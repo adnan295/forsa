@@ -53,6 +53,8 @@ export const users = pgTable("users", {
   city: text("city"),
   country: text("country"),
   emailVerified: boolean("email_verified").notNull().default(false),
+  referralCode: text("referral_code").unique(),
+  referredBy: varchar("referred_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -69,11 +71,13 @@ export const campaigns = pgTable("campaigns", {
   prizeName: text("prize_name").notNull(),
   prizeDescription: text("prize_description"),
   prizeImageUrl: text("prize_image_url"),
+  category: text("category").default("other"),
   status: campaignStatusEnum("status").notNull().default("active"),
   winnerId: varchar("winner_id"),
   winnerTicketId: varchar("winner_ticket_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   drawAt: timestamp("draw_at"),
+  endsAt: timestamp("ends_at"),
 });
 
 export const orders = pgTable("orders", {
@@ -289,6 +293,8 @@ export const insertCampaignSchema = createInsertSchema(campaigns).pick({
   prizeName: true,
   prizeDescription: true,
   prizeImageUrl: true,
+  category: true,
+  endsAt: true,
 });
 
 export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick({

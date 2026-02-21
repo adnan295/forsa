@@ -17,6 +17,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
@@ -145,6 +150,111 @@ function StatChip({ icon, value, label }: {
     </View>
   );
 }
+
+const SOCIAL_PROOF_DATA = [
+  { name: "ساعة رولكس فاخرة", minutes: 3 },
+  { name: "سماعات آبل AirPods Max", minutes: 7 },
+  { name: "حقيبة لويس فيتون", minutes: 12 },
+  { name: "عطر شانيل الفاخر", minutes: 5 },
+  { name: "نظارة قوتشي شمسية", minutes: 9 },
+  { name: "ساعة أبل الذكية", minutes: 2 },
+  { name: "حقيبة سفر سامسونايت", minutes: 15 },
+  { name: "عطر ديور الأصلي", minutes: 8 },
+];
+
+function RecentPurchaseBanner() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [visible, setVisible] = useState(false);
+  const opacity = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: (1 - opacity.value) * 20 }],
+  }));
+
+  useEffect(() => {
+    const showBanner = () => {
+      setCurrentIndex((prev) => (prev + 1) % SOCIAL_PROOF_DATA.length);
+      setVisible(true);
+      opacity.value = withTiming(1, { duration: 400 });
+
+      setTimeout(() => {
+        opacity.value = withTiming(0, { duration: 400 });
+        setTimeout(() => {
+          setVisible(false);
+        }, 500);
+      }, 5000);
+    };
+
+    const initialTimer = setTimeout(showBanner, 5000);
+    const interval = setInterval(showBanner, 30000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const item = SOCIAL_PROOF_DATA[currentIndex];
+
+  if (!visible) return null;
+
+  return (
+    <Animated.View style={[proofStyles.container, animatedStyle]}>
+      <View style={proofStyles.banner}>
+        <View style={proofStyles.iconWrap}>
+          <Ionicons name="bag-check" size={16} color="#10B981" />
+        </View>
+        <Text style={proofStyles.text} numberOfLines={1}>
+          مستخدم اشترى {item.name} منذ {item.minutes} دقائق
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+const proofStyles = StyleSheet.create({
+  container: {
+    position: "absolute",
+    bottom: Platform.OS === "web" ? 84 + 16 : 96,
+    left: 16,
+    right: 16,
+    alignItems: "center",
+    zIndex: 100,
+  },
+  banner: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(31, 41, 55, 0.92)",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    maxWidth: 400,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  iconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  text: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: "#FFFFFF",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+});
 
 const FILTER_TABS: { key: FilterKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: "all", label: "الكل", icon: "apps" },
@@ -419,6 +529,7 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
+      <RecentPurchaseBanner />
     </View>
   );
 }

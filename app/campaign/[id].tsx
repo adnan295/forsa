@@ -29,6 +29,7 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
+import { useFavorites } from "@/lib/favorites-context";
 import { getApiUrl } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
 
@@ -37,6 +38,7 @@ export default function CampaignDetailScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { addItem } = useCart();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
 
@@ -137,21 +139,38 @@ export default function CampaignDetailScreen() {
                     <Ionicons name="arrow-forward" size={22} color="#fff" />
                   </View>
                 </Pressable>
-                <Pressable
-                  onPress={async () => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    try {
-                      await Share.share({
-                        message: `🛒 ${campaign.title}\n🎁 جائزة: ${campaign.prizeName}\n💰 السعر: $${unitPrice.toFixed(2)}\n\nاشترِ المنتج واحصل على فرصة للفوز! 🎉\n\nلاكي درو - تسوق واربح`,
-                      });
-                    } catch (e) {}
-                  }}
-                  style={styles.backButton}
-                >
-                  <View style={styles.backBtnCircle}>
-                    <Ionicons name="share-social" size={20} color="#fff" />
-                  </View>
-                </Pressable>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Pressable
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      if (id) toggleFavorite(id);
+                    }}
+                    style={styles.backButton}
+                  >
+                    <View style={styles.backBtnCircle}>
+                      <Ionicons
+                        name={id && isFavorite(id) ? "heart" : "heart-outline"}
+                        size={20}
+                        color={id && isFavorite(id) ? "#EF4444" : "#fff"}
+                      />
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    onPress={async () => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      try {
+                        await Share.share({
+                          message: `🛒 ${campaign.title}\n🎁 جائزة: ${campaign.prizeName}\n💰 السعر: $${unitPrice.toFixed(2)}\n\nاشترِ المنتج واحصل على فرصة للفوز! 🎉\n\nلاكي درو - تسوق واربح`,
+                        });
+                      } catch (e) {}
+                    }}
+                    style={styles.backButton}
+                  >
+                    <View style={styles.backBtnCircle}>
+                      <Ionicons name="share-social" size={20} color="#fff" />
+                    </View>
+                  </Pressable>
+                </View>
               </View>
 
               <View style={styles.heroCenter}>

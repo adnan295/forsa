@@ -9,6 +9,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
+import { FavoritesProvider } from "@/lib/favorites-context";
 import {
   useFonts,
   Inter_400Regular,
@@ -54,6 +55,10 @@ function RootLayoutNav() {
         name="info"
         options={{ headerShown: false, presentation: "card" }}
       />
+      <Stack.Screen
+        name="winners"
+        options={{ headerShown: false, presentation: "card" }}
+      />
     </Stack>
   );
 }
@@ -79,11 +84,13 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <CartProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
+            <FavoritesProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </FavoritesProvider>
           </CartProvider>
         </AuthProvider>
       </QueryClientProvider>

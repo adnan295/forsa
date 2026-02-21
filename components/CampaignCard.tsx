@@ -10,6 +10,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { getApiUrl } from "@/lib/query-client";
+import { useFavorites } from "@/lib/favorites-context";
 import type { Campaign } from "@shared/schema";
 
 interface Props {
@@ -19,6 +20,8 @@ interface Props {
 
 export default function CampaignCard({ campaign, onPress }: Props) {
   const scale = useSharedValue(1);
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const favorited = isFavorite(campaign.id);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -95,6 +98,22 @@ export default function CampaignCard({ campaign, onPress }: Props) {
             <Ionicons name={getStatusIcon()} size={11} color="#fff" />
             <Text style={styles.statusText}>{getStatusText()}</Text>
           </View>
+
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              toggleFavorite(campaign.id);
+            }}
+            style={styles.favoriteButton}
+            hitSlop={8}
+          >
+            <Ionicons
+              name={favorited ? "heart" : "heart-outline"}
+              size={22}
+              color={favorited ? "#EF4444" : "#fff"}
+            />
+          </Pressable>
 
           <View style={styles.priceTag}>
             <Text style={styles.priceTagCurrency}>$</Text>
@@ -229,6 +248,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
+  },
+  favoriteButton: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
   },
   statusText: {
     fontFamily: "Inter_600SemiBold",

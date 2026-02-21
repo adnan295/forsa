@@ -119,6 +119,13 @@ export default function ProfileScreen() {
       color: "#F59E0B",
       onPress: () => router.push("/(tabs)/tickets" as any),
     },
+    {
+      icon: "people-outline" as const,
+      label: "الفائزون السابقون",
+      subtitle: "عرض جميع الفائزين",
+      color: "#8B5CF6",
+      onPress: () => router.push("/winners" as any),
+    },
   ];
 
   const settingsItems = [
