@@ -223,21 +223,38 @@ export default function TicketsScreen() {
 
   const EmptyState = () => (
     <View style={styles.emptyWrap}>
-      <View style={styles.emptyIconWrap}>
+      <LinearGradient
+        colors={activeTab === "orders" ? ["rgba(124,58,237,0.08)", "rgba(236,72,153,0.08)"] : ["rgba(236,72,153,0.08)", "rgba(124,58,237,0.08)"]}
+        style={styles.emptyIconWrap}
+      >
         <Ionicons
-          name={activeTab === "orders" ? "receipt-outline" : "ticket-outline"}
+          name={activeTab === "orders" ? "bag-outline" : "sparkles-outline"}
           size={36}
-          color={Colors.light.tabIconDefault}
+          color={activeTab === "orders" ? Colors.light.accent : Colors.light.accentPink}
         />
-      </View>
+      </LinearGradient>
       <Text style={styles.emptyTitle}>
         {activeTab === "orders" ? "لا توجد طلبات بعد" : "لا توجد تذاكر بعد"}
       </Text>
       <Text style={styles.emptyText}>
         {activeTab === "orders"
-          ? "ستظهر طلباتك هنا بعد الشراء"
-          : "اشترِ من حملة للحصول على تذاكر السحب"}
+          ? "اكتشف الحملات المثيرة واشترِ تذكرتك الأولى الآن!"
+          : "كل تذكرة فرصة للفوز بجائزة مذهلة - ابدأ الآن!"}
       </Text>
+      <Pressable
+        onPress={() => router.push("/(tabs)/" as any)}
+        style={styles.emptyActionBtn}
+      >
+        <LinearGradient
+          colors={[Colors.light.accent, Colors.light.accentPink]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.emptyActionGradient}
+        >
+          <Ionicons name="compass" size={18} color="#fff" />
+          <Text style={styles.emptyActionText}>تصفّح الحملات</Text>
+        </LinearGradient>
+      </Pressable>
     </View>
   );
 
@@ -554,14 +571,13 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 24,
-    backgroundColor: Colors.light.progressBg,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    fontSize: 20,
     color: Colors.light.text,
     marginTop: 4,
     marginBottom: 8,
@@ -573,6 +589,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "center",
+    writingDirection: "rtl",
+    lineHeight: 22,
+  },
+  emptyActionBtn: {
+    borderRadius: 14,
+    overflow: "hidden",
+    marginTop: 20,
+  },
+  emptyActionGradient: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  emptyActionText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: "#FFFFFF",
     writingDirection: "rtl",
   },
   signInButton: {
