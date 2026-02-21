@@ -5,14 +5,12 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Alert,
   ActivityIndicator,
   Platform,
-  Modal,
   Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -27,17 +25,14 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
-import type { Campaign, Ticket } from "@shared/schema";
+import { getApiUrl } from "@/lib/query-client";
+import type { Campaign } from "@shared/schema";
 
 export default function CampaignDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [quantity, setQuantity] = useState(1);
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [purchasedTickets, setPurchasedTickets] = useState<Ticket[]>([]);
 
   const pulseScale = useSharedValue(1);
 
@@ -65,30 +60,6 @@ export default function CampaignDetailScreen() {
     staleTime: 3000,
   });
 
-  const purchaseMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/purchase", {
-        campaignId: id,
-        quantity,
-        paymentMethod: "card",
-      });
-      return res.json();
-    },
-    onSuccess: (data) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setPurchasedTickets(data.tickets);
-      setShowPurchaseModal(false);
-      setShowSuccessModal(true);
-      setQuantity(1);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
-    },
-    onError: (err: any) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const msg = err.message || "فشلت عملية الشراء";
-      Alert.alert("خطأ", msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
-    },
-  });
 
   if (isLoading || !campaign) {
     return (
@@ -254,7 +225,7 @@ export default function CampaignDetailScreen() {
                   return;
                 }
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setShowPurchaseModal(true);
+                router.push({ pathname: "/checkout", params: { campaignId: id, quantity: String(quantity) } });
               }}
               style={({ pressed }) => [
                 styles.buyButton,
@@ -275,118 +246,6 @@ export default function CampaignDetailScreen() {
         </View>
       )}
 
-      <Modal visible={showPurchaseModal} transparent animationType="slide">
-        <View style={modalStyles.overlay}>
-          <View style={modalStyles.container}>
-            <View style={modalStyles.header}>
-              <Text style={modalStyles.title}>تأكيد الشراء</Text>
-              <Pressable onPress={() => setShowPurchaseModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.light.text} />
-              </Pressable>
-            </View>
-
-            <View style={modalStyles.body}>
-              <Text style={modalStyles.campaignName}>{campaign.title}</Text>
-
-              <View style={modalStyles.qtyRow}>
-                <Text style={modalStyles.qtyLabel}>الكمية</Text>
-                <View style={modalStyles.qtyControls}>
-                  <Pressable
-                    onPress={() => {
-                      if (quantity > 1) {
-                        setQuantity(quantity - 1);
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                    }}
-                    style={[modalStyles.qtyBtn, quantity <= 1 && { opacity: 0.3 }]}
-                  >
-                    <Ionicons name="remove" size={20} color={Colors.light.text} />
-                  </Pressable>
-                  <Text style={modalStyles.qtyValue}>{quantity}</Text>
-                  <Pressable
-                    onPress={() => {
-                      if (quantity < maxQty) {
-                        setQuantity(quantity + 1);
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                    }}
-                    style={[modalStyles.qtyBtn, quantity >= maxQty && { opacity: 0.3 }]}
-                  >
-                    <Ionicons name="add" size={20} color={Colors.light.text} />
-                  </Pressable>
-                </View>
-              </View>
-
-              <View style={modalStyles.summaryRow}>
-                <Text style={modalStyles.summaryLabel}>
-                  ${parseFloat(campaign.productPrice).toFixed(2)} x {quantity}
-                </Text>
-                <Text style={modalStyles.summaryTotal}>${totalPrice}</Text>
-              </View>
-
-              <View style={modalStyles.paymentSection}>
-                <Text style={modalStyles.paymentLabel}>طريقة الدفع</Text>
-                <View style={modalStyles.paymentOption}>
-                  <Ionicons name="card" size={20} color={Colors.light.accent} />
-                  <Text style={modalStyles.paymentText}>بطاقة ائتمان / خصم</Text>
-                  <Ionicons name="checkmark-circle" size={20} color={Colors.light.success} />
-                </View>
-              </View>
-
-              <Pressable
-                onPress={() => purchaseMutation.mutate()}
-                disabled={purchaseMutation.isPending}
-                style={({ pressed }) => [
-                  modalStyles.confirmBtn,
-                  pressed && { opacity: 0.9 },
-                  purchaseMutation.isPending && { opacity: 0.6 },
-                ]}
-              >
-                {purchaseMutation.isPending ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={modalStyles.confirmBtnText}>
-                    ادفع ${totalPrice}
-                  </Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showSuccessModal} transparent animationType="fade">
-        <View style={successStyles.overlay}>
-          <View style={successStyles.container}>
-            <View style={successStyles.iconCircle}>
-              <Ionicons name="checkmark-circle" size={56} color={Colors.light.success} />
-            </View>
-            <Text style={successStyles.title}>تمت عملية الشراء بنجاح!</Text>
-            <Text style={successStyles.subtitle}>
-              حصلت على {purchasedTickets.length} تذكرة
-            </Text>
-
-            <View style={successStyles.ticketList}>
-              {purchasedTickets.map((t) => (
-                <View key={t.id} style={successStyles.ticketItem}>
-                  <Ionicons name="ticket" size={16} color={Colors.light.accent} />
-                  <Text style={successStyles.ticketNumber}>{t.ticketNumber}</Text>
-                </View>
-              ))}
-            </View>
-
-            <Pressable
-              onPress={() => {
-                setShowSuccessModal(false);
-                setPurchasedTickets([]);
-              }}
-              style={successStyles.doneBtn}
-            >
-              <Text style={successStyles.doneBtnText}>تم</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -666,199 +525,3 @@ const styles = StyleSheet.create({
   },
 });
 
-const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  container: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  header: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  body: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  campaignName: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-    color: Colors.light.text,
-    marginBottom: 20,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  qtyRow: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  qtyLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 15,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl",
-  },
-  qtyControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  qtyBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: Colors.light.inputBg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  qtyValue: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    color: Colors.light.text,
-    minWidth: 30,
-    textAlign: "center",
-  },
-  summaryRow: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    marginBottom: 16,
-  },
-  summaryLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl",
-  },
-  summaryTotal: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: Colors.light.text,
-  },
-  paymentSection: {
-    marginBottom: 20,
-  },
-  paymentLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    marginBottom: 10,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  paymentOption: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: Colors.light.inputBg,
-    padding: 14,
-    borderRadius: 12,
-  },
-  paymentText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 15,
-    color: Colors.light.text,
-    flex: 1,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  confirmBtn: {
-    backgroundColor: Colors.light.accent,
-    borderRadius: 14,
-    height: 56,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  confirmBtnText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: "#FFFFFF",
-    writingDirection: "rtl",
-  },
-});
-
-const successStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 32,
-    alignItems: "center",
-    width: "100%",
-    maxWidth: 360,
-  },
-  iconCircle: {
-    marginBottom: 16,
-  },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: Colors.light.text,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    marginBottom: 20,
-  },
-  ticketList: {
-    width: "100%",
-    gap: 8,
-    marginBottom: 24,
-  },
-  ticketItem: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: Colors.light.inputBg,
-    padding: 12,
-    borderRadius: 10,
-  },
-  ticketNumber: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: Colors.light.text,
-    letterSpacing: 0.5,
-  },
-  doneBtn: {
-    backgroundColor: Colors.light.accent,
-    borderRadius: 14,
-    height: 50,
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  doneBtnText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: "#FFFFFF",
-  },
-});

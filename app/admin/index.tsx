@@ -12,6 +12,7 @@ import {
   Modal,
   FlatList,
   Switch,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -21,7 +22,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { apiRequest, queryClient } from "@/lib/query-client";
+import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
 
 type AdminTab = "dashboard" | "orders" | "users" | "campaigns" | "payments" | "coupons" | "activity";
 
@@ -149,6 +150,18 @@ function OrdersSection() {
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
+  const paymentMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await apiRequest("PUT", `/api/admin/orders/${id}/payment`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+    },
+    onError: (err: any) => Alert.alert("خطأ", err.message),
+  });
+
   if (isLoading) return <LoadingView />;
 
   const getShippingStatusAr = (s: string) => {
@@ -162,6 +175,14 @@ function OrdersSection() {
   const getOrderStatusAr = (s: string) => {
     const map: Record<string, string> = { pending: "معلق", paid: "مدفوع", failed: "فشل", refunded: "مسترد" };
     return map[s] || s;
+  };
+  const getPaymentStatusAr = (s: string) => {
+    const map: Record<string, string> = { pending_payment: "في انتظار الدفع", pending_review: "قيد المراجعة", confirmed: "تم التأكيد", rejected: "مرفوض" };
+    return map[s] || s;
+  };
+  const getPaymentColor = (s: string) => {
+    const map: Record<string, string> = { pending_payment: "#F39C12", pending_review: "#3498DB", confirmed: "#2ECC71", rejected: "#E74C3C" };
+    return map[s] || "#666";
   };
 
   return (
@@ -193,6 +214,11 @@ function OrdersSection() {
               <View style={[styles.statusPill, { backgroundColor: item.status === "paid" ? "#2ECC7120" : "#F39C1220" }]}>
                 <Text style={[styles.statusPillText, { color: item.status === "paid" ? "#2ECC71" : "#F39C12" }]}>{getOrderStatusAr(item.status)}</Text>
               </View>
+              {item.paymentStatus && (
+                <View style={[styles.statusPill, { backgroundColor: getPaymentColor(item.paymentStatus) + "20" }]}>
+                  <Text style={[styles.statusPillText, { color: getPaymentColor(item.paymentStatus) }]}>{getPaymentStatusAr(item.paymentStatus)}</Text>
+                </View>
+              )}
               <Text style={styles.orderDate}>{new Date(item.createdAt).toLocaleDateString("ar-SA")}</Text>
             </View>
           </Pressable>
@@ -202,25 +228,38 @@ function OrdersSection() {
         visible={showShippingModal}
         order={selectedOrder}
         onClose={() => setShowShippingModal(false)}
-        onUpdate={(data) => selectedOrder && shippingMutation.mutate({ id: selectedOrder.id, data })}
+        onUpdate={(data: any) => selectedOrder && shippingMutation.mutate({ id: selectedOrder.id, data })}
+        onPaymentUpdate={(data: any) => selectedOrder && paymentMutation.mutate({ id: selectedOrder.id, data })}
         loading={shippingMutation.isPending}
+        paymentLoading={paymentMutation.isPending}
       />
     </>
   );
 }
 
-function ShippingModal({ visible, order, onClose, onUpdate, loading }: any) {
+function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loading, paymentLoading }: any) {
   const [status, setStatus] = useState(order?.shippingStatus || "pending");
   const [tracking, setTracking] = useState(order?.trackingNumber || "");
   const [address, setAddress] = useState(order?.shippingAddress || "");
+  const [rejectionReason, setRejectionReason] = useState("");
 
   React.useEffect(() => {
     if (order) {
       setStatus(order.shippingStatus || "pending");
       setTracking(order.trackingNumber || "");
       setAddress(order.shippingAddress || "");
+      setRejectionReason("");
     }
   }, [order]);
+
+  const getPaymentStatusAr = (s: string) => {
+    const map: Record<string, string> = { pending_payment: "في انتظار الدفع", pending_review: "قيد المراجعة", confirmed: "تم التأكيد", rejected: "مرفوض" };
+    return map[s] || s;
+  };
+  const getPaymentColor = (s: string) => {
+    const map: Record<string, string> = { pending_payment: "#F39C12", pending_review: "#3498DB", confirmed: "#2ECC71", rejected: "#E74C3C" };
+    return map[s] || "#666";
+  };
 
   const statuses = [
     { key: "pending", label: "قيد الانتظار" },
@@ -235,10 +274,99 @@ function ShippingModal({ visible, order, onClose, onUpdate, loading }: any) {
       <View style={modalStyles.overlay}>
         <View style={modalStyles.container}>
           <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>تحديث الشحن</Text>
+            <Text style={modalStyles.title}>إدارة الطلب</Text>
             <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
           </View>
           <ScrollView contentContainerStyle={modalStyles.scrollContent}>
+            {order && (order.shippingFullName || order.shippingPhone || order.shippingCity || order.shippingAddress || order.shippingCountry) && (
+              <View style={orderMgmtStyles.infoSection}>
+                <Text style={orderMgmtStyles.infoSectionTitle}>عنوان الشحن</Text>
+                {order.shippingFullName && (
+                  <View style={orderMgmtStyles.infoRow}>
+                    <Ionicons name="person" size={14} color={Colors.light.textSecondary} />
+                    <Text style={orderMgmtStyles.infoText}>{order.shippingFullName}</Text>
+                  </View>
+                )}
+                {order.shippingPhone && (
+                  <View style={orderMgmtStyles.infoRow}>
+                    <Ionicons name="call" size={14} color={Colors.light.textSecondary} />
+                    <Text style={orderMgmtStyles.infoText}>{order.shippingPhone}</Text>
+                  </View>
+                )}
+                {(order.shippingCity || order.shippingCountry) && (
+                  <View style={orderMgmtStyles.infoRow}>
+                    <Ionicons name="location" size={14} color={Colors.light.textSecondary} />
+                    <Text style={orderMgmtStyles.infoText}>{[order.shippingCity, order.shippingCountry].filter(Boolean).join("، ")}</Text>
+                  </View>
+                )}
+                {order.shippingAddress && (
+                  <View style={orderMgmtStyles.infoRow}>
+                    <Ionicons name="home" size={14} color={Colors.light.textSecondary} />
+                    <Text style={orderMgmtStyles.infoText}>{order.shippingAddress}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {order?.paymentStatus && (
+              <View style={orderMgmtStyles.infoSection}>
+                <Text style={orderMgmtStyles.infoSectionTitle}>حالة الدفع</Text>
+                <View style={[styles.statusPill, { backgroundColor: getPaymentColor(order.paymentStatus) + "20", alignSelf: "flex-end", marginBottom: 8 }]}>
+                  <Text style={[styles.statusPillText, { color: getPaymentColor(order.paymentStatus) }]}>{getPaymentStatusAr(order.paymentStatus)}</Text>
+                </View>
+
+                {order.receiptUrl && (
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={orderMgmtStyles.receiptLabel}>صورة الإيصال:</Text>
+                    <Image
+                      source={{ uri: getApiUrl() + order.receiptUrl }}
+                      style={orderMgmtStyles.receiptImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                )}
+
+                {order.paymentStatus === "pending_review" && (
+                  <View style={orderMgmtStyles.paymentActions}>
+                    <Pressable
+                      onPress={() => onPaymentUpdate({ paymentStatus: "confirmed" })}
+                      disabled={paymentLoading}
+                      style={[orderMgmtStyles.confirmBtn, paymentLoading && { opacity: 0.6 }]}
+                    >
+                      {paymentLoading ? <ActivityIndicator color="#fff" size="small" /> : (
+                        <>
+                          <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                          <Text style={orderMgmtStyles.confirmBtnText}>تأكيد الدفع</Text>
+                        </>
+                      )}
+                    </Pressable>
+                    <View style={{ marginTop: 8 }}>
+                      <TextInput
+                        style={orderMgmtStyles.rejectionInput}
+                        value={rejectionReason}
+                        onChangeText={setRejectionReason}
+                        placeholder="سبب الرفض (اختياري)"
+                        placeholderTextColor={Colors.light.tabIconDefault}
+                        textAlign="right"
+                      />
+                      <Pressable
+                        onPress={() => onPaymentUpdate({ paymentStatus: "rejected", rejectionReason: rejectionReason || undefined })}
+                        disabled={paymentLoading}
+                        style={[orderMgmtStyles.rejectBtn, paymentLoading && { opacity: 0.6 }]}
+                      >
+                        {paymentLoading ? <ActivityIndicator color="#fff" size="small" /> : (
+                          <>
+                            <Ionicons name="close-circle" size={18} color="#fff" />
+                            <Text style={orderMgmtStyles.rejectBtnText}>رفض الدفع</Text>
+                          </>
+                        )}
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
             <Text style={modalStyles.inputLabel}>حالة الشحن</Text>
             <View style={styles.statusPicker}>
               {statuses.map((s) => (
@@ -254,7 +382,7 @@ function ShippingModal({ visible, order, onClose, onUpdate, loading }: any) {
               disabled={loading}
               style={[modalStyles.createBtn, loading && { opacity: 0.6 }]}
             >
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>تحديث</Text>}
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>تحديث الشحن</Text>}
             </Pressable>
           </ScrollView>
         </View>
@@ -700,6 +828,9 @@ function CreatePaymentModal({ visible, onClose }: { visible: boolean; onClose: (
   const [nameAr, setNameAr] = useState("");
   const [icon, setIcon] = useState("card");
   const [desc, setDesc] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [iban, setIban] = useState("");
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
@@ -710,7 +841,7 @@ function CreatePaymentModal({ visible, onClose }: { visible: boolean; onClose: (
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-methods"] });
       onClose();
-      setName(""); setNameAr(""); setIcon("card"); setDesc("");
+      setName(""); setNameAr(""); setIcon("card"); setDesc(""); setBankName(""); setAccountName(""); setIban("");
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
@@ -728,10 +859,18 @@ function CreatePaymentModal({ visible, onClose }: { visible: boolean; onClose: (
             <ModalInput label="الاسم (عربي) *" value={nameAr} onChangeText={setNameAr} placeholder="بطاقة ائتمان" />
             <ModalInput label="أيقونة" value={icon} onChangeText={setIcon} placeholder="card" />
             <ModalInput label="وصف" value={desc} onChangeText={setDesc} placeholder="وصف اختياري" />
+            <ModalInput label="اسم البنك" value={bankName} onChangeText={setBankName} placeholder="مثال: البنك الأهلي" />
+            <ModalInput label="اسم صاحب الحساب" value={accountName} onChangeText={setAccountName} placeholder="الاسم كما في الحساب البنكي" />
+            <ModalInput label="رقم الآيبان (IBAN)" value={iban} onChangeText={setIban} placeholder="SA..." />
             <Pressable
               onPress={() => {
                 if (!name || !nameAr) { Alert.alert("خطأ", "يرجى ملء الحقول المطلوبة"); return; }
-                mutation.mutate({ name, nameAr, icon, description: desc || undefined });
+                mutation.mutate({
+                  name, nameAr, icon, description: desc || undefined,
+                  ...(bankName ? { bankName } : {}),
+                  ...(accountName ? { accountName } : {}),
+                  ...(iban ? { iban } : {}),
+                });
               }}
               disabled={mutation.isPending}
               style={[modalStyles.createBtn, mutation.isPending && { opacity: 0.6 }]}
@@ -925,4 +1064,19 @@ const modalStyles = StyleSheet.create({
   input: { backgroundColor: "#fff", borderRadius: 12, padding: 14, fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl" },
   createBtn: { backgroundColor: Colors.light.accent, borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center", marginTop: 8 },
   createBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#fff", writingDirection: "rtl" },
+});
+
+const orderMgmtStyles = StyleSheet.create({
+  infoSection: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: Colors.light.border },
+  infoSectionTitle: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 10 },
+  infoRow: { flexDirection: "row-reverse", alignItems: "center", gap: 8, marginBottom: 6 },
+  infoText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
+  receiptLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
+  receiptImage: { width: "100%", height: 200, borderRadius: 10, backgroundColor: Colors.light.inputBg },
+  paymentActions: { marginTop: 8 },
+  confirmBtn: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#2ECC71", borderRadius: 10, paddingVertical: 12 },
+  confirmBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
+  rejectBtn: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#E74C3C", borderRadius: 10, paddingVertical: 12, marginTop: 8 },
+  rejectBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
+  rejectionInput: { backgroundColor: Colors.light.inputBg, borderRadius: 10, padding: 12, fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
 });
