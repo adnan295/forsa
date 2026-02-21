@@ -19,6 +19,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
+import { useCart, CartItem } from "@/lib/cart-context";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import type { Campaign, PaymentMethod } from "@shared/schema";
 
@@ -38,13 +39,18 @@ function isBankTransfer(method: PaymentMethod): boolean {
 }
 
 export default function CheckoutScreen() {
-  const { campaignId, quantity: qtyParam } = useLocalSearchParams<{
+  const params = useLocalSearchParams<{
     campaignId: string;
     quantity: string;
+    fromCart: string;
   }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const qty = parseInt(qtyParam || "1", 10) || 1;
+  const { items: cartItems, clearCart } = useCart();
+
+  const isCartMode = params.fromCart === "true";
+  const campaignId = params.campaignId;
+  const qty = parseInt(params.quantity || "1", 10) || 1;
 
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
@@ -64,6 +70,7 @@ export default function CheckoutScreen() {
 
   const { data: campaign, isLoading: campaignLoading } = useQuery<Campaign>({
     queryKey: ["/api/campaigns", campaignId],
+    enabled: !isCartMode && !!campaignId,
   });
 
   const { data: paymentMethods, isLoading: methodsLoading } = useQuery<
@@ -76,7 +83,12 @@ export default function CheckoutScreen() {
     paymentMethods?.find((m) => m.id === selectedMethodId) || null;
 
   const unitPrice = campaign ? parseFloat(campaign.productPrice) : 0;
-  const subtotal = unitPrice * qty;
+  const subtotal = isCartMode
+    ? cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    : unitPrice * qty;
+  const totalItemCount = isCartMode
+    ? cartItems.reduce((sum, item) => sum + item.quantity, 0)
+    : qty;
   const discountAmount = appliedCoupon
     ? (subtotal * appliedCoupon.discountPercent) / 100
     : 0;
@@ -107,18 +119,35 @@ export default function CheckoutScreen() {
 
   const purchaseMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/purchase", {
-        campaignId,
-        quantity: qty,
-        paymentMethod: selectedMethod?.name,
-        shippingFullName,
-        shippingPhone,
-        shippingCity,
-        shippingAddress,
-        shippingCountry,
-        couponCode: appliedCoupon?.code || undefined,
-      });
-      return res.json();
+      if (isCartMode) {
+        const res = await apiRequest("POST", "/api/cart-purchase", {
+          items: cartItems.map((item) => ({
+            campaignId: item.campaignId,
+            quantity: item.quantity,
+          })),
+          paymentMethod: selectedMethod?.name,
+          shippingFullName,
+          shippingPhone,
+          shippingCity,
+          shippingAddress,
+          shippingCountry,
+          couponCode: appliedCoupon?.code || undefined,
+        });
+        return res.json();
+      } else {
+        const res = await apiRequest("POST", "/api/purchase", {
+          campaignId,
+          quantity: qty,
+          paymentMethod: selectedMethod?.name,
+          shippingFullName,
+          shippingPhone,
+          shippingCity,
+          shippingAddress,
+          shippingCountry,
+          couponCode: appliedCoupon?.code || undefined,
+        });
+        return res.json();
+      }
     },
     onSuccess: (data: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -126,18 +155,35 @@ export default function CheckoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
 
-      if (selectedMethod && isBankTransfer(selectedMethod)) {
-        router.replace({
-          pathname: `/order/${data.order?.id || data.id}`,
-          params: { showUpload: "true" },
-        } as any);
+      if (isCartMode) {
+        clearCart();
+        if (selectedMethod && isBankTransfer(selectedMethod) && data.orders?.[0]) {
+          router.replace({
+            pathname: `/order/${data.orders[0].id}`,
+            params: { showUpload: "true" },
+          } as any);
+        } else {
+          Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
+            {
+              text: "حسناً",
+              onPress: () => router.replace("/(tabs)/tickets" as any),
+            },
+          ]);
+        }
       } else {
-        Alert.alert("تم بنجاح", "تم تأكيد طلبك بنجاح!", [
-          {
-            text: "حسناً",
-            onPress: () => router.replace("/(tabs)/tickets" as any),
-          },
-        ]);
+        if (selectedMethod && isBankTransfer(selectedMethod)) {
+          router.replace({
+            pathname: `/order/${data.order?.id || data.id}`,
+            params: { showUpload: "true" },
+          } as any);
+        } else {
+          Alert.alert("تم بنجاح", "تم تأكيد طلبك بنجاح!", [
+            {
+              text: "حسناً",
+              onPress: () => router.replace("/(tabs)/tickets" as any),
+            },
+          ]);
+        }
       }
     },
     onError: (err: any) => {
@@ -166,7 +212,7 @@ export default function CheckoutScreen() {
     purchaseMutation.mutate();
   }
 
-  if (campaignLoading || methodsLoading) {
+  if ((!isCartMode && campaignLoading) || methodsLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={Colors.light.accent} />
@@ -174,11 +220,20 @@ export default function CheckoutScreen() {
     );
   }
 
-  if (!campaign) {
+  if (!isCartMode && !campaign) {
     return (
       <View style={[styles.container, styles.centered]}>
         <Ionicons name="alert-circle" size={48} color={Colors.light.danger} />
         <Text style={styles.errorText}>لم يتم العثور على الحملة</Text>
+      </View>
+    );
+  }
+
+  if (isCartMode && cartItems.length === 0) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Ionicons name="cart-outline" size={48} color={Colors.light.textSecondary} />
+        <Text style={styles.errorText}>السلة فارغة</Text>
       </View>
     );
   }
@@ -265,23 +320,37 @@ export default function CheckoutScreen() {
               <Text style={styles.sectionTitle}>ملخص الطلب</Text>
             </View>
             <View style={styles.divider} />
-            <Text style={styles.campaignTitle}>{campaign.title}</Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>
-                ${unitPrice.toFixed(2)}
-              </Text>
-              <Text style={styles.summaryLabel}>سعر المنتج</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryValue}>{qty}</Text>
-              <Text style={styles.summaryLabel}>الكمية</Text>
-            </View>
+            {isCartMode ? (
+              <>
+                {cartItems.map((item) => (
+                  <View key={item.campaignId} style={styles.cartItemRow}>
+                    <Text style={styles.cartItemPrice}>${(item.price * item.quantity).toFixed(2)}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.campaignTitle}>{item.title}</Text>
+                      <Text style={styles.summaryLabel}>{item.quantity} × ${item.price.toFixed(2)}</Text>
+                    </View>
+                  </View>
+                ))}
+              </>
+            ) : (
+              <>
+                <Text style={styles.campaignTitle}>{campaign!.title}</Text>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryValue}>${unitPrice.toFixed(2)}</Text>
+                  <Text style={styles.summaryLabel}>سعر المنتج</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryValue}>{qty}</Text>
+                  <Text style={styles.summaryLabel}>الكمية</Text>
+                </View>
+              </>
+            )}
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text style={styles.subtotalValue}>
                 ${subtotal.toFixed(2)}
               </Text>
-              <Text style={styles.subtotalLabel}>المجموع الفرعي</Text>
+              <Text style={styles.subtotalLabel}>المجموع الفرعي ({totalItemCount} منتج)</Text>
             </View>
           </View>
 
@@ -666,13 +735,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.border,
     marginVertical: 14,
   },
+  cartItemRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border + "40",
+    marginBottom: 4,
+  },
+  cartItemPrice: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: Colors.light.accent,
+    marginRight: 12,
+  },
   campaignTitle: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
     writingDirection: "rtl",
-    marginBottom: 12,
+    marginBottom: 4,
   },
   summaryRow: {
     flexDirection: "row-reverse",

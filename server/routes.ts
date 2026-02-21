@@ -462,6 +462,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/cart-purchase", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const {
+        items,
+        paymentMethod = "card",
+        shippingFullName,
+        shippingPhone,
+        shippingCity,
+        shippingAddress,
+        shippingCountry,
+        couponCode,
+      } = req.body;
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "Cart items required" });
+      }
+
+      const shippingData = shippingFullName
+        ? {
+            fullName: shippingFullName,
+            phone: shippingPhone || "",
+            city: shippingCity || "",
+            address: shippingAddress || "",
+            country: shippingCountry,
+          }
+        : undefined;
+
+      const allOrders: any[] = [];
+      const allTickets: any[] = [];
+
+      for (const item of items) {
+        const { campaignId, quantity } = item;
+        if (!campaignId || !quantity) continue;
+
+        const result = await storage.purchaseProduct(
+          req.session.userId!,
+          campaignId,
+          quantity,
+          paymentMethod,
+          shippingData,
+          couponCode
+        );
+
+        allOrders.push(result.order);
+        allTickets.push(...result.tickets);
+
+        await storage.logActivity(
+          "purchase",
+          "New purchase",
+          `User purchased ${result.tickets.length} ticket(s) for order ${result.order.id}`,
+          req.session.userId!,
+          JSON.stringify({ orderId: result.order.id, campaignId, quantity, paymentMethod })
+        );
+
+        await storage.createAdminNotification(
+          "new_order",
+          "طلب جديد",
+          `طلب جديد من المستخدم بقيمة ${result.order.totalAmount}`,
+          JSON.stringify({ orderId: result.order.id, userId: req.session.userId })
+        );
+
+        const buyer = await storage.getUser(req.session.userId!);
+        const campaign = await storage.getCampaign(campaignId);
+        if (buyer && campaign) {
+          sendOrderConfirmation(buyer.email, {
+            orderId: result.order.id,
+            campaignTitle: campaign.title,
+            quantity: result.tickets.length,
+            totalAmount: result.order.totalAmount,
+            ticketNumbers: result.tickets.map((t: any) => t.ticketNumber),
+            paymentMethod: paymentMethod,
+          });
+        }
+      }
+
+      res.json({
+        orders: allOrders,
+        tickets: allTickets,
+        message: `Purchase successful! You received ${allTickets.length} ticket(s) across ${allOrders.length} order(s).`,
+      });
+    } catch (error: any) {
+      console.error("Cart purchase error:", error);
+      res.status(400).json({ message: error.message || "Cart purchase failed" });
+    }
+  });
+
   app.get("/api/tickets", requireAuth as any, async (req: Request, res: Response) => {
     try {
       const userTickets = await storage.getTicketsByUser(req.session.userId!);
