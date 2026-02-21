@@ -34,10 +34,7 @@ function getPaymentIcon(icon: string): keyof typeof Ionicons.glyphMap {
 
 function isBankTransfer(method: PaymentMethod): boolean {
   const name = (method.name + " " + method.nameAr).toLowerCase();
-  return (
-    !!(method.bankName || method.accountName || method.iban) &&
-    (name.includes("bank") || name.includes("تحويل"))
-  );
+  return name.includes("bank") || name.includes("تحويل") || name.includes("حوالة");
 }
 
 export default function CheckoutScreen() {
@@ -361,28 +358,42 @@ export default function CheckoutScreen() {
                     تفاصيل التحويل البنكي
                   </Text>
                 </View>
-                {selectedMethod.bankName && (
-                  <View style={styles.bankRow}>
-                    <Text style={styles.bankValue}>
-                      {selectedMethod.bankName}
+                {(selectedMethod.bankName || selectedMethod.accountName || selectedMethod.iban) ? (
+                  <>
+                    {selectedMethod.bankName && (
+                      <View style={styles.bankRow}>
+                        <Text style={styles.bankValue}>
+                          {selectedMethod.bankName}
+                        </Text>
+                        <Text style={styles.bankLabel}>البنك</Text>
+                      </View>
+                    )}
+                    {selectedMethod.accountName && (
+                      <View style={styles.bankRow}>
+                        <Text style={styles.bankValue}>
+                          {selectedMethod.accountName}
+                        </Text>
+                        <Text style={styles.bankLabel}>اسم صاحب الحساب</Text>
+                      </View>
+                    )}
+                    {selectedMethod.iban && (
+                      <View style={styles.bankRow}>
+                        <Text style={[styles.bankValue, { fontSize: 13 }]}>
+                          {selectedMethod.iban}
+                        </Text>
+                        <Text style={styles.bankLabel}>IBAN</Text>
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <View style={{ paddingVertical: 12, alignItems: "center" }}>
+                    <Ionicons name="alert-circle" size={28} color={Colors.light.warning} />
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.light.warning, textAlign: "center", writingDirection: "rtl", marginTop: 8 }}>
+                      بيانات الحساب البنكي غير متوفرة حالياً
                     </Text>
-                    <Text style={styles.bankLabel}>البنك</Text>
-                  </View>
-                )}
-                {selectedMethod.accountName && (
-                  <View style={styles.bankRow}>
-                    <Text style={styles.bankValue}>
-                      {selectedMethod.accountName}
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", marginTop: 4 }}>
+                      يرجى التواصل مع الإدارة للحصول على بيانات التحويل
                     </Text>
-                    <Text style={styles.bankLabel}>اسم صاحب الحساب</Text>
-                  </View>
-                )}
-                {selectedMethod.iban && (
-                  <View style={styles.bankRow}>
-                    <Text style={[styles.bankValue, { fontSize: 13 }]}>
-                      {selectedMethod.iban}
-                    </Text>
-                    <Text style={styles.bankLabel}>IBAN</Text>
                   </View>
                 )}
                 <View style={styles.bankNote}>
@@ -392,7 +403,7 @@ export default function CheckoutScreen() {
                     color={Colors.light.warning}
                   />
                   <Text style={styles.bankNoteText}>
-                    يرجى التحويل ثم رفع إيصال الدفع
+                    يرجى التحويل ثم رفع إيصال الدفع بعد تأكيد الطلب
                   </Text>
                 </View>
               </View>

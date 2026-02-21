@@ -583,6 +583,7 @@ function CampaignsSection() {
 function PaymentsSection() {
   const { data: methods, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/payment-methods"] });
   const [showCreate, setShowCreate] = useState(false);
+  const [editingMethod, setEditingMethod] = useState<any>(null);
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
@@ -606,6 +607,11 @@ function PaymentsSection() {
   });
 
   if (isLoading) return <LoadingView />;
+
+  const isBankType = (m: any) => {
+    const n = ((m.name || "") + " " + (m.nameAr || "")).toLowerCase();
+    return n.includes("bank") || n.includes("تحويل") || n.includes("حوالة");
+  };
 
   return (
     <>
@@ -633,19 +639,58 @@ function PaymentsSection() {
               </View>
               <Switch value={item.enabled} onValueChange={(v) => toggleMutation.mutate({ id: item.id, enabled: v })} trackColor={{ true: Colors.light.accent }} />
             </View>
-            <Pressable
-              onPress={() => Alert.alert("حذف", `حذف طريقة الدفع "${item.nameAr}"؟`, [
-                { text: "إلغاء", style: "cancel" },
-                { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
-              ])}
-              style={styles.deletePaymentBtn}
-            >
-              <Ionicons name="trash-outline" size={16} color={Colors.light.danger} />
-            </Pressable>
+            {isBankType(item) && (
+              <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: Colors.light.border }}>
+                {item.bankName ? (
+                  <View style={{ flexDirection: "row-reverse", gap: 6, marginBottom: 4 }}>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>البنك:</Text>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.text }}>{item.bankName}</Text>
+                  </View>
+                ) : null}
+                {item.accountName ? (
+                  <View style={{ flexDirection: "row-reverse", gap: 6, marginBottom: 4 }}>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>الحساب:</Text>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.text }}>{item.accountName}</Text>
+                  </View>
+                ) : null}
+                {item.iban ? (
+                  <View style={{ flexDirection: "row-reverse", gap: 6, marginBottom: 4 }}>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>IBAN:</Text>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.light.text }}>{item.iban}</Text>
+                  </View>
+                ) : null}
+                {!item.bankName && !item.accountName && !item.iban && (
+                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingVertical: 4 }}>
+                    <Ionicons name="warning" size={14} color={Colors.light.warning} />
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.warning, writingDirection: "rtl" }}>بيانات البنك غير مكتملة - اضغط تعديل لإضافتها</Text>
+                  </View>
+                )}
+              </View>
+            )}
+            <View style={{ flexDirection: "row-reverse", gap: 8, marginTop: 8 }}>
+              <Pressable
+                onPress={() => setEditingMethod(item)}
+                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "12", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+              >
+                <Ionicons name="create-outline" size={14} color={Colors.light.accent} />
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.accent }}>تعديل</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => Alert.alert("حذف", `حذف طريقة الدفع "${item.nameAr}"؟`, [
+                  { text: "إلغاء", style: "cancel" },
+                  { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
+                ])}
+                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: Colors.light.danger + "12", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+              >
+                <Ionicons name="trash-outline" size={14} color={Colors.light.danger} />
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.danger }}>حذف</Text>
+              </Pressable>
+            </View>
           </View>
         )}
       />
       <CreatePaymentModal visible={showCreate} onClose={() => setShowCreate(false)} />
+      {editingMethod && <EditPaymentModal visible={!!editingMethod} method={editingMethod} onClose={() => setEditingMethod(null)} />}
     </>
   );
 }
@@ -982,6 +1027,73 @@ function CreatePaymentModal({ visible, onClose }: { visible: boolean; onClose: (
               style={[modalStyles.createBtn, mutation.isPending && { opacity: 0.6 }]}
             >
               {mutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>إضافة</Text>}
+            </Pressable>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function EditPaymentModal({ visible, method, onClose }: { visible: boolean; method: any; onClose: () => void }) {
+  const [name, setName] = useState(method?.name || "");
+  const [nameAr, setNameAr] = useState(method?.nameAr || "");
+  const [icon, setIcon] = useState(method?.icon || "card");
+  const [desc, setDesc] = useState(method?.description || "");
+  const [bankName, setBankName] = useState(method?.bankName || "");
+  const [accountName, setAccountName] = useState(method?.accountName || "");
+  const [iban, setIban] = useState(method?.iban || "");
+
+  const mutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", `/api/admin/payment-methods/${method.id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-methods"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
+      onClose();
+    },
+    onError: (err: any) => Alert.alert("خطأ", err.message),
+  });
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.container}>
+          <View style={modalStyles.header}>
+            <Text style={modalStyles.title}>تعديل طريقة الدفع</Text>
+            <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
+          </View>
+          <ScrollView contentContainerStyle={modalStyles.scrollContent}>
+            <ModalInput label="الاسم (إنجليزي) *" value={name} onChangeText={setName} placeholder="Credit Card" />
+            <ModalInput label="الاسم (عربي) *" value={nameAr} onChangeText={setNameAr} placeholder="بطاقة ائتمان" />
+            <ModalInput label="أيقونة" value={icon} onChangeText={setIcon} placeholder="card" />
+            <ModalInput label="وصف" value={desc} onChangeText={setDesc} placeholder="وصف اختياري" />
+            <View style={{ backgroundColor: "rgba(124,58,237,0.04)", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: Colors.light.accent + "20" }}>
+              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                <Ionicons name="business" size={16} color={Colors.light.accent} />
+                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" }}>بيانات الحساب البنكي</Text>
+              </View>
+              <ModalInput label="اسم البنك" value={bankName} onChangeText={setBankName} placeholder="مثال: البنك الأهلي السعودي" />
+              <ModalInput label="اسم صاحب الحساب" value={accountName} onChangeText={setAccountName} placeholder="الاسم كما في الحساب البنكي" />
+              <ModalInput label="رقم الآيبان (IBAN)" value={iban} onChangeText={setIban} placeholder="SA..." />
+            </View>
+            <Pressable
+              onPress={() => {
+                if (!name || !nameAr) { Alert.alert("خطأ", "يرجى ملء الحقول المطلوبة"); return; }
+                mutation.mutate({
+                  name, nameAr, icon, description: desc || undefined,
+                  bankName: bankName || null,
+                  accountName: accountName || null,
+                  iban: iban || null,
+                });
+              }}
+              disabled={mutation.isPending}
+              style={[modalStyles.createBtn, mutation.isPending && { opacity: 0.6 }]}
+            >
+              {mutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>حفظ التعديلات</Text>}
             </Pressable>
           </ScrollView>
         </View>
