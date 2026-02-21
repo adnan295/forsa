@@ -88,11 +88,13 @@ Comprehensive admin dashboard with 7 sections:
 - Full Arabic UI with RTL support
 
 ## Recent Changes
+- Email notification system (nodemailer) for order confirmations, payment updates, winner notifications, shipping updates, password reset
+- Password reset flow with 6-digit codes (15min expiry), forgot-password.tsx page
+- Campaign image upload in admin panel (expo-image-picker + /api/admin/campaigns/upload-image endpoint)
+- Rate limiting: authLimiter (20 req/15min) for auth routes, apiLimiter (60 req/min) for general API
+- Auto-seed default payment methods (Bank Transfer, Cash on Delivery) on first startup
 - Added user profile fields (fullName, phone, address, city, country) with edit-profile.tsx page
 - Profile completion required before purchase (checkout redirects to edit-profile if incomplete)
-- Searchable country picker with Arab countries prioritized (130+ countries in Arabic)
-- Auto-fill shipping address from user profile data in checkout
-- Social sharing button on campaign detail page (share-social icon in hero header)
 - Reviews & ratings system on campaign pages (1-5 stars with optional comments)
 - Admin notifications tab with real-time new order/receipt upload alerts
 - CSV export for orders in admin panel (GET /api/admin/orders/export/csv)
