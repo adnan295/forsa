@@ -25,6 +25,12 @@ export const orderStatusEnum = pgEnum("order_status", [
   "failed",
   "refunded",
 ]);
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending_payment",
+  "pending_review",
+  "confirmed",
+  "rejected",
+]);
 export const shippingStatusEnum = pgEnum("shipping_status", [
   "pending",
   "processing",
@@ -78,9 +84,18 @@ export const orders = pgTable("orders", {
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: orderStatusEnum("status").notNull().default("pending"),
   paymentMethod: text("payment_method"),
+  paymentStatus: paymentStatusEnum("payment_status").notNull().default("pending_payment"),
+  receiptUrl: text("receipt_url"),
+  rejectionReason: text("rejection_reason"),
   shippingStatus: shippingStatusEnum("shipping_status").notNull().default("pending"),
   shippingAddress: text("shipping_address"),
+  shippingFullName: text("shipping_full_name"),
+  shippingPhone: text("shipping_phone"),
+  shippingCity: text("shipping_city"),
+  shippingCountry: text("shipping_country"),
   trackingNumber: text("tracking_number"),
+  couponCode: text("coupon_code"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -111,6 +126,9 @@ export const paymentMethods = pgTable("payment_methods", {
   icon: text("icon").notNull().default("card"),
   enabled: boolean("enabled").notNull().default(true),
   description: text("description"),
+  bankName: text("bank_name"),
+  accountName: text("account_name"),
+  iban: text("iban"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -208,6 +226,9 @@ export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick
   icon: true,
   enabled: true,
   description: true,
+  bankName: true,
+  accountName: true,
+  iban: true,
 });
 
 export const insertCouponSchema = createInsertSchema(coupons).pick({

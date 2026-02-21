@@ -6,6 +6,36 @@ import { pool } from "./db";
 import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
+import multer from "multer";
+import path from "path";
+import { mkdirSync } from "fs";
+
+mkdirSync("uploads/receipts", { recursive: true });
+
+const receiptStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, "uploads/receipts/");
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const uploadReceipt = multer({
+  storage: receiptStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp|pdf/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files and PDFs are allowed"));
+    }
+  },
+});
 
 const PgSession = connectPgSimple(session);
 
@@ -191,18 +221,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/payment-methods", async (_req: Request, res: Response) => {
+    try {
+      const methods = await storage.getEnabledPaymentMethods();
+      res.json(methods);
+    } catch (error) {
+      console.error("Get payment methods error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/validate-coupon", async (req: Request, res: Response) => {
+    try {
+      const { code } = req.body;
+      if (!code) {
+        return res.status(400).json({ message: "Coupon code is required" });
+      }
+      const coupon = await storage.validateCoupon(code);
+      res.json({
+        valid: true,
+        code: coupon.code,
+        discountPercent: coupon.discountPercent,
+      });
+    } catch (error: any) {
+      res.status(400).json({ valid: false, message: error.message || "Invalid coupon" });
+    }
+  });
+
   app.post("/api/purchase", requireAuth as any, async (req: Request, res: Response) => {
     try {
-      const { campaignId, quantity = 1, paymentMethod = "card" } = req.body;
+      const {
+        campaignId,
+        quantity = 1,
+        paymentMethod = "card",
+        shippingFullName,
+        shippingPhone,
+        shippingCity,
+        shippingAddress,
+        shippingCountry,
+        couponCode,
+      } = req.body;
       if (!campaignId) {
         return res.status(400).json({ message: "Campaign ID required" });
       }
+
+      const shippingData = shippingFullName
+        ? {
+            fullName: shippingFullName,
+            phone: shippingPhone || "",
+            city: shippingCity || "",
+            address: shippingAddress || "",
+            country: shippingCountry,
+          }
+        : undefined;
 
       const result = await storage.purchaseProduct(
         req.session.userId!,
         campaignId,
         quantity,
-        paymentMethod
+        paymentMethod,
+        shippingData,
+        couponCode
       );
 
       await storage.logActivity(
@@ -210,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "New purchase",
         `User purchased ${result.tickets.length} ticket(s) for order ${result.order.id}`,
         req.session.userId!,
-        JSON.stringify({ orderId: result.order.id, campaignId, quantity })
+        JSON.stringify({ orderId: result.order.id, campaignId, quantity, paymentMethod })
       );
 
       res.json({
@@ -251,6 +330,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get orders error:", error);
       res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/orders/:id", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const order = await storage.getOrder(req.params.id as string);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      if (order.userId !== req.session.userId!) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.json(order);
+    } catch (error) {
+      console.error("Get order error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/orders/:id/receipt", requireAuth as any, uploadReceipt.single("receipt"), async (req: Request, res: Response) => {
+    try {
+      const order = await storage.getOrder(req.params.id as string);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      if (order.userId !== req.session.userId!) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ message: "Receipt file is required" });
+      }
+
+      const receiptUrl = `/uploads/receipts/${req.file.filename}`;
+      const updated = await storage.updateOrderPayment(order.id, {
+        paymentStatus: "pending_review",
+        receiptUrl,
+      });
+
+      await storage.logActivity(
+        "receipt_upload",
+        "Receipt uploaded",
+        `User uploaded receipt for order ${order.id}`,
+        req.session.userId!,
+        JSON.stringify({ orderId: order.id, receiptUrl })
+      );
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Upload receipt error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
     }
   });
 
@@ -339,6 +468,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updated);
     } catch (error) {
       console.error("Update shipping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/admin/orders/:id/payment", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { paymentStatus, rejectionReason } = req.body;
+      if (!paymentStatus || !["confirmed", "rejected"].includes(paymentStatus)) {
+        return res.status(400).json({ message: "Invalid payment status. Must be 'confirmed' or 'rejected'" });
+      }
+
+      const order = await storage.getOrder(req.params.id as string);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      if (paymentStatus === "confirmed") {
+        await storage.updateOrder(order.id, { status: "paid" as any });
+        await storage.updateOrderPayment(order.id, { paymentStatus: "confirmed" });
+
+        await storage.logActivity(
+          "payment_confirmed",
+          "Payment confirmed",
+          `Admin confirmed payment for order ${order.id}`,
+          req.session.userId!,
+          JSON.stringify({ orderId: order.id })
+        );
+      } else {
+        await storage.updateOrderPayment(order.id, {
+          paymentStatus: "rejected",
+          rejectionReason: rejectionReason || "",
+        });
+
+        await storage.logActivity(
+          "payment_rejected",
+          "Payment rejected",
+          `Admin rejected payment for order ${order.id}: ${rejectionReason || "No reason provided"}`,
+          req.session.userId!,
+          JSON.stringify({ orderId: order.id, rejectionReason })
+        );
+      }
+
+      const updated = await storage.getOrder(order.id);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update payment error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

@@ -40,8 +40,17 @@ export interface IStorage {
     totalAmount: string;
     paymentMethod?: string;
     status?: string;
+    paymentStatus?: string;
+    shippingAddress?: string;
+    shippingFullName?: string;
+    shippingPhone?: string;
+    shippingCity?: string;
+    shippingCountry?: string;
+    couponCode?: string;
+    discountAmount?: string;
   }): Promise<Order>;
   getOrdersByUser(userId: string): Promise<Order[]>;
+  getOrder(id: string): Promise<Order | undefined>;
   updateOrder(id: string, data: Partial<Order>): Promise<Order | undefined>;
 
   createTicket(data: {
@@ -58,7 +67,9 @@ export interface IStorage {
     userId: string,
     campaignId: string,
     quantity: number,
-    paymentMethod: string
+    paymentMethod: string,
+    shippingData?: { fullName: string; phone: string; city: string; address: string; country?: string },
+    couponCode?: string
   ): Promise<{ order: Order; tickets: Ticket[] }>;
 
   drawWinner(campaignId: string): Promise<{ winner: User; ticket: Ticket } | null>;
@@ -67,8 +78,10 @@ export interface IStorage {
   getUserStats(userId: string): Promise<{ orderCount: number; ticketCount: number; totalSpent: string }>;
   getAllOrders(): Promise<(Order & { username: string; campaignTitle: string })[]>;
   updateOrderShipping(orderId: string, data: { shippingStatus?: string; trackingNumber?: string; shippingAddress?: string }): Promise<Order | undefined>;
+  updateOrderPayment(orderId: string, data: { paymentStatus: string; receiptUrl?: string; rejectionReason?: string }): Promise<Order | undefined>;
 
   getPaymentMethods(): Promise<PaymentMethod[]>;
+  getEnabledPaymentMethods(): Promise<PaymentMethod[]>;
   createPaymentMethod(data: InsertPaymentMethod): Promise<PaymentMethod>;
   updatePaymentMethod(id: string, data: Partial<PaymentMethod>): Promise<PaymentMethod | undefined>;
   deletePaymentMethod(id: string): Promise<boolean>;
@@ -77,6 +90,7 @@ export interface IStorage {
   createCoupon(data: InsertCoupon): Promise<Coupon>;
   updateCoupon(id: string, data: Partial<Coupon>): Promise<Coupon | undefined>;
   deleteCoupon(id: string): Promise<boolean>;
+  validateCoupon(code: string): Promise<Coupon>;
 
   getActivityLog(limit?: number): Promise<ActivityLogEntry[]>;
   logActivity(type: string, title: string, description?: string, userId?: string, metadata?: string): Promise<ActivityLogEntry>;
@@ -170,6 +184,14 @@ export class DatabaseStorage implements IStorage {
     totalAmount: string;
     paymentMethod?: string;
     status?: string;
+    paymentStatus?: string;
+    shippingAddress?: string;
+    shippingFullName?: string;
+    shippingPhone?: string;
+    shippingCity?: string;
+    shippingCountry?: string;
+    couponCode?: string;
+    discountAmount?: string;
   }): Promise<Order> {
     const [order] = await db
       .insert(orders)
@@ -180,6 +202,14 @@ export class DatabaseStorage implements IStorage {
         totalAmount: data.totalAmount,
         paymentMethod: data.paymentMethod || "stripe",
         status: (data.status as any) || "pending",
+        paymentStatus: (data.paymentStatus as any) || "pending_payment",
+        shippingAddress: data.shippingAddress,
+        shippingFullName: data.shippingFullName,
+        shippingPhone: data.shippingPhone,
+        shippingCity: data.shippingCity,
+        shippingCountry: data.shippingCountry,
+        couponCode: data.couponCode,
+        discountAmount: data.discountAmount,
       })
       .returning();
     return order;
@@ -260,7 +290,9 @@ export class DatabaseStorage implements IStorage {
     userId: string,
     campaignId: string,
     quantity: number,
-    paymentMethod: string
+    paymentMethod: string,
+    shippingData?: { fullName: string; phone: string; city: string; address: string; country?: string },
+    couponCode?: string
   ): Promise<{ order: Order; tickets: Ticket[] }> {
     const campaign = await this.getCampaign(campaignId);
     if (!campaign) throw new Error("Campaign not found");
@@ -270,15 +302,39 @@ export class DatabaseStorage implements IStorage {
     if (quantity > remaining)
       throw new Error(`Only ${remaining} items remaining`);
 
-    const totalAmount = (parseFloat(campaign.productPrice) * quantity).toFixed(2);
+    let totalAmount = parseFloat(campaign.productPrice) * quantity;
+    let discountAmount: string | undefined;
+    let appliedCouponCode: string | undefined;
+
+    if (couponCode) {
+      const coupon = await this.validateCoupon(couponCode);
+      const discount = (totalAmount * coupon.discountPercent) / 100;
+      discountAmount = discount.toFixed(2);
+      totalAmount = totalAmount - discount;
+      appliedCouponCode = coupon.code;
+
+      await this.updateCoupon(coupon.id, { usedCount: coupon.usedCount + 1 });
+    }
+
+    const isBankTransfer = paymentMethod === "bank_transfer";
+    const orderStatus = isBankTransfer ? "pending" : "paid";
+    const orderPaymentStatus = isBankTransfer ? "pending_payment" : "confirmed";
 
     const order = await this.createOrder({
       userId,
       campaignId,
       quantity,
-      totalAmount,
+      totalAmount: totalAmount.toFixed(2),
       paymentMethod,
-      status: "paid",
+      status: orderStatus,
+      paymentStatus: orderPaymentStatus,
+      shippingAddress: shippingData?.address,
+      shippingFullName: shippingData?.fullName,
+      shippingPhone: shippingData?.phone,
+      shippingCity: shippingData?.city,
+      shippingCountry: shippingData?.country,
+      couponCode: appliedCouponCode,
+      discountAmount,
     });
 
     const createdTickets: Ticket[] = [];
@@ -369,9 +425,18 @@ export class DatabaseStorage implements IStorage {
         totalAmount: orders.totalAmount,
         status: orders.status,
         paymentMethod: orders.paymentMethod,
+        paymentStatus: orders.paymentStatus,
+        receiptUrl: orders.receiptUrl,
+        rejectionReason: orders.rejectionReason,
         shippingStatus: orders.shippingStatus,
         shippingAddress: orders.shippingAddress,
+        shippingFullName: orders.shippingFullName,
+        shippingPhone: orders.shippingPhone,
+        shippingCity: orders.shippingCity,
+        shippingCountry: orders.shippingCountry,
         trackingNumber: orders.trackingNumber,
+        couponCode: orders.couponCode,
+        discountAmount: orders.discountAmount,
         createdAt: orders.createdAt,
         username: users.username,
         campaignTitle: campaigns.title,
@@ -386,6 +451,11 @@ export class DatabaseStorage implements IStorage {
       username: row.username || "Unknown",
       campaignTitle: row.campaignTitle || "Unknown",
     }));
+  }
+
+  async getOrder(id: string): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order || undefined;
   }
 
   async updateOrderShipping(
@@ -405,8 +475,28 @@ export class DatabaseStorage implements IStorage {
     return updated || undefined;
   }
 
+  async updateOrderPayment(
+    orderId: string,
+    data: { paymentStatus: string; receiptUrl?: string; rejectionReason?: string }
+  ): Promise<Order | undefined> {
+    const updateData: any = { paymentStatus: data.paymentStatus };
+    if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
+    if (data.rejectionReason !== undefined) updateData.rejectionReason = data.rejectionReason;
+
+    const [updated] = await db
+      .update(orders)
+      .set(updateData)
+      .where(eq(orders.id, orderId))
+      .returning();
+    return updated || undefined;
+  }
+
   async getPaymentMethods(): Promise<PaymentMethod[]> {
     return db.select().from(paymentMethods).orderBy(desc(paymentMethods.createdAt));
+  }
+
+  async getEnabledPaymentMethods(): Promise<PaymentMethod[]> {
+    return db.select().from(paymentMethods).where(eq(paymentMethods.enabled, true)).orderBy(desc(paymentMethods.createdAt));
   }
 
   async createPaymentMethod(data: InsertPaymentMethod): Promise<PaymentMethod> {
@@ -455,6 +545,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(coupons.id, id))
       .returning();
     return !!deleted;
+  }
+
+  async validateCoupon(code: string): Promise<Coupon> {
+    const [coupon] = await db
+      .select()
+      .from(coupons)
+      .where(eq(coupons.code, code.toUpperCase()));
+
+    if (!coupon) throw new Error("Invalid coupon code");
+    if (!coupon.enabled) throw new Error("This coupon is no longer active");
+    if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+      throw new Error("This coupon has expired");
+    }
+    if (coupon.usedCount >= coupon.maxUses) {
+      throw new Error("This coupon has reached its maximum usage limit");
+    }
+
+    return coupon;
   }
 
   async getActivityLog(limit: number = 50): Promise<ActivityLogEntry[]> {
