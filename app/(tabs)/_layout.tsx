@@ -11,17 +11,17 @@ import Colors from "@/constants/colors";
 function NativeTabLayout() {
   return (
     <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "flame", selected: "flame.fill" }} />
-        <Label>الحملات</Label>
+      <NativeTabs.Trigger name="profile">
+        <Icon sf={{ default: "person", selected: "person.fill" }} />
+        <Label>حسابي</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="tickets">
         <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
         <Label>تذاكري</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>حسابي</Label>
+      <NativeTabs.Trigger name="index">
+        <Icon sf={{ default: "flame", selected: "flame.fill" }} />
+        <Label>الحملات</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -63,11 +63,11 @@ function ClassicTabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="profile"
         options={{
-          title: "الحملات",
+          title: "حسابي",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flame" size={size} color={color} />
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />
@@ -81,11 +81,11 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="index"
         options={{
-          title: "حسابي",
+          title: "الحملات",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <Ionicons name="flame" size={size} color={color} />
           ),
         }}
       />
