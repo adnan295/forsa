@@ -25,6 +25,13 @@ export const orderStatusEnum = pgEnum("order_status", [
   "failed",
   "refunded",
 ]);
+export const shippingStatusEnum = pgEnum("shipping_status", [
+  "pending",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+]);
 
 export const users = pgTable("users", {
   id: varchar("id")
@@ -71,6 +78,9 @@ export const orders = pgTable("orders", {
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: orderStatusEnum("status").notNull().default("pending"),
   paymentMethod: text("payment_method"),
+  shippingStatus: shippingStatusEnum("shipping_status").notNull().default("pending"),
+  shippingAddress: text("shipping_address"),
+  trackingNumber: text("tracking_number"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -89,6 +99,43 @@ export const tickets = pgTable("tickets", {
     .notNull()
     .references(() => orders.id),
   isWinner: boolean("is_winner").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const paymentMethods = pgTable("payment_methods", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  nameAr: text("name_ar").notNull(),
+  icon: text("icon").notNull().default("card"),
+  enabled: boolean("enabled").notNull().default(true),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const coupons = pgTable("coupons", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  code: text("code").notNull().unique(),
+  discountPercent: integer("discount_percent").notNull(),
+  maxUses: integer("max_uses").notNull().default(100),
+  usedCount: integer("used_count").notNull().default(0),
+  enabled: boolean("enabled").notNull().default(true),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const activityLog = pgTable("activity_log", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  userId: varchar("user_id"),
+  metadata: text("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -155,9 +202,29 @@ export const insertCampaignSchema = createInsertSchema(campaigns).pick({
   prizeImageUrl: true,
 });
 
+export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick({
+  name: true,
+  nameAr: true,
+  icon: true,
+  enabled: true,
+  description: true,
+});
+
+export const insertCouponSchema = createInsertSchema(coupons).pick({
+  code: true,
+  discountPercent: true,
+  maxUses: true,
+  expiresAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Campaign = typeof campaigns.$inferSelect;
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
 export type Order = typeof orders.$inferSelect;
 export type Ticket = typeof tickets.$inferSelect;
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
+export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
+export type Coupon = typeof coupons.$inferSelect;
+export type InsertCoupon = z.infer<typeof insertCouponSchema>;
+export type ActivityLogEntry = typeof activityLog.$inferSelect;
