@@ -20,6 +20,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
+import { useCart } from "@/lib/cart-context";
 import CampaignCard from "@/components/CampaignCard";
 import { queryClient } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
@@ -154,6 +155,7 @@ const FILTER_TABS: { key: FilterKey; label: string; icon: keyof typeof Ionicons.
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { totalItems } = useCart();
   const [searchText, setSearchText] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 
@@ -206,14 +208,28 @@ export default function HomeScreen() {
                 </Text>
                 <Text style={styles.heroTitle}>لاكي درو</Text>
               </View>
-              {!user && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Pressable
-                  onPress={() => router.push("/auth")}
-                  style={styles.signInBtn}
+                  onPress={() => router.push("/cart" as any)}
+                  style={styles.cartBtn}
+                  testID="cart-button"
                 >
-                  <Text style={styles.signInText}>دخول</Text>
+                  <Ionicons name="cart-outline" size={22} color="#fff" />
+                  {totalItems > 0 && (
+                    <View style={styles.cartBadge}>
+                      <Text style={styles.cartBadgeText}>{totalItems > 99 ? "99+" : totalItems}</Text>
+                    </View>
+                  )}
                 </Pressable>
-              )}
+                {!user && (
+                  <Pressable
+                    onPress={() => router.push("/auth")}
+                    style={styles.signInBtn}
+                  >
+                    <Text style={styles.signInText}>دخول</Text>
+                  </Pressable>
+                )}
+              </View>
             </View>
 
             {activeCampaigns.length > 0 && (
@@ -534,6 +550,34 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     textAlign: "right",
     writingDirection: "rtl",
+  },
+  cartBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  cartBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#EC4899",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: "#7C3AED",
+  },
+  cartBadgeText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 10,
+    color: "#fff",
   },
   signInBtn: {
     backgroundColor: "rgba(255,255,255,0.2)",

@@ -28,6 +28,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
+import { useCart } from "@/lib/cart-context";
 import { getApiUrl } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
 
@@ -35,7 +36,9 @@ export default function CampaignDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
+  const [addedToCart, setAddedToCart] = useState(false);
 
   const pulseScale = useSharedValue(1);
 
@@ -424,30 +427,53 @@ export default function CampaignDetailScreen() {
               <Text style={styles.bottomPrice}>${totalPrice}</Text>
               <Text style={styles.bottomQty}>{quantity} منتج</Text>
             </View>
-            <Pressable
-              onPress={() => {
-                if (!user) {
-                  router.push("/auth");
-                  return;
-                }
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                router.push({ pathname: "/checkout", params: { campaignId: id, quantity: String(quantity) } });
-              }}
-              style={({ pressed }) => [
-                styles.buyButton,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-              ]}
-            >
-              <LinearGradient
-                colors={[Colors.light.accent, Colors.light.accentDark]}
-                style={styles.buyButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
+            <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+              <Pressable
+                onPress={() => {
+                  if (!user) {
+                    router.push("/auth");
+                    return;
+                  }
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  router.push({ pathname: "/checkout", params: { campaignId: id, quantity: String(quantity) } });
+                }}
+                style={({ pressed }) => [
+                  styles.buyButton,
+                  pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                ]}
               >
-                <Ionicons name="cart" size={20} color="#fff" />
-                <Text style={styles.buyButtonText}>اشترِ الآن</Text>
-              </LinearGradient>
-            </Pressable>
+                <LinearGradient
+                  colors={[Colors.light.accent, Colors.light.accentDark]}
+                  style={styles.buyButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Ionicons name="flash" size={18} color="#fff" />
+                  <Text style={styles.buyButtonText}>اشترِ الآن</Text>
+                </LinearGradient>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  if (!user) {
+                    router.push("/auth");
+                    return;
+                  }
+                  if (campaign) {
+                    addItem(campaign, quantity);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    setAddedToCart(true);
+                    setTimeout(() => setAddedToCart(false), 2000);
+                  }
+                }}
+                style={({ pressed }) => [
+                  styles.addToCartButton,
+                  pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                  addedToCart && { borderColor: Colors.light.success },
+                ]}
+              >
+                <Ionicons name={addedToCart ? "checkmark-circle" : "cart-outline"} size={20} color={addedToCart ? Colors.light.success : Colors.light.accent} />
+              </Pressable>
+            </View>
           </View>
         </View>
       )}
@@ -858,6 +884,16 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
   },
+  addToCartButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: Colors.light.accent,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   buyButton: {
     borderRadius: 16,
     overflow: "hidden",
@@ -866,7 +902,7 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
     paddingVertical: 16,
     borderRadius: 16,
   },
