@@ -1,8 +1,8 @@
-import React, { useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
-  FlatList,
+  SectionList,
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
@@ -16,7 +16,64 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { queryClient } from "@/lib/query-client";
-import type { Ticket } from "@shared/schema";
+import type { Ticket, Order } from "@shared/schema";
+
+type TabKey = "orders" | "tickets";
+
+const getPaymentStatusAr = (s: string) => {
+  const map: Record<string, string> = { pending_payment: "في انتظار الدفع", pending_review: "قيد المراجعة", confirmed: "تم التأكيد", rejected: "مرفوض" };
+  return map[s] || s;
+};
+const getPaymentColor = (s: string) => {
+  const map: Record<string, string> = { pending_payment: "#F39C12", pending_review: "#3498DB", confirmed: "#2ECC71", rejected: "#E74C3C" };
+  return map[s] || "#666";
+};
+const getShippingStatusAr = (s: string) => {
+  const map: Record<string, string> = { pending: "قيد الانتظار", processing: "قيد التجهيز", shipped: "تم الشحن", delivered: "تم التوصيل", cancelled: "ملغي" };
+  return map[s] || s;
+};
+const getShippingColor = (s: string) => {
+  const map: Record<string, string> = { pending: "#F39C12", processing: "#3498DB", shipped: "#9B59B6", delivered: "#2ECC71", cancelled: "#E74C3C" };
+  return map[s] || "#666";
+};
+
+function OrderItem({ order }: { order: Order }) {
+  return (
+    <Pressable
+      style={styles.orderCard}
+      onPress={() => router.push({ pathname: "/order/[id]", params: { id: order.id } })}
+    >
+      <View style={styles.orderHeader}>
+        <View style={styles.orderIdRow}>
+          <Ionicons name="receipt" size={18} color={Colors.light.accent} />
+          <Text style={styles.orderIdText}>#{order.id.slice(0, 8)}</Text>
+        </View>
+        <Ionicons name="chevron-back" size={18} color={Colors.light.textSecondary} />
+      </View>
+      <View style={styles.orderBody}>
+        <View style={styles.orderInfoRow}>
+          <Text style={styles.orderAmount}>${order.totalAmount}</Text>
+          <Text style={styles.orderQty}>{order.quantity} تذكرة</Text>
+        </View>
+        <View style={styles.orderPills}>
+          <View style={[styles.pill, { backgroundColor: getPaymentColor(order.paymentStatus) + "18" }]}>
+            <Text style={[styles.pillText, { color: getPaymentColor(order.paymentStatus) }]}>
+              {getPaymentStatusAr(order.paymentStatus)}
+            </Text>
+          </View>
+          <View style={[styles.pill, { backgroundColor: getShippingColor(order.shippingStatus) + "18" }]}>
+            <Text style={[styles.pillText, { color: getShippingColor(order.shippingStatus) }]}>
+              {getShippingStatusAr(order.shippingStatus)}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <Text style={styles.orderDate}>
+        {new Date(order.createdAt).toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" })}
+      </Text>
+    </Pressable>
+  );
+}
 
 function TicketItem({ ticket }: { ticket: Ticket }) {
   return (
@@ -56,31 +113,45 @@ function TicketItem({ ticket }: { ticket: Ticket }) {
 export default function TicketsScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabKey>("orders");
 
   const {
     data: tickets,
-    isLoading,
-    refetch,
-    isRefetching,
+    isLoading: ticketsLoading,
+    refetch: refetchTickets,
+    isRefetching: ticketsRefetching,
   } = useQuery<Ticket[]>({
     queryKey: ["/api/tickets"],
     enabled: !!user,
     staleTime: 5000,
   });
 
+  const {
+    data: orders,
+    isLoading: ordersLoading,
+    refetch: refetchOrders,
+    isRefetching: ordersRefetching,
+  } = useQuery<Order[]>({
+    queryKey: ["/api/orders"],
+    enabled: !!user,
+    staleTime: 5000,
+  });
+
   const onRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
-    refetch();
-  }, [refetch]);
+    queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+    refetchTickets();
+    refetchOrders();
+  }, [refetchTickets, refetchOrders]);
 
   if (!user) {
     return (
       <View style={[styles.container, styles.centered]}>
         <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
-          <Ionicons name="ticket-outline" size={56} color={Colors.light.tabIconDefault} />
-          <Text style={styles.emptyTitle}>سجّل الدخول لعرض التذاكر</Text>
+          <Ionicons name="receipt-outline" size={56} color={Colors.light.tabIconDefault} />
+          <Text style={styles.emptyTitle}>سجّل الدخول لعرض طلباتك</Text>
           <Text style={styles.emptyText}>
-            ستظهر تذاكر السحب هنا بعد الشراء
+            ستظهر طلباتك وتذاكر السحب هنا بعد الشراء
           </Text>
           <Pressable
             onPress={() => router.push("/auth")}
@@ -93,6 +164,9 @@ export default function TicketsScreen() {
     );
   }
 
+  const isLoading = ticketsLoading || ordersLoading;
+  const isRefetching = ticketsRefetching || ordersRefetching;
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -101,26 +175,61 @@ export default function TicketsScreen() {
     );
   }
 
+  const renderItem = ({ item, section }: any) => {
+    if (section.key === "orders") {
+      return <OrderItem order={item} />;
+    }
+    return <TicketItem ticket={item} />;
+  };
+
+  const sections = activeTab === "orders"
+    ? [{ key: "orders", data: orders || [] }]
+    : [{ key: "tickets", data: tickets || [] }];
+
   return (
     <View style={styles.container}>
-      <FlatList
-        data={tickets}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <TicketItem ticket={item} />}
-        ListHeaderComponent={
-          <View style={{ paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 }}>
-            <Text style={styles.screenTitle}>تذاكري</Text>
-            <Text style={styles.screenSubtitle}>
-              {tickets?.length || 0} تذكرة
+      <View style={{ paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16, paddingHorizontal: 16 }}>
+        <Text style={styles.screenTitle}>طلباتي</Text>
+        <View style={styles.tabRow}>
+          <Pressable
+            onPress={() => setActiveTab("orders")}
+            style={[styles.tabBtn, activeTab === "orders" && styles.tabBtnActive]}
+          >
+            <Ionicons name="receipt" size={16} color={activeTab === "orders" ? Colors.light.accent : Colors.light.textSecondary} />
+            <Text style={[styles.tabBtnText, activeTab === "orders" && styles.tabBtnTextActive]}>
+              الطلبات ({orders?.length || 0})
             </Text>
-          </View>
-        }
+          </Pressable>
+          <Pressable
+            onPress={() => setActiveTab("tickets")}
+            style={[styles.tabBtn, activeTab === "tickets" && styles.tabBtnActive]}
+          >
+            <Ionicons name="ticket" size={16} color={activeTab === "tickets" ? Colors.light.accent : Colors.light.textSecondary} />
+            <Text style={[styles.tabBtnText, activeTab === "tickets" && styles.tabBtnTextActive]}>
+              التذاكر ({tickets?.length || 0})
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+      <SectionList
+        sections={sections}
+        keyExtractor={(item: any) => item.id}
+        renderItem={renderItem}
+        renderSectionHeader={() => null}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
-            <Ionicons name="ticket-outline" size={48} color={Colors.light.tabIconDefault} />
-            <Text style={styles.emptyTitle}>لا توجد تذاكر بعد</Text>
+            <Ionicons
+              name={activeTab === "orders" ? "receipt-outline" : "ticket-outline"}
+              size={48}
+              color={Colors.light.tabIconDefault}
+            />
+            <Text style={styles.emptyTitle}>
+              {activeTab === "orders" ? "لا توجد طلبات بعد" : "لا توجد تذاكر بعد"}
+            </Text>
             <Text style={styles.emptyText}>
-              اشترِ من حملة للحصول على تذاكر السحب
+              {activeTab === "orders"
+                ? "ستظهر طلباتك هنا بعد الشراء"
+                : "اشترِ من حملة للحصول على تذاكر السحب"}
             </Text>
           </View>
         }
@@ -157,17 +266,106 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 28,
     color: Colors.light.text,
-    marginBottom: 4,
+    marginBottom: 12,
     paddingHorizontal: 4,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  screenSubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
+  tabRow: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    marginBottom: 16,
+  },
+  tabBtn: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  tabBtnActive: {
+    backgroundColor: Colors.light.accent + "12",
+    borderColor: Colors.light.accent,
+  },
+  tabBtnText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
     color: Colors.light.textSecondary,
-    marginBottom: 20,
-    paddingHorizontal: 4,
+    writingDirection: "rtl",
+  },
+  tabBtnTextActive: {
+    color: Colors.light.accent,
+    fontFamily: "Inter_600SemiBold",
+  },
+  orderCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  orderHeader: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  orderIdRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  orderIdText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: Colors.light.text,
+  },
+  orderBody: {
+    marginBottom: 8,
+  },
+  orderInfoRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  orderAmount: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+    color: Colors.light.text,
+  },
+  orderQty: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+  orderPills: {
+    flexDirection: "row-reverse",
+    gap: 8,
+  },
+  pill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  pillText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    writingDirection: "rtl",
+  },
+  orderDate: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: Colors.light.textSecondary,
     textAlign: "right",
     writingDirection: "rtl",
   },
