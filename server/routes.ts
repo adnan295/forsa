@@ -109,6 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username,
         email: user.email,
         role: user.role,
+        createdAt: user.createdAt,
       });
     } catch (error: any) {
       if (error?.code === "23505") {
@@ -142,6 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username,
         email: user.email,
         role: user.role,
+        createdAt: user.createdAt,
       });
     } catch (error) {
       console.error("Login error:", error);
@@ -168,7 +170,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       username: user.username,
       email: user.email,
       role: user.role,
+      createdAt: user.createdAt,
     });
+  });
+
+  app.get("/api/user/stats", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId!;
+      const userOrders = await storage.getOrdersByUser(userId);
+      const userTickets = await storage.getTicketsByUser(userId);
+      const totalSpent = userOrders.reduce((sum, o) => sum + parseFloat(o.totalAmount), 0);
+      const confirmedOrders = userOrders.filter(o => o.paymentStatus === "confirmed").length;
+      const winningTickets = userTickets.filter(t => t.isWinner).length;
+      res.json({
+        totalOrders: userOrders.length,
+        confirmedOrders,
+        totalTickets: userTickets.length,
+        winningTickets,
+        totalSpent: totalSpent.toFixed(2),
+      });
+    } catch (error) {
+      console.error("Get user stats error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
   });
 
   app.get("/api/campaigns", async (_req: Request, res: Response) => {
