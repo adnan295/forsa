@@ -60,7 +60,6 @@ export default function CampaignDetailScreen() {
     staleTime: 3000,
   });
 
-
   if (isLoading || !campaign) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -76,14 +75,15 @@ export default function CampaignDetailScreen() {
   const isActive = campaign.status === "active";
   const isCompleted = campaign.status === "completed";
   const isSoldOut = campaign.status === "sold_out" || campaign.status === "drawing";
-  const totalPrice = (parseFloat(campaign.productPrice) * quantity).toFixed(2);
+  const unitPrice = parseFloat(campaign.productPrice);
+  const totalPrice = (unitPrice * quantity).toFixed(2);
   const maxQty = Math.min(remaining, 10);
 
   return (
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: isActive ? 120 : 40 }}
+        contentContainerStyle={{ paddingBottom: isActive ? 140 : 40 }}
       >
         <View style={styles.heroSection}>
           {campaign.imageUrl ? (
@@ -99,13 +99,15 @@ export default function CampaignDetailScreen() {
           >
             <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
               <Pressable onPress={() => router.back()} style={styles.backButton}>
-                <Ionicons name="arrow-forward" size={24} color="#fff" />
+                <View style={styles.backBtnCircle}>
+                  <Ionicons name="arrow-forward" size={22} color="#fff" />
+                </View>
               </Pressable>
 
               <View style={styles.heroCenter}>
                 {!campaign.imageUrl && (
                   <Animated.View style={[styles.prizeIcon, pulseStyle]}>
-                    <Ionicons name="gift" size={56} color={Colors.light.accent} />
+                    <Ionicons name="gift" size={52} color={Colors.light.accent} />
                   </Animated.View>
                 )}
                 <Text style={styles.heroTitle}>{campaign.title}</Text>
@@ -121,7 +123,10 @@ export default function CampaignDetailScreen() {
         <View style={styles.content}>
           <View style={styles.progressCard}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressTitle}>تقدم الحملة</Text>
+              <View style={styles.progressTitleRow}>
+                <Ionicons name="analytics" size={18} color={Colors.light.accent} />
+                <Text style={styles.progressTitle}>تقدم الحملة</Text>
+              </View>
               <Text style={styles.progressPercent}>
                 {Math.round(progress * 100)}%
               </Text>
@@ -130,7 +135,13 @@ export default function CampaignDetailScreen() {
             <View style={styles.progressBarWrap}>
               <View style={styles.progressBarBg}>
                 <LinearGradient
-                  colors={[Colors.light.accent, Colors.light.accentDark]}
+                  colors={
+                    isCompleted
+                      ? [Colors.light.success, "#27AE60"]
+                      : isSoldOut
+                      ? [Colors.light.warning, "#E67E22"]
+                      : [Colors.light.accent, "#C49A3C"]
+                  }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={[
@@ -143,18 +154,21 @@ export default function CampaignDetailScreen() {
 
             <View style={styles.progressStats}>
               <View style={styles.progressStat}>
+                <View style={[styles.statDot, { backgroundColor: Colors.light.accent }]} />
                 <Text style={styles.progressStatNum}>
                   {campaign.soldQuantity}
                 </Text>
                 <Text style={styles.progressStatLabel}>مباع</Text>
               </View>
               <View style={styles.progressStat}>
+                <View style={[styles.statDot, { backgroundColor: Colors.light.textSecondary }]} />
                 <Text style={styles.progressStatNum}>
                   {campaign.totalQuantity}
                 </Text>
                 <Text style={styles.progressStatLabel}>الإجمالي</Text>
               </View>
               <View style={styles.progressStat}>
+                <View style={[styles.statDot, { backgroundColor: Colors.light.success }]} />
                 <Text style={[styles.progressStatNum, { color: Colors.light.accent }]}>
                   {remaining}
                 </Text>
@@ -163,26 +177,79 @@ export default function CampaignDetailScreen() {
             </View>
           </View>
 
+          {isActive && (
+            <View style={styles.quantityCard}>
+              <View style={styles.quantityHeader}>
+                <Ionicons name="layers-outline" size={18} color={Colors.light.accent} />
+                <Text style={styles.quantityTitle}>اختر الكمية</Text>
+              </View>
+              <View style={styles.quantityControls}>
+                <Pressable
+                  onPress={() => {
+                    if (quantity > 1) {
+                      setQuantity(quantity - 1);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                  }}
+                  style={[styles.qtyBtn, quantity <= 1 && styles.qtyBtnDisabled]}
+                  disabled={quantity <= 1}
+                >
+                  <Ionicons name="remove" size={22} color={quantity <= 1 ? Colors.light.border : Colors.light.text} />
+                </Pressable>
+                <View style={styles.qtyValueWrap}>
+                  <Text style={styles.qtyValue}>{quantity}</Text>
+                </View>
+                <Pressable
+                  onPress={() => {
+                    if (quantity < maxQty) {
+                      setQuantity(quantity + 1);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                  }}
+                  style={[styles.qtyBtn, quantity >= maxQty && styles.qtyBtnDisabled]}
+                  disabled={quantity >= maxQty}
+                >
+                  <Ionicons name="add" size={22} color={quantity >= maxQty ? Colors.light.border : Colors.light.text} />
+                </Pressable>
+              </View>
+              <View style={styles.quantityPriceRow}>
+                <Text style={styles.quantityPriceLabel}>{quantity} × ${unitPrice.toFixed(2)}</Text>
+                <Text style={styles.quantityPriceTotal}>${totalPrice}</Text>
+              </View>
+            </View>
+          )}
+
           <View style={styles.detailSection}>
-            <Text style={styles.detailTitle}>عن المنتج</Text>
+            <View style={styles.detailHeader}>
+              <Ionicons name="information-circle-outline" size={18} color={Colors.light.accent} />
+              <Text style={styles.detailTitle}>عن المنتج</Text>
+            </View>
             <Text style={styles.detailText}>{campaign.description}</Text>
           </View>
 
           {campaign.prizeDescription && (
             <View style={styles.detailSection}>
-              <Text style={styles.detailTitle}>تفاصيل الجائزة</Text>
+              <View style={styles.detailHeader}>
+                <Ionicons name="gift-outline" size={18} color="#FFD700" />
+                <Text style={styles.detailTitle}>تفاصيل الجائزة</Text>
+              </View>
               <Text style={styles.detailText}>{campaign.prizeDescription}</Text>
             </View>
           )}
 
           <View style={styles.priceCard}>
-            <View>
+            <View style={styles.priceCardLeft}>
               <Text style={styles.priceLabel}>سعر التذكرة</Text>
-              <Text style={styles.priceValue}>
-                ${parseFloat(campaign.productPrice).toFixed(2)}
-              </Text>
+              <View style={styles.priceValueRow}>
+                <Text style={styles.priceCurrency}>$</Text>
+                <Text style={styles.priceValue}>
+                  {unitPrice.toFixed(2)}
+                </Text>
+              </View>
             </View>
-            <Ionicons name="pricetag" size={28} color={Colors.light.accent} />
+            <View style={styles.priceIconWrap}>
+              <Ionicons name="pricetag" size={24} color={Colors.light.accent} />
+            </View>
           </View>
 
           {isCompleted && campaign.winnerTicketId && (
@@ -191,7 +258,7 @@ export default function CampaignDetailScreen() {
                 colors={["#FFD700", "#FFA500"]}
                 style={styles.winnerGradient}
               >
-                <Ionicons name="trophy" size={32} color="#fff" />
+                <Ionicons name="trophy" size={36} color="#fff" />
                 <Text style={styles.winnerTitle}>تم إعلان الفائز!</Text>
                 <Text style={styles.winnerTicket}>
                   التذكرة: {campaign.winnerTicketId}
@@ -202,7 +269,9 @@ export default function CampaignDetailScreen() {
 
           {isSoldOut && (
             <View style={styles.soldOutBanner}>
-              <Ionicons name="hourglass" size={24} color={Colors.light.warning} />
+              <View style={styles.soldOutIconWrap}>
+                <Ionicons name="hourglass" size={22} color={Colors.light.warning} />
+              </View>
               <Text style={styles.soldOutText}>
                 نفذت جميع العناصر! السحب سيبدأ قريباً.
               </Text>
@@ -213,8 +282,13 @@ export default function CampaignDetailScreen() {
 
       {isActive && (
         <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : Math.max(insets.bottom, 16) }]}>
+          <LinearGradient
+            colors={["rgba(255,255,255,0)", "rgba(255,255,255,1)", "#FFFFFF"]}
+            style={styles.bottomGradient}
+          />
           <View style={styles.bottomContent}>
-            <View>
+            <View style={styles.bottomLeft}>
+              <Text style={styles.bottomPriceLabel}>الإجمالي</Text>
               <Text style={styles.bottomPrice}>${totalPrice}</Text>
               <Text style={styles.bottomQty}>{quantity} تذكرة</Text>
             </View>
@@ -245,7 +319,6 @@ export default function CampaignDetailScreen() {
           </View>
         </View>
       )}
-
     </View>
   );
 }
@@ -261,7 +334,7 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     position: "relative",
-    minHeight: 280,
+    minHeight: 300,
   },
   heroImage: {
     position: "absolute",
@@ -274,11 +347,19 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     flex: 1,
-    paddingBottom: 32,
+    paddingBottom: 36,
   },
   backButton: {
     padding: 16,
     alignSelf: "flex-end",
+  },
+  backBtnCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   heroCenter: {
     alignItems: "center",
@@ -291,23 +372,28 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(212, 168, 83, 0.15)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: "rgba(212, 168, 83, 0.25)",
   },
   heroTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 24,
+    fontSize: 26,
     color: "#FFFFFF",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 12,
+    writingDirection: "rtl",
   },
   prizeBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 7,
     backgroundColor: "rgba(255, 215, 0, 0.12)",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 215, 0, 0.2)",
   },
   prizeTitle: {
     fontFamily: "Inter_600SemiBold",
@@ -316,24 +402,29 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    marginTop: -16,
+    marginTop: -20,
   },
   progressCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    marginBottom: 14,
+    shadowColor: "#0A1628",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
   },
   progressHeader: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 16,
+  },
+  progressTitleRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
   },
   progressTitle: {
     fontFamily: "Inter_600SemiBold",
@@ -344,57 +435,144 @@ const styles = StyleSheet.create({
   },
   progressPercent: {
     fontFamily: "Inter_700Bold",
-    fontSize: 18,
+    fontSize: 20,
     color: Colors.light.accent,
   },
   progressBarWrap: {
-    marginBottom: 16,
+    marginBottom: 18,
   },
   progressBarBg: {
-    height: 12,
+    height: 10,
     backgroundColor: Colors.light.progressBg,
-    borderRadius: 6,
+    borderRadius: 5,
     overflow: "hidden",
   },
   progressBarFill: {
     height: "100%",
-    borderRadius: 6,
+    borderRadius: 5,
   },
   progressStats: {
     flexDirection: "row-reverse",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
   },
   progressStat: {
     alignItems: "center",
+    gap: 4,
+  },
+  statDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   progressStatNum: {
     fontFamily: "Inter_700Bold",
-    fontSize: 20,
+    fontSize: 22,
     color: Colors.light.text,
   },
   progressStatLabel: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
-    marginTop: 2,
     writingDirection: "rtl",
   },
+
+  quantityCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: "#0A1628",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  quantityHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  quantityTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+    color: Colors.light.text,
+    writingDirection: "rtl",
+  },
+  quantityControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 20,
+    marginBottom: 14,
+  },
+  qtyBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: Colors.light.progressBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyBtnDisabled: {
+    opacity: 0.4,
+  },
+  qtyValueWrap: {
+    width: 64,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: "rgba(212, 168, 83, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: Colors.light.accent,
+  },
+  qtyValue: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 26,
+    color: Colors.light.text,
+  },
+  quantityPriceRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.border,
+  },
+  quantityPriceLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+  quantityPriceTotal: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 20,
+    color: Colors.light.accent,
+  },
+
   detailSection: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 18,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowColor: "#0A1628",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
     elevation: 2,
+  },
+  detailHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
   },
   detailTitle: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 16,
     color: Colors.light.text,
-    marginBottom: 8,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -402,7 +580,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
-    lineHeight: 22,
+    lineHeight: 24,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -411,15 +589,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 18,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowColor: "#0A1628",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
     elevation: 2,
   },
+  priceCardLeft: {},
   priceLabel: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
@@ -428,44 +607,71 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
+  priceValueRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+  },
+  priceCurrency: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 16,
+    color: Colors.light.accent,
+    marginBottom: 3,
+    marginRight: 2,
+  },
   priceValue: {
     fontFamily: "Inter_700Bold",
-    fontSize: 28,
+    fontSize: 30,
     color: Colors.light.text,
   },
+  priceIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: "rgba(212, 168, 83, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   winnerCard: {
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: "hidden",
     marginBottom: 12,
   },
   winnerGradient: {
-    padding: 24,
+    padding: 28,
     alignItems: "center",
   },
   winnerTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 20,
+    fontSize: 22,
     color: "#fff",
-    marginTop: 10,
+    marginTop: 12,
     writingDirection: "rtl",
   },
   winnerTicket: {
     fontFamily: "Inter_500Medium",
     fontSize: 14,
     color: "rgba(255,255,255,0.8)",
-    marginTop: 6,
+    marginTop: 8,
     writingDirection: "rtl",
   },
   soldOutBanner: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(243, 156, 18, 0.1)",
+    gap: 12,
+    backgroundColor: "rgba(243, 156, 18, 0.08)",
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(243, 156, 18, 0.3)",
+    borderColor: "rgba(243, 156, 18, 0.2)",
     marginBottom: 12,
+  },
+  soldOutIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "rgba(243, 156, 18, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   soldOutText: {
     fontFamily: "Inter_500Medium",
@@ -474,6 +680,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "right",
     writingDirection: "rtl",
+    lineHeight: 22,
   },
   bottomBar: {
     position: "absolute",
@@ -481,47 +688,60 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "#FFFFFF",
+    paddingTop: 14,
+    paddingHorizontal: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.light.border,
-    paddingTop: 12,
-    paddingHorizontal: 16,
+  },
+  bottomGradient: {
+    position: "absolute",
+    top: -30,
+    left: 0,
+    right: 0,
+    height: 30,
   },
   bottomContent: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
   },
+  bottomLeft: {
+    alignItems: "flex-end",
+  },
+  bottomPriceLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
   bottomPrice: {
     fontFamily: "Inter_700Bold",
-    fontSize: 22,
+    fontSize: 24,
     color: Colors.light.text,
-    textAlign: "right",
     writingDirection: "rtl",
   },
   bottomQty: {
     fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.light.textSecondary,
-    textAlign: "right",
     writingDirection: "rtl",
   },
   buyButton: {
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: "hidden",
   },
   buyButtonGradient: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 28,
+    paddingHorizontal: 32,
     paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: 16,
   },
   buyButtonText: {
     fontFamily: "Inter_700Bold",
-    fontSize: 16,
+    fontSize: 17,
     color: "#FFFFFF",
     writingDirection: "rtl",
   },
 });
-
