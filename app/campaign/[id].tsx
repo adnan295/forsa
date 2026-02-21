@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
   Modal,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -26,7 +27,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { apiRequest, queryClient } from "@/lib/query-client";
+import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
 import type { Campaign, Ticket } from "@shared/schema";
 
 export default function CampaignDetailScreen() {
@@ -113,27 +114,38 @@ export default function CampaignDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: isActive ? 120 : 40 }}
       >
-        <LinearGradient
-          colors={["#0A1628", "#152238", "#1A2D4A"]}
-          style={styles.heroSection}
-        >
-          <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-forward" size={24} color="#fff" />
-            </Pressable>
+        <View style={styles.heroSection}>
+          {campaign.imageUrl ? (
+            <Image
+              source={{ uri: `${getApiUrl()}${campaign.imageUrl}`.replace(/\/+/g, '/').replace(':/', '://') }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          ) : null}
+          <LinearGradient
+            colors={campaign.imageUrl ? ["transparent", "rgba(10,22,40,0.7)", "rgba(10,22,40,0.95)"] : ["#0A1628", "#152238", "#1A2D4A"]}
+            style={styles.heroOverlay}
+          >
+            <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
+              <Pressable onPress={() => router.back()} style={styles.backButton}>
+                <Ionicons name="arrow-forward" size={24} color="#fff" />
+              </Pressable>
 
-            <View style={styles.heroCenter}>
-              <Animated.View style={[styles.prizeIcon, pulseStyle]}>
-                <Ionicons name="gift" size={56} color={Colors.light.accent} />
-              </Animated.View>
-              <Text style={styles.heroTitle}>{campaign.title}</Text>
-              <View style={styles.prizeBadge}>
-                <Ionicons name="trophy" size={16} color="#FFD700" />
-                <Text style={styles.prizeTitle}>{campaign.prizeName}</Text>
+              <View style={styles.heroCenter}>
+                {!campaign.imageUrl && (
+                  <Animated.View style={[styles.prizeIcon, pulseStyle]}>
+                    <Ionicons name="gift" size={56} color={Colors.light.accent} />
+                  </Animated.View>
+                )}
+                <Text style={styles.heroTitle}>{campaign.title}</Text>
+                <View style={styles.prizeBadge}>
+                  <Ionicons name="trophy" size={16} color="#FFD700" />
+                  <Text style={styles.prizeTitle}>{campaign.prizeName}</Text>
+                </View>
               </View>
             </View>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
+        </View>
 
         <View style={styles.content}>
           <View style={styles.progressCard}>
@@ -389,6 +401,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   heroSection: {
+    position: "relative",
+    minHeight: 280,
+  },
+  heroImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    height: "100%",
+  },
+  heroOverlay: {
+    flex: 1,
     paddingBottom: 32,
   },
   backButton: {

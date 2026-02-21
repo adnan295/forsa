@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -9,6 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { getApiUrl } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
 
 interface Props {
@@ -59,12 +60,20 @@ export default function CampaignCard({ campaign, onPress }: Props) {
         style={styles.card}
       >
         <View style={styles.imageArea}>
-          <LinearGradient
-            colors={["#1A2D4A", "#0F1C30", "#0A1628"]}
-            style={styles.imagePlaceholder}
-          >
-            <Ionicons name="gift" size={44} color={Colors.light.accent} />
-          </LinearGradient>
+          {campaign.imageUrl ? (
+            <Image
+              source={{ uri: `${getApiUrl()}${campaign.imageUrl}`.replace(/\/+/g, '/').replace(':/', '://') }}
+              style={styles.campaignImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <LinearGradient
+              colors={["#1A2D4A", "#0F1C30", "#0A1628"]}
+              style={styles.imagePlaceholder}
+            >
+              <Ionicons name="gift" size={44} color={Colors.light.accent} />
+            </LinearGradient>
+          )}
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
             <Text style={styles.statusText}>{getStatusText()}</Text>
           </View>
@@ -136,6 +145,10 @@ const styles = StyleSheet.create({
   imageArea: {
     height: 160,
     position: "relative",
+  },
+  campaignImage: {
+    width: "100%",
+    height: "100%",
   },
   imagePlaceholder: {
     flex: 1,
