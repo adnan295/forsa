@@ -15,13 +15,16 @@ Mobile-first e-commerce application with an automated raffle system. Products ar
 app/                    # Expo Router screens
   _layout.tsx           # Root layout with providers
   auth.tsx              # Login/Register screen
+  checkout.tsx          # Checkout page (payment method, bank details, coupon, shipping address)
   (tabs)/
-    _layout.tsx         # Tab navigation (Campaigns, My Tickets, Profile)
+    _layout.tsx         # Tab navigation (Campaigns, My Orders, Profile)
     index.tsx           # Home - campaign list with progress
-    tickets.tsx         # User's raffle tickets
+    tickets.tsx         # My Orders & Tickets (dual sub-tabs)
     profile.tsx         # Profile + admin panel entry
   campaign/
-    [id].tsx            # Campaign detail with purchase flow
+    [id].tsx            # Campaign detail → navigates to checkout
+  order/
+    [id].tsx            # Order tracking (payment status, receipt upload, shipping timeline)
   admin/
     index.tsx           # Comprehensive admin panel (7 tabs)
 components/
@@ -34,9 +37,10 @@ lib/
   query-client.ts       # React Query config + API helpers
 server/
   index.ts              # Express server entry
-  routes.ts             # API routes (auth, campaigns, purchases, admin)
+  routes.ts             # API routes (auth, campaigns, purchases, admin, receipts)
   storage.ts            # Database storage layer (full CRUD for all entities)
   db.ts                 # Database connection
+  uploads/              # Receipt image uploads directory
   templates/
     landing-page.html   # Static landing page
 shared/
@@ -45,7 +49,11 @@ shared/
 
 ## Key Features
 - Campaign listing with real-time progress bars
-- Purchase flow with quantity selection and ticket generation
+- Full checkout flow with payment method selection, bank transfer details, coupon codes, shipping address
+- Receipt upload for bank transfer payments (expo-image-picker for mobile, file input for web)
+- Payment verification workflow: pending_payment → pending_review → confirmed/rejected
+- Order tracking page with payment status, receipt preview, shipping timeline
+- My Orders tab with payment/shipping status pills and order navigation
 - Unique ticket numbers (LD-{timestamp}-{random})
 - Cryptographically secure random winner selection
 - Session-based authentication
