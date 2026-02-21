@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import React, { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,17 +10,21 @@ import {
   Pressable,
   Dimensions,
   ScrollView,
+  TextInput,
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import CampaignCard from "@/components/CampaignCard";
 import { queryClient } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
+
+type FilterKey = "all" | "active" | "completed";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BANNER_WIDTH = SCREEN_WIDTH - 32;
@@ -130,9 +134,17 @@ function StatChip({ icon, value, label }: {
   );
 }
 
+const FILTER_TABS: { key: FilterKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: "all", label: "الكل", icon: "apps" },
+  { key: "active", label: "نشطة", icon: "flame" },
+  { key: "completed", label: "منتهية", icon: "trophy" },
+];
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const [searchText, setSearchText] = useState("");
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 
   const {
     data: campaigns,
@@ -147,6 +159,21 @@ export default function HomeScreen() {
 
   const activeCampaigns = campaigns?.filter((c) => c.status === "active") || [];
   const otherCampaigns = campaigns?.filter((c) => c.status !== "active") || [];
+
+  const filteredCampaigns = useMemo(() => {
+    let list = campaigns || [];
+    if (activeFilter === "active") list = list.filter(c => c.status === "active");
+    else if (activeFilter === "completed") list = list.filter(c => c.status !== "active");
+    if (searchText.trim()) {
+      const q = searchText.trim().toLowerCase();
+      list = list.filter(c =>
+        c.title.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q) ||
+        c.prizeName.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [campaigns, activeFilter, searchText]);
 
   const onRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
@@ -203,29 +230,77 @@ export default function HomeScreen() {
           <BannerCarousel />
         </View>
 
-        {activeCampaigns.length > 0 && (
+        <View style={styles.searchSection}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={18} color={Colors.light.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="ابحث عن حملة أو جائزة..."
+              placeholderTextColor="#9CA3AF"
+              value={searchText}
+              onChangeText={setSearchText}
+              writingDirection="rtl"
+              testID="search-input"
+            />
+            {searchText.length > 0 && (
+              <Pressable onPress={() => setSearchText("")}>
+                <Ionicons name="close-circle" size={18} color={Colors.light.textSecondary} />
+              </Pressable>
+            )}
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {FILTER_TABS.map((tab) => (
+              <Pressable
+                key={tab.key}
+                onPress={() => {
+                  setActiveFilter(tab.key);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                style={[
+                  styles.filterChip,
+                  activeFilter === tab.key && styles.filterChipActive,
+                ]}
+              >
+                <Ionicons
+                  name={tab.icon}
+                  size={14}
+                  color={activeFilter === tab.key ? "#fff" : Colors.light.textSecondary}
+                />
+                <Text style={[
+                  styles.filterChipText,
+                  activeFilter === tab.key && styles.filterChipTextActive,
+                ]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        {filteredCampaigns.length > 0 && (
           <View style={styles.sectionHeader}>
-            <Ionicons name="flame" size={18} color={Colors.light.accent} />
-            <Text style={styles.sectionTitle}>الحملات النشطة</Text>
+            <Ionicons
+              name={activeFilter === "completed" ? "trophy" : "flame"}
+              size={18}
+              color={activeFilter === "completed" ? Colors.light.success : Colors.light.accent}
+            />
+            <Text style={styles.sectionTitle}>
+              {activeFilter === "all" ? "جميع الحملات" : activeFilter === "active" ? "الحملات النشطة" : "الحملات المنتهية"}
+            </Text>
+            <View style={styles.resultCount}>
+              <Text style={styles.resultCountText}>{filteredCampaigns.length}</Text>
+            </View>
             <View style={styles.sectionHeaderLine} />
           </View>
         )}
       </View>
     );
   }
-
-  function renderOtherSection() {
-    if (otherCampaigns.length === 0) return null;
-    return (
-      <View style={styles.sectionHeader}>
-        <Ionicons name="trophy" size={18} color={Colors.light.success} />
-        <Text style={styles.sectionTitle}>الحملات السابقة</Text>
-        <View style={styles.sectionHeaderLine} />
-      </View>
-    );
-  }
-
-  const allCampaignsForList = [...activeCampaigns, ...otherCampaigns];
 
   if (isLoading) {
     return (
@@ -238,34 +313,53 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <FlatList
-        data={allCampaignsForList}
+        data={filteredCampaigns}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <View>
-            {index === activeCampaigns.length && otherCampaigns.length > 0 && renderOtherSection()}
-            <View style={styles.cardPadding}>
-              <CampaignCard
-                campaign={item}
-                onPress={() =>
-                  router.push({
-                    pathname: "/campaign/[id]",
-                    params: { id: item.id },
-                  })
-                }
-              />
-            </View>
+        renderItem={({ item }) => (
+          <View style={styles.cardPadding}>
+            <CampaignCard
+              campaign={item}
+              onPress={() =>
+                router.push({
+                  pathname: "/campaign/[id]",
+                  params: { id: item.id },
+                })
+              }
+            />
           </View>
         )}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <View style={styles.emptyIconWrap}>
-              <Ionicons name="calendar-outline" size={36} color={Colors.light.tabIconDefault} />
-            </View>
-            <Text style={styles.emptyTitle}>لا توجد حملات حالياً</Text>
-            <Text style={styles.emptyText}>
-              تابعنا لاحقاً للحملات والجوائز المثيرة
+            <LinearGradient
+              colors={["rgba(124,58,237,0.08)", "rgba(236,72,153,0.08)"]}
+              style={styles.emptyIconWrap}
+            >
+              <Ionicons
+                name={searchText ? "search-outline" : "sparkles-outline"}
+                size={36}
+                color={Colors.light.accent}
+              />
+            </LinearGradient>
+            <Text style={styles.emptyTitle}>
+              {searchText ? "لا توجد نتائج" : "لا توجد حملات حالياً"}
             </Text>
+            <Text style={styles.emptyText}>
+              {searchText
+                ? "جرب كلمات بحث مختلفة أو تصفّح جميع الحملات"
+                : "ترقب! حملات وجوائز مذهلة في الطريق إليك"}
+            </Text>
+            {searchText && (
+              <Pressable
+                onPress={() => {
+                  setSearchText("");
+                  setActiveFilter("all");
+                }}
+                style={styles.clearSearchBtn}
+              >
+                <Text style={styles.clearSearchText}>مسح البحث</Text>
+              </Pressable>
+            )}
           </View>
         }
         contentContainerStyle={{
@@ -473,6 +567,87 @@ const styles = StyleSheet.create({
   },
   bannerSection: {
     marginTop: 0,
+  },
+  searchSection: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 12,
+  },
+  searchBar: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === "ios" ? 12 : 2,
+    gap: 10,
+    shadowColor: "#7C3AED",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  filterRow: {
+    flexDirection: "row-reverse",
+    gap: 8,
+  },
+  filterChip: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  filterChipActive: {
+    backgroundColor: Colors.light.accent,
+    borderColor: Colors.light.accent,
+  },
+  filterChipText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+  filterChipTextActive: {
+    color: "#FFFFFF",
+  },
+  resultCount: {
+    backgroundColor: "rgba(124, 58, 237, 0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  resultCountText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 12,
+    color: Colors.light.accent,
+  },
+  clearSearchBtn: {
+    marginTop: 16,
+    backgroundColor: "rgba(124, 58, 237, 0.1)",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  clearSearchText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: Colors.light.accent,
+    writingDirection: "rtl",
   },
   sectionHeader: {
     flexDirection: "row-reverse",
