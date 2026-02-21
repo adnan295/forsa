@@ -24,10 +24,11 @@ import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
 
-type AdminTab = "dashboard" | "orders" | "users" | "campaigns" | "payments" | "coupons" | "activity";
+type AdminTab = "dashboard" | "orders" | "users" | "campaigns" | "payments" | "coupons" | "notifications" | "activity";
 
 const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "dashboard", label: "الرئيسية", icon: "grid" },
+  { key: "notifications", label: "الإشعارات", icon: "notifications" },
   { key: "orders", label: "الطلبات", icon: "receipt" },
   { key: "users", label: "المستخدمين", icon: "people" },
   { key: "campaigns", label: "الحملات", icon: "megaphone" },
@@ -78,6 +79,7 @@ export default function AdminPanel() {
 
       <View style={styles.content}>
         {activeTab === "dashboard" && <DashboardSection />}
+        {activeTab === "notifications" && <NotificationsSection />}
         {activeTab === "orders" && <OrdersSection />}
         {activeTab === "users" && <UsersSection />}
         {activeTab === "campaigns" && <CampaignsSection />}
@@ -191,7 +193,29 @@ function OrdersSection() {
         data={orders || []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.sectionPadding}
-        ListHeaderComponent={<Text style={styles.sectionTitle}>جميع الطلبات ({orders?.length || 0})</Text>}
+        ListHeaderComponent={
+          <View>
+            <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={styles.sectionTitle}>جميع الطلبات ({orders?.length || 0})</Text>
+              <Pressable
+                onPress={async () => {
+                  try {
+                    const url = `${getApiUrl()}/api/admin/orders/export/csv`;
+                    if (Platform.OS === "web") {
+                      window.open(url, "_blank");
+                    } else {
+                      Alert.alert("تصدير CSV", "التصدير متاح عبر المتصفح فقط حالياً");
+                    }
+                  } catch (e) {}
+                }}
+                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: "#2ECC7115", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+              >
+                <Ionicons name="download-outline" size={16} color="#2ECC71" />
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#2ECC71" }}>CSV</Text>
+              </Pressable>
+            </View>
+          </View>
+        }
         ListEmptyComponent={<Text style={styles.emptyText}>لا توجد طلبات</Text>}
         renderItem={({ item }) => (
           <Pressable style={styles.orderCard} onPress={() => { setSelectedOrder(item); setShowShippingModal(true); }}>
@@ -758,6 +782,88 @@ function StatCard({ icon, label, value, color }: { icon: string; label: string; 
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
+  );
+}
+
+function NotificationsSection() {
+  const { data: notifications, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/notifications"],
+    refetchInterval: 10000,
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("PUT", `/api/admin/notifications/${id}/read`);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications"] }),
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("PUT", "/api/admin/notifications/read-all");
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications"] }),
+  });
+
+  if (isLoading) return <LoadingView />;
+
+  const unreadCount = notifications?.filter((n: any) => !n.isRead).length || 0;
+
+  const getNotifIcon = (type: string) => {
+    if (type === "new_order") return "cart";
+    if (type === "receipt_uploaded") return "image";
+    if (type === "new_user") return "person-add";
+    return "notifications";
+  };
+  const getNotifColor = (type: string) => {
+    if (type === "new_order") return "#7C3AED";
+    if (type === "receipt_uploaded") return "#3498DB";
+    if (type === "new_user") return "#2ECC71";
+    return Colors.light.accent;
+  };
+
+  return (
+    <FlatList
+      data={notifications || []}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={styles.sectionPadding}
+      ListHeaderComponent={
+        <View>
+          <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <Text style={styles.sectionTitle}>الإشعارات ({notifications?.length || 0})</Text>
+            {unreadCount > 0 && (
+              <Pressable
+                onPress={() => markAllReadMutation.mutate()}
+                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "15", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+              >
+                <Ionicons name="checkmark-done" size={16} color={Colors.light.accent} />
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.accent }}>قراءة الكل ({unreadCount})</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      }
+      ListEmptyComponent={<Text style={styles.emptyText}>لا توجد إشعارات</Text>}
+      renderItem={({ item }) => (
+        <Pressable
+          onPress={() => { if (!item.isRead) markReadMutation.mutate(item.id); }}
+          style={[styles.orderCard, { borderRightWidth: 3, borderRightColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#FAFBFF" }]}
+        >
+          <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: getNotifColor(item.type) + "15", alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name={getNotifIcon(item.type) as any} size={18} color={getNotifColor(item.type)} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: item.isRead ? "Inter_400Regular" : "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" }}>{item.message}</Text>
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", marginTop: 4 }}>
+                {new Date(item.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </Text>
+            </View>
+            {!item.isRead && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: getNotifColor(item.type) }} />}
+          </View>
+        </Pressable>
+      )}
+    />
   );
 }
 
