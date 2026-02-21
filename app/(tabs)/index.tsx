@@ -55,11 +55,22 @@ const BANNERS = [
 
 function BannerCarousel() {
   const scrollRef = useRef<ScrollView>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const reversedBanners = useMemo(() => [...BANNERS].reverse(), []);
+  const [activeIndex, setActiveIndex] = useState(reversedBanners.length - 1);
+  const initialScrollDone = useRef(false);
+
+  useEffect(() => {
+    if (!initialScrollDone.current) {
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ x: (reversedBanners.length - 1) * (BANNER_WIDTH + 12), animated: false });
+        initialScrollDone.current = true;
+      }, 50);
+    }
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const nextIndex = (activeIndex + 1) % BANNERS.length;
+      const nextIndex = activeIndex <= 0 ? reversedBanners.length - 1 : activeIndex - 1;
       scrollRef.current?.scrollTo({ x: nextIndex * (BANNER_WIDTH + 12), animated: true });
       setActiveIndex(nextIndex);
     }, 4000);
@@ -78,10 +89,10 @@ function BannerCarousel() {
         contentContainerStyle={bannerStyles.scrollContent}
         onMomentumScrollEnd={(e) => {
           const index = Math.round(e.nativeEvent.contentOffset.x / (BANNER_WIDTH + 12));
-          setActiveIndex(Math.max(0, Math.min(index, BANNERS.length - 1)));
+          setActiveIndex(Math.max(0, Math.min(index, reversedBanners.length - 1)));
         }}
       >
-        {BANNERS.map((banner) => (
+        {reversedBanners.map((banner) => (
           <View key={banner.id} style={bannerStyles.bannerWrap}>
             <LinearGradient
               colors={banner.colors}
@@ -106,7 +117,7 @@ function BannerCarousel() {
       </ScrollView>
 
       <View style={bannerStyles.dots}>
-        {BANNERS.map((_, i) => (
+        {reversedBanners.map((_, i) => (
           <View
             key={i}
             style={[
@@ -249,11 +260,7 @@ export default function HomeScreen() {
             )}
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
+          <View style={styles.filterRow}>
             {FILTER_TABS.map((tab) => (
               <Pressable
                 key={tab.key}
@@ -279,7 +286,7 @@ export default function HomeScreen() {
                 </Text>
               </Pressable>
             ))}
-          </ScrollView>
+          </View>
         </View>
 
         {filteredCampaigns.length > 0 && (
@@ -602,11 +609,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
+    flex: 1,
     flexDirection: "row-reverse",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 12,
     borderWidth: 1,
