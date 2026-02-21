@@ -157,6 +157,15 @@ export default function AuthScreen() {
               </View>
             </Pressable>
 
+            {isLogin && (
+              <Pressable
+                onPress={() => router.push("/forgot-password")}
+                style={styles.forgotBtn}
+              >
+                <Text style={styles.forgotText}>نسيت كلمة المرور؟</Text>
+              </Pressable>
+            )}
+
             <Pressable
               onPress={() => {
                 setIsLogin(!isLogin);
@@ -278,5 +287,16 @@ const styles = StyleSheet.create({
   switchTextBold: {
     fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
+  },
+  forgotBtn: {
+    alignItems: "center",
+    padding: 4,
+  },
+  forgotText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.7)",
+    writingDirection: "rtl",
+    textDecorationLine: "underline",
   },
 });

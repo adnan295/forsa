@@ -2,15 +2,19 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "node:http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import rateLimit from "express-rate-limit";
 import { pool } from "./db";
 import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, reviews } from "@shared/schema";
+import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate } from "./email";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import multer from "multer";
 import path from "path";
 import { mkdirSync } from "fs";
 
 mkdirSync("uploads/receipts", { recursive: true });
+mkdirSync("uploads/campaigns", { recursive: true });
 
 const receiptStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -35,6 +39,47 @@ const uploadReceipt = multer({
       cb(new Error("Only image files and PDFs are allowed"));
     }
   },
+});
+
+const campaignStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, "uploads/campaigns/");
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const uploadCampaignImage = multer({
+  storage: campaignStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { message: "Too many attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 60,
+  message: { message: "Too many requests, please slow down" },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 const PgSession = connectPgSimple(session);
@@ -82,7 +127,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
-  app.post("/api/auth/register", async (req: Request, res: Response) => {
+  app.use("/api/", apiLimiter);
+
+  app.post("/api/auth/register", authLimiter, async (req: Request, res: Response) => {
     try {
       const parsed = insertUserSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -120,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
+  app.post("/api/auth/login", authLimiter, async (req: Request, res: Response) => {
     try {
       const parsed = loginSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -161,6 +208,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     req.session.destroy(() => {
       res.json({ message: "Logged out" });
     });
+  });
+
+  app.post("/api/auth/forgot-password", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.json({ message: "إذا كان البريد مسجلاً، سيتم إرسال رمز إعادة التعيين" });
+      }
+
+      const code = crypto.randomInt(100000, 999999).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      await storage.createPasswordResetToken(user.id, code, expiresAt);
+      await sendPasswordResetCode(user.email, { code, username: user.username });
+
+      res.json({ message: "إذا كان البريد مسجلاً، سيتم إرسال رمز إعادة التعيين" });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email, code, newPassword } = req.body;
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ message: "جميع الحقول مطلوبة" });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(400).json({ message: "بيانات غير صحيحة" });
+      }
+
+      const token = await storage.verifyPasswordResetToken(user.id, code);
+      if (!token) {
+        return res.status(400).json({ message: "الرمز غير صحيح أو منتهي الصلاحية" });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await storage.updateUserPassword(user.id, hashedPassword);
+      await storage.markResetTokenUsed(token.id);
+
+      res.json({ message: "تم تغيير كلمة المرور بنجاح" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
   });
 
   app.get("/api/auth/me", async (req: Request, res: Response) => {
@@ -335,6 +438,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         JSON.stringify({ orderId: result.order.id, userId: req.session.userId })
       );
 
+      const buyer = await storage.getUser(req.session.userId!);
+      const campaign = await storage.getCampaign(campaignId);
+      if (buyer && campaign) {
+        sendOrderConfirmation(buyer.email, {
+          orderId: result.order.id,
+          campaignTitle: campaign.title,
+          quantity: result.tickets.length,
+          totalAmount: result.order.totalAmount,
+          ticketNumbers: result.tickets.map((t: any) => t.ticketNumber),
+          paymentMethod: paymentMethod,
+        });
+      }
+
       res.json({
         order: result.order,
         tickets: result.tickets,
@@ -448,6 +564,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         JSON.stringify({ campaignId: req.params.campaignId, winnerId: result.winner.id, ticketNumber: result.ticket.ticketNumber })
       );
 
+      const drawnCampaign = await storage.getCampaign(req.params.campaignId as string);
+      if (drawnCampaign) {
+        sendWinnerNotification(result.winner.email, {
+          campaignTitle: drawnCampaign.title,
+          prizeName: drawnCampaign.prizeName,
+          ticketNumber: result.ticket.ticketNumber,
+        });
+      }
+
       res.json({
         winner: {
           id: result.winner.id,
@@ -515,6 +640,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updated) {
         return res.status(404).json({ message: "Order not found" });
       }
+
+      if (shippingStatus && ["processing", "shipped", "delivered"].includes(shippingStatus)) {
+        const shippingOrder = await storage.getOrder(req.params.id as string);
+        if (shippingOrder) {
+          const shippingUser = await storage.getUser(shippingOrder.userId);
+          const shippingCampaign = await storage.getCampaign(shippingOrder.campaignId);
+          if (shippingUser && shippingCampaign) {
+            sendShippingUpdate(shippingUser.email, {
+              orderId: shippingOrder.id,
+              campaignTitle: shippingCampaign.title,
+              status: shippingStatus,
+              trackingNumber,
+            });
+          }
+        }
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Update shipping error:", error);
@@ -561,6 +703,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updated = await storage.getOrder(order.id);
+
+      const orderUser = await storage.getUser(order.userId);
+      const orderCampaign = await storage.getCampaign(order.campaignId);
+      if (orderUser && orderCampaign) {
+        sendPaymentStatusUpdate(orderUser.email, {
+          orderId: order.id,
+          status: paymentStatus,
+          campaignTitle: orderCampaign.title,
+          rejectionReason,
+        });
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Update payment error:", error);
@@ -829,6 +983,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.markAllNotificationsRead();
       res.json({ success: true });
     } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/admin/campaigns/upload-image", requireAdmin as any, uploadCampaignImage.single("image"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Image file is required" });
+      }
+      const imageUrl = `/uploads/campaigns/${req.file.filename}`;
+      res.json({ imageUrl });
+    } catch (error: any) {
+      console.error("Upload campaign image error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+
+  app.post("/api/admin/seed-payment-methods", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const existing = await storage.getPaymentMethods();
+      if (existing.length > 0) {
+        return res.json({ message: "Payment methods already exist", count: existing.length });
+      }
+
+      const methods = [
+        { name: "Bank Transfer", nameAr: "تحويل بنكي", icon: "business", enabled: true, description: "تحويل مباشر إلى الحساب البنكي" },
+        { name: "Cash on Delivery", nameAr: "الدفع عند الاستلام", icon: "cash", enabled: true, description: "ادفع نقداً عند استلام المنتج" },
+      ];
+
+      for (const m of methods) {
+        await storage.createPaymentMethod(m as any);
+      }
+
+      res.json({ message: "Default payment methods created", count: methods.length });
+    } catch (error) {
+      console.error("Seed payment methods error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

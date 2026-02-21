@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
@@ -927,6 +928,67 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
   const [quantity, setQuantity] = useState("");
   const [prizeName, setPrizeName] = useState("");
   const [prizeDesc, setPrizeDesc] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const pickCampaignImage = async () => {
+    if (Platform.OS === "web") {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = (e: any) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          setImageFile(file);
+          const reader = new FileReader();
+          reader.onload = (ev) => setImageUri(ev.target?.result as string);
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    } else {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setImageUri(result.assets[0].uri);
+      }
+    }
+  };
+
+  const uploadImage = async (): Promise<string | undefined> => {
+    if (!imageUri && !imageFile) return undefined;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      if (Platform.OS === "web" && imageFile) {
+        formData.append("image", imageFile);
+      } else if (imageUri) {
+        formData.append("image", {
+          uri: imageUri,
+          type: "image/jpeg",
+          name: "campaign.jpg",
+        } as any);
+      }
+      const baseUrl = getApiUrl();
+      const url = new URL("/api/admin/campaigns/upload-image", baseUrl);
+      const res = await fetch(url.toString(), {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("فشل رفع الصورة");
+      const data = await res.json();
+      return data.imageUrl;
+    } catch (err) {
+      console.error("Image upload error:", err);
+      return undefined;
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
@@ -937,10 +999,30 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       onClose();
-      setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc("");
+      setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc(""); setImageUri(null); setImageFile(null);
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
+
+  const handleCreate = async () => {
+    if (!title || !description || !price || !quantity || !prizeName) {
+      Alert.alert("خطأ", "يرجى ملء جميع الحقول المطلوبة");
+      return;
+    }
+    let imageUrl: string | undefined;
+    if (imageUri || imageFile) {
+      imageUrl = await uploadImage();
+    }
+    mutation.mutate({
+      title,
+      description,
+      productPrice: price,
+      totalQuantity: parseInt(quantity),
+      prizeName,
+      prizeDescription: prizeDesc || undefined,
+      imageUrl,
+    });
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -951,6 +1033,23 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
             <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
           </View>
           <ScrollView contentContainerStyle={modalStyles.scrollContent}>
+            <View style={{ alignItems: "center", marginBottom: 16 }}>
+              <Pressable onPress={pickCampaignImage} style={{ width: "100%", height: 160, borderRadius: 16, backgroundColor: Colors.light.background, borderWidth: 2, borderColor: Colors.light.accent + "30", borderStyle: "dashed", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                {imageUri ? (
+                  <Image source={{ uri: imageUri }} style={{ width: "100%", height: "100%", borderRadius: 14 }} resizeMode="cover" />
+                ) : (
+                  <View style={{ alignItems: "center", gap: 8 }}>
+                    <Ionicons name="image-outline" size={36} color={Colors.light.accent} />
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" }}>اضغط لرفع صورة المنتج</Text>
+                  </View>
+                )}
+              </Pressable>
+              {imageUri && (
+                <Pressable onPress={() => { setImageUri(null); setImageFile(null); }} style={{ marginTop: 8 }}>
+                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: "#EF4444" }}>إزالة الصورة</Text>
+                </Pressable>
+              )}
+            </View>
             <ModalInput label="العنوان *" value={title} onChangeText={setTitle} placeholder="اسم الحملة" />
             <ModalInput label="الوصف *" value={description} onChangeText={setDescription} placeholder="وصف المنتج" multiline />
             <ModalInput label="السعر ($) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
@@ -958,14 +1057,11 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
             <ModalInput label="اسم الجائزة *" value={prizeName} onChangeText={setPrizeName} placeholder="iPhone 16 Pro Max" />
             <ModalInput label="وصف الجائزة" value={prizeDesc} onChangeText={setPrizeDesc} placeholder="تفاصيل إضافية" multiline />
             <Pressable
-              onPress={() => {
-                if (!title || !description || !price || !quantity || !prizeName) { Alert.alert("خطأ", "يرجى ملء جميع الحقول المطلوبة"); return; }
-                mutation.mutate({ title, description, productPrice: price, totalQuantity: parseInt(quantity), prizeName, prizeDescription: prizeDesc || undefined });
-              }}
-              disabled={mutation.isPending}
-              style={[modalStyles.createBtn, mutation.isPending && { opacity: 0.6 }]}
+              onPress={handleCreate}
+              disabled={mutation.isPending || uploading}
+              style={[modalStyles.createBtn, (mutation.isPending || uploading) && { opacity: 0.6 }]}
             >
-              {mutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>إنشاء الحملة</Text>}
+              {(mutation.isPending || uploading) ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>إنشاء الحملة</Text>}
             </Pressable>
           </ScrollView>
         </View>

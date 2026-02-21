@@ -21,6 +21,7 @@ import {
   activityLog,
   reviews,
   adminNotifications,
+  passwordResetTokens,
   insertReviewSchema,
 } from "@shared/schema";
 import { db } from "./db";
@@ -121,6 +122,12 @@ export interface IStorage {
   markNotificationRead(id: string): Promise<boolean>;
   markAllNotificationsRead(): Promise<boolean>;
   getUnreadNotificationCount(): Promise<number>;
+
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createPasswordResetToken(userId: string, code: string, expiresAt: Date): Promise<any>;
+  verifyPasswordResetToken(userId: string, code: string): Promise<any>;
+  markResetTokenUsed(tokenId: string): Promise<void>;
+  updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
 }
 
 function generateTicketNumber(): string {
@@ -740,6 +747,47 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.select({ count: count() }).from(adminNotifications)
       .where(eq(adminNotifications.isRead, false));
     return result?.count || 0;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createPasswordResetToken(userId: string, code: string, expiresAt: Date): Promise<any> {
+    const [token] = await db.insert(passwordResetTokens).values({
+      userId,
+      code,
+      expiresAt,
+    }).returning();
+    return token;
+  }
+
+  async verifyPasswordResetToken(userId: string, code: string): Promise<any> {
+    const [token] = await db.select().from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.userId, userId),
+          eq(passwordResetTokens.code, code),
+          eq(passwordResetTokens.used, false),
+          gte(passwordResetTokens.expiresAt, new Date())
+        )
+      )
+      .orderBy(desc(passwordResetTokens.createdAt))
+      .limit(1);
+    return token || null;
+  }
+
+  async markResetTokenUsed(tokenId: string): Promise<void> {
+    await db.update(passwordResetTokens)
+      .set({ used: true })
+      .where(eq(passwordResetTokens.id, tokenId));
+  }
+
+  async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
+    await db.update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, userId));
   }
 }
 

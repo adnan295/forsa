@@ -238,6 +238,18 @@ function setupErrorHandler(app: express.Application) {
 
   const server = await registerRoutes(app);
 
+  try {
+    const { storage } = await import("./storage");
+    const existingMethods = await storage.getPaymentMethods();
+    if (existingMethods.length === 0) {
+      await storage.createPaymentMethod({ name: "Bank Transfer", nameAr: "تحويل بنكي", icon: "business", enabled: true, description: "تحويل مباشر إلى الحساب البنكي" } as any);
+      await storage.createPaymentMethod({ name: "Cash on Delivery", nameAr: "الدفع عند الاستلام", icon: "cash", enabled: true, description: "ادفع نقداً عند استلام المنتج" } as any);
+      console.log("[Seed] Default payment methods created");
+    }
+  } catch (err) {
+    console.log("[Seed] Skipped payment methods seeding:", (err as any)?.message);
+  }
+
   setupErrorHandler(app);
 
   const port = parseInt(process.env.PORT || "5000", 10);
