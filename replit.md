@@ -80,7 +80,7 @@ Comprehensive admin dashboard with 7 sections:
 - GET /api/admin/activity-log - audit trail
 
 ## Database Tables
-- users (with fullName, phone, address, city, country, emailVerified), campaigns, orders (with shipping_status, tracking_number, shipping_address), tickets, payment_methods, coupons, activity_log, reviews, admin_notifications
+- users (with fullName, phone, address, city, country, emailVerified), campaigns, orders (with shipping_status, tracking_number, shipping_address), tickets, payment_methods, coupons, activity_log, reviews, admin_notifications, user_notifications
 
 ## Design
 - Luxury theme: Navy (#0A1628) + Metallic Gold (#D4A853)
@@ -89,6 +89,7 @@ Comprehensive admin dashboard with 7 sections:
 - Full Arabic UI with RTL support
 
 ## Recent Changes
+- User notifications system: user_notifications table, bell icon with badge in home header, notifications page (app/notifications.tsx), auto-notifications for: new campaigns → all users, low stock (10%) → campaign participants, sold out → participants, draw completed → participants, winner announced → all users, you won → winner. API: GET/PUT /api/notifications, GET /api/notifications/unread-count, PUT /api/notifications/read-all
 - Shopping cart feature: CartProvider (AsyncStorage), cart page (app/cart.tsx), add-to-cart button on campaign detail, cart icon with badge in home header, POST /api/cart-purchase for multi-item checkout
 - Email notification system (nodemailer) for order confirmations, payment updates, winner notifications, shipping updates, password reset
 - Password reset flow with 6-digit codes (15min expiry), forgot-password.tsx page

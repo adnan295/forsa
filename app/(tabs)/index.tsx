@@ -170,6 +170,14 @@ export default function HomeScreen() {
     staleTime: 5000,
   });
 
+  const { data: unreadData } = useQuery<{ count: number }>({
+    queryKey: ["/api/notifications/unread-count"],
+    enabled: !!user,
+    refetchInterval: 15000,
+    staleTime: 10000,
+  });
+  const unreadCount = unreadData?.count || 0;
+
   const activeCampaigns = campaigns?.filter((c) => c.status === "active") || [];
   const otherCampaigns = campaigns?.filter((c) => c.status !== "active") || [];
 
@@ -209,6 +217,20 @@ export default function HomeScreen() {
                 <Text style={styles.heroTitle}>لاكي درو</Text>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                {user && (
+                  <Pressable
+                    onPress={() => router.push("/notifications" as any)}
+                    style={styles.cartBtn}
+                    testID="notifications-button"
+                  >
+                    <Ionicons name="notifications-outline" size={22} color="#fff" />
+                    {unreadCount > 0 && (
+                      <View style={[styles.cartBadge, { backgroundColor: "#EF4444" }]}>
+                        <Text style={styles.cartBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                )}
                 <Pressable
                   onPress={() => router.push("/cart" as any)}
                   style={styles.cartBtn}
