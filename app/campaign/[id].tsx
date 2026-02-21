@@ -119,7 +119,7 @@ export default function CampaignDetailScreen() {
         >
           <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
             <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
+              <Ionicons name="arrow-forward" size={24} color="#fff" />
             </Pressable>
 
             <View style={styles.heroCenter}>
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 16,
-    alignSelf: "flex-start",
+    alignSelf: "flex-end",
   },
   heroCenter: {
     alignItems: "center",
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   progressHeader: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
@@ -454,6 +454,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 16,
     color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   progressPercent: {
     fontFamily: "Inter_700Bold",
@@ -474,7 +476,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   progressStats: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
   },
   progressStat: {
@@ -490,6 +492,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.light.textSecondary,
     marginTop: 2,
+    writingDirection: "rtl",
   },
   detailSection: {
     backgroundColor: "#FFFFFF",
@@ -507,15 +510,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.light.text,
     marginBottom: 8,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   detailText: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     lineHeight: 22,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   priceCard: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
@@ -533,6 +540,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.light.textSecondary,
     marginBottom: 4,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   priceValue: {
     fontFamily: "Inter_700Bold",
@@ -553,15 +562,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: "#fff",
     marginTop: 10,
+    writingDirection: "rtl",
   },
   winnerTicket: {
     fontFamily: "Inter_500Medium",
     fontSize: 14,
     color: "rgba(255,255,255,0.8)",
     marginTop: 6,
+    writingDirection: "rtl",
   },
   soldOutBanner: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 10,
     backgroundColor: "rgba(243, 156, 18, 0.1)",
@@ -576,6 +587,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.warning,
     flex: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   bottomBar: {
     position: "absolute",
@@ -589,7 +602,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   bottomContent: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
   },
@@ -597,18 +610,22 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 22,
     color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   bottomQty: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
     color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   buyButton: {
     borderRadius: 14,
     overflow: "hidden",
   },
   buyButtonGradient: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 28,
@@ -619,6 +636,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 16,
     color: "#FFFFFF",
+    writingDirection: "rtl",
   },
 });
 
@@ -634,7 +652,7 @@ const modalStyles = StyleSheet.create({
     borderTopRightRadius: 20,
   },
   header: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
@@ -645,6 +663,8 @@ const modalStyles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 20,
     color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   body: {
     padding: 20,
@@ -655,9 +675,11 @@ const modalStyles = StyleSheet.create({
     fontSize: 16,
     color: Colors.light.text,
     marginBottom: 20,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   qtyRow: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
@@ -666,6 +688,7 @@ const modalStyles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 15,
     color: Colors.light.textSecondary,
+    writingDirection: "rtl",
   },
   qtyControls: {
     flexDirection: "row",
@@ -688,7 +711,7 @@ const modalStyles = StyleSheet.create({
     textAlign: "center",
   },
   summaryRow: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 16,
@@ -700,6 +723,7 @@ const modalStyles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
+    writingDirection: "rtl",
   },
   summaryTotal: {
     fontFamily: "Inter_700Bold",
@@ -714,9 +738,11 @@ const modalStyles = StyleSheet.create({
     fontSize: 13,
     color: Colors.light.textSecondary,
     marginBottom: 10,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   paymentOption: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 12,
     backgroundColor: Colors.light.inputBg,
@@ -728,6 +754,8 @@ const modalStyles = StyleSheet.create({
     fontSize: 15,
     color: Colors.light.text,
     flex: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   confirmBtn: {
     backgroundColor: Colors.light.accent,
@@ -740,6 +768,7 @@ const modalStyles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 17,
     color: "#FFFFFF",
+    writingDirection: "rtl",
   },
 });
 
@@ -780,7 +809,7 @@ const successStyles = StyleSheet.create({
     marginBottom: 24,
   },
   ticketItem: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 10,
     backgroundColor: Colors.light.inputBg,

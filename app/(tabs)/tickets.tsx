@@ -159,6 +159,8 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: 4,
     paddingHorizontal: 4,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   screenSubtitle: {
     fontFamily: "Inter_400Regular",
@@ -166,9 +168,11 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     marginBottom: 20,
     paddingHorizontal: 4,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   ticketCard: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     marginBottom: 12,
@@ -207,14 +211,18 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     letterSpacing: 0.5,
     marginBottom: 4,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   ticketDate: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   winnerBadge: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 4,
     marginTop: 6,
@@ -229,6 +237,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#B8860B",
     letterSpacing: 1,
+    writingDirection: "rtl",
   },
   ticketRight: {
     width: 24,
@@ -254,12 +263,14 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
     textAlign: "center",
+    writingDirection: "rtl",
   },
   emptyText: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "center",
+    writingDirection: "rtl",
   },
   signInButton: {
     backgroundColor: Colors.light.accent,
@@ -273,5 +284,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 16,
     color: "#FFFFFF",
+    writingDirection: "rtl",
   },
 });

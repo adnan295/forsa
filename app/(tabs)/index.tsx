@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   heroTop: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 8,
@@ -207,20 +207,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "rgba(255,255,255,0.6)",
     marginBottom: 4,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   heroTitle: {
     fontFamily: "Inter_700Bold",
     fontSize: 30,
     color: "#FFFFFF",
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   heroSubtitle: {
     fontFamily: "Inter_400Regular",
     fontSize: 15,
     color: "rgba(255,255,255,0.5)",
     marginBottom: 20,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   signInBtn: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
     backgroundColor: "rgba(212, 168, 83, 0.15)",
@@ -234,6 +240,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: Colors.light.accent,
+    writingDirection: "rtl",
   },
   statsRow: {
     flexDirection: "row",
@@ -256,6 +263,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.5)",
+    writingDirection: "rtl",
   },
   statDivider: {
     width: 1,
@@ -263,7 +271,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.1)",
   },
   sectionHeader: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 20,
@@ -274,6 +282,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 18,
     color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   cardPadding: {
     paddingHorizontal: 16,
@@ -289,11 +299,13 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginTop: 16,
     marginBottom: 8,
+    writingDirection: "rtl",
   },
   emptyText: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "center",
+    writingDirection: "rtl",
   },
 });

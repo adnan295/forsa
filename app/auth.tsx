@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   backBtn: {
     position: "absolute" as const,
     top: 0,
-    left: 0,
+    right: 0,
     padding: 8,
   },
   logoArea: {
@@ -215,17 +215,19 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: "#FFFFFF",
     marginBottom: 8,
+    writingDirection: "rtl",
   },
   tagline: {
     fontFamily: "Inter_400Regular",
     fontSize: 16,
     color: "#8B99AD",
+    writingDirection: "rtl",
   },
   form: {
     gap: 16,
   },
   inputGroup: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     backgroundColor: "rgba(255, 255, 255, 0.08)",
     borderRadius: 14,
@@ -235,7 +237,7 @@ const styles = StyleSheet.create({
     height: 56,
   },
   inputIcon: {
-    marginRight: 12,
+    marginLeft: 12,
   },
   input: {
     flex: 1,
@@ -243,6 +245,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#FFFFFF",
     height: 56,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   eyeBtn: {
     padding: 4,
@@ -262,6 +266,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 17,
     color: "#FFFFFF",
+    writingDirection: "rtl",
   },
   switchBtn: {
     alignItems: "center",
@@ -272,6 +277,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: "#8B99AD",
+    writingDirection: "rtl",
   },
   switchTextBold: {
     fontFamily: "Inter_600SemiBold",

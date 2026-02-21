@@ -111,7 +111,7 @@ export default function CampaignCard({ campaign, onPress }: Props) {
             {!isCompleted && !isSoldOut && (
               <View style={styles.buyHint}>
                 <Text style={styles.buyHintText}>اشترِ الآن</Text>
-                <Ionicons name="arrow-forward" size={14} color={Colors.light.accent} />
+                <Ionicons name="arrow-back" size={14} color={Colors.light.accent} />
               </View>
             )}
           </View>
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     position: "absolute",
     top: 12,
-    right: 12,
+    left: 12,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
@@ -154,8 +154,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 11,
     color: "#FFFFFF",
-    textTransform: "uppercase" as const,
     letterSpacing: 0.5,
+    writingDirection: "rtl",
   },
   content: {
     padding: 16,
@@ -165,9 +165,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.light.text,
     marginBottom: 6,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   prizeRow: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
     marginBottom: 14,
@@ -177,6 +179,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.light.textSecondary,
     flex: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   progressSection: {
     marginBottom: 14,
@@ -193,21 +197,23 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   progressInfo: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
   },
   soldText: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
     color: Colors.light.textSecondary,
+    writingDirection: "rtl",
   },
   remainingText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 12,
     color: Colors.light.accent,
+    writingDirection: "rtl",
   },
   footer: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
   },
@@ -215,9 +221,10 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 22,
     color: Colors.light.text,
+    writingDirection: "rtl",
   },
   buyHint: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 4,
   },
@@ -225,5 +232,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: Colors.light.accent,
+    writingDirection: "rtl",
   },
 });

@@ -431,14 +431,16 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: "#FFFFFF",
     marginBottom: 4,
+    writingDirection: "rtl",
   },
   profileEmail: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: "rgba(255,255,255,0.5)",
+    writingDirection: "rtl",
   },
   adminBadge: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 4,
     backgroundColor: "rgba(255, 215, 0, 0.15)",
@@ -452,6 +454,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#FFD700",
     letterSpacing: 0.5,
+    writingDirection: "rtl",
   },
   avatarPlaceholder: {
     width: 80,
@@ -468,6 +471,7 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: 8,
     textAlign: "center",
+    writingDirection: "rtl",
   },
   emptyText: {
     fontFamily: "Inter_400Regular",
@@ -475,6 +479,7 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     textAlign: "center",
     paddingHorizontal: 40,
+    writingDirection: "rtl",
   },
   signInButton: {
     backgroundColor: Colors.light.accent,
@@ -487,6 +492,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 16,
     color: "#FFFFFF",
+    writingDirection: "rtl",
   },
   section: {
     marginBottom: 24,
@@ -496,6 +502,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.light.text,
     marginBottom: 14,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   statsGrid: {
     flexDirection: "row",
@@ -503,7 +511,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionButton: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     padding: 16,
@@ -520,6 +528,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.light.text,
     flex: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   drawSection: {
     marginTop: 16,
@@ -529,9 +539,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.light.textSecondary,
     marginBottom: 10,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   drawItem: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     padding: 14,
@@ -550,15 +562,19 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
     color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   drawItemSub: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     marginTop: 2,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   drawButton: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
     backgroundColor: Colors.light.accent,
@@ -570,9 +586,10 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: "#FFFFFF",
+    writingDirection: "rtl",
   },
   logoutButton: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 10,
     backgroundColor: "#FFFFFF",
@@ -588,6 +605,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
     color: Colors.light.danger,
+    writingDirection: "rtl",
   },
 });
 
@@ -616,11 +634,15 @@ const statStyles = StyleSheet.create({
     fontSize: 20,
     color: Colors.light.text,
     marginBottom: 2,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   label: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
 });
 
@@ -637,7 +659,7 @@ const modalStyles = StyleSheet.create({
     maxHeight: "90%",
   },
   header: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 20,
@@ -648,6 +670,8 @@ const modalStyles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 20,
     color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   scrollContent: {
     padding: 20,
@@ -661,6 +685,8 @@ const modalStyles = StyleSheet.create({
     fontSize: 13,
     color: Colors.light.textSecondary,
     marginBottom: 6,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   input: {
     backgroundColor: "#FFFFFF",
@@ -671,6 +697,8 @@ const modalStyles = StyleSheet.create({
     color: Colors.light.text,
     borderWidth: 1,
     borderColor: Colors.light.border,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   createBtn: {
     backgroundColor: Colors.light.accent,
@@ -684,5 +712,6 @@ const modalStyles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 16,
     color: "#FFFFFF",
+    writingDirection: "rtl",
   },
 });
