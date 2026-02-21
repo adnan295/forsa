@@ -16,11 +16,12 @@ app/                    # Expo Router screens
   _layout.tsx           # Root layout with providers
   auth.tsx              # Login/Register screen
   checkout.tsx          # Checkout page (payment method, bank details, coupon, shipping address)
+  info.tsx              # Info pages (about, terms, privacy, contact) via ?type= param
   (tabs)/
     _layout.tsx         # Tab navigation (Campaigns, My Orders, Profile)
-    index.tsx           # Home - campaign list with progress
-    tickets.tsx         # My Orders & Tickets (dual sub-tabs)
-    profile.tsx         # Profile + admin panel entry
+    index.tsx           # Home - campaign list with search bar, filter tabs, progress bars
+    tickets.tsx         # My Orders & Tickets (dual sub-tabs, enhanced empty states)
+    profile.tsx         # Profile with stats, activity menu, settings, admin entry
   campaign/
     [id].tsx            # Campaign detail → navigates to checkout
   order/
@@ -31,7 +32,7 @@ components/
   CampaignCard.tsx      # Campaign card with progress bar
   ErrorBoundary.tsx     # Error boundary wrapper
 constants/
-  colors.ts             # Design tokens (navy + gold theme)
+  colors.ts             # Design tokens (purple/pink gradient theme)
 lib/
   auth-context.tsx      # Auth provider (login/register/logout)
   query-client.ts       # React Query config + API helpers
@@ -85,6 +86,15 @@ Comprehensive admin dashboard with 7 sections:
 - Inter font family
 - Tab-based navigation with 3 tabs
 - Full Arabic UI with RTL support
+
+## Recent Changes
+- Added user stats API endpoint (GET /api/user/stats)
+- Redesigned profile page with gradient header, avatar, stats cards, activity menu, settings
+- Added search bar and filter tabs (all/active/completed) to home page
+- Created info.tsx page with About, Terms, Privacy, Contact sections (accessed via ?type= param)
+- Enhanced empty states in tickets page with gradient icons, encouraging messages, action buttons
+- Redesigned landing page (server/templates/landing-page.html) with purple/pink gradient theme
+- Profile settings now link to info pages properly
 
 ## Admin Credentials
 - Username: admin
