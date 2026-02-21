@@ -33,6 +33,10 @@ function RootLayoutNav() {
         name="auth"
         options={{ headerShown: false, presentation: "modal" }}
       />
+      <Stack.Screen
+        name="admin/index"
+        options={{ headerShown: false, presentation: "card" }}
+      />
     </Stack>
   );
 }

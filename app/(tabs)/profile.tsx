@@ -1,36 +1,25 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   Pressable,
-  Alert,
   Platform,
-  ActivityIndicator,
-  TextInput,
-  Modal,
 } from "react-native";
 import { router } from "expo-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { apiRequest, queryClient } from "@/lib/query-client";
-import type { Campaign } from "@shared/schema";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
-  const [showCreateModal, setShowCreateModal] = useState(false);
-
-  const { data: campaigns } = useQuery<Campaign[]>({
-    queryKey: ["/api/campaigns"],
-  });
 
   const { data: stats } = useQuery<{
     totalCampaigns: number;
@@ -41,37 +30,6 @@ export default function ProfileScreen() {
     queryKey: ["/api/admin/stats"],
     enabled: isAdmin,
   });
-
-  const drawMutation = useMutation({
-    mutationFn: async (campaignId: string) => {
-      const res = await apiRequest("POST", `/api/admin/draw/${campaignId}`);
-      return res.json();
-    },
-    onSuccess: (data) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("تم السحب!", `الفائز: ${data.winner.username} - التذكرة: ${data.ticket.ticketNumber}`);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-    },
-    onError: (err: any) => {
-      Alert.alert("خطأ", err.message || "فشل السحب");
-    },
-  });
-
-  function handleDraw(campaign: Campaign) {
-    Alert.alert(
-      "سحب الفائز",
-      `هل أنت متأكد من إجراء السحب لحملة "${campaign.title}"؟ لا يمكن التراجع عن هذا الإجراء.`,
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: "سحب",
-          style: "destructive",
-          onPress: () => drawMutation.mutate(campaign.id),
-        },
-      ]
-    );
-  }
 
   async function handleLogout() {
     await logout();
@@ -99,11 +57,6 @@ export default function ProfileScreen() {
       </View>
     );
   }
-
-  const soldOutCampaigns =
-    campaigns?.filter(
-      (c) => c.status === "sold_out" || c.status === "drawing"
-    ) || [];
 
   return (
     <ScrollView
@@ -170,56 +123,25 @@ export default function ProfileScreen() {
 
       {isAdmin && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>إدارة الحملات</Text>
-
           <Pressable
-            onPress={() => setShowCreateModal(true)}
+            onPress={() => router.push("/admin")}
             style={({ pressed }) => [
-              styles.actionButton,
+              styles.adminPanelButton,
               pressed && { opacity: 0.8 },
             ]}
           >
-            <Ionicons name="add-circle" size={22} color={Colors.light.accent} />
-            <Text style={styles.actionButtonText}>إنشاء حملة جديدة</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={Colors.light.textSecondary}
-            />
+            <LinearGradient
+              colors={["#0A1628", "#1A2D4A"]}
+              style={styles.adminPanelGradient}
+            >
+              <Ionicons name="grid" size={28} color={Colors.light.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.adminPanelTitle}>لوحة التحكم الكاملة</Text>
+                <Text style={styles.adminPanelSub}>إدارة الطلبات، المستخدمين، الحملات، الدفع والمزيد</Text>
+              </View>
+              <Ionicons name="chevron-back" size={20} color={Colors.light.accent} />
+            </LinearGradient>
           </Pressable>
-
-          {soldOutCampaigns.length > 0 && (
-            <View style={styles.drawSection}>
-              <Text style={styles.drawTitle}>جاهز للسحب</Text>
-              {soldOutCampaigns.map((c) => (
-                <View key={c.id} style={styles.drawItem}>
-                  <View style={styles.drawInfo}>
-                    <Text style={styles.drawItemTitle}>{c.title}</Text>
-                    <Text style={styles.drawItemSub}>
-                      {c.soldQuantity} تذكرة مباعة
-                    </Text>
-                  </View>
-                  <Pressable
-                    onPress={() => handleDraw(c)}
-                    disabled={drawMutation.isPending}
-                    style={({ pressed }) => [
-                      styles.drawButton,
-                      pressed && { opacity: 0.8 },
-                    ]}
-                  >
-                    {drawMutation.isPending ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons name="dice" size={16} color="#fff" />
-                        <Text style={styles.drawButtonText}>سحب</Text>
-                      </>
-                    )}
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          )}
         </View>
       )}
 
@@ -236,10 +158,6 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
-      <CreateCampaignModal
-        visible={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-      />
     </ScrollView>
   );
 }
@@ -262,132 +180,6 @@ function StatCard({
       </View>
       <Text style={statStyles.value}>{value}</Text>
       <Text style={statStyles.label}>{label}</Text>
-    </View>
-  );
-}
-
-function CreateCampaignModal({
-  visible,
-  onClose,
-}: {
-  visible: boolean;
-  onClose: () => void;
-}) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [prizeName, setPrizeName] = useState("");
-  const [prizeDesc, setPrizeDesc] = useState("");
-
-  const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/campaigns", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      onClose();
-      setTitle("");
-      setDescription("");
-      setPrice("");
-      setQuantity("");
-      setPrizeName("");
-      setPrizeDesc("");
-    },
-    onError: (err: any) => {
-      Alert.alert("خطأ", err.message || "فشل إنشاء الحملة");
-    },
-  });
-
-  function handleCreate() {
-    if (!title || !description || !price || !quantity || !prizeName) {
-      Alert.alert("خطأ", "يرجى ملء جميع الحقول المطلوبة");
-      return;
-    }
-    createMutation.mutate({
-      title,
-      description,
-      productPrice: price,
-      totalQuantity: parseInt(quantity),
-      prizeName,
-      prizeDescription: prizeDesc || undefined,
-    });
-  }
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={modalStyles.overlay}>
-        <View style={modalStyles.container}>
-          <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>حملة جديدة</Text>
-            <Pressable onPress={onClose}>
-              <Ionicons name="close" size={24} color={Colors.light.text} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={modalStyles.scrollContent}
-          >
-            <ModalInput label="العنوان *" value={title} onChangeText={setTitle} placeholder="اسم الحملة" />
-            <ModalInput label="الوصف *" value={description} onChangeText={setDescription} placeholder="وصف المنتج" multiline />
-            <ModalInput label="السعر ($) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
-            <ModalInput label="الكمية الإجمالية *" value={quantity} onChangeText={setQuantity} placeholder="4000" keyboardType="number-pad" />
-            <ModalInput label="اسم الجائزة *" value={prizeName} onChangeText={setPrizeName} placeholder="iPhone 15 Pro Max" />
-            <ModalInput label="وصف الجائزة" value={prizeDesc} onChangeText={setPrizeDesc} placeholder="تفاصيل إضافية (اختياري)" multiline />
-
-            <Pressable
-              onPress={handleCreate}
-              disabled={createMutation.isPending}
-              style={({ pressed }) => [
-                modalStyles.createBtn,
-                pressed && { opacity: 0.9 },
-                createMutation.isPending && { opacity: 0.6 },
-              ]}
-            >
-              {createMutation.isPending ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={modalStyles.createBtnText}>إنشاء الحملة</Text>
-              )}
-            </Pressable>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-function ModalInput({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  multiline,
-  keyboardType,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (t: string) => void;
-  placeholder: string;
-  multiline?: boolean;
-  keyboardType?: any;
-}) {
-  return (
-    <View style={modalStyles.inputGroup}>
-      <Text style={modalStyles.inputLabel}>{label}</Text>
-      <TextInput
-        style={[modalStyles.input, multiline && { height: 80, textAlignVertical: "top" }]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={Colors.light.tabIconDefault}
-        multiline={multiline}
-        keyboardType={keyboardType}
-      />
     </View>
   );
 }
@@ -607,6 +399,31 @@ const styles = StyleSheet.create({
     color: Colors.light.danger,
     writingDirection: "rtl",
   },
+  adminPanelButton: {
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  adminPanelGradient: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    padding: 18,
+    gap: 14,
+  },
+  adminPanelTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    color: Colors.light.accent,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  adminPanelSub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.6)",
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginTop: 2,
+  },
 });
 
 const statStyles = StyleSheet.create({
@@ -646,72 +463,3 @@ const statStyles = StyleSheet.create({
   },
 });
 
-const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  container: {
-    backgroundColor: Colors.light.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "90%",
-  },
-  header: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    marginBottom: 6,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 14,
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: Colors.light.text,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  createBtn: {
-    backgroundColor: Colors.light.accent,
-    borderRadius: 14,
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  createBtnText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-    color: "#FFFFFF",
-    writingDirection: "rtl",
-  },
-});
