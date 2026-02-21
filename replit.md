@@ -15,7 +15,8 @@ Mobile-first e-commerce application with an automated raffle system. Products ar
 app/                    # Expo Router screens
   _layout.tsx           # Root layout with providers
   auth.tsx              # Login/Register screen
-  checkout.tsx          # Checkout page (payment method, bank details, coupon, shipping address)
+  cart.tsx              # Shopping cart page (view/edit cart items, proceed to checkout)
+  checkout.tsx          # Checkout page (supports single-item and cart-based purchase)
   info.tsx              # Info pages (about, terms, privacy, contact) via ?type= param
   (tabs)/
     _layout.tsx         # Tab navigation (Campaigns, My Orders, Profile)
@@ -88,6 +89,7 @@ Comprehensive admin dashboard with 7 sections:
 - Full Arabic UI with RTL support
 
 ## Recent Changes
+- Shopping cart feature: CartProvider (AsyncStorage), cart page (app/cart.tsx), add-to-cart button on campaign detail, cart icon with badge in home header, POST /api/cart-purchase for multi-item checkout
 - Email notification system (nodemailer) for order confirmations, payment updates, winner notifications, shipping updates, password reset
 - Password reset flow with 6-digit codes (15min expiry), forgot-password.tsx page
 - Campaign image upload in admin panel (expo-image-picker + /api/admin/campaigns/upload-image endpoint)
