@@ -16,13 +16,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-  interpolateColor,
-} from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import CampaignCard from "@/components/CampaignCard";
@@ -38,24 +31,21 @@ const BANNERS = [
     title: "سحوبات حصرية",
     subtitle: "اشترك الآن واربح جوائز قيمة",
     icon: "diamond" as const,
-    colors: ["#1A2D4A", "#0F1C30", "#0A1628"] as [string, string, string],
-    accentColor: Colors.light.accent,
+    colors: ["#7C3AED", "#A855F7", "#C084FC"] as [string, string, string],
   },
   {
     id: "2",
     title: "فرصة الفوز الكبرى",
     subtitle: "كل تذكرة تقربك من الجائزة",
     icon: "trophy" as const,
-    colors: ["#2C1810", "#1A0F08", "#0D0704"] as [string, string, string],
-    accentColor: "#FFD700",
+    colors: ["#EC4899", "#F472B6", "#FBCFE8"] as [string, string, string],
   },
   {
     id: "3",
     title: "عروض محدودة",
     subtitle: "لا تفوت الفرصة - الكمية محدودة",
     icon: "flash" as const,
-    colors: ["#1A1A2E", "#16213E", "#0F3460"] as [string, string, string],
-    accentColor: "#E74C3C",
+    colors: ["#6D28D9", "#7C3AED", "#A78BFA"] as [string, string, string],
   },
 ];
 
@@ -100,14 +90,12 @@ function BannerCarousel() {
                   <Text style={bannerStyles.bannerTitle}>{banner.title}</Text>
                   <Text style={bannerStyles.bannerSubtitle}>{banner.subtitle}</Text>
                 </View>
-                <View style={[bannerStyles.bannerIconWrap, { backgroundColor: banner.accentColor + "20" }]}>
-                  <Ionicons name={banner.icon} size={32} color={banner.accentColor} />
+                <View style={bannerStyles.bannerIconWrap}>
+                  <Ionicons name={banner.icon} size={28} color="#fff" />
                 </View>
               </View>
-
-              <View style={[bannerStyles.bannerDecor1, { backgroundColor: banner.accentColor + "08" }]} />
-              <View style={[bannerStyles.bannerDecor2, { backgroundColor: banner.accentColor + "06" }]} />
-              <View style={[bannerStyles.bannerAccentLine, { backgroundColor: banner.accentColor }]} />
+              <View style={bannerStyles.decor1} />
+              <View style={bannerStyles.decor2} />
             </LinearGradient>
           </View>
         ))}
@@ -128,17 +116,14 @@ function BannerCarousel() {
   );
 }
 
-function StatChip({ icon, value, label, color }: {
+function StatChip({ icon, value, label }: {
   icon: keyof typeof Ionicons.glyphMap;
   value: string | number;
   label: string;
-  color: string;
 }) {
   return (
     <View style={statStyles.chip}>
-      <View style={[statStyles.chipIcon, { backgroundColor: color + "15" }]}>
-        <Ionicons name={icon} size={18} color={color} />
-      </View>
+      <Ionicons name={icon} size={18} color="rgba(255,255,255,0.8)" />
       <Text style={statStyles.chipValue}>{value}</Text>
       <Text style={statStyles.chipLabel}>{label}</Text>
     </View>
@@ -172,7 +157,7 @@ export default function HomeScreen() {
     return (
       <View>
         <LinearGradient
-          colors={["#0A1628", "#111D32", "#152238"]}
+          colors={["#7C3AED", "#6D28D9", "#5B21B6"]}
           style={styles.hero}
         >
           <View style={[styles.heroContent, { paddingTop: Platform.OS === "web" ? 67 + 20 : insets.top + 20 }]}>
@@ -181,46 +166,30 @@ export default function HomeScreen() {
                 <Text style={styles.greeting}>
                   {user ? `أهلاً، ${user.username}` : "مرحباً بك"}
                 </Text>
-                <View style={styles.logoRow}>
-                  <Ionicons name="diamond" size={22} color={Colors.light.accent} />
-                  <Text style={styles.heroTitle}>لاكي درو</Text>
-                </View>
+                <Text style={styles.heroTitle}>لاكي درو</Text>
               </View>
               {!user && (
                 <Pressable
                   onPress={() => router.push("/auth")}
                   style={styles.signInBtn}
                 >
-                  <LinearGradient
-                    colors={[Colors.light.accent, Colors.light.accentDark]}
-                    style={styles.signInGradient}
-                  >
-                    <Ionicons name="log-in-outline" size={18} color="#fff" />
-                    <Text style={styles.signInText}>دخول</Text>
-                  </LinearGradient>
+                  <Text style={styles.signInText}>دخول</Text>
                 </Pressable>
               )}
             </View>
 
             {activeCampaigns.length > 0 && (
               <View style={styles.statsRow}>
-                <StatChip
-                  icon="flame"
-                  value={activeCampaigns.length}
-                  label="نشطة"
-                  color={Colors.light.accent}
-                />
+                <StatChip icon="flame" value={activeCampaigns.length} label="نشطة" />
                 <StatChip
                   icon="ticket"
                   value={activeCampaigns.reduce((sum, c) => sum + (c.totalQuantity - c.soldQuantity), 0)}
                   label="متبقية"
-                  color="#3498DB"
                 />
                 <StatChip
                   icon="trophy"
                   value={campaigns?.filter((c) => c.status === "completed").length || 0}
                   label="فائزون"
-                  color="#2ECC71"
                 />
               </View>
             )}
@@ -236,9 +205,7 @@ export default function HomeScreen() {
 
         {activeCampaigns.length > 0 && (
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderIcon}>
-              <Ionicons name="flame" size={16} color={Colors.light.accent} />
-            </View>
+            <Ionicons name="flame" size={18} color={Colors.light.accent} />
             <Text style={styles.sectionTitle}>الحملات النشطة</Text>
             <View style={styles.sectionHeaderLine} />
           </View>
@@ -251,9 +218,7 @@ export default function HomeScreen() {
     if (otherCampaigns.length === 0) return null;
     return (
       <View style={styles.sectionHeader}>
-        <View style={[styles.sectionHeaderIcon, { backgroundColor: "rgba(46, 204, 113, 0.12)" }]}>
-          <Ionicons name="trophy" size={16} color={Colors.light.success} />
-        </View>
+        <Ionicons name="trophy" size={18} color={Colors.light.success} />
         <Text style={styles.sectionTitle}>الحملات السابقة</Text>
         <View style={styles.sectionHeaderLine} />
       </View>
@@ -295,7 +260,7 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <View style={styles.emptyIconWrap}>
-              <Ionicons name="calendar-outline" size={40} color={Colors.light.tabIconDefault} />
+              <Ionicons name="calendar-outline" size={36} color={Colors.light.tabIconDefault} />
             </View>
             <Text style={styles.emptyTitle}>لا توجد حملات حالياً</Text>
             <Text style={styles.emptyText}>
@@ -332,9 +297,9 @@ const bannerStyles = StyleSheet.create({
     width: BANNER_WIDTH,
   },
   banner: {
-    borderRadius: 18,
-    padding: 22,
-    minHeight: 130,
+    borderRadius: 20,
+    padding: 24,
+    minHeight: 120,
     overflow: "hidden",
     justifyContent: "center",
   },
@@ -350,7 +315,7 @@ const bannerStyles = StyleSheet.create({
   },
   bannerTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 20,
+    fontSize: 19,
     color: "#FFFFFF",
     marginBottom: 6,
     textAlign: "right",
@@ -359,54 +324,48 @@ const bannerStyles = StyleSheet.create({
   bannerSubtitle: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.75)",
     textAlign: "right",
     writingDirection: "rtl",
     lineHeight: 20,
   },
   bannerIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
-  bannerDecor1: {
+  decor1: {
     position: "absolute",
-    top: -30,
-    left: -30,
+    top: -40,
+    right: -30,
     width: 120,
     height: 120,
     borderRadius: 60,
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
-  bannerDecor2: {
+  decor2: {
     position: "absolute",
-    bottom: -40,
-    right: -20,
+    bottom: -50,
+    left: -20,
     width: 100,
     height: 100,
     borderRadius: 50,
-  },
-  bannerAccentLine: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   dots: {
     flexDirection: "row",
     justifyContent: "center",
     gap: 6,
-    marginTop: 12,
+    marginTop: 14,
   },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.light.border,
+    backgroundColor: "#D1D5DB",
   },
   dotActive: {
     width: 20,
@@ -419,14 +378,7 @@ const statStyles = StyleSheet.create({
   chip: {
     flex: 1,
     alignItems: "center",
-    gap: 6,
-  },
-  chipIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+    gap: 4,
   },
   chipValue: {
     fontFamily: "Inter_700Bold",
@@ -436,7 +388,7 @@ const statStyles = StyleSheet.create({
   chipLabel: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.6)",
     writingDirection: "rtl",
   },
 });
@@ -467,16 +419,11 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   heroTitleArea: {},
-  logoRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
-  },
   greeting: {
     fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: "rgba(255,255,255,0.5)",
-    marginBottom: 6,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
+    marginBottom: 4,
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -488,16 +435,10 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   signInBtn: {
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  signInGradient: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 14,
   },
   signInText: {
     fontFamily: "Inter_600SemiBold",
@@ -507,12 +448,10 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row-reverse",
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius: 16,
-    paddingVertical: 18,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 18,
+    paddingVertical: 16,
     paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
   },
   heroDecoCircle: {
     position: "absolute",
@@ -521,16 +460,16 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: "rgba(212, 168, 83, 0.04)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   heroDecoCircle2: {
     position: "absolute",
-    bottom: -30,
+    bottom: -40,
     left: -50,
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: "rgba(212, 168, 83, 0.03)",
+    backgroundColor: "rgba(236, 72, 153, 0.1)",
   },
   bannerSection: {
     marginTop: 0,
@@ -538,18 +477,10 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 14,
-  },
-  sectionHeaderIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: "rgba(212, 168, 83, 0.12)",
-    alignItems: "center",
-    justifyContent: "center",
   },
   sectionTitle: {
     fontFamily: "Inter_700Bold",
@@ -573,9 +504,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: Colors.light.progressBg,
     alignItems: "center",
     justifyContent: "center",

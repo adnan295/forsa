@@ -41,12 +41,16 @@ function ClassicTabLayout() {
           position: "absolute",
           backgroundColor: Platform.select({
             ios: "transparent",
-            android: isDark ? "#0A1628" : "#FFFFFF",
+            android: "#FFFFFF",
             web: "#FFFFFF",
           }),
           borderTopWidth: 0,
           elevation: 0,
           height: Platform.OS === "web" ? 84 : undefined,
+          shadowColor: "#7C3AED",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 12,
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
@@ -57,7 +61,7 @@ function ClassicTabLayout() {
             />
           ) : null,
         tabBarLabelStyle: {
-          fontFamily: "Inter_500Medium",
+          fontFamily: "Inter_600SemiBold",
           fontSize: 11,
         },
       }}

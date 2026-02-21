@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet, Image, Dimensions } from "react-native";
+import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -11,8 +11,6 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { getApiUrl } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface Props {
   campaign: Campaign;
@@ -74,23 +72,22 @@ export default function CampaignCard({ campaign, onPress }: Props) {
             />
           ) : (
             <LinearGradient
-              colors={["#0F1C30", "#1A2D4A", "#243B5C"]}
+              colors={["#7C3AED", "#A855F7", "#C084FC"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.imagePlaceholder}
             >
               <View style={styles.placeholderIcon}>
-                <Ionicons name="gift" size={36} color={Colors.light.accent} />
+                <Ionicons name="gift" size={32} color="#fff" />
               </View>
-              <View style={styles.placeholderDots}>
-                {[0, 1, 2].map((i) => (
-                  <View key={i} style={[styles.dot, { opacity: 0.1 + i * 0.08 }]} />
-                ))}
+              <View style={styles.placeholderPattern}>
+                <View style={[styles.patternCircle, { top: -20, right: -20, width: 80, height: 80 }]} />
+                <View style={[styles.patternCircle, { bottom: -30, left: -10, width: 60, height: 60 }]} />
               </View>
             </LinearGradient>
           )}
           <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.5)"]}
+            colors={["transparent", "rgba(0,0,0,0.4)"]}
             style={styles.imageOverlay}
           />
 
@@ -114,7 +111,7 @@ export default function CampaignCard({ campaign, onPress }: Props) {
 
           <View style={styles.prizeRow}>
             <View style={styles.prizeIconWrap}>
-              <Ionicons name="trophy" size={13} color="#FFD700" />
+              <Ionicons name="trophy" size={13} color={Colors.light.accent} />
             </View>
             <Text style={styles.prizeText} numberOfLines={1}>
               {campaign.prizeName}
@@ -132,10 +129,10 @@ export default function CampaignCard({ campaign, onPress }: Props) {
               <LinearGradient
                 colors={
                   isCompleted
-                    ? [Colors.light.success, "#27AE60"]
+                    ? [Colors.light.success, "#059669"]
                     : isSoldOut
-                    ? [Colors.light.warning, "#E67E22"]
-                    : [Colors.light.accent, "#C49A3C"]
+                    ? [Colors.light.warning, "#D97706"]
+                    : [Colors.light.accent, Colors.light.accentPink]
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -172,14 +169,14 @@ export default function CampaignCard({ campaign, onPress }: Props) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: "hidden",
     marginBottom: 16,
-    shadowColor: "#0A1628",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowColor: "#7C3AED",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   imageArea: {
     height: 180,
@@ -193,29 +190,27 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   placeholderIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "rgba(212, 168, 83, 0.12)",
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(212, 168, 83, 0.2)",
   },
-  placeholderDots: {
+  placeholderPattern: {
     position: "absolute",
-    bottom: 20,
-    right: 20,
-    flexDirection: "row",
-    gap: 6,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.light.accent,
+  patternCircle: {
+    position: "absolute",
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
   imageOverlay: {
     position: "absolute",
@@ -233,7 +228,7 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: 20,
   },
   statusText: {
     fontFamily: "Inter_600SemiBold",
@@ -247,16 +242,15 @@ const styles = StyleSheet.create({
     left: 14,
     flexDirection: "row",
     alignItems: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 12,
+    backgroundColor: "rgba(124, 58, 237, 0.9)",
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 10,
-    backdropFilter: "blur(10px)",
+    borderRadius: 14,
   },
   priceTagCurrency: {
     fontFamily: "Inter_500Medium",
     fontSize: 13,
-    color: Colors.light.accent,
+    color: "rgba(255,255,255,0.8)",
     marginBottom: 1,
     marginRight: 2,
   },
@@ -287,7 +281,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "rgba(255, 215, 0, 0.12)",
+    backgroundColor: "rgba(124, 58, 237, 0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -350,10 +344,10 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(212, 168, 83, 0.08)",
+    backgroundColor: "rgba(124, 58, 237, 0.06)",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   buyHintText: {
     fontFamily: "Inter_600SemiBold",
