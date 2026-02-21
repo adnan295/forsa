@@ -88,7 +88,16 @@ export default function ProfileScreen() {
     );
   }
 
+  const isProfileComplete = !!(user.fullName && user.phone && user.address && user.city && user.country);
+
   const menuItems = [
+    {
+      icon: "person-circle-outline" as const,
+      label: "تعديل الملف الشخصي",
+      subtitle: isProfileComplete ? "مكتمل ✓" : "أكمل بياناتك للشراء",
+      color: isProfileComplete ? "#10B981" : "#EF4444",
+      onPress: () => router.push("/edit-profile" as any),
+    },
     {
       icon: "receipt-outline" as const,
       label: "طلباتي",
@@ -113,6 +122,12 @@ export default function ProfileScreen() {
   ];
 
   const settingsItems = [
+    {
+      icon: "help-circle-outline" as const,
+      label: "الأسئلة الشائعة",
+      color: "#7C3AED",
+      onPress: () => router.push("/faq" as any),
+    },
     {
       icon: "information-circle-outline" as const,
       label: "عن التطبيق",
@@ -167,7 +182,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.userInfo}>
               <View style={styles.nameRow}>
-                <Text style={styles.userName}>{user.username}</Text>
+                <Text style={styles.userName}>{user.fullName || user.username}</Text>
                 {isAdmin && (
                   <View style={styles.adminBadge}>
                     <Ionicons name="shield-checkmark" size={11} color="#FFD700" />

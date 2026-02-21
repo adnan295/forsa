@@ -7,6 +7,12 @@ interface AuthUser {
   username: string;
   email: string;
   role: "user" | "admin";
+  fullName?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  emailVerified?: boolean;
 }
 
 interface AuthContextValue {
@@ -15,6 +21,7 @@ interface AuthContextValue {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -63,8 +70,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  async function refreshUser() {
+    try {
+      const baseUrl = getApiUrl();
+      const url = new URL("/api/auth/me", baseUrl);
+      const res = await fetch(url.toString(), { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data);
+      }
+    } catch (e) {}
+  }
+
   const value = useMemo(
-    () => ({ user, isLoading, login, register, logout }),
+    () => ({ user, isLoading, login, register, logout, refreshUser }),
     [user, isLoading]
   );
 

@@ -57,11 +57,13 @@ export default function CheckoutScreen() {
   } | null>(null);
   const [couponError, setCouponError] = useState("");
 
-  const [shippingFullName, setShippingFullName] = useState("");
-  const [shippingPhone, setShippingPhone] = useState("");
-  const [shippingCity, setShippingCity] = useState("");
-  const [shippingAddress, setShippingAddress] = useState("");
-  const [shippingCountry, setShippingCountry] = useState("السعودية");
+  const [shippingFullName, setShippingFullName] = useState(user?.fullName || "");
+  const [shippingPhone, setShippingPhone] = useState(user?.phone || "");
+  const [shippingCity, setShippingCity] = useState(user?.city || "");
+  const [shippingAddress, setShippingAddress] = useState(user?.address || "");
+  const [shippingCountry, setShippingCountry] = useState(user?.country || "السعودية");
+
+  const isProfileComplete = !!(user?.fullName && user?.phone && user?.address && user?.city && user?.country);
 
   const { data: campaign, isLoading: campaignLoading } = useQuery<Campaign>({
     queryKey: ["/api/campaigns", campaignId],
@@ -180,6 +182,51 @@ export default function CheckoutScreen() {
       <View style={[styles.container, styles.centered]}>
         <Ionicons name="alert-circle" size={48} color={Colors.light.danger} />
         <Text style={styles.errorText}>لم يتم العثور على الحملة</Text>
+      </View>
+    );
+  }
+
+  if (!isProfileComplete) {
+    return (
+      <View style={styles.container}>
+        <View
+          style={[
+            styles.header,
+            { paddingTop: Platform.OS === "web" ? 67 : insets.top },
+          ]}
+        >
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-forward" size={24} color={Colors.light.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>إتمام الشراء</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(239,68,68,0.1)", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+            <Ionicons name="person-circle-outline" size={44} color={Colors.light.danger} />
+          </View>
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.light.text, textAlign: "center", writingDirection: "rtl", marginBottom: 8 }}>
+            أكمل ملفك الشخصي أولاً
+          </Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", lineHeight: 24, marginBottom: 24 }}>
+            يجب إكمال بياناتك الشخصية (الاسم، الهاتف، العنوان) قبل إتمام عملية الشراء
+          </Text>
+          <Pressable
+            onPress={() => router.push("/edit-profile" as any)}
+            style={{ borderRadius: 16, overflow: "hidden", width: "100%" }}
+          >
+            <LinearGradient
+              colors={[Colors.light.accent, Colors.light.accentPink]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ paddingVertical: 16, alignItems: "center", borderRadius: 16 }}
+            >
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 17, color: "#FFFFFF", writingDirection: "rtl" }}>
+                إكمال الملف الشخصي
+              </Text>
+            </LinearGradient>
+          </Pressable>
+        </View>
       </View>
     );
   }

@@ -8,9 +8,12 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  Share,
+  TextInput,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/query-client";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -60,6 +63,33 @@ export default function CampaignDetailScreen() {
     staleTime: 3000,
   });
 
+  const { data: reviewsData } = useQuery<{ username: string; rating: number; comment: string | null; createdAt: string }[]>({
+    queryKey: ["/api/reviews", id],
+    enabled: !!id,
+  });
+
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  const reviewMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/reviews", {
+        campaignId: id,
+        rating: reviewRating,
+        comment: reviewComment || undefined,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews", id] });
+      setShowReviewForm(false);
+      setReviewRating(0);
+      setReviewComment("");
+    },
+  });
+
   if (isLoading || !campaign) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -98,11 +128,28 @@ export default function CampaignDetailScreen() {
             style={styles.heroOverlay}
           >
             <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
-              <Pressable onPress={() => router.back()} style={styles.backButton}>
-                <View style={styles.backBtnCircle}>
-                  <Ionicons name="arrow-forward" size={22} color="#fff" />
-                </View>
-              </Pressable>
+              <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", paddingHorizontal: 4 }}>
+                <Pressable onPress={() => router.back()} style={styles.backButton}>
+                  <View style={styles.backBtnCircle}>
+                    <Ionicons name="arrow-forward" size={22} color="#fff" />
+                  </View>
+                </Pressable>
+                <Pressable
+                  onPress={async () => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    try {
+                      await Share.share({
+                        message: `🛒 ${campaign.title}\n🎁 جائزة: ${campaign.prizeName}\n💰 السعر: $${unitPrice.toFixed(2)}\n\nاشترِ المنتج واحصل على فرصة للفوز! 🎉\n\nلاكي درو - تسوق واربح`,
+                      });
+                    } catch (e) {}
+                  }}
+                  style={styles.backButton}
+                >
+                  <View style={styles.backBtnCircle}>
+                    <Ionicons name="share-social" size={20} color="#fff" />
+                  </View>
+                </Pressable>
+              </View>
 
               <View style={styles.heroCenter}>
                 {!campaign.imageUrl && (
@@ -277,6 +324,91 @@ export default function CampaignDetailScreen() {
               </Text>
             </View>
           )}
+
+          <View style={styles.detailSection}>
+            <View style={styles.detailHeader}>
+              <Ionicons name="star" size={18} color="#F59E0B" />
+              <Text style={styles.detailTitle}>التقييمات والآراء</Text>
+              {reviewsData && reviewsData.length > 0 && (
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, marginRight: "auto" }}>
+                  ({reviewsData.length})
+                </Text>
+              )}
+            </View>
+
+            {user && !showReviewForm && (
+              <Pressable
+                onPress={() => setShowReviewForm(true)}
+                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, marginBottom: 12 }}
+              >
+                <Ionicons name="create-outline" size={18} color={Colors.light.accent} />
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" }}>أضف تقييمك</Text>
+              </Pressable>
+            )}
+
+            {showReviewForm && (
+              <View style={{ backgroundColor: "#F9FAFB", borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: Colors.light.border }}>
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 10 }}>تقييمك</Text>
+                <View style={{ flexDirection: "row-reverse", justifyContent: "center", gap: 8, marginBottom: 12 }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Pressable key={star} onPress={() => { setReviewRating(star); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}>
+                      <Ionicons name={star <= reviewRating ? "star" : "star-outline"} size={32} color="#F59E0B" />
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput
+                  style={{ backgroundColor: "#fff", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.border, padding: 12, fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", minHeight: 60, textAlignVertical: "top" }}
+                  placeholder="اكتب رأيك (اختياري)"
+                  placeholderTextColor={Colors.light.textSecondary}
+                  value={reviewComment}
+                  onChangeText={setReviewComment}
+                  multiline
+                />
+                <View style={{ flexDirection: "row-reverse", gap: 10, marginTop: 12 }}>
+                  <Pressable
+                    onPress={() => { if (reviewRating > 0) reviewMutation.mutate(); }}
+                    disabled={reviewRating === 0 || reviewMutation.isPending}
+                    style={{ flex: 1, backgroundColor: Colors.light.accent, borderRadius: 12, paddingVertical: 12, alignItems: "center", opacity: reviewRating === 0 ? 0.5 : 1 }}
+                  >
+                    {reviewMutation.isPending ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" }}>إرسال</Text>
+                    )}
+                  </Pressable>
+                  <Pressable
+                    onPress={() => { setShowReviewForm(false); setReviewRating(0); setReviewComment(""); }}
+                    style={{ flex: 1, backgroundColor: "#fff", borderRadius: 12, paddingVertical: 12, alignItems: "center", borderWidth: 1, borderColor: Colors.light.border }}
+                  >
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.textSecondary }}>إلغاء</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {reviewsData && reviewsData.length > 0 ? (
+              reviewsData.slice(0, 5).map((review, idx) => (
+                <View key={idx} style={{ paddingVertical: 12, borderBottomWidth: idx < Math.min(reviewsData.length, 5) - 1 ? 1 : 0, borderBottomColor: Colors.light.border }}>
+                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(124,58,237,0.1)", alignItems: "center", justifyContent: "center" }}>
+                      <Text style={{ fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.light.accent }}>{review.username.charAt(0).toUpperCase()}</Text>
+                    </View>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.text, flex: 1, textAlign: "right", writingDirection: "rtl" }}>{review.username}</Text>
+                    <View style={{ flexDirection: "row", gap: 2 }}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Ionicons key={s} name={s <= review.rating ? "star" : "star-outline"} size={14} color="#F59E0B" />
+                      ))}
+                    </View>
+                  </View>
+                  {review.comment && (
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginRight: 40 }}>{review.comment}</Text>
+                  )}
+                </View>
+              ))
+            ) : (
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", paddingVertical: 16 }}>لا توجد تقييمات بعد. كن أول من يقيّم!</Text>
+            )}
+          </View>
         </View>
       </ScrollView>
 
