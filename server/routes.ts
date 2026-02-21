@@ -340,6 +340,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
       }
       const campaign = await storage.createCampaign(parsed.data);
+
+      try {
+        const allUsers = await storage.getAllUsers();
+        const userIds = allUsers.filter(u => u.role !== "admin").map(u => u.id);
+        if (userIds.length > 0) {
+          await storage.createBulkUserNotifications(
+            userIds,
+            "new_campaign",
+            "منتج جديد 🎉",
+            `تم إضافة منتج جديد: ${campaign.title}`,
+            campaign.id
+          );
+        }
+      } catch (e) {
+        console.error("Notification error:", e);
+      }
+
       res.json(campaign);
     } catch (error) {
       console.error("Create campaign error:", error);
@@ -449,6 +466,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ticketNumbers: result.tickets.map((t: any) => t.ticketNumber),
           paymentMethod: paymentMethod,
         });
+
+        try {
+          const remaining = campaign.totalQuantity - campaign.soldQuantity;
+          const threshold = Math.ceil(campaign.totalQuantity * 0.1);
+          if (remaining <= threshold && remaining > 0) {
+            const campaignTickets = await storage.getTicketsByCampaign(campaignId);
+            const participantIds = [...new Set(campaignTickets.map(t => t.userId))];
+            if (participantIds.length > 0) {
+              await storage.createBulkUserNotifications(
+                participantIds,
+                "low_stock",
+                "الكمية قاربت على النفاد ⚡",
+                `بقي ${remaining} قطعة فقط من ${campaign.title}! سارع بالشراء`,
+                campaignId
+              );
+            }
+          }
+          if (remaining <= 0) {
+            const campaignTickets = await storage.getTicketsByCampaign(campaignId);
+            const participantIds = [...new Set(campaignTickets.map(t => t.userId))];
+            if (participantIds.length > 0) {
+              await storage.createBulkUserNotifications(
+                participantIds,
+                "sold_out",
+                "نفدت الكمية! 🔥",
+                `تم بيع كامل كمية ${campaign.title}! السحب قريباً`,
+                campaignId
+              );
+            }
+          }
+        } catch (e) {
+          console.error("Notification error:", e);
+        }
       }
 
       res.json({
@@ -534,6 +584,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ticketNumbers: result.tickets.map((t: any) => t.ticketNumber),
             paymentMethod: paymentMethod,
           });
+
+          try {
+            const remaining = campaign.totalQuantity - campaign.soldQuantity;
+            const threshold = Math.ceil(campaign.totalQuantity * 0.1);
+            if (remaining <= threshold && remaining > 0) {
+              const cTickets = await storage.getTicketsByCampaign(campaignId);
+              const pIds = [...new Set(cTickets.map(t => t.userId))];
+              if (pIds.length > 0) {
+                await storage.createBulkUserNotifications(pIds, "low_stock", "الكمية قاربت على النفاد ⚡", `بقي ${remaining} قطعة فقط من ${campaign.title}! سارع بالشراء`, campaignId);
+              }
+            }
+            if (remaining <= 0) {
+              const cTickets = await storage.getTicketsByCampaign(campaignId);
+              const pIds = [...new Set(cTickets.map(t => t.userId))];
+              if (pIds.length > 0) {
+                await storage.createBulkUserNotifications(pIds, "sold_out", "نفدت الكمية! 🔥", `تم بيع كامل كمية ${campaign.title}! السحب قريباً`, campaignId);
+              }
+            }
+          } catch (e) {
+            console.error("Notification error:", e);
+          }
         }
       }
 
@@ -657,6 +728,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           prizeName: drawnCampaign.prizeName,
           ticketNumber: result.ticket.ticketNumber,
         });
+
+        try {
+          await storage.createUserNotification(
+            result.winner.id,
+            "you_won",
+            "مبروك أنت الفائز! 🏆🎉",
+            `لقد فزت بجائزة ${drawnCampaign.prizeName} في حملة ${drawnCampaign.title} بالتذكرة ${result.ticket.ticketNumber}!`,
+            req.params.campaignId as string
+          );
+
+          const campaignTickets = await storage.getTicketsByCampaign(req.params.campaignId as string);
+          const participantIds = [...new Set(campaignTickets.map(t => t.userId))].filter(id => id !== result.winner.id);
+          if (participantIds.length > 0) {
+            await storage.createBulkUserNotifications(
+              participantIds,
+              "draw_completed",
+              "تم إجراء السحب 🎰",
+              `تم سحب الفائز في حملة ${drawnCampaign.title}! حظاً أوفر في المرة القادمة`,
+              req.params.campaignId as string
+            );
+          }
+
+          const allUsers = await storage.getAllUsers();
+          const nonParticipantIds = allUsers
+            .filter(u => u.role !== "admin" && u.id !== result.winner.id && !participantIds.includes(u.id))
+            .map(u => u.id);
+          if (nonParticipantIds.length > 0) {
+            await storage.createBulkUserNotifications(
+              nonParticipantIds,
+              "winner_announced",
+              "فائز جديد! 🎊",
+              `تم اختيار الفائز في حملة ${drawnCampaign.title}!`,
+              req.params.campaignId as string
+            );
+          }
+        } catch (e) {
+          console.error("Notification error:", e);
+        }
       }
 
       res.json({
@@ -1122,6 +1231,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(csvHeader + csvRows);
     } catch (error) {
       console.error("Export CSV error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // User Notifications API
+  app.get("/api/notifications", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const notifications = await storage.getUserNotifications(req.session.userId!);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/notifications/unread-count", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const count = await storage.getUnreadUserNotificationCount(req.session.userId!);
+      res.json({ count });
+    } catch (error) {
+      console.error("Get unread count error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/notifications/:id/read", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const success = await storage.markUserNotificationRead(req.params.id as string, req.session.userId!);
+      if (!success) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Mark notification read error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/notifications/read-all", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      await storage.markAllUserNotificationsRead(req.session.userId!);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Mark all read error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
