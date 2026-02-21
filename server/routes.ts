@@ -1,10 +1,10 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "node:http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertCampaignSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 
 const PgSession = connectPgSimple(session);
@@ -71,6 +71,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       req.session.userId = user.id;
+
+      await storage.logActivity("user_register", "New user registered", `User ${user.username} registered`, user.id);
+
       res.json({
         id: user.id,
         username: user.username,
@@ -150,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/campaigns/:id", async (req: Request, res: Response) => {
     try {
-      const campaign = await storage.getCampaign(req.params.id);
+      const campaign = await storage.getCampaign(req.params.id as string);
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
@@ -177,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/campaigns/:id", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const campaign = await storage.updateCampaign(req.params.id, req.body);
+      const campaign = await storage.updateCampaign(req.params.id as string, req.body);
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
@@ -200,6 +203,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         campaignId,
         quantity,
         paymentMethod
+      );
+
+      await storage.logActivity(
+        "purchase",
+        "New purchase",
+        `User purchased ${result.tickets.length} ticket(s) for order ${result.order.id}`,
+        req.session.userId!,
+        JSON.stringify({ orderId: result.order.id, campaignId, quantity })
       );
 
       res.json({
@@ -225,7 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/tickets/campaign/:campaignId", async (req: Request, res: Response) => {
     try {
-      const campaignTickets = await storage.getTicketsByCampaign(req.params.campaignId);
+      const campaignTickets = await storage.getTicketsByCampaign(req.params.campaignId as string);
       res.json(campaignTickets);
     } catch (error) {
       console.error("Get campaign tickets error:", error);
@@ -245,10 +256,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/draw/:campaignId", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const result = await storage.drawWinner(req.params.campaignId);
+      const result = await storage.drawWinner(req.params.campaignId as string);
       if (!result) {
         return res.status(400).json({ message: "No tickets found for this campaign" });
       }
+
+      await storage.logActivity(
+        "draw",
+        "Winner drawn",
+        `Winner ${result.winner.username} drawn for campaign with ticket ${result.ticket.ticketNumber}`,
+        req.session.userId!,
+        JSON.stringify({ campaignId: req.params.campaignId, winnerId: result.winner.id, ticketNumber: result.ticket.ticketNumber })
+      );
+
       res.json({
         winner: {
           id: result.winner.id,
@@ -281,6 +301,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Stats error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/dashboard", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const stats = await storage.getAdminDashboardStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Dashboard stats error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/orders", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const allOrders = await storage.getAllOrders();
+      res.json(allOrders);
+    } catch (error) {
+      console.error("Get all orders error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/admin/orders/:id/shipping", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { shippingStatus, trackingNumber, shippingAddress } = req.body;
+      const updated = await storage.updateOrderShipping(req.params.id as string, {
+        shippingStatus,
+        trackingNumber,
+        shippingAddress,
+      });
+      if (!updated) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Update shipping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/users", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const usersWithStats = await Promise.all(
+        allUsers.map(async (user) => {
+          const stats = await storage.getUserStats(user.id);
+          return {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            createdAt: user.createdAt,
+            ...stats,
+          };
+        })
+      );
+      res.json(usersWithStats);
+    } catch (error) {
+      console.error("Get all users error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/admin/campaigns/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteCampaign(req.params.id as string);
+      if (!deleted) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      res.json({ message: "Campaign deleted" });
+    } catch (error: any) {
+      console.error("Delete campaign error:", error);
+      res.status(400).json({ message: error.message || "Failed to delete campaign" });
+    }
+  });
+
+  app.get("/api/admin/payment-methods", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const methods = await storage.getPaymentMethods();
+      res.json(methods);
+    } catch (error) {
+      console.error("Get payment methods error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/admin/payment-methods", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const parsed = insertPaymentMethodSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
+      }
+      const method = await storage.createPaymentMethod(parsed.data);
+      res.json(method);
+    } catch (error) {
+      console.error("Create payment method error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/admin/payment-methods/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const updated = await storage.updatePaymentMethod(req.params.id as string, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Payment method not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Update payment method error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/admin/payment-methods/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deletePaymentMethod(req.params.id as string);
+      if (!deleted) {
+        return res.status(404).json({ message: "Payment method not found" });
+      }
+      res.json({ message: "Payment method deleted" });
+    } catch (error) {
+      console.error("Delete payment method error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/coupons", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const allCoupons = await storage.getCoupons();
+      res.json(allCoupons);
+    } catch (error) {
+      console.error("Get coupons error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/admin/coupons", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const parsed = insertCouponSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
+      }
+      const coupon = await storage.createCoupon(parsed.data);
+      res.json(coupon);
+    } catch (error) {
+      console.error("Create coupon error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/admin/coupons/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const updated = await storage.updateCoupon(req.params.id as string, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Coupon not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Update coupon error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/admin/coupons/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteCoupon(req.params.id as string);
+      if (!deleted) {
+        return res.status(404).json({ message: "Coupon not found" });
+      }
+      res.json({ message: "Coupon deleted" });
+    } catch (error) {
+      console.error("Delete coupon error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/activity-log", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const log = await storage.getActivityLog(limit);
+      res.json(log);
+    } catch (error) {
+      console.error("Get activity log error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
