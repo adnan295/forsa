@@ -94,7 +94,7 @@ export default function CampaignDetailScreen() {
             />
           ) : null}
           <LinearGradient
-            colors={campaign.imageUrl ? ["transparent", "rgba(10,22,40,0.7)", "rgba(10,22,40,0.95)"] : ["#0A1628", "#152238", "#1A2D4A"]}
+            colors={campaign.imageUrl ? ["transparent", "rgba(124,58,237,0.7)", "rgba(91,33,182,0.95)"] : ["#7C3AED", "#6D28D9", "#5B21B6"]}
             style={styles.heroOverlay}
           >
             <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
@@ -107,12 +107,12 @@ export default function CampaignDetailScreen() {
               <View style={styles.heroCenter}>
                 {!campaign.imageUrl && (
                   <Animated.View style={[styles.prizeIcon, pulseStyle]}>
-                    <Ionicons name="gift" size={52} color={Colors.light.accent} />
+                    <Ionicons name="gift" size={52} color="#fff" />
                   </Animated.View>
                 )}
                 <Text style={styles.heroTitle}>{campaign.title}</Text>
                 <View style={styles.prizeBadge}>
-                  <Ionicons name="trophy" size={16} color="#FFD700" />
+                  <Ionicons name="trophy" size={16} color="#A78BFA" />
                   <Text style={styles.prizeTitle}>{campaign.prizeName}</Text>
                 </View>
               </View>
@@ -140,7 +140,7 @@ export default function CampaignDetailScreen() {
                       ? [Colors.light.success, "#27AE60"]
                       : isSoldOut
                       ? [Colors.light.warning, "#E67E22"]
-                      : [Colors.light.accent, "#C49A3C"]
+                      : [Colors.light.accent, Colors.light.accentPink]
                   }
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -230,7 +230,7 @@ export default function CampaignDetailScreen() {
           {campaign.prizeDescription && (
             <View style={styles.detailSection}>
               <View style={styles.detailHeader}>
-                <Ionicons name="gift-outline" size={18} color="#FFD700" />
+                <Ionicons name="gift-outline" size={18} color="#A78BFA" />
                 <Text style={styles.detailTitle}>تفاصيل الجائزة</Text>
               </View>
               <Text style={styles.detailText}>{campaign.prizeDescription}</Text>
@@ -255,7 +255,7 @@ export default function CampaignDetailScreen() {
           {isCompleted && campaign.winnerTicketId && (
             <View style={styles.winnerCard}>
               <LinearGradient
-                colors={["#FFD700", "#FFA500"]}
+                colors={["#7C3AED", "#EC4899"]}
                 style={styles.winnerGradient}
               >
                 <Ionicons name="trophy" size={36} color="#fff" />
@@ -369,12 +369,12 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "rgba(212, 168, 83, 0.15)",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: "rgba(212, 168, 83, 0.25)",
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
   heroTitle: {
     fontFamily: "Inter_700Bold",
@@ -388,17 +388,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    backgroundColor: "rgba(255, 215, 0, 0.12)",
+    backgroundColor: "rgba(124, 58, 237, 0.15)",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 215, 0, 0.2)",
+    borderColor: "rgba(124, 58, 237, 0.25)",
   },
   prizeTitle: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
-    color: "#FFD700",
+    color: "#A78BFA",
   },
   content: {
     padding: 16,
@@ -406,12 +406,12 @@ const styles = StyleSheet.create({
   },
   progressCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 20,
     marginBottom: 14,
-    shadowColor: "#0A1628",
+    shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.06,
     shadowRadius: 16,
     elevation: 6,
   },
@@ -478,10 +478,10 @@ const styles = StyleSheet.create({
 
   quantityCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
     marginBottom: 14,
-    shadowColor: "#0A1628",
+    shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 56,
     borderRadius: 16,
-    backgroundColor: "rgba(212, 168, 83, 0.08)",
+    backgroundColor: "rgba(124, 58, 237, 0.06)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
@@ -554,10 +554,10 @@ const styles = StyleSheet.create({
 
   detailSection: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
     marginBottom: 12,
-    shadowColor: "#0A1628",
+    shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -589,10 +589,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
     marginBottom: 12,
-    shadowColor: "#0A1628",
+    shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -627,12 +627,12 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 18,
-    backgroundColor: "rgba(212, 168, 83, 0.1)",
+    backgroundColor: "rgba(124, 58, 237, 0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
   winnerCard: {
-    borderRadius: 18,
+    borderRadius: 22,
     overflow: "hidden",
     marginBottom: 12,
   },

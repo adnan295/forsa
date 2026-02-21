@@ -70,7 +70,7 @@ export default function ProfileScreen() {
     >
       <View style={styles.profileCard}>
         <LinearGradient
-          colors={["#0A1628", "#1A2D4A"]}
+          colors={["#7C3AED", "#6D28D9"]}
           style={styles.profileGradient}
         >
           <View style={styles.avatar}>
@@ -131,7 +131,7 @@ export default function ProfileScreen() {
             ]}
           >
             <LinearGradient
-              colors={["#0A1628", "#1A2D4A"]}
+              colors={["#7C3AED", "#6D28D9"]}
               style={styles.adminPanelGradient}
             >
               <Ionicons name="grid" size={28} color={Colors.light.accent} />
@@ -194,12 +194,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   profileCard: {
-    borderRadius: 22,
+    borderRadius: 24,
     overflow: "hidden",
     marginBottom: 24,
-    shadowColor: "#0A1628",
+    shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.12,
     shadowRadius: 20,
     elevation: 8,
   },
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(212, 168, 83, 0.2)",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
@@ -392,13 +392,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     padding: 18,
     borderRadius: 16,
-    shadowColor: "#0A1628",
+    shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 3,
     borderWidth: 1,
-    borderColor: "rgba(231, 76, 60, 0.12)",
+    borderColor: "rgba(239, 68, 68, 0.12)",
   },
   logoutText: {
     fontFamily: "Inter_600SemiBold",
@@ -409,9 +409,9 @@ const styles = StyleSheet.create({
   adminPanelButton: {
     borderRadius: 18,
     overflow: "hidden",
-    shadowColor: "#0A1628",
+    shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.10,
     shadowRadius: 16,
     elevation: 6,
   },

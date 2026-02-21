@@ -58,7 +58,7 @@ export default function AuthScreen() {
   }
 
   return (
-    <LinearGradient colors={["#0A1628", "#152238", "#1A2D4A"]} style={styles.gradient}>
+    <LinearGradient colors={["#7C3AED", "#6D28D9", "#5B21B6"]} style={styles.gradient}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -74,12 +74,12 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="close" size={28} color="#fff" />
+            <Ionicons name="close" size={28} color="rgba(255,255,255,0.8)" />
           </Pressable>
 
           <View style={styles.logoArea}>
             <View style={styles.iconCircle}>
-              <Ionicons name="diamond" size={40} color={Colors.light.accent} />
+              <Ionicons name="diamond" size={36} color="#fff" />
             </View>
             <Text style={styles.logoText}>لاكي درو</Text>
             <Text style={styles.tagline}>
@@ -89,11 +89,11 @@ export default function AuthScreen() {
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Ionicons name="person-outline" size={20} color="#8B99AD" style={styles.inputIcon} />
+              <Ionicons name="person-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="اسم المستخدم"
-                placeholderTextColor="#5A6B82"
+                placeholderTextColor="rgba(255,255,255,0.4)"
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -103,11 +103,11 @@ export default function AuthScreen() {
 
             {!isLogin && (
               <View style={styles.inputGroup}>
-                <Ionicons name="mail-outline" size={20} color="#8B99AD" style={styles.inputIcon} />
+                <Ionicons name="mail-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="البريد الإلكتروني"
-                  placeholderTextColor="#5A6B82"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -118,11 +118,11 @@ export default function AuthScreen() {
             )}
 
             <View style={styles.inputGroup}>
-              <Ionicons name="lock-closed-outline" size={20} color="#8B99AD" style={styles.inputIcon} />
+              <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 placeholder="كلمة المرور"
-                placeholderTextColor="#5A6B82"
+                placeholderTextColor="rgba(255,255,255,0.4)"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -132,7 +132,7 @@ export default function AuthScreen() {
                 <Ionicons
                   name={showPassword ? "eye-off-outline" : "eye-outline"}
                   size={20}
-                  color="#8B99AD"
+                  color="rgba(255,255,255,0.5)"
                 />
               </Pressable>
             </View>
@@ -146,20 +146,15 @@ export default function AuthScreen() {
                 loading && { opacity: 0.6 },
               ]}
             >
-              <LinearGradient
-                colors={[Colors.light.accent, Colors.light.accentDark]}
-                style={styles.submitGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
+              <View style={styles.submitInner}>
                 {loading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={Colors.light.accent} />
                 ) : (
                   <Text style={styles.submitText}>
                     {isLogin ? "تسجيل الدخول" : "إنشاء حساب"}
                   </Text>
                 )}
-              </LinearGradient>
+              </View>
             </Pressable>
 
             <Pressable
@@ -202,10 +197,10 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(212, 168, 83, 0.15)",
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
@@ -220,7 +215,7 @@ const styles = StyleSheet.create({
   tagline: {
     fontFamily: "Inter_400Regular",
     fontSize: 16,
-    color: "#8B99AD",
+    color: "rgba(255,255,255,0.6)",
     writingDirection: "rtl",
   },
   form: {
@@ -229,10 +224,10 @@ const styles = StyleSheet.create({
   inputGroup: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "rgba(255, 255, 255, 0.15)",
     paddingHorizontal: 16,
     height: 56,
   },
@@ -253,19 +248,20 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     marginTop: 8,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: "hidden",
   },
-  submitGradient: {
+  submitInner: {
     height: 56,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 14,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
   },
   submitText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Inter_700Bold",
     fontSize: 17,
-    color: "#FFFFFF",
+    color: Colors.light.accent,
     writingDirection: "rtl",
   },
   switchBtn: {
@@ -276,11 +272,11 @@ const styles = StyleSheet.create({
   switchText: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "#8B99AD",
+    color: "rgba(255,255,255,0.6)",
     writingDirection: "rtl",
   },
   switchTextBold: {
     fontFamily: "Inter_600SemiBold",
-    color: Colors.light.accent,
+    color: "#FFFFFF",
   },
 });
