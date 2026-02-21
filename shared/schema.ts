@@ -186,6 +186,22 @@ export const adminNotifications = pgTable("admin_notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const userNotifications = pgTable("user_notifications", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  campaignId: varchar("campaign_id"),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: varchar("id")
     .primaryKey()
@@ -320,3 +336,4 @@ export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type ActivityLogEntry = typeof activityLog.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type AdminNotification = typeof adminNotifications.$inferSelect;
+export type UserNotification = typeof userNotifications.$inferSelect;

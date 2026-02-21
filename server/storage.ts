@@ -12,6 +12,7 @@ import {
   type ActivityLogEntry,
   type Review,
   type AdminNotification,
+  type UserNotification,
   users,
   campaigns,
   orders,
@@ -21,6 +22,7 @@ import {
   activityLog,
   reviews,
   adminNotifications,
+  userNotifications,
   passwordResetTokens,
   insertReviewSchema,
 } from "@shared/schema";
@@ -122,6 +124,13 @@ export interface IStorage {
   markNotificationRead(id: string): Promise<boolean>;
   markAllNotificationsRead(): Promise<boolean>;
   getUnreadNotificationCount(): Promise<number>;
+
+  createUserNotification(userId: string, type: string, title: string, body: string, campaignId?: string, metadata?: string): Promise<UserNotification>;
+  createBulkUserNotifications(userIds: string[], type: string, title: string, body: string, campaignId?: string, metadata?: string): Promise<void>;
+  getUserNotifications(userId: string, limit?: number): Promise<UserNotification[]>;
+  markUserNotificationRead(id: string, userId: string): Promise<boolean>;
+  markAllUserNotificationsRead(userId: string): Promise<boolean>;
+  getUnreadUserNotificationCount(userId: string): Promise<number>;
 
   getUserByEmail(email: string): Promise<User | undefined>;
   createPasswordResetToken(userId: string, code: string, expiresAt: Date): Promise<any>;
@@ -788,6 +797,59 @@ export class DatabaseStorage implements IStorage {
     await db.update(users)
       .set({ password: hashedPassword })
       .where(eq(users.id, userId));
+  }
+
+  async createUserNotification(userId: string, type: string, title: string, body: string, campaignId?: string, metadata?: string): Promise<UserNotification> {
+    const [notification] = await db.insert(userNotifications).values({
+      userId,
+      type,
+      title,
+      body,
+      campaignId: campaignId || null,
+      metadata: metadata || null,
+    }).returning();
+    return notification;
+  }
+
+  async createBulkUserNotifications(userIds: string[], type: string, title: string, body: string, campaignId?: string, metadata?: string): Promise<void> {
+    if (userIds.length === 0) return;
+    const values = userIds.map((userId) => ({
+      userId,
+      type,
+      title,
+      body,
+      campaignId: campaignId || null,
+      metadata: metadata || null,
+    }));
+    await db.insert(userNotifications).values(values);
+  }
+
+  async getUserNotifications(userId: string, limit = 50): Promise<UserNotification[]> {
+    return db.select().from(userNotifications)
+      .where(eq(userNotifications.userId, userId))
+      .orderBy(desc(userNotifications.createdAt))
+      .limit(limit);
+  }
+
+  async markUserNotificationRead(id: string, userId: string): Promise<boolean> {
+    const [result] = await db.update(userNotifications)
+      .set({ isRead: true })
+      .where(and(eq(userNotifications.id, id), eq(userNotifications.userId, userId)))
+      .returning();
+    return !!result;
+  }
+
+  async markAllUserNotificationsRead(userId: string): Promise<boolean> {
+    await db.update(userNotifications)
+      .set({ isRead: true })
+      .where(and(eq(userNotifications.userId, userId), eq(userNotifications.isRead, false)));
+    return true;
+  }
+
+  async getUnreadUserNotificationCount(userId: string): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(userNotifications)
+      .where(and(eq(userNotifications.userId, userId), eq(userNotifications.isRead, false)));
+    return result?.count || 0;
   }
 }
 
