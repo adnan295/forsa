@@ -37,10 +37,10 @@ export default function CampaignCard({ campaign, onPress }: Props) {
   }
 
   function getStatusText() {
-    if (isCompleted) return "Completed";
-    if (campaign.status === "drawing") return "Drawing...";
-    if (isSoldOut) return "Sold Out";
-    return "Active";
+    if (isCompleted) return "مكتمل";
+    if (campaign.status === "drawing") return "جاري السحب...";
+    if (isSoldOut) return "نفذت الكمية";
+    return "نشط";
   }
 
   return (
@@ -96,10 +96,10 @@ export default function CampaignCard({ campaign, onPress }: Props) {
             </View>
             <View style={styles.progressInfo}>
               <Text style={styles.soldText}>
-                {campaign.soldQuantity}/{campaign.totalQuantity} sold
+                {campaign.soldQuantity}/{campaign.totalQuantity} مباع
               </Text>
               {!isCompleted && !isSoldOut && (
-                <Text style={styles.remainingText}>{remaining} left</Text>
+                <Text style={styles.remainingText}>{remaining} متبقي</Text>
               )}
             </View>
           </View>
@@ -110,7 +110,7 @@ export default function CampaignCard({ campaign, onPress }: Props) {
             </Text>
             {!isCompleted && !isSoldOut && (
               <View style={styles.buyHint}>
-                <Text style={styles.buyHintText}>Buy Now</Text>
+                <Text style={styles.buyHintText}>اشترِ الآن</Text>
                 <Ionicons name="arrow-forward" size={14} color={Colors.light.accent} />
               </View>
             )}

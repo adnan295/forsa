@@ -84,8 +84,8 @@ export default function CampaignDetailScreen() {
     },
     onError: (err: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const msg = err.message || "Purchase failed";
-      Alert.alert("Error", msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
+      const msg = err.message || "فشلت عملية الشراء";
+      Alert.alert("خطأ", msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
     },
   });
 
@@ -138,7 +138,7 @@ export default function CampaignDetailScreen() {
         <View style={styles.content}>
           <View style={styles.progressCard}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressTitle}>Campaign Progress</Text>
+              <Text style={styles.progressTitle}>تقدم الحملة</Text>
               <Text style={styles.progressPercent}>
                 {Math.round(progress * 100)}%
               </Text>
@@ -163,38 +163,38 @@ export default function CampaignDetailScreen() {
                 <Text style={styles.progressStatNum}>
                   {campaign.soldQuantity}
                 </Text>
-                <Text style={styles.progressStatLabel}>Sold</Text>
+                <Text style={styles.progressStatLabel}>مباع</Text>
               </View>
               <View style={styles.progressStat}>
                 <Text style={styles.progressStatNum}>
                   {campaign.totalQuantity}
                 </Text>
-                <Text style={styles.progressStatLabel}>Total</Text>
+                <Text style={styles.progressStatLabel}>الإجمالي</Text>
               </View>
               <View style={styles.progressStat}>
                 <Text style={[styles.progressStatNum, { color: Colors.light.accent }]}>
                   {remaining}
                 </Text>
-                <Text style={styles.progressStatLabel}>Remaining</Text>
+                <Text style={styles.progressStatLabel}>متبقي</Text>
               </View>
             </View>
           </View>
 
           <View style={styles.detailSection}>
-            <Text style={styles.detailTitle}>About</Text>
+            <Text style={styles.detailTitle}>عن المنتج</Text>
             <Text style={styles.detailText}>{campaign.description}</Text>
           </View>
 
           {campaign.prizeDescription && (
             <View style={styles.detailSection}>
-              <Text style={styles.detailTitle}>Prize Details</Text>
+              <Text style={styles.detailTitle}>تفاصيل الجائزة</Text>
               <Text style={styles.detailText}>{campaign.prizeDescription}</Text>
             </View>
           )}
 
           <View style={styles.priceCard}>
             <View>
-              <Text style={styles.priceLabel}>Price per ticket</Text>
+              <Text style={styles.priceLabel}>سعر التذكرة</Text>
               <Text style={styles.priceValue}>
                 ${parseFloat(campaign.productPrice).toFixed(2)}
               </Text>
@@ -209,9 +209,9 @@ export default function CampaignDetailScreen() {
                 style={styles.winnerGradient}
               >
                 <Ionicons name="trophy" size={32} color="#fff" />
-                <Text style={styles.winnerTitle}>Winner Announced!</Text>
+                <Text style={styles.winnerTitle}>تم إعلان الفائز!</Text>
                 <Text style={styles.winnerTicket}>
-                  Ticket: {campaign.winnerTicketId}
+                  التذكرة: {campaign.winnerTicketId}
                 </Text>
               </LinearGradient>
             </View>
@@ -221,7 +221,7 @@ export default function CampaignDetailScreen() {
             <View style={styles.soldOutBanner}>
               <Ionicons name="hourglass" size={24} color={Colors.light.warning} />
               <Text style={styles.soldOutText}>
-                All items sold! Draw will begin soon.
+                نفذت جميع العناصر! السحب سيبدأ قريباً.
               </Text>
             </View>
           )}
@@ -233,7 +233,7 @@ export default function CampaignDetailScreen() {
           <View style={styles.bottomContent}>
             <View>
               <Text style={styles.bottomPrice}>${totalPrice}</Text>
-              <Text style={styles.bottomQty}>{quantity} ticket(s)</Text>
+              <Text style={styles.bottomQty}>{quantity} تذكرة</Text>
             </View>
             <Pressable
               onPress={() => {
@@ -256,7 +256,7 @@ export default function CampaignDetailScreen() {
                 end={{ x: 1, y: 0 }}
               >
                 <Ionicons name="cart" size={20} color="#fff" />
-                <Text style={styles.buyButtonText}>Buy Now</Text>
+                <Text style={styles.buyButtonText}>اشترِ الآن</Text>
               </LinearGradient>
             </Pressable>
           </View>
@@ -267,7 +267,7 @@ export default function CampaignDetailScreen() {
         <View style={modalStyles.overlay}>
           <View style={modalStyles.container}>
             <View style={modalStyles.header}>
-              <Text style={modalStyles.title}>Confirm Purchase</Text>
+              <Text style={modalStyles.title}>تأكيد الشراء</Text>
               <Pressable onPress={() => setShowPurchaseModal(false)}>
                 <Ionicons name="close" size={24} color={Colors.light.text} />
               </Pressable>
@@ -277,7 +277,7 @@ export default function CampaignDetailScreen() {
               <Text style={modalStyles.campaignName}>{campaign.title}</Text>
 
               <View style={modalStyles.qtyRow}>
-                <Text style={modalStyles.qtyLabel}>Quantity</Text>
+                <Text style={modalStyles.qtyLabel}>الكمية</Text>
                 <View style={modalStyles.qtyControls}>
                   <Pressable
                     onPress={() => {
@@ -313,10 +313,10 @@ export default function CampaignDetailScreen() {
               </View>
 
               <View style={modalStyles.paymentSection}>
-                <Text style={modalStyles.paymentLabel}>Payment Method</Text>
+                <Text style={modalStyles.paymentLabel}>طريقة الدفع</Text>
                 <View style={modalStyles.paymentOption}>
                   <Ionicons name="card" size={20} color={Colors.light.accent} />
-                  <Text style={modalStyles.paymentText}>Credit / Debit Card</Text>
+                  <Text style={modalStyles.paymentText}>بطاقة ائتمان / خصم</Text>
                   <Ionicons name="checkmark-circle" size={20} color={Colors.light.success} />
                 </View>
               </View>
@@ -334,7 +334,7 @@ export default function CampaignDetailScreen() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text style={modalStyles.confirmBtnText}>
-                    Pay ${totalPrice}
+                    ادفع ${totalPrice}
                   </Text>
                 )}
               </Pressable>
@@ -349,9 +349,9 @@ export default function CampaignDetailScreen() {
             <View style={successStyles.iconCircle}>
               <Ionicons name="checkmark-circle" size={56} color={Colors.light.success} />
             </View>
-            <Text style={successStyles.title}>Purchase Successful!</Text>
+            <Text style={successStyles.title}>تمت عملية الشراء بنجاح!</Text>
             <Text style={successStyles.subtitle}>
-              You received {purchasedTickets.length} ticket(s)
+              حصلت على {purchasedTickets.length} تذكرة
             </Text>
 
             <View style={successStyles.ticketList}>
@@ -370,7 +370,7 @@ export default function CampaignDetailScreen() {
               }}
               style={successStyles.doneBtn}
             >
-              <Text style={successStyles.doneBtnText}>Done</Text>
+              <Text style={successStyles.doneBtnText}>تم</Text>
             </Pressable>
           </View>
         </View>

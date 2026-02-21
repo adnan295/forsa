@@ -49,23 +49,23 @@ export default function ProfileScreen() {
     },
     onSuccess: (data) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Winner Drawn!", data.message);
+      Alert.alert("تم السحب!", `الفائز: ${data.winner.username} - التذكرة: ${data.ticket.ticketNumber}`);
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
     },
     onError: (err: any) => {
-      Alert.alert("Error", err.message || "Draw failed");
+      Alert.alert("خطأ", err.message || "فشل السحب");
     },
   });
 
   function handleDraw(campaign: Campaign) {
     Alert.alert(
-      "Draw Winner",
-      `Are you sure you want to draw a winner for "${campaign.title}"? This action cannot be undone.`,
+      "سحب الفائز",
+      `هل أنت متأكد من إجراء السحب لحملة "${campaign.title}"؟ لا يمكن التراجع عن هذا الإجراء.`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "إلغاء", style: "cancel" },
         {
-          text: "Draw",
+          text: "سحب",
           style: "destructive",
           onPress: () => drawMutation.mutate(campaign.id),
         },
@@ -85,15 +85,15 @@ export default function ProfileScreen() {
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person" size={40} color={Colors.light.tabIconDefault} />
           </View>
-          <Text style={styles.emptyTitle}>Sign in to your account</Text>
+          <Text style={styles.emptyTitle}>سجّل الدخول لحسابك</Text>
           <Text style={styles.emptyText}>
-            Manage your profile and view your activity
+            أدِر ملفك الشخصي واطلع على نشاطك
           </Text>
           <Pressable
             onPress={() => router.push("/auth")}
             style={styles.signInButton}
           >
-            <Text style={styles.signInButtonText}>Sign In</Text>
+            <Text style={styles.signInButtonText}>تسجيل الدخول</Text>
           </Pressable>
         </View>
       </View>
@@ -138,29 +138,29 @@ export default function ProfileScreen() {
 
       {isAdmin && stats && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Admin Dashboard</Text>
+          <Text style={styles.sectionTitle}>لوحة التحكم</Text>
           <View style={styles.statsGrid}>
             <StatCard
               icon="bar-chart"
-              label="Total Campaigns"
+              label="إجمالي الحملات"
               value={stats.totalCampaigns.toString()}
               color="#3498DB"
             />
             <StatCard
               icon="flame"
-              label="Active"
+              label="نشطة"
               value={stats.activeCampaigns.toString()}
               color={Colors.light.accent}
             />
             <StatCard
               icon="checkmark-circle"
-              label="Completed"
+              label="مكتملة"
               value={stats.completedCampaigns.toString()}
               color={Colors.light.success}
             />
             <StatCard
               icon="cash"
-              label="Revenue"
+              label="الإيرادات"
               value={`$${stats.totalRevenue}`}
               color="#9B59B6"
             />
@@ -170,7 +170,7 @@ export default function ProfileScreen() {
 
       {isAdmin && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Campaign Management</Text>
+          <Text style={styles.sectionTitle}>إدارة الحملات</Text>
 
           <Pressable
             onPress={() => setShowCreateModal(true)}
@@ -180,7 +180,7 @@ export default function ProfileScreen() {
             ]}
           >
             <Ionicons name="add-circle" size={22} color={Colors.light.accent} />
-            <Text style={styles.actionButtonText}>Create New Campaign</Text>
+            <Text style={styles.actionButtonText}>إنشاء حملة جديدة</Text>
             <Ionicons
               name="chevron-forward"
               size={18}
@@ -190,13 +190,13 @@ export default function ProfileScreen() {
 
           {soldOutCampaigns.length > 0 && (
             <View style={styles.drawSection}>
-              <Text style={styles.drawTitle}>Ready for Draw</Text>
+              <Text style={styles.drawTitle}>جاهز للسحب</Text>
               {soldOutCampaigns.map((c) => (
                 <View key={c.id} style={styles.drawItem}>
                   <View style={styles.drawInfo}>
                     <Text style={styles.drawItemTitle}>{c.title}</Text>
                     <Text style={styles.drawItemSub}>
-                      {c.soldQuantity} tickets sold
+                      {c.soldQuantity} تذكرة مباعة
                     </Text>
                   </View>
                   <Pressable
@@ -212,7 +212,7 @@ export default function ProfileScreen() {
                     ) : (
                       <>
                         <Ionicons name="dice" size={16} color="#fff" />
-                        <Text style={styles.drawButtonText}>Draw</Text>
+                        <Text style={styles.drawButtonText}>سحب</Text>
                       </>
                     )}
                   </Pressable>
@@ -232,7 +232,7 @@ export default function ProfileScreen() {
           ]}
         >
           <Ionicons name="log-out-outline" size={22} color={Colors.light.danger} />
-          <Text style={styles.logoutText}>Sign Out</Text>
+          <Text style={styles.logoutText}>تسجيل الخروج</Text>
         </Pressable>
       </View>
 
@@ -298,13 +298,13 @@ function CreateCampaignModal({
       setPrizeDesc("");
     },
     onError: (err: any) => {
-      Alert.alert("Error", err.message || "Failed to create campaign");
+      Alert.alert("خطأ", err.message || "فشل إنشاء الحملة");
     },
   });
 
   function handleCreate() {
     if (!title || !description || !price || !quantity || !prizeName) {
-      Alert.alert("Error", "Please fill in all required fields");
+      Alert.alert("خطأ", "يرجى ملء جميع الحقول المطلوبة");
       return;
     }
     createMutation.mutate({
@@ -322,7 +322,7 @@ function CreateCampaignModal({
       <View style={modalStyles.overlay}>
         <View style={modalStyles.container}>
           <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>New Campaign</Text>
+            <Text style={modalStyles.title}>حملة جديدة</Text>
             <Pressable onPress={onClose}>
               <Ionicons name="close" size={24} color={Colors.light.text} />
             </Pressable>
@@ -332,12 +332,12 @@ function CreateCampaignModal({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={modalStyles.scrollContent}
           >
-            <ModalInput label="Title *" value={title} onChangeText={setTitle} placeholder="Campaign name" />
-            <ModalInput label="Description *" value={description} onChangeText={setDescription} placeholder="Describe the product" multiline />
-            <ModalInput label="Price per item ($) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
-            <ModalInput label="Total Quantity *" value={quantity} onChangeText={setQuantity} placeholder="4000" keyboardType="number-pad" />
-            <ModalInput label="Prize Name *" value={prizeName} onChangeText={setPrizeName} placeholder="iPhone 15 Pro Max" />
-            <ModalInput label="Prize Description" value={prizeDesc} onChangeText={setPrizeDesc} placeholder="Optional details" multiline />
+            <ModalInput label="العنوان *" value={title} onChangeText={setTitle} placeholder="اسم الحملة" />
+            <ModalInput label="الوصف *" value={description} onChangeText={setDescription} placeholder="وصف المنتج" multiline />
+            <ModalInput label="السعر ($) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
+            <ModalInput label="الكمية الإجمالية *" value={quantity} onChangeText={setQuantity} placeholder="4000" keyboardType="number-pad" />
+            <ModalInput label="اسم الجائزة *" value={prizeName} onChangeText={setPrizeName} placeholder="iPhone 15 Pro Max" />
+            <ModalInput label="وصف الجائزة" value={prizeDesc} onChangeText={setPrizeDesc} placeholder="تفاصيل إضافية (اختياري)" multiline />
 
             <Pressable
               onPress={handleCreate}
@@ -351,7 +351,7 @@ function CreateCampaignModal({
               {createMutation.isPending ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={modalStyles.createBtnText}>Create Campaign</Text>
+                <Text style={modalStyles.createBtnText}>إنشاء الحملة</Text>
               )}
             </Pressable>
           </ScrollView>

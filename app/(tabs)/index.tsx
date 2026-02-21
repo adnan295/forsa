@@ -54,9 +54,9 @@ export default function HomeScreen() {
             <View style={styles.heroTop}>
               <View>
                 <Text style={styles.greeting}>
-                  {user ? `Hello, ${user.username}` : "Welcome"}
+                  {user ? `أهلاً، ${user.username}` : "مرحباً"}
                 </Text>
-                <Text style={styles.heroTitle}>LuckyDraw</Text>
+                <Text style={styles.heroTitle}>لاكي درو</Text>
               </View>
               {!user && (
                 <Pressable
@@ -64,19 +64,19 @@ export default function HomeScreen() {
                   style={styles.signInBtn}
                 >
                   <Ionicons name="log-in-outline" size={20} color={Colors.light.accent} />
-                  <Text style={styles.signInText}>Sign In</Text>
+                  <Text style={styles.signInText}>تسجيل الدخول</Text>
                 </Pressable>
               )}
             </View>
             <Text style={styles.heroSubtitle}>
-              Buy products, get raffle tickets, win big prizes
+              اشترِ المنتجات، احصل على تذاكر السحب، واربح جوائز كبرى
             </Text>
 
             {activeCampaigns.length > 0 && (
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>{activeCampaigns.length}</Text>
-                  <Text style={styles.statLabel}>Active Draws</Text>
+                  <Text style={styles.statLabel}>سحوبات نشطة</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
@@ -86,14 +86,14 @@ export default function HomeScreen() {
                       0
                     )}
                   </Text>
-                  <Text style={styles.statLabel}>Tickets Left</Text>
+                  <Text style={styles.statLabel}>تذاكر متبقية</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>
                     {campaigns?.filter((c) => c.status === "completed").length || 0}
                   </Text>
-                  <Text style={styles.statLabel}>Winners</Text>
+                  <Text style={styles.statLabel}>فائزون</Text>
                 </View>
               </View>
             )}
@@ -103,7 +103,7 @@ export default function HomeScreen() {
         {activeCampaigns.length > 0 && (
           <View style={styles.sectionHeader}>
             <Ionicons name="flame" size={20} color={Colors.light.accent} />
-            <Text style={styles.sectionTitle}>Active Campaigns</Text>
+            <Text style={styles.sectionTitle}>الحملات النشطة</Text>
           </View>
         )}
       </View>
@@ -116,7 +116,7 @@ export default function HomeScreen() {
       <View>
         <View style={styles.sectionHeader}>
           <Ionicons name="trophy" size={20} color={Colors.light.success} />
-          <Text style={styles.sectionTitle}>Past Campaigns</Text>
+          <Text style={styles.sectionTitle}>الحملات السابقة</Text>
         </View>
       </View>
     );
@@ -157,9 +157,9 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="calendar-outline" size={48} color={Colors.light.tabIconDefault} />
-            <Text style={styles.emptyTitle}>No campaigns yet</Text>
+            <Text style={styles.emptyTitle}>لا توجد حملات حالياً</Text>
             <Text style={styles.emptyText}>
-              Check back later for exciting campaigns and prizes
+              تابعنا لاحقاً للحملات والجوائز المثيرة
             </Text>
           </View>
         }

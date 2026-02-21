@@ -42,7 +42,7 @@ function TicketItem({ ticket }: { ticket: Ticket }) {
         {ticket.isWinner && (
           <View style={styles.winnerBadge}>
             <Ionicons name="star" size={12} color="#FFD700" />
-            <Text style={styles.winnerText}>WINNER</Text>
+            <Text style={styles.winnerText}>فائز</Text>
           </View>
         )}
       </View>
@@ -78,15 +78,15 @@ export default function TicketsScreen() {
       <View style={[styles.container, styles.centered]}>
         <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
           <Ionicons name="ticket-outline" size={56} color={Colors.light.tabIconDefault} />
-          <Text style={styles.emptyTitle}>Sign in to view tickets</Text>
+          <Text style={styles.emptyTitle}>سجّل الدخول لعرض التذاكر</Text>
           <Text style={styles.emptyText}>
-            Your raffle tickets will appear here after purchasing
+            ستظهر تذاكر السحب هنا بعد الشراء
           </Text>
           <Pressable
             onPress={() => router.push("/auth")}
             style={styles.signInButton}
           >
-            <Text style={styles.signInButtonText}>Sign In</Text>
+            <Text style={styles.signInButtonText}>تسجيل الدخول</Text>
           </Pressable>
         </View>
       </View>
@@ -109,18 +109,18 @@ export default function TicketsScreen() {
         renderItem={({ item }) => <TicketItem ticket={item} />}
         ListHeaderComponent={
           <View style={{ paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 }}>
-            <Text style={styles.screenTitle}>My Tickets</Text>
+            <Text style={styles.screenTitle}>تذاكري</Text>
             <Text style={styles.screenSubtitle}>
-              {tickets?.length || 0} total tickets
+              {tickets?.length || 0} تذكرة
             </Text>
           </View>
         }
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Ionicons name="ticket-outline" size={48} color={Colors.light.tabIconDefault} />
-            <Text style={styles.emptyTitle}>No tickets yet</Text>
+            <Text style={styles.emptyTitle}>لا توجد تذاكر بعد</Text>
             <Text style={styles.emptyText}>
-              Purchase from a campaign to receive raffle tickets
+              اشترِ من حملة للحصول على تذاكر السحب
             </Text>
           </View>
         }

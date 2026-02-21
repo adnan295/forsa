@@ -31,11 +31,11 @@ export default function AuthScreen() {
 
   async function handleSubmit() {
     if (!username.trim() || !password.trim()) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert("خطأ", "يرجى ملء جميع الحقول");
       return;
     }
     if (!isLogin && !email.trim()) {
-      Alert.alert("Error", "Please enter your email");
+      Alert.alert("خطأ", "يرجى إدخال البريد الإلكتروني");
       return;
     }
 
@@ -50,8 +50,8 @@ export default function AuthScreen() {
       router.back();
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const msg = error?.message || "Something went wrong";
-      Alert.alert("Error", msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
+      const msg = error?.message || "حدث خطأ ما";
+      Alert.alert("خطأ", msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
     } finally {
       setLoading(false);
     }
@@ -81,9 +81,9 @@ export default function AuthScreen() {
             <View style={styles.iconCircle}>
               <Ionicons name="diamond" size={40} color={Colors.light.accent} />
             </View>
-            <Text style={styles.logoText}>LuckyDraw</Text>
+            <Text style={styles.logoText}>لاكي درو</Text>
             <Text style={styles.tagline}>
-              {isLogin ? "Welcome back" : "Create your account"}
+              {isLogin ? "أهلاً بعودتك" : "أنشئ حسابك"}
             </Text>
           </View>
 
@@ -92,7 +92,7 @@ export default function AuthScreen() {
               <Ionicons name="person-outline" size={20} color="#8B99AD" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Username"
+                placeholder="اسم المستخدم"
                 placeholderTextColor="#5A6B82"
                 value={username}
                 onChangeText={setUsername}
@@ -106,7 +106,7 @@ export default function AuthScreen() {
                 <Ionicons name="mail-outline" size={20} color="#8B99AD" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Email"
+                  placeholder="البريد الإلكتروني"
                   placeholderTextColor="#5A6B82"
                   value={email}
                   onChangeText={setEmail}
@@ -121,7 +121,7 @@ export default function AuthScreen() {
               <Ionicons name="lock-closed-outline" size={20} color="#8B99AD" style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { flex: 1 }]}
-                placeholder="Password"
+                placeholder="كلمة المرور"
                 placeholderTextColor="#5A6B82"
                 value={password}
                 onChangeText={setPassword}
@@ -156,7 +156,7 @@ export default function AuthScreen() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text style={styles.submitText}>
-                    {isLogin ? "Sign In" : "Create Account"}
+                    {isLogin ? "تسجيل الدخول" : "إنشاء حساب"}
                   </Text>
                 )}
               </LinearGradient>
@@ -170,9 +170,9 @@ export default function AuthScreen() {
               style={styles.switchBtn}
             >
               <Text style={styles.switchText}>
-                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                {isLogin ? "ليس لديك حساب؟ " : "لديك حساب بالفعل؟ "}
                 <Text style={styles.switchTextBold}>
-                  {isLogin ? "Sign Up" : "Sign In"}
+                  {isLogin ? "سجّل الآن" : "تسجيل الدخول"}
                 </Text>
               </Text>
             </Pressable>

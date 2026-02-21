@@ -13,15 +13,15 @@ function NativeTabLayout() {
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "flame", selected: "flame.fill" }} />
-        <Label>Campaigns</Label>
+        <Label>الحملات</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="tickets">
         <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
-        <Label>My Tickets</Label>
+        <Label>تذاكري</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>Profile</Label>
+        <Label>حسابي</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -65,7 +65,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Campaigns",
+          title: "الحملات",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="flame" size={size} color={color} />
           ),
@@ -74,7 +74,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="tickets"
         options={{
-          title: "My Tickets",
+          title: "تذاكري",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="ticket" size={size} color={color} />
           ),
@@ -83,7 +83,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: "حسابي",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
