@@ -182,9 +182,26 @@ export default function TicketsScreen() {
     return <TicketItem ticket={item} />;
   };
 
-  const sections = activeTab === "orders"
-    ? [{ key: "orders", data: orders || [] }]
-    : [{ key: "tickets", data: tickets || [] }];
+  const currentData = activeTab === "orders" ? (orders || []) : (tickets || []);
+  const sections = currentData.length > 0 ? [{ key: activeTab, data: currentData }] : [];
+
+  const EmptyState = () => (
+    <View style={styles.emptyWrap}>
+      <Ionicons
+        name={activeTab === "orders" ? "receipt-outline" : "ticket-outline"}
+        size={48}
+        color={Colors.light.tabIconDefault}
+      />
+      <Text style={styles.emptyTitle}>
+        {activeTab === "orders" ? "لا توجد طلبات بعد" : "لا توجد تذاكر بعد"}
+      </Text>
+      <Text style={styles.emptyText}>
+        {activeTab === "orders"
+          ? "ستظهر طلباتك هنا بعد الشراء"
+          : "اشترِ من حملة للحصول على تذاكر السحب"}
+      </Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -216,23 +233,7 @@ export default function TicketsScreen() {
         keyExtractor={(item: any) => item.id}
         renderItem={renderItem}
         renderSectionHeader={() => null}
-        ListEmptyComponent={
-          <View style={styles.emptyWrap}>
-            <Ionicons
-              name={activeTab === "orders" ? "receipt-outline" : "ticket-outline"}
-              size={48}
-              color={Colors.light.tabIconDefault}
-            />
-            <Text style={styles.emptyTitle}>
-              {activeTab === "orders" ? "لا توجد طلبات بعد" : "لا توجد تذاكر بعد"}
-            </Text>
-            <Text style={styles.emptyText}>
-              {activeTab === "orders"
-                ? "ستظهر طلباتك هنا بعد الشراء"
-                : "اشترِ من حملة للحصول على تذاكر السحب"}
-            </Text>
-          </View>
-        }
+        ListEmptyComponent={<EmptyState />}
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: Platform.OS === "web" ? 84 + 20 : 100 },
