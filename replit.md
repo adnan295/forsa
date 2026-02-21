@@ -79,7 +79,7 @@ Comprehensive admin dashboard with 7 sections:
 - GET /api/admin/activity-log - audit trail
 
 ## Database Tables
-- users, campaigns, orders (with shipping_status, tracking_number, shipping_address), tickets, payment_methods, coupons, activity_log
+- users (with fullName, phone, address, city, country, emailVerified), campaigns, orders (with shipping_status, tracking_number, shipping_address), tickets, payment_methods, coupons, activity_log, reviews, admin_notifications
 
 ## Design
 - Luxury theme: Navy (#0A1628) + Metallic Gold (#D4A853)
@@ -88,13 +88,16 @@ Comprehensive admin dashboard with 7 sections:
 - Full Arabic UI with RTL support
 
 ## Recent Changes
-- Added user stats API endpoint (GET /api/user/stats)
-- Redesigned profile page with gradient header, avatar, stats cards, activity menu, settings
-- Added search bar and filter tabs (all/active/completed) to home page
-- Created info.tsx page with About, Terms, Privacy, Contact sections (accessed via ?type= param)
-- Enhanced empty states in tickets page with gradient icons, encouraging messages, action buttons
-- Redesigned landing page (server/templates/landing-page.html) with purple/pink gradient theme
-- Profile settings now link to info pages properly
+- Added user profile fields (fullName, phone, address, city, country) with edit-profile.tsx page
+- Profile completion required before purchase (checkout redirects to edit-profile if incomplete)
+- Searchable country picker with Arab countries prioritized (130+ countries in Arabic)
+- Auto-fill shipping address from user profile data in checkout
+- Social sharing button on campaign detail page (share-social icon in hero header)
+- Reviews & ratings system on campaign pages (1-5 stars with optional comments)
+- Admin notifications tab with real-time new order/receipt upload alerts
+- CSV export for orders in admin panel (GET /api/admin/orders/export/csv)
+- FAQ page (app/faq.tsx) with 10 expandable items in Arabic
+- Admin panel expanded to 8 tabs (added Notifications section)
 
 ## Admin Credentials
 - Username: admin
