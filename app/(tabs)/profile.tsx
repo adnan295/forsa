@@ -68,7 +68,7 @@ export default function ProfileScreen() {
           </LinearGradient>
           <Text style={styles.emptyTitle}>سجّل الدخول لحسابك</Text>
           <Text style={styles.emptyText}>
-            أدِر ملفك الشخصي، تابع طلباتك، واطلع على تذاكرك
+            أدِر ملفك الشخصي، تابع طلباتك، واطلع على سحوباتك
           </Text>
           <Pressable
             onPress={() => router.push("/auth")}
@@ -98,8 +98,8 @@ export default function ProfileScreen() {
     },
     {
       icon: "ticket-outline" as const,
-      label: "تذاكري",
-      subtitle: `${stats?.totalTickets || 0} تذكرة`,
+      label: "تذاكر السحب",
+      subtitle: `${stats?.totalTickets || 0} تذكرة سحب`,
       color: "#EC4899",
       onPress: () => router.push("/(tabs)/tickets" as any),
     },

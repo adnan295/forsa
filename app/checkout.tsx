@@ -226,7 +226,7 @@ export default function CheckoutScreen() {
               <Text style={styles.summaryValue}>
                 ${unitPrice.toFixed(2)}
               </Text>
-              <Text style={styles.summaryLabel}>سعر التذكرة</Text>
+              <Text style={styles.summaryLabel}>سعر المنتج</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryValue}>{qty}</Text>

@@ -73,7 +73,7 @@ function OrderItem({ order }: { order: Order }) {
         </View>
         <View style={styles.orderAmountArea}>
           <Text style={styles.orderAmount}>${parseFloat(order.totalAmount).toFixed(2)}</Text>
-          <Text style={styles.orderQty}>{order.quantity} تذكرة</Text>
+          <Text style={styles.orderQty}>{order.quantity} منتج</Text>
         </View>
       </View>
 
@@ -182,7 +182,7 @@ export default function TicketsScreen() {
           </View>
           <Text style={styles.emptyTitle}>سجّل الدخول لعرض طلباتك</Text>
           <Text style={styles.emptyText}>
-            ستظهر طلباتك وتذاكر السحب هنا بعد الشراء
+            ستظهر طلباتك وتذاكر السحب هنا بعد شراء المنتجات
           </Text>
           <Pressable
             onPress={() => router.push("/auth")}
@@ -238,8 +238,8 @@ export default function TicketsScreen() {
       </Text>
       <Text style={styles.emptyText}>
         {activeTab === "orders"
-          ? "اكتشف الحملات المثيرة واشترِ تذكرتك الأولى الآن!"
-          : "كل تذكرة فرصة للفوز بجائزة مذهلة - ابدأ الآن!"}
+          ? "اكتشف المنتجات المميزة واحصل على فرصة للفوز بالسحب!"
+          : "كل منتج تشتريه يمنحك تذكرة سحب وفرصة للفوز!"}
       </Text>
       <Pressable
         onPress={() => router.push("/(tabs)/" as any)}
@@ -252,7 +252,7 @@ export default function TicketsScreen() {
           style={styles.emptyActionGradient}
         >
           <Ionicons name="compass" size={18} color="#fff" />
-          <Text style={styles.emptyActionText}>تصفّح الحملات</Text>
+          <Text style={styles.emptyActionText}>تصفّح المنتجات</Text>
         </LinearGradient>
       </Pressable>
     </View>

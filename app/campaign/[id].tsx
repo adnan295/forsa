@@ -239,7 +239,7 @@ export default function CampaignDetailScreen() {
 
           <View style={styles.priceCard}>
             <View style={styles.priceCardLeft}>
-              <Text style={styles.priceLabel}>سعر التذكرة</Text>
+              <Text style={styles.priceLabel}>سعر المنتج</Text>
               <View style={styles.priceValueRow}>
                 <Text style={styles.priceCurrency}>$</Text>
                 <Text style={styles.priceValue}>
@@ -261,7 +261,7 @@ export default function CampaignDetailScreen() {
                 <Ionicons name="trophy" size={36} color="#fff" />
                 <Text style={styles.winnerTitle}>تم إعلان الفائز!</Text>
                 <Text style={styles.winnerTicket}>
-                  التذكرة: {campaign.winnerTicketId}
+                  تذكرة السحب: {campaign.winnerTicketId}
                 </Text>
               </LinearGradient>
             </View>
@@ -273,7 +273,7 @@ export default function CampaignDetailScreen() {
                 <Ionicons name="hourglass" size={22} color={Colors.light.warning} />
               </View>
               <Text style={styles.soldOutText}>
-                نفذت جميع العناصر! السحب سيبدأ قريباً.
+                نفذت جميع المنتجات! السحب سيبدأ قريباً.
               </Text>
             </View>
           )}
@@ -290,7 +290,7 @@ export default function CampaignDetailScreen() {
             <View style={styles.bottomLeft}>
               <Text style={styles.bottomPriceLabel}>الإجمالي</Text>
               <Text style={styles.bottomPrice}>${totalPrice}</Text>
-              <Text style={styles.bottomQty}>{quantity} تذكرة</Text>
+              <Text style={styles.bottomQty}>{quantity} منتج</Text>
             </View>
             <Pressable
               onPress={() => {

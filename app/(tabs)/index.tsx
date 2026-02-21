@@ -33,14 +33,14 @@ const BANNERS = [
   {
     id: "1",
     title: "سحوبات حصرية",
-    subtitle: "اشترك الآن واربح جوائز قيمة",
+    subtitle: "اشترِ منتجاتنا واربح جوائز قيمة",
     icon: "diamond" as const,
     colors: ["#7C3AED", "#A855F7", "#C084FC"] as [string, string, string],
   },
   {
     id: "2",
     title: "فرصة الفوز الكبرى",
-    subtitle: "كل تذكرة تقربك من الجائزة",
+    subtitle: "كل منتج يمنحك فرصة للفوز بالجائزة",
     icon: "trophy" as const,
     colors: ["#EC4899", "#F472B6", "#FBCFE8"] as [string, string, string],
   },
@@ -209,9 +209,9 @@ export default function HomeScreen() {
               <View style={styles.statsRow}>
                 <StatChip icon="flame" value={activeCampaigns.length} label="نشطة" />
                 <StatChip
-                  icon="ticket"
+                  icon="cube"
                   value={activeCampaigns.reduce((sum, c) => sum + (c.totalQuantity - c.soldQuantity), 0)}
-                  label="متبقية"
+                  label="متبقي"
                 />
                 <StatChip
                   icon="trophy"
@@ -235,7 +235,7 @@ export default function HomeScreen() {
             <Ionicons name="search" size={18} color={Colors.light.textSecondary} />
             <TextInput
               style={styles.searchInput}
-              placeholder="ابحث عن حملة أو جائزة..."
+              placeholder="ابحث عن منتج أو جائزة..."
               placeholderTextColor="#9CA3AF"
               value={searchText}
               onChangeText={setSearchText}
