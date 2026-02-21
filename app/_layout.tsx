@@ -37,6 +37,14 @@ function RootLayoutNav() {
         name="admin/index"
         options={{ headerShown: false, presentation: "card" }}
       />
+      <Stack.Screen
+        name="checkout"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
+        name="order/[id]"
+        options={{ headerShown: false, presentation: "card" }}
+      />
     </Stack>
   );
 }
