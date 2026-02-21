@@ -47,6 +47,12 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   role: roleEnum("role").notNull().default("user"),
+  fullName: text("full_name"),
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  country: text("country"),
+  emailVerified: boolean("email_verified").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -157,17 +163,53 @@ export const activityLog = pgTable("activity_log", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const reviews = pgTable("reviews", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  campaignId: varchar("campaign_id").notNull(),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const adminNotifications = pgTable("admin_notifications", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   orders: many(orders),
   tickets: many(tickets),
+  reviews: many(reviews),
 }));
 
 export const campaignsRelations = relations(campaigns, ({ many, one }) => ({
   orders: many(orders),
   tickets: many(tickets),
+  reviews: many(reviews),
   winner: one(users, {
     fields: [campaigns.winnerId],
     references: [users.id],
+  }),
+}));
+
+export const reviewsRelations = relations(reviews, ({ one }) => ({
+  user: one(users, {
+    fields: [reviews.userId],
+    references: [users.id],
+  }),
+  campaign: one(campaigns, {
+    fields: [reviews.campaignId],
+    references: [campaigns.id],
   }),
 }));
 
@@ -238,6 +280,20 @@ export const insertCouponSchema = createInsertSchema(coupons).pick({
   expiresAt: true,
 });
 
+export const updateProfileSchema = z.object({
+  fullName: z.string().min(2, "الاسم الكامل مطلوب"),
+  phone: z.string().min(8, "رقم الهاتف غير صحيح"),
+  address: z.string().min(5, "العنوان مطلوب"),
+  city: z.string().min(2, "المدينة مطلوبة"),
+  country: z.string().min(2, "الدولة مطلوبة"),
+});
+
+export const insertReviewSchema = z.object({
+  campaignId: z.string().min(1),
+  rating: z.number().min(1).max(5),
+  comment: z.string().optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Campaign = typeof campaigns.$inferSelect;
@@ -249,3 +305,5 @@ export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
 export type Coupon = typeof coupons.$inferSelect;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type ActivityLogEntry = typeof activityLog.$inferSelect;
+export type Review = typeof reviews.$inferSelect;
+export type AdminNotification = typeof adminNotifications.$inferSelect;

@@ -4,7 +4,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, reviews } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
@@ -143,6 +143,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: user.username,
         email: user.email,
         role: user.role,
+        fullName: user.fullName,
+        phone: user.phone,
+        address: user.address,
+        city: user.city,
+        country: user.country,
+        emailVerified: user.emailVerified,
         createdAt: user.createdAt,
       });
     } catch (error) {
@@ -170,6 +176,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       username: user.username,
       email: user.email,
       role: user.role,
+      fullName: user.fullName,
+      phone: user.phone,
+      address: user.address,
+      city: user.city,
+      country: user.country,
+      emailVerified: user.emailVerified,
       createdAt: user.createdAt,
     });
   });
@@ -316,6 +328,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         JSON.stringify({ orderId: result.order.id, campaignId, quantity, paymentMethod })
       );
 
+      await storage.createAdminNotification(
+        "new_order",
+        "طلب جديد",
+        `طلب جديد من المستخدم بقيمة ${result.order.totalAmount}`,
+        JSON.stringify({ orderId: result.order.id, userId: req.session.userId })
+      );
+
       res.json({
         order: result.order,
         tickets: result.tickets,
@@ -398,6 +417,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `User uploaded receipt for order ${order.id}`,
         req.session.userId!,
         JSON.stringify({ orderId: order.id, receiptUrl })
+      );
+
+      await storage.createAdminNotification(
+        "receipt_uploaded",
+        "إيصال جديد",
+        `تم رفع إيصال للطلب ${order.id}`,
+        JSON.stringify({ orderId: order.id, userId: req.session.userId })
       );
 
       res.json(updated);
@@ -685,6 +711,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(log);
     } catch (error) {
       console.error("Get activity log error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Profile update
+  app.put("/api/user/profile", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const parsed = updateProfileSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: parsed.error.flatten() });
+      }
+      const updated = await storage.updateUserProfile(req.session.userId!, parsed.data);
+      if (!updated) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+      res.json({ 
+        id: updated.id,
+        username: updated.username,
+        email: updated.email,
+        role: updated.role,
+        fullName: updated.fullName,
+        phone: updated.phone,
+        address: updated.address,
+        city: updated.city,
+        country: updated.country,
+        emailVerified: updated.emailVerified,
+      });
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "خطأ في الخادم" });
+    }
+  });
+
+  // Check if profile is complete
+  app.get("/api/user/profile-status", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const isComplete = !!(user.fullName && user.phone && user.address && user.city && user.country);
+      res.json({ 
+        isComplete,
+        profile: {
+          fullName: user.fullName,
+          phone: user.phone,
+          address: user.address,
+          city: user.city,
+          country: user.country,
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Reviews
+  app.get("/api/reviews/:campaignId", async (req: Request, res: Response) => {
+    try {
+      const campaignReviews = await storage.getReviewsByCampaign(req.params.campaignId as string);
+      res.json(campaignReviews);
+    } catch (error) {
+      console.error("Get reviews error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/reviews", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const parsed = insertReviewSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: parsed.error.flatten() });
+      }
+      const existing = await storage.getUserReviewForCampaign(req.session.userId!, parsed.data.campaignId);
+      if (existing) {
+        return res.status(400).json({ message: "لقد قمت بتقييم هذا المنتج مسبقاً" });
+      }
+      const review = await storage.createReview(req.session.userId!, parsed.data);
+      res.json(review);
+    } catch (error: any) {
+      console.error("Create review error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+
+  // Admin notifications
+  app.get("/api/admin/notifications", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const notifications = await storage.getAdminNotifications(limit);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/notifications/unread-count", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const count = await storage.getUnreadNotificationCount();
+      res.json({ count });
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/admin/notifications/:id/read", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      await storage.markNotificationRead(req.params.id as string);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/admin/notifications/read-all", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      await storage.markAllNotificationsRead();
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // CSV export for admin orders
+  app.get("/api/admin/orders/export/csv", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const allOrders = await storage.getAllOrders();
+      const csvHeader = "Order ID,Username,Campaign,Quantity,Total,Payment Method,Payment Status,Shipping Status,Tracking Number,Date\n";
+      const csvRows = allOrders.map(o => 
+        `"${o.id}","${o.username}","${o.campaignTitle}",${o.quantity},"${o.totalAmount}","${o.paymentMethod || ''}","${o.paymentStatus || ''}","${o.shippingStatus || ''}","${o.trackingNumber || ''}","${o.createdAt}"`
+      ).join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=orders.csv");
+      res.send(csvHeader + csvRows);
+    } catch (error) {
+      console.error("Export CSV error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

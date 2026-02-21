@@ -10,6 +10,8 @@ import {
   type Coupon,
   type InsertCoupon,
   type ActivityLogEntry,
+  type Review,
+  type AdminNotification,
   users,
   campaigns,
   orders,
@@ -17,6 +19,9 @@ import {
   paymentMethods,
   coupons,
   activityLog,
+  reviews,
+  adminNotifications,
+  insertReviewSchema,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count, sum, gte } from "drizzle-orm";
@@ -104,6 +109,18 @@ export interface IStorage {
     newUsersThisWeek: number;
     topCampaigns: { title: string; soldQuantity: number }[];
   }>;
+
+  updateUserProfile(userId: string, data: { fullName: string; phone: string; address: string; city: string; country: string }): Promise<User | undefined>;
+  
+  getReviewsByCampaign(campaignId: string): Promise<(Review & { username: string })[]>;
+  createReview(userId: string, data: { campaignId: string; rating: number; comment?: string }): Promise<Review>;
+  getUserReviewForCampaign(userId: string, campaignId: string): Promise<Review | undefined>;
+  
+  getAdminNotifications(limit?: number): Promise<AdminNotification[]>;
+  createAdminNotification(type: string, title: string, message: string, metadata?: string): Promise<AdminNotification>;
+  markNotificationRead(id: string): Promise<boolean>;
+  markAllNotificationsRead(): Promise<boolean>;
+  getUnreadNotificationCount(): Promise<number>;
 }
 
 function generateTicketNumber(): string {
@@ -643,6 +660,86 @@ export class DatabaseStorage implements IStorage {
       newUsersThisWeek: newUsersResult?.total || 0,
       topCampaigns,
     };
+  }
+
+  async updateUserProfile(userId: string, data: { fullName: string; phone: string; address: string; city: string; country: string }): Promise<User | undefined> {
+    const [user] = await db.update(users).set({
+      fullName: data.fullName,
+      phone: data.phone,
+      address: data.address,
+      city: data.city,
+      country: data.country,
+    }).where(eq(users.id, userId)).returning();
+    return user || undefined;
+  }
+
+  async getReviewsByCampaign(campaignId: string): Promise<(Review & { username: string })[]> {
+    const result = await db.select({
+      id: reviews.id,
+      userId: reviews.userId,
+      campaignId: reviews.campaignId,
+      rating: reviews.rating,
+      comment: reviews.comment,
+      createdAt: reviews.createdAt,
+      username: users.username,
+    }).from(reviews)
+      .innerJoin(users, eq(reviews.userId, users.id))
+      .where(eq(reviews.campaignId, campaignId))
+      .orderBy(desc(reviews.createdAt));
+    return result;
+  }
+
+  async createReview(userId: string, data: { campaignId: string; rating: number; comment?: string }): Promise<Review> {
+    const [review] = await db.insert(reviews).values({
+      userId,
+      campaignId: data.campaignId,
+      rating: data.rating,
+      comment: data.comment || null,
+    }).returning();
+    return review;
+  }
+
+  async getUserReviewForCampaign(userId: string, campaignId: string): Promise<Review | undefined> {
+    const [review] = await db.select().from(reviews)
+      .where(and(eq(reviews.userId, userId), eq(reviews.campaignId, campaignId)));
+    return review || undefined;
+  }
+
+  async getAdminNotifications(limit: number = 50): Promise<AdminNotification[]> {
+    return db.select().from(adminNotifications)
+      .orderBy(desc(adminNotifications.createdAt))
+      .limit(limit);
+  }
+
+  async createAdminNotification(type: string, title: string, message: string, metadata?: string): Promise<AdminNotification> {
+    const [notification] = await db.insert(adminNotifications).values({
+      type,
+      title,
+      message,
+      metadata: metadata || null,
+    }).returning();
+    return notification;
+  }
+
+  async markNotificationRead(id: string): Promise<boolean> {
+    const [result] = await db.update(adminNotifications)
+      .set({ isRead: true })
+      .where(eq(adminNotifications.id, id))
+      .returning();
+    return !!result;
+  }
+
+  async markAllNotificationsRead(): Promise<boolean> {
+    await db.update(adminNotifications)
+      .set({ isRead: true })
+      .where(eq(adminNotifications.isRead, false));
+    return true;
+  }
+
+  async getUnreadNotificationCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(adminNotifications)
+      .where(eq(adminNotifications.isRead, false));
+    return result?.count || 0;
   }
 }
 
