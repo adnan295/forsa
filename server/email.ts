@@ -1,48 +1,14 @@
 import { Resend } from "resend";
 
 const APP_NAME = "فرصة - Forsa";
+const FROM_EMAIL = "noreply@forsa.today";
 
-let connectionSettings: any;
-
-async function getCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? "repl " + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-      ? "depl " + process.env.WEB_REPL_RENEWAL
-      : null;
-
-  if (!xReplitToken) {
-    throw new Error("X-Replit-Token not found for repl/depl");
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY not configured");
   }
-
-  connectionSettings = await fetch(
-    "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
-    {
-      headers: {
-        Accept: "application/json",
-        "X-Replit-Token": xReplitToken,
-      },
-    }
-  )
-    .then((res) => res.json())
-    .then((data) => data.items?.[0]);
-
-  if (!connectionSettings || !connectionSettings.settings.api_key) {
-    throw new Error("Resend not connected");
-  }
-  return {
-    apiKey: connectionSettings.settings.api_key,
-    fromEmail: connectionSettings.settings.from_email,
-  };
-}
-
-async function getUncachableResendClient() {
-  const { apiKey, fromEmail } = await getCredentials();
-  return {
-    client: new Resend(apiKey),
-    fromEmail: fromEmail || "noreply@send.draw-mania.replit.app",
-  };
+  return new Resend(apiKey);
 }
 
 function baseTemplate(content: string): string {
@@ -97,22 +63,19 @@ function baseTemplate(content: string): string {
 }
 
 function isResendConfigured(): boolean {
-  return !!(process.env.REPLIT_CONNECTORS_HOSTNAME && (process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL));
+  return !!process.env.RESEND_API_KEY;
 }
 
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   if (!isResendConfigured()) {
-    console.log("[Email] Resend not configured (dev mode), skipping email to", to);
+    console.log("[Email] RESEND_API_KEY not configured, skipping email to", to);
     return false;
   }
 
   try {
-    const { client, fromEmail } = await getUncachableResendClient();
-    if (!fromEmail || fromEmail === "onboarding@resend.dev") {
-      console.warn("[Email] No from_email configured in Resend integration, using default");
-    }
+    const client = getResendClient();
     await client.emails.send({
-      from: `${APP_NAME} <${fromEmail}>`,
+      from: `${APP_NAME} <${FROM_EMAIL}>`,
       to,
       subject,
       html,
