@@ -18,6 +18,8 @@ import Colors from "@/constants/colors";
 import { getApiUrl } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
 
+type WinnerCampaign = Campaign & { winnerUsername: string };
+
 function formatDrawDate(dateStr: string | null | undefined) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
@@ -31,12 +33,9 @@ function formatDrawDate(dateStr: string | null | undefined) {
 export default function WinnersScreen() {
   const insets = useSafeAreaInsets();
 
-  const { data: campaigns, isLoading } = useQuery<Campaign[]>({
-    queryKey: ["/api/campaigns"],
+  const { data: completedCampaigns = [], isLoading } = useQuery<WinnerCampaign[]>({
+    queryKey: ["/api/winners"],
   });
-
-  const completedCampaigns =
-    campaigns?.filter((c) => c.status === "completed") || [];
 
   if (isLoading) {
     return (
@@ -97,7 +96,7 @@ export default function WinnersScreen() {
   );
 }
 
-function WinnerCard({ campaign }: { campaign: Campaign }) {
+function WinnerCard({ campaign }: { campaign: WinnerCampaign }) {
   const imageUri = campaign.imageUrl
     ? `${getApiUrl()}${campaign.imageUrl}`
         .replace(/\/+/g, "/")
@@ -149,6 +148,20 @@ function WinnerCard({ campaign }: { campaign: Campaign }) {
             </Text>
           </View>
         </View>
+
+        {campaign.winnerUsername ? (
+          <View style={styles.infoRow}>
+            <View style={[styles.infoIconWrap, { backgroundColor: "rgba(245,158,11,0.1)" }]}>
+              <Ionicons name="person" size={14} color={Colors.light.warning} />
+            </View>
+            <View style={styles.infoTextArea}>
+              <Text style={styles.infoLabel}>الفائز</Text>
+              <Text style={[styles.infoValue, { color: Colors.light.warning }]}>
+                {campaign.winnerUsername}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         {campaign.winnerTicketId && (
           <View style={styles.infoRow}>

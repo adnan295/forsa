@@ -92,6 +92,75 @@ export default function AdminPanel() {
   );
 }
 
+function SalesChart() {
+  const { data: chartData } = useQuery<{ date: string; total: string; count: number }[]>({
+    queryKey: ["/api/admin/sales-chart"],
+    refetchInterval: 30000,
+  });
+
+  if (!chartData || chartData.length === 0) return null;
+
+  const totals = chartData.map((d) => parseFloat(d.total));
+  const maxVal = Math.max(...totals, 1);
+
+  const getDayLabel = (dateStr: string) => {
+    const d = new Date(dateStr + "T00:00:00");
+    const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    return days[d.getDay()];
+  };
+
+  const totalSales = totals.reduce((s, v) => s + v, 0);
+  const totalOrders = chartData.reduce((s, d) => s + d.count, 0);
+
+  return (
+    <View style={chartStyles.container}>
+      <View style={chartStyles.headerRow}>
+        <Text style={styles.sectionTitle}>المبيعات (آخر 7 أيام)</Text>
+        <View style={chartStyles.summaryRow}>
+          <View style={chartStyles.summaryItem}>
+            <Text style={chartStyles.summaryValue}>${totalSales.toFixed(0)}</Text>
+            <Text style={chartStyles.summaryLabel}>إجمالي</Text>
+          </View>
+          <View style={[chartStyles.summaryItem, { marginRight: 16 }]}>
+            <Text style={chartStyles.summaryValue}>{totalOrders}</Text>
+            <Text style={chartStyles.summaryLabel}>طلب</Text>
+          </View>
+        </View>
+      </View>
+      <View style={chartStyles.barsContainer}>
+        {chartData.map((day, i) => {
+          const val = parseFloat(day.total);
+          const heightPercent = maxVal > 0 ? (val / maxVal) * 100 : 0;
+          const barColor = val > 0 ? Colors.light.accent : Colors.light.progressBg;
+          return (
+            <View key={day.date} style={chartStyles.barCol}>
+              <Text style={chartStyles.barValue}>
+                {val > 0 ? `$${val >= 1000 ? (val / 1000).toFixed(1) + "k" : val.toFixed(0)}` : ""}
+              </Text>
+              <View style={chartStyles.barTrack}>
+                <View
+                  style={[
+                    chartStyles.barFill,
+                    {
+                      height: `${Math.max(heightPercent, 3)}%`,
+                      backgroundColor: barColor,
+                      opacity: val > 0 ? 1 : 0.3,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={chartStyles.barLabel}>{getDayLabel(day.date)}</Text>
+              <Text style={chartStyles.barCount}>
+                {day.count > 0 ? `${day.count}` : "-"}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function DashboardSection() {
   const { data: stats, isLoading } = useQuery<any>({
     queryKey: ["/api/admin/dashboard"],
@@ -111,6 +180,8 @@ function DashboardSection() {
         <StatCard icon="today" label="طلبات اليوم" value={stats?.ordersToday?.toString() || "0"} color="#E74C3C" />
         <StatCard icon="person-add" label="مستخدمين جدد (أسبوع)" value={stats?.newUsersThisWeek?.toString() || "0"} color="#1ABC9C" />
       </View>
+
+      <SalesChart />
 
       {stats?.topCampaigns && stats.topCampaigns.length > 0 && (
         <>
@@ -921,6 +992,14 @@ function LoadingView() {
   );
 }
 
+const CATEGORY_OPTIONS: { key: string; label: string }[] = [
+  { key: "electronics", label: "إلكترونيات" },
+  { key: "fashion", label: "أزياء" },
+  { key: "beauty", label: "جمال" },
+  { key: "accessories", label: "إكسسوارات" },
+  { key: "other", label: "أخرى" },
+];
+
 function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -928,6 +1007,8 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
   const [quantity, setQuantity] = useState("");
   const [prizeName, setPrizeName] = useState("");
   const [prizeDesc, setPrizeDesc] = useState("");
+  const [category, setCategory] = useState("other");
+  const [endsAtText, setEndsAtText] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
@@ -999,7 +1080,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       onClose();
-      setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc(""); setImageUri(null); setImageFile(null);
+      setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc(""); setCategory("other"); setEndsAtText(""); setImageUri(null); setImageFile(null);
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
@@ -1020,6 +1101,8 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
       totalQuantity: parseInt(quantity),
       prizeName,
       prizeDescription: prizeDesc || undefined,
+      category,
+      endsAt: endsAtText && !isNaN(new Date(endsAtText).getTime()) ? new Date(endsAtText).toISOString() : undefined,
       imageUrl,
     });
   };
@@ -1056,6 +1139,21 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
             <ModalInput label="الكمية الإجمالية *" value={quantity} onChangeText={setQuantity} placeholder="4000" keyboardType="number-pad" />
             <ModalInput label="اسم الجائزة *" value={prizeName} onChangeText={setPrizeName} placeholder="iPhone 16 Pro Max" />
             <ModalInput label="وصف الجائزة" value={prizeDesc} onChangeText={setPrizeDesc} placeholder="تفاصيل إضافية" multiline />
+            <View style={modalStyles.inputGroup}>
+              <Text style={modalStyles.inputLabel}>التصنيف</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {CATEGORY_OPTIONS.map((cat) => (
+                  <Pressable
+                    key={cat.key}
+                    onPress={() => setCategory(cat.key)}
+                    style={[styles.statusOption, category === cat.key && styles.statusOptionActive]}
+                  >
+                    <Text style={[styles.statusOptionText, category === cat.key && styles.statusOptionTextActive]}>{cat.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            <ModalInput label="تاريخ الانتهاء (اختياري)" value={endsAtText} onChangeText={setEndsAtText} placeholder="2025-12-31T23:59" />
             <Pressable
               onPress={handleCreate}
               disabled={mutation.isPending || uploading}
@@ -1393,4 +1491,20 @@ const orderMgmtStyles = StyleSheet.create({
   rejectBtn: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#E74C3C", borderRadius: 10, paddingVertical: 12, marginTop: 8 },
   rejectBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
   rejectionInput: { backgroundColor: Colors.light.inputBg, borderRadius: 10, padding: 12, fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
+});
+
+const chartStyles = StyleSheet.create({
+  container: { marginTop: 24, backgroundColor: "#fff", borderRadius: 16, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
+  headerRow: { marginBottom: 16 },
+  summaryRow: { flexDirection: "row-reverse", gap: 4, marginTop: -4 },
+  summaryItem: { alignItems: "center" },
+  summaryValue: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.light.text },
+  summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  barsContainer: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", height: 180, paddingTop: 8 },
+  barCol: { flex: 1, alignItems: "center", gap: 4 },
+  barValue: { fontFamily: "Inter_600SemiBold", fontSize: 9, color: Colors.light.accent, minHeight: 14, textAlign: "center" },
+  barTrack: { width: 28, height: 120, backgroundColor: Colors.light.progressBg, borderRadius: 6, justifyContent: "flex-end", overflow: "hidden" },
+  barFill: { width: "100%", borderRadius: 6 },
+  barLabel: { fontFamily: "Inter_500Medium", fontSize: 9, color: Colors.light.textSecondary, writingDirection: "rtl", textAlign: "center" },
+  barCount: { fontFamily: "Inter_400Regular", fontSize: 9, color: Colors.light.tabIconDefault },
 });

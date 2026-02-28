@@ -59,6 +59,14 @@ function RootLayoutNav() {
         name="winners"
         options={{ headerShown: false, presentation: "card" }}
       />
+      <Stack.Screen
+        name="favorites"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
+        name="referral"
+        options={{ headerShown: false, presentation: "card" }}
+      />
     </Stack>
   );
 }

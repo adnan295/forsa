@@ -758,6 +758,58 @@ export class DatabaseStorage implements IStorage {
     return result?.count || 0;
   }
 
+  async generateReferralCode(): Promise<string> {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code: string;
+    let exists = true;
+    do {
+      code = "";
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const [existing] = await db.select().from(users).where(eq(users.referralCode, code)).limit(1);
+      exists = !!existing;
+    } while (exists);
+    return code;
+  }
+
+  async getUserByReferralCode(code: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.referralCode, code.toUpperCase()));
+    return user || undefined;
+  }
+
+  async setUserReferralCode(userId: string, code: string): Promise<void> {
+    await db.update(users).set({ referralCode: code }).where(eq(users.id, userId));
+  }
+
+  async setUserReferredBy(userId: string, referrerId: string): Promise<void> {
+    await db.update(users).set({ referredBy: referrerId }).where(eq(users.id, userId));
+  }
+
+  async getReferralCount(userId: string): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(users).where(eq(users.referredBy, userId));
+    return result?.count || 0;
+  }
+
+  async getReferredUsers(userId: string): Promise<{ username: string; createdAt: Date }[]> {
+    const result = await db.select({
+      username: users.username,
+      createdAt: users.createdAt,
+    }).from(users).where(eq(users.referredBy, userId)).orderBy(desc(users.createdAt));
+    return result;
+  }
+
+  async ensureAllUsersHaveReferralCodes(): Promise<number> {
+    const usersWithoutCodes = await db.select({ id: users.id }).from(users).where(sql`${users.referralCode} IS NULL`);
+    let updated = 0;
+    for (const u of usersWithoutCodes) {
+      const code = await this.generateReferralCode();
+      await this.setUserReferralCode(u.id, code);
+      updated++;
+    }
+    return updated;
+  }
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;

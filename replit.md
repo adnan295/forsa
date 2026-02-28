@@ -17,25 +17,30 @@ app/                    # Expo Router screens
   auth.tsx              # Login/Register screen
   cart.tsx              # Shopping cart page (view/edit cart items, proceed to checkout)
   checkout.tsx          # Checkout page (supports single-item and cart-based purchase)
+  favorites.tsx         # Favorites page (saved campaigns)
+  winners.tsx           # Winners page (completed campaigns with winner info)
+  referral.tsx          # Referral program page (code, share, stats)
   info.tsx              # Info pages (about, terms, privacy, contact) via ?type= param
   (tabs)/
     _layout.tsx         # Tab navigation (Campaigns, My Orders, Profile)
-    index.tsx           # Home - campaign list with search bar, filter tabs, progress bars
+    index.tsx           # Home - campaign list with search, filter, category tabs, progress bars
     tickets.tsx         # My Orders & Tickets (dual sub-tabs, enhanced empty states)
     profile.tsx         # Profile with stats, activity menu, settings, admin entry
   campaign/
-    [id].tsx            # Campaign detail → navigates to checkout
+    [id].tsx            # Campaign detail with countdown timer → navigates to checkout
   order/
     [id].tsx            # Order tracking (payment status, receipt upload, shipping timeline)
   admin/
-    index.tsx           # Comprehensive admin panel (7 tabs)
+    index.tsx           # Comprehensive admin panel (8 tabs) with sales charts
 components/
-  CampaignCard.tsx      # Campaign card with progress bar
+  CampaignCard.tsx      # Campaign card with progress bar, countdown timer, favorite heart
   ErrorBoundary.tsx     # Error boundary wrapper
 constants/
   colors.ts             # Design tokens (purple/pink gradient theme)
 lib/
   auth-context.tsx      # Auth provider (login/register/logout)
+  favorites-context.tsx # Favorites provider (AsyncStorage-based)
+  cart-context.tsx       # Cart provider (AsyncStorage-based)
   query-client.ts       # React Query config + API helpers
 server/
   index.ts              # Express server entry
@@ -80,7 +85,7 @@ Comprehensive admin dashboard with 7 sections:
 - GET /api/admin/activity-log - audit trail
 
 ## Database Tables
-- users (with fullName, phone, address, city, country, emailVerified), campaigns, orders (with shipping_status, tracking_number, shipping_address), tickets, payment_methods, coupons, activity_log, reviews, admin_notifications, user_notifications
+- users (with fullName, phone, address, city, country, emailVerified, referralCode, referredBy), campaigns (with category, endsAt), orders (with shipping_status, tracking_number, shipping_address), tickets, payment_methods, coupons, activity_log, reviews, admin_notifications, user_notifications
 
 ## Design
 - Luxury theme: Navy (#0A1628) + Metallic Gold (#D4A853)
@@ -103,6 +108,13 @@ Comprehensive admin dashboard with 7 sections:
 - CSV export for orders in admin panel (GET /api/admin/orders/export/csv)
 - FAQ page (app/faq.tsx) with 10 expandable items in Arabic
 - Admin panel expanded to 8 tabs (added Notifications section)
+- Countdown timer on campaign cards and detail page (shows days/hours/minutes/seconds when endsAt is set)
+- Product categories: category field on campaigns (electronics, fashion, beauty, accessories, other), category filter tabs on home page, category picker in admin campaign creation
+- Favorites system: FavoritesProvider (AsyncStorage), heart icon on campaign cards and detail page, favorites page (app/favorites.tsx)
+- Winners page (app/winners.tsx): Shows completed campaigns with winner usernames, GET /api/winners endpoint
+- Referral program: Auto-generated 6-char referral codes, referral page (app/referral.tsx) with share/copy, GET /api/referral, POST /api/referral/apply, referral tracking
+- Admin sales charts: Daily sales bar chart (last 7 days) in admin dashboard, GET /api/admin/sales-chart endpoint
+- Social proof banners: Animated recent purchase notifications on home page
 
 ## Admin Credentials
 - Username: admin

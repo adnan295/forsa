@@ -3,9 +3,10 @@ import { createServer, type Server } from "node:http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
-import { pool } from "./db";
+import { pool, db } from "./db";
 import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, reviews } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, reviews, orders } from "@shared/schema";
+import { sum, count, and, gte, sql } from "drizzle-orm";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate } from "./email";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -142,10 +143,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hashedPassword = await bcrypt.hash(parsed.data.password, 10);
+      const referralCode = await storage.generateReferralCode();
       const user = await storage.createUser({
         ...parsed.data,
         password: hashedPassword,
-      });
+        referralCode,
+      } as any);
+
+      const { referralCode: appliedCode } = req.body;
+      if (appliedCode) {
+        const referrer = await storage.getUserByReferralCode(appliedCode);
+        if (referrer && referrer.id !== user.id) {
+          await storage.setUserReferredBy(user.id, referrer.id);
+        }
+      }
 
       req.session.userId = user.id;
 
@@ -1275,6 +1286,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       console.error("Mark all read error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/winners", async (_req: Request, res: Response) => {
+    try {
+      const allCampaigns = await storage.getCampaigns();
+      const completed = allCampaigns.filter(c => c.status === "completed" && c.winnerId);
+      const results = await Promise.all(
+        completed.map(async (campaign) => {
+          let winnerUsername = "";
+          if (campaign.winnerId) {
+            const winner = await storage.getUser(campaign.winnerId);
+            if (winner) {
+              winnerUsername = winner.username;
+            }
+          }
+          return {
+            ...campaign,
+            winnerUsername,
+          };
+        })
+      );
+      res.json(results);
+    } catch (error) {
+      console.error("Get winners error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/sales-chart", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const days: { date: string; total: string; count: number }[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const dayStart = new Date();
+        dayStart.setDate(dayStart.getDate() - i);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(dayStart);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const [result] = await db
+          .select({
+            total: sum(orders.totalAmount),
+            count: count(),
+          })
+          .from(orders)
+          .where(
+            and(
+              gte(orders.createdAt, dayStart),
+              sql`${orders.createdAt} <= ${dayEnd}`
+            )
+          );
+
+        days.push({
+          date: dayStart.toISOString().split("T")[0],
+          total: result?.total || "0",
+          count: result?.count || 0,
+        });
+      }
+      res.json(days);
+    } catch (error) {
+      console.error("Sales chart error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/referral", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (!user.referralCode) {
+        const code = await storage.generateReferralCode();
+        await storage.setUserReferralCode(user.id, code);
+        user.referralCode = code;
+      }
+
+      const referralCount = await storage.getReferralCount(user.id);
+      const referredUsers = await storage.getReferredUsers(user.id);
+
+      res.json({
+        referralCode: user.referralCode,
+        referralCount,
+        referredUsers: referredUsers.map(u => ({
+          username: u.username,
+          joinedAt: u.createdAt,
+        })),
+      });
+    } catch (error) {
+      console.error("Get referral error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/referral/apply", async (req: Request, res: Response) => {
+    try {
+      const { code } = req.body;
+      if (!code) {
+        return res.status(400).json({ message: "Referral code is required" });
+      }
+      const referrer = await storage.getUserByReferralCode(code.toUpperCase());
+      if (!referrer) {
+        return res.status(404).json({ valid: false, message: "رمز الإحالة غير صحيح" });
+      }
+      res.json({ valid: true, referrerUsername: referrer.username });
+    } catch (error) {
+      console.error("Apply referral error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/admin/generate-referral-codes", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const updated = await storage.ensureAllUsersHaveReferralCodes();
+      res.json({ message: `Generated referral codes for ${updated} users`, updated });
+    } catch (error) {
+      console.error("Generate referral codes error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

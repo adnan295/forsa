@@ -113,11 +113,25 @@ export default function ProfileScreen() {
       onPress: () => router.push("/(tabs)/tickets" as any),
     },
     {
+      icon: "heart-outline" as const,
+      label: "المفضلة",
+      subtitle: "الحملات المحفوظة",
+      color: "#EF4444",
+      onPress: () => router.push("/favorites" as any),
+    },
+    {
       icon: "trophy-outline" as const,
       label: "جوائزي",
       subtitle: stats?.winningTickets ? `${stats.winningTickets} فوز` : "لم تفز بعد",
       color: "#F59E0B",
       onPress: () => router.push("/(tabs)/tickets" as any),
+    },
+    {
+      icon: "gift-outline" as const,
+      label: "برنامج الإحالة",
+      subtitle: "ادعُ أصدقاءك واحصل على مكافآت",
+      color: "#06B6D4",
+      onPress: () => router.push("/referral" as any),
     },
     {
       icon: "people-outline" as const,

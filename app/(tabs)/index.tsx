@@ -31,6 +31,16 @@ import { queryClient } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
 
 type FilterKey = "all" | "active" | "completed";
+type CategoryKey = "all" | "electronics" | "fashion" | "beauty" | "accessories" | "other";
+
+const CATEGORY_TABS: { key: CategoryKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: "all", label: "الكل", icon: "grid" },
+  { key: "electronics", label: "إلكترونيات", icon: "laptop" },
+  { key: "fashion", label: "أزياء", icon: "shirt" },
+  { key: "beauty", label: "جمال", icon: "sparkles" },
+  { key: "accessories", label: "إكسسوارات", icon: "watch" },
+  { key: "other", label: "أخرى", icon: "ellipsis-horizontal" },
+];
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BANNER_WIDTH = SCREEN_WIDTH - 32;
@@ -268,6 +278,7 @@ export default function HomeScreen() {
   const { totalItems } = useCart();
   const [searchText, setSearchText] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+  const [activeCategory, setActiveCategory] = useState<CategoryKey>("all");
 
   const {
     data: campaigns,
@@ -295,6 +306,7 @@ export default function HomeScreen() {
     let list = campaigns || [];
     if (activeFilter === "active") list = list.filter(c => c.status === "active");
     else if (activeFilter === "completed") list = list.filter(c => c.status !== "active");
+    if (activeCategory !== "all") list = list.filter(c => (c.category || "other") === activeCategory);
     if (searchText.trim()) {
       const q = searchText.trim().toLowerCase();
       list = list.filter(c =>
@@ -304,7 +316,7 @@ export default function HomeScreen() {
       );
     }
     return list;
-  }, [campaigns, activeFilter, searchText]);
+  }, [campaigns, activeFilter, activeCategory, searchText]);
 
   const onRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
@@ -435,6 +447,38 @@ export default function HomeScreen() {
               </Pressable>
             ))}
           </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryRow}
+          >
+            {CATEGORY_TABS.map((cat) => (
+              <Pressable
+                key={cat.key}
+                onPress={() => {
+                  setActiveCategory(cat.key);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                style={[
+                  styles.categoryChip,
+                  activeCategory === cat.key && styles.categoryChipActive,
+                ]}
+              >
+                <Ionicons
+                  name={cat.icon}
+                  size={14}
+                  color={activeCategory === cat.key ? Colors.light.accent : Colors.light.textSecondary}
+                />
+                <Text style={[
+                  styles.categoryChipText,
+                  activeCategory === cat.key && styles.categoryChipTextActive,
+                ]}>
+                  {cat.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
 
         {filteredCampaigns.length > 0 && (
@@ -509,6 +553,7 @@ export default function HomeScreen() {
                 onPress={() => {
                   setSearchText("");
                   setActiveFilter("all");
+                  setActiveCategory("all");
                 }}
                 style={styles.clearSearchBtn}
               >
@@ -784,6 +829,36 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: "row-reverse",
     gap: 8,
+  },
+  categoryRow: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    paddingTop: 4,
+  },
+  categoryChip: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  categoryChipActive: {
+    backgroundColor: "rgba(124, 58, 237, 0.08)",
+    borderColor: Colors.light.accent,
+  },
+  categoryChipText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+  categoryChipTextActive: {
+    color: Colors.light.accent,
+    fontFamily: "Inter_600SemiBold",
   },
   filterChip: {
     flex: 1,

@@ -33,6 +33,28 @@ import { useFavorites } from "@/lib/favorites-context";
 import { getApiUrl } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
 
+function useCountdown(endsAt: string | Date | null | undefined) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
+  useEffect(() => {
+    if (!endsAt) return;
+    const calc = () => {
+      const diff = new Date(endsAt).getTime() - Date.now();
+      if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
+      return {
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+        expired: false,
+      };
+    };
+    setTimeLeft(calc());
+    const id = setInterval(() => setTimeLeft(calc()), 1000);
+    return () => clearInterval(id);
+  }, [endsAt]);
+  return timeLeft;
+}
+
 export default function CampaignDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -67,6 +89,8 @@ export default function CampaignDetailScreen() {
     refetchInterval: 5000,
     staleTime: 3000,
   });
+
+  const countdown = useCountdown(campaign?.endsAt);
 
   const { data: reviewsData } = useQuery<{ username: string; rating: number; comment: string | null; createdAt: string }[]>({
     queryKey: ["/api/reviews", id],
@@ -245,6 +269,36 @@ export default function CampaignDetailScreen() {
               </View>
             </View>
           </View>
+
+          {campaign.endsAt && !isCompleted && !isSoldOut && !countdown.expired && (
+            <View style={styles.countdownCard}>
+              <View style={styles.countdownHeader}>
+                <Ionicons name="timer-outline" size={18} color="#EF4444" />
+                <Text style={styles.countdownTitle}>ينتهي خلال</Text>
+              </View>
+              <View style={styles.countdownBoxes}>
+                <View style={styles.countdownBox}>
+                  <Text style={styles.countdownBoxNum}>{countdown.days}</Text>
+                  <Text style={styles.countdownBoxLabel}>يوم</Text>
+                </View>
+                <Text style={styles.countdownBoxSep}>:</Text>
+                <View style={styles.countdownBox}>
+                  <Text style={styles.countdownBoxNum}>{String(countdown.hours).padStart(2, "0")}</Text>
+                  <Text style={styles.countdownBoxLabel}>ساعة</Text>
+                </View>
+                <Text style={styles.countdownBoxSep}>:</Text>
+                <View style={styles.countdownBox}>
+                  <Text style={styles.countdownBoxNum}>{String(countdown.minutes).padStart(2, "0")}</Text>
+                  <Text style={styles.countdownBoxLabel}>دقيقة</Text>
+                </View>
+                <Text style={styles.countdownBoxSep}>:</Text>
+                <View style={styles.countdownBox}>
+                  <Text style={styles.countdownBoxNum}>{String(countdown.seconds).padStart(2, "0")}</Text>
+                  <Text style={styles.countdownBoxLabel}>ثانية</Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           {isActive && (
             <View style={styles.quantityCard}>
@@ -930,5 +984,61 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: "#FFFFFF",
     writingDirection: "rtl",
+  },
+  countdownCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.15)",
+    shadowColor: "#EF4444",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  countdownHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+  countdownTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+    color: "#EF4444",
+    writingDirection: "rtl",
+  },
+  countdownBoxes: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  countdownBox: {
+    alignItems: "center",
+    backgroundColor: "rgba(239,68,68,0.06)",
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    minWidth: 60,
+  },
+  countdownBoxNum: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 24,
+    color: "#EF4444",
+  },
+  countdownBoxLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: Colors.light.textSecondary,
+    marginTop: 2,
+    writingDirection: "rtl",
+  },
+  countdownBoxSep: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 20,
+    color: "#EF4444",
   },
 });

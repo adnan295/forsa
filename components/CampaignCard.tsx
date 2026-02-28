@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -13,6 +13,28 @@ import { getApiUrl } from "@/lib/query-client";
 import { useFavorites } from "@/lib/favorites-context";
 import type { Campaign } from "@shared/schema";
 
+function useCountdown(endsAt: string | Date | null | undefined) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
+  useEffect(() => {
+    if (!endsAt) return;
+    const calc = () => {
+      const diff = new Date(endsAt).getTime() - Date.now();
+      if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
+      return {
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
+        expired: false,
+      };
+    };
+    setTimeLeft(calc());
+    const id = setInterval(() => setTimeLeft(calc()), 1000);
+    return () => clearInterval(id);
+  }, [endsAt]);
+  return timeLeft;
+}
+
 interface Props {
   campaign: Campaign;
   onPress: () => void;
@@ -22,6 +44,7 @@ export default function CampaignCard({ campaign, onPress }: Props) {
   const scale = useSharedValue(1);
   const { toggleFavorite, isFavorite } = useFavorites();
   const favorited = isFavorite(campaign.id);
+  const countdown = useCountdown(campaign.endsAt);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -162,6 +185,31 @@ export default function CampaignCard({ campaign, onPress }: Props) {
               />
             </View>
           </View>
+
+          {campaign.endsAt && !isCompleted && !isSoldOut && !countdown.expired && (
+            <View style={styles.countdownRow}>
+              <Ionicons name="timer-outline" size={14} color="#EF4444" />
+              <View style={styles.countdownUnit}>
+                <Text style={styles.countdownNum}>{countdown.days}</Text>
+                <Text style={styles.countdownLabel}>يوم</Text>
+              </View>
+              <Text style={styles.countdownSep}>:</Text>
+              <View style={styles.countdownUnit}>
+                <Text style={styles.countdownNum}>{String(countdown.hours).padStart(2, "0")}</Text>
+                <Text style={styles.countdownLabel}>ساعة</Text>
+              </View>
+              <Text style={styles.countdownSep}>:</Text>
+              <View style={styles.countdownUnit}>
+                <Text style={styles.countdownNum}>{String(countdown.minutes).padStart(2, "0")}</Text>
+                <Text style={styles.countdownLabel}>دقيقة</Text>
+              </View>
+              <Text style={styles.countdownSep}>:</Text>
+              <View style={styles.countdownUnit}>
+                <Text style={styles.countdownNum}>{String(countdown.seconds).padStart(2, "0")}</Text>
+                <Text style={styles.countdownLabel}>ثانية</Text>
+              </View>
+            </View>
+          )}
 
           <View style={styles.footer}>
             {!isCompleted && !isSoldOut ? (
@@ -385,5 +433,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.light.accent,
     writingDirection: "rtl",
+  },
+  countdownRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "rgba(239,68,68,0.06)",
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  countdownUnit: {
+    alignItems: "center",
+    minWidth: 32,
+  },
+  countdownNum: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: "#EF4444",
+  },
+  countdownLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 9,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+  countdownSep: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    color: "#EF4444",
+    marginTop: -6,
   },
 });
