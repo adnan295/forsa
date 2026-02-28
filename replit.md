@@ -7,6 +7,7 @@ Mobile-first e-commerce application with an automated raffle system. Products ar
 - **Frontend**: Expo (React Native) with expo-router file-based routing
 - **Backend**: Express.js with TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
+- **Email**: Resend (via Replit integration)
 - **Auth**: Session-based (express-session + connect-pg-simple)
 - **State**: React Query (@tanstack/react-query) + React Context
 

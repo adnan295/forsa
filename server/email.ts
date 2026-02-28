@@ -1,20 +1,48 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "",
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: process.env.SMTP_SECURE === "true",
-  auth: {
-    user: process.env.SMTP_USER || "",
-    pass: process.env.SMTP_PASS || "",
-  },
-});
-
-const FROM_EMAIL = process.env.SMTP_FROM || "noreply@luckydraw.app";
 const APP_NAME = "لاكي درو - LuckyDraw";
 
-function isEmailConfigured(): boolean {
-  return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+let connectionSettings: any;
+
+async function getCredentials() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? "repl " + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+      ? "depl " + process.env.WEB_REPL_RENEWAL
+      : null;
+
+  if (!xReplitToken) {
+    throw new Error("X-Replit-Token not found for repl/depl");
+  }
+
+  connectionSettings = await fetch(
+    "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
+    {
+      headers: {
+        Accept: "application/json",
+        "X-Replit-Token": xReplitToken,
+      },
+    }
+  )
+    .then((res) => res.json())
+    .then((data) => data.items?.[0]);
+
+  if (!connectionSettings || !connectionSettings.settings.api_key) {
+    throw new Error("Resend not connected");
+  }
+  return {
+    apiKey: connectionSettings.settings.api_key,
+    fromEmail: connectionSettings.settings.from_email,
+  };
+}
+
+async function getUncachableResendClient() {
+  const { apiKey, fromEmail } = await getCredentials();
+  return {
+    client: new Resend(apiKey),
+    fromEmail: fromEmail || "onboarding@resend.dev",
+  };
 }
 
 function baseTemplate(content: string): string {
@@ -55,33 +83,57 @@ function baseTemplate(content: string): string {
 <body>
   <div class="container">
     <div class="header">
-      <h1>🎯 ${APP_NAME}</h1>
+      <h1>${APP_NAME}</h1>
       <p>منصة التسوق والسحوبات</p>
     </div>
     ${content}
     <div class="footer">
       <p>${APP_NAME}</p>
-      <p>جميع الحقوق محفوظة © ${new Date().getFullYear()}</p>
+      <p>جميع الحقوق محفوظة &copy; ${new Date().getFullYear()}</p>
     </div>
   </div>
 </body>
 </html>`;
 }
 
+function isResendConfigured(): boolean {
+  return !!(process.env.REPLIT_CONNECTORS_HOSTNAME && (process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL));
+}
+
+async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+  if (!isResendConfigured()) {
+    console.log("[Email] Resend not configured (dev mode), skipping email to", to);
+    return false;
+  }
+
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    if (!fromEmail || fromEmail === "onboarding@resend.dev") {
+      console.warn("[Email] No from_email configured in Resend integration, using default");
+    }
+    await client.emails.send({
+      from: `${APP_NAME} <${fromEmail}>`,
+      to,
+      subject,
+      html,
+    });
+    console.log("[Email] Sent to", to);
+    return true;
+  } catch (err: any) {
+    console.error("[Email] Failed to send to", to, ":", err?.message || err);
+    return false;
+  }
+}
+
 export async function sendOrderConfirmation(
   to: string,
   data: { orderId: string; campaignTitle: string; quantity: number; totalAmount: string; ticketNumbers: string[]; paymentMethod: string }
 ) {
-  if (!isEmailConfigured()) {
-    console.log("[Email] SMTP not configured, skipping order confirmation email to", to);
-    return;
-  }
-
   const ticketsHtml = data.ticketNumbers.map(t => `<span class="badge badge-info" style="margin: 2px;">${t}</span>`).join(" ");
 
   const html = baseTemplate(`
     <div class="body">
-      <h2>✅ تم تأكيد طلبك بنجاح!</h2>
+      <h2>تم تأكيد طلبك بنجاح!</h2>
       <p>شكراً لك! تم استلام طلبك وسيتم معالجته في أقرب وقت.</p>
       <div class="info-box">
         <div class="info-row"><span class="info-label">رقم الطلب</span><span class="info-value">#${data.orderId.slice(0, 8)}</span></div>
@@ -92,32 +144,17 @@ export async function sendOrderConfirmation(
       </div>
       <p><strong>تذاكر السحب:</strong></p>
       <div style="margin: 12px 0;">${ticketsHtml}</div>
-      <p>بالتوفيق في السحب! 🍀</p>
+      <p>بالتوفيق في السحب!</p>
     </div>
   `);
 
-  try {
-    await transporter.sendMail({
-      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
-      to,
-      subject: `تأكيد الطلب #${data.orderId.slice(0, 8)} - ${APP_NAME}`,
-      html,
-    });
-    console.log("[Email] Order confirmation sent to", to);
-  } catch (err) {
-    console.error("[Email] Failed to send order confirmation:", err);
-  }
+  await sendEmail(to, `تأكيد الطلب #${data.orderId.slice(0, 8)} - ${APP_NAME}`, html);
 }
 
 export async function sendPaymentStatusUpdate(
   to: string,
   data: { orderId: string; status: string; campaignTitle: string; rejectionReason?: string }
 ) {
-  if (!isEmailConfigured()) {
-    console.log("[Email] SMTP not configured, skipping payment status email to", to);
-    return;
-  }
-
   const statusMap: Record<string, { label: string; badge: string; message: string }> = {
     confirmed: { label: "تم التأكيد", badge: "badge-success", message: "تم تأكيد دفعتك بنجاح! سيتم شحن طلبك قريباً." },
     rejected: { label: "مرفوض", badge: "badge-error", message: `تم رفض إيصال الدفع. ${data.rejectionReason ? `السبب: ${data.rejectionReason}` : "يرجى رفع إيصال صحيح."}` },
@@ -128,7 +165,7 @@ export async function sendPaymentStatusUpdate(
 
   const html = baseTemplate(`
     <div class="body">
-      <h2>📋 تحديث حالة الدفع</h2>
+      <h2>تحديث حالة الدفع</h2>
       <p>تم تحديث حالة الدفع لطلبك:</p>
       <div class="info-box">
         <div class="info-row"><span class="info-label">رقم الطلب</span><span class="info-value">#${data.orderId.slice(0, 8)}</span></div>
@@ -139,32 +176,17 @@ export async function sendPaymentStatusUpdate(
     </div>
   `);
 
-  try {
-    await transporter.sendMail({
-      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
-      to,
-      subject: `تحديث حالة الدفع - طلب #${data.orderId.slice(0, 8)} - ${APP_NAME}`,
-      html,
-    });
-    console.log("[Email] Payment status update sent to", to);
-  } catch (err) {
-    console.error("[Email] Failed to send payment status update:", err);
-  }
+  await sendEmail(to, `تحديث حالة الدفع - طلب #${data.orderId.slice(0, 8)} - ${APP_NAME}`, html);
 }
 
 export async function sendWinnerNotification(
   to: string,
   data: { campaignTitle: string; prizeName: string; ticketNumber: string }
 ) {
-  if (!isEmailConfigured()) {
-    console.log("[Email] SMTP not configured, skipping winner notification to", to);
-    return;
-  }
-
   const html = baseTemplate(`
     <div class="body">
       <div class="winner-box">
-        <h3>🎉 مبروك! أنت الفائز!</h3>
+        <h3>مبروك! أنت الفائز!</h3>
         <p>لقد تم اختيارك كفائز في السحب</p>
       </div>
       <div class="info-box">
@@ -173,35 +195,25 @@ export async function sendWinnerNotification(
         <div class="info-row"><span class="info-label">تذكرة الفوز</span><span class="info-value">${data.ticketNumber}</span></div>
       </div>
       <p>سيتم التواصل معك قريباً لترتيب تسليم الجائزة. تأكد من تحديث بيانات التواصل في ملفك الشخصي.</p>
-      <p>ألف مبروك! 🎊</p>
+      <p>ألف مبروك!</p>
     </div>
   `);
 
-  try {
-    await transporter.sendMail({
-      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
-      to,
-      subject: `🎉 مبروك! أنت الفائز - ${data.campaignTitle} - ${APP_NAME}`,
-      html,
-    });
-    console.log("[Email] Winner notification sent to", to);
-  } catch (err) {
-    console.error("[Email] Failed to send winner notification:", err);
-  }
+  await sendEmail(to, `مبروك! أنت الفائز - ${data.campaignTitle} - ${APP_NAME}`, html);
 }
 
 export async function sendEmailVerificationCode(
   to: string,
   data: { code: string; username: string }
 ) {
-  if (!isEmailConfigured()) {
-    console.log("[Email] SMTP not configured. Verification code for", to, "is:", data.code);
+  if (!isResendConfigured()) {
+    console.log(`[Email] Resend not configured. Verification code for ${to} is: ${data.code}`);
     return;
   }
 
   const html = baseTemplate(`
     <div class="body">
-      <h2>📧 تحقق من بريدك الإلكتروني</h2>
+      <h2>تحقق من بريدك الإلكتروني</h2>
       <p>مرحباً ${data.username}،</p>
       <p>شكراً لتسجيلك في لاكي درو! استخدم الرمز التالي لتفعيل حسابك:</p>
       <div class="code-box">${data.code}</div>
@@ -210,31 +222,21 @@ export async function sendEmailVerificationCode(
     </div>
   `);
 
-  try {
-    await transporter.sendMail({
-      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
-      to,
-      subject: `رمز التحقق - ${APP_NAME}`,
-      html,
-    });
-    console.log("[Email] Verification code sent to", to);
-  } catch (err) {
-    console.error("[Email] Failed to send verification code:", err);
-  }
+  await sendEmail(to, `رمز التحقق - ${APP_NAME}`, html);
 }
 
 export async function sendPasswordResetCode(
   to: string,
   data: { code: string; username: string }
 ) {
-  if (!isEmailConfigured()) {
-    console.log("[Email] SMTP not configured, skipping password reset email to", to);
+  if (!isResendConfigured()) {
+    console.log(`[Email] Resend not configured. Password reset code for ${to} is: ${data.code}`);
     return;
   }
 
   const html = baseTemplate(`
     <div class="body">
-      <h2>🔐 إعادة تعيين كلمة المرور</h2>
+      <h2>إعادة تعيين كلمة المرور</h2>
       <p>مرحباً ${data.username}،</p>
       <p>لقد طلبت إعادة تعيين كلمة المرور. استخدم الرمز التالي:</p>
       <div class="code-box">${data.code}</div>
@@ -243,28 +245,13 @@ export async function sendPasswordResetCode(
     </div>
   `);
 
-  try {
-    await transporter.sendMail({
-      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
-      to,
-      subject: `رمز إعادة تعيين كلمة المرور - ${APP_NAME}`,
-      html,
-    });
-    console.log("[Email] Password reset code sent to", to);
-  } catch (err) {
-    console.error("[Email] Failed to send password reset code:", err);
-  }
+  await sendEmail(to, `رمز إعادة تعيين كلمة المرور - ${APP_NAME}`, html);
 }
 
 export async function sendShippingUpdate(
   to: string,
   data: { orderId: string; campaignTitle: string; status: string; trackingNumber?: string }
 ) {
-  if (!isEmailConfigured()) {
-    console.log("[Email] SMTP not configured, skipping shipping update email to", to);
-    return;
-  }
-
   const statusMap: Record<string, { label: string; emoji: string }> = {
     processing: { label: "جاري التجهيز", emoji: "📦" },
     shipped: { label: "تم الشحن", emoji: "🚚" },
@@ -285,15 +272,5 @@ export async function sendShippingUpdate(
     </div>
   `);
 
-  try {
-    await transporter.sendMail({
-      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
-      to,
-      subject: `${statusInfo.emoji} تحديث الشحن - طلب #${data.orderId.slice(0, 8)} - ${APP_NAME}`,
-      html,
-    });
-    console.log("[Email] Shipping update sent to", to);
-  } catch (err) {
-    console.error("[Email] Failed to send shipping update:", err);
-  }
+  await sendEmail(to, `${statusInfo.emoji} تحديث الشحن - طلب #${data.orderId.slice(0, 8)} - ${APP_NAME}`, html);
 }
