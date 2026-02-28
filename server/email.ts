@@ -205,10 +205,10 @@ export async function sendWinnerNotification(
 export async function sendEmailVerificationCode(
   to: string,
   data: { code: string; username: string }
-) {
+): Promise<boolean> {
   if (!isResendConfigured()) {
     console.log(`[Email] Resend not configured. Verification code for ${to} is: ${data.code}`);
-    return;
+    return false;
   }
 
   const html = baseTemplate(`
@@ -222,7 +222,8 @@ export async function sendEmailVerificationCode(
     </div>
   `);
 
-  await sendEmail(to, `رمز التحقق - ${APP_NAME}`, html);
+  const sent = await sendEmail(to, `رمز التحقق - ${APP_NAME}`, html);
+  return sent;
 }
 
 export async function sendPasswordResetCode(

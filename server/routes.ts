@@ -163,13 +163,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const otpCode = crypto.randomInt(100000, 999999).toString();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
       await storage.createEmailVerificationToken(user.id, otpCode, expiresAt);
-      await sendEmailVerificationCode(user.email, { code: otpCode, username: user.username });
+      const emailSent = await sendEmailVerificationCode(user.email, { code: otpCode, username: user.username });
 
-      res.json({
+      const response: any = {
         requiresVerification: true,
         email: user.email,
         message: "تم إرسال رمز التحقق إلى بريدك الإلكتروني",
-      });
+      };
+      if (!emailSent) {
+        response.verificationCode = otpCode;
+        response.emailFallback = true;
+        response.message = "تعذر إرسال البريد الإلكتروني. استخدم الرمز الظاهر على الشاشة";
+      }
+      res.json(response);
     } catch (error: any) {
       if (error?.code === "23505") {
         return res.status(409).json({ message: "Username or email already taken" });
@@ -239,9 +245,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const otpCode = crypto.randomInt(100000, 999999).toString();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
       await storage.createEmailVerificationToken(user.id, otpCode, expiresAt);
-      await sendEmailVerificationCode(user.email, { code: otpCode, username: user.username });
+      const emailSent = await sendEmailVerificationCode(user.email, { code: otpCode, username: user.username });
 
-      res.json({ message: "تم إرسال رمز تحقق جديد" });
+      const response: any = { message: "تم إرسال رمز تحقق جديد" };
+      if (!emailSent) {
+        response.verificationCode = otpCode;
+        response.emailFallback = true;
+        response.message = "تعذر إرسال البريد الإلكتروني. استخدم الرمز الظاهر على الشاشة";
+      }
+      res.json(response);
     } catch (error) {
       console.error("Resend verification error:", error);
       res.status(500).json({ message: "Server error" });
@@ -1009,6 +1021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             username: user.username,
             email: user.email,
             role: user.role,
+            emailVerified: user.emailVerified,
             createdAt: user.createdAt,
             ...stats,
           };
@@ -1017,6 +1030,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(usersWithStats);
     } catch (error) {
       console.error("Get all users error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/admin/verify-user/:userId", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUser(userId as string);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (user.emailVerified) {
+        return res.status(400).json({ message: "البريد مفعّل بالفعل" });
+      }
+      await storage.setEmailVerified(userId as string);
+      res.json({ message: "تم تفعيل البريد الإلكتروني بنجاح" });
+    } catch (error) {
+      console.error("Admin verify user error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

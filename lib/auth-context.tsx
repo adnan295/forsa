@@ -18,6 +18,8 @@ interface AuthUser {
 interface VerificationResult {
   requiresVerification: true;
   email: string;
+  verificationCode?: string;
+  emailFallback?: boolean;
 }
 
 interface AuthContextValue {
@@ -26,7 +28,7 @@ interface AuthContextValue {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<VerificationResult>;
   verifyEmail: (email: string, code: string) => Promise<void>;
-  resendVerification: (email: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -79,7 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function resendVerification(email: string) {
-    await apiRequest("POST", "/api/auth/resend-verification", { email });
+    const res = await apiRequest("POST", "/api/auth/resend-verification", { email });
+    const data = await res.json();
+    return data;
   }
 
   async function logout() {

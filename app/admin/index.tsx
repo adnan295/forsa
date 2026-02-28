@@ -494,6 +494,26 @@ function UsersSection() {
     queryKey: ["/api/admin/users"],
   });
 
+  const verifyMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await apiRequest("PUT", `/api/admin/verify-user/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      Alert.alert("تم", "تم تفعيل البريد الإلكتروني بنجاح");
+    },
+    onError: () => {
+      Alert.alert("خطأ", "تعذر تفعيل البريد");
+    },
+  });
+
+  function handleVerify(userId: string, username: string) {
+    Alert.alert("تفعيل البريد", `تفعيل بريد المستخدم ${username}؟`, [
+      { text: "إلغاء", style: "cancel" },
+      { text: "تفعيل", onPress: () => verifyMutation.mutate(userId) },
+    ]);
+  }
+
   if (isLoading) return <LoadingView />;
 
   return (
@@ -513,6 +533,14 @@ function UsersSection() {
               <Text style={styles.userName}>{item.username}</Text>
               {item.role === "admin" && (
                 <View style={styles.adminPill}><Text style={styles.adminPillText}>أدمن</Text></View>
+              )}
+              {item.emailVerified ? (
+                <View style={styles.verifiedPill}><Ionicons name="checkmark-circle" size={12} color="#10B981" /><Text style={styles.verifiedPillText}>مفعّل</Text></View>
+              ) : (
+                <Pressable onPress={() => handleVerify(item.id, item.username)} style={styles.unverifiedPill}>
+                  <Ionicons name="close-circle" size={12} color="#EF4444" />
+                  <Text style={styles.unverifiedPillText}>تفعيل</Text>
+                </Pressable>
               )}
             </View>
             <Text style={styles.userEmail}>{item.email}</Text>
@@ -1642,7 +1670,11 @@ const styles = StyleSheet.create({
   userName: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
   userEmail: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
   adminPill: { backgroundColor: "#FFD70020", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  adminPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#FFD700", writingDirection: "rtl" },
+  adminPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#FFD700", writingDirection: "rtl" as const },
+  verifiedPill: { flexDirection: "row-reverse" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#10B98118", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  verifiedPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#10B981", writingDirection: "rtl" as const },
+  unverifiedPill: { flexDirection: "row-reverse" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#EF444418", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  unverifiedPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#EF4444", writingDirection: "rtl" as const },
   userStatsRow: { flexDirection: "row-reverse", gap: 12, marginTop: 8 },
   userStat: { flexDirection: "row-reverse", alignItems: "center", gap: 4 },
   userStatText: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },

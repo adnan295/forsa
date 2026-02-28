@@ -101,6 +101,7 @@ export default function AuthScreen() {
   const [verificationEmail, setVerificationEmail] = useState("");
   const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [resendTimer, setResendTimer] = useState(0);
+  const [fallbackCode, setFallbackCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (resendTimer <= 0) return;
@@ -133,6 +134,9 @@ export default function AuthScreen() {
           setVerificationEmail(result.email);
           setVerificationStep(true);
           setResendTimer(60);
+          if (result.verificationCode) {
+            setFallbackCode(result.verificationCode);
+          }
         }
       }
     } catch (error: any) {
@@ -169,10 +173,15 @@ export default function AuthScreen() {
   async function handleResend() {
     if (resendTimer > 0) return;
     try {
-      await resendVerification(verificationEmail);
+      const res = await resendVerification(verificationEmail);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setResendTimer(60);
-      Alert.alert("تم", "تم إرسال رمز تحقق جديد");
+      if (res?.verificationCode) {
+        setFallbackCode(res.verificationCode);
+      } else {
+        setFallbackCode(null);
+        Alert.alert("تم", "تم إرسال رمز تحقق جديد");
+      }
     } catch (error: any) {
       Alert.alert("خطأ", "تعذّر إعادة الإرسال، حاول لاحقاً");
     }
@@ -213,6 +222,16 @@ export default function AuthScreen() {
             </View>
 
             <View style={styles.form}>
+              {fallbackCode && (
+                <View style={fallbackStyles.container}>
+                  <View style={fallbackStyles.iconRow}>
+                    <Ionicons name="information-circle" size={20} color="#FBBF24" />
+                    <Text style={fallbackStyles.title}>رمز التحقق الخاص بك</Text>
+                  </View>
+                  <Text style={fallbackStyles.code}>{fallbackCode}</Text>
+                  <Text style={fallbackStyles.hint}>أدخل هذا الرمز أدناه لتفعيل حسابك</Text>
+                </View>
+              )}
               <OTPInput value={otpDigits} onChange={setOtpDigits} />
 
               <Pressable
@@ -514,5 +533,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#A78BFA",
     writingDirection: "rtl",
+  },
+});
+
+const fallbackStyles = StyleSheet.create({
+  container: {
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.3)",
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    gap: 8,
+  },
+  iconRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  title: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: "#FBBF24",
+    writingDirection: "rtl",
+  },
+  code: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 32,
+    color: "#FFFFFF",
+    letterSpacing: 8,
+    textAlign: "center",
+  },
+  hint: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.5)",
+    writingDirection: "rtl",
+    textAlign: "center",
   },
 });
