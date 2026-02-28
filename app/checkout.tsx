@@ -16,6 +16,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
@@ -47,6 +52,11 @@ export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { items: cartItems, clearCart } = useCart();
+
+  const submitScale = useSharedValue(1);
+  const submitAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: submitScale.value }],
+  }));
 
   const isCartMode = params.fromCart === "true";
   const campaignId = params.campaignId;
@@ -629,33 +639,36 @@ export default function CheckoutScreen() {
             </View>
           </View>
 
-          <Pressable
-            onPress={handlePlaceOrder}
-            disabled={purchaseMutation.isPending}
-            style={({ pressed }) => [
-              styles.placeOrderBtn,
-              pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
-              purchaseMutation.isPending && { opacity: 0.6 },
-            ]}
-          >
-            <LinearGradient
-              colors={[Colors.light.accent, Colors.light.accentDark]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.placeOrderGradient}
+          <Animated.View style={submitAnimStyle}>
+            <Pressable
+              onPressIn={() => { submitScale.value = withSpring(0.95, { damping: 15, stiffness: 300 }); }}
+              onPressOut={() => { submitScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+              onPress={handlePlaceOrder}
+              disabled={purchaseMutation.isPending}
+              style={[
+                styles.placeOrderBtn,
+                purchaseMutation.isPending && { opacity: 0.6 },
+              ]}
             >
-              {purchaseMutation.isPending ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <>
-                  <Text style={styles.placeOrderText}>تأكيد الطلب</Text>
-                  <Text style={styles.placeOrderPrice}>
-                    {total.toFixed(2)} $
-                  </Text>
-                </>
-              )}
-            </LinearGradient>
-          </Pressable>
+              <LinearGradient
+                colors={[Colors.light.accent, Colors.light.accentDark]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.placeOrderGradient}
+              >
+                {purchaseMutation.isPending ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.placeOrderText}>تأكيد الطلب</Text>
+                    <Text style={styles.placeOrderPrice}>
+                      {total.toFixed(2)} $
+                    </Text>
+                  </>
+                )}
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

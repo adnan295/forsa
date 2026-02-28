@@ -1294,6 +1294,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/broadcast-notification", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { title, message } = req.body;
+      if (!title || !message) {
+        return res.status(400).json({ message: "العنوان والرسالة مطلوبان" });
+      }
+      const allUsers = await storage.getAllUsers();
+      const userIds = allUsers.filter(u => u.role !== "admin").map(u => u.id);
+      if (userIds.length === 0) {
+        return res.status(400).json({ message: "لا يوجد مستخدمين لإرسال الإشعار إليهم" });
+      }
+      await storage.createBulkUserNotifications(userIds, "broadcast", title, message);
+      await storage.logActivity("broadcast_notification", "إشعار جماعي", `تم إرسال إشعار "${title}" إلى ${userIds.length} مستخدم`, req.session.userId!);
+      res.json({ success: true, sentTo: userIds.length });
+    } catch (error) {
+      console.error("Broadcast notification error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.post("/api/admin/campaigns/upload-image", requireAdmin as any, uploadCampaignImage.single("image"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
@@ -1350,6 +1370,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send("\uFEFF" + csvHeader + csvRows);
     } catch (error) {
       console.error("Export CSV error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/users/export/csv", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const usersWithStats = await Promise.all(
+        allUsers.map(async (user) => {
+          const stats = await storage.getUserStats(user.id);
+          return {
+            username: user.username,
+            email: user.email,
+            emailVerified: user.emailVerified ? "Yes" : "No",
+            orderCount: stats.orderCount,
+            ticketCount: stats.ticketCount,
+            totalSpent: stats.totalSpent,
+            createdAt: user.createdAt,
+          };
+        })
+      );
+      const escapeCsv = (val: string | null | undefined): string => {
+        const str = (val ?? "").toString().replace(/\r?\n/g, " ");
+        const sanitized = /^[=+\-@]/.test(str) ? "'" + str : str;
+        return '"' + sanitized.replace(/"/g, '""') + '"';
+      };
+      const csvHeader = "Username,Email,Email Verified,Order Count,Ticket Count,Total Spent,Created At\n";
+      const csvRows = usersWithStats.map(u =>
+        [u.username, u.email, u.emailVerified, u.orderCount, u.ticketCount, u.totalSpent, u.createdAt]
+          .map(v => escapeCsv(v as any))
+          .join(",")
+      ).join("\n");
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=users.csv");
+      res.send("\uFEFF" + csvHeader + csvRows);
+    } catch (error) {
+      console.error("Export users CSV error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

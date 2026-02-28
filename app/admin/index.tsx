@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
@@ -43,6 +49,25 @@ export default function AdminPanel() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+  const tabOpacity = useSharedValue(1);
+  const tabTranslateY = useSharedValue(0);
+
+  const tabContentStyle = useAnimatedStyle(() => ({
+    opacity: tabOpacity.value,
+    transform: [{ translateY: tabTranslateY.value }],
+  }));
+
+  const switchTab = (tab: AdminTab) => {
+    tabOpacity.value = withTiming(0, { duration: 120, easing: Easing.in(Easing.ease) }, () => {
+      tabTranslateY.value = 8;
+    });
+    setTimeout(() => {
+      setActiveTab(tab);
+      tabOpacity.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) });
+      tabTranslateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) });
+    }, 130);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
 
   if (!user || user.role !== "admin") {
     return (
@@ -69,7 +94,7 @@ export default function AdminPanel() {
           {TABS.map((tab) => (
             <Pressable
               key={tab.key}
-              onPress={() => { setActiveTab(tab.key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              onPress={() => switchTab(tab.key)}
               style={[styles.tab, activeTab === tab.key && styles.tabActive]}
             >
               <Ionicons name={tab.icon as any} size={18} color={activeTab === tab.key ? Colors.light.accent : "rgba(255,255,255,0.5)"} />
@@ -79,7 +104,7 @@ export default function AdminPanel() {
         </ScrollView>
       </LinearGradient>
 
-      <View style={styles.content}>
+      <Animated.View style={[styles.content, tabContentStyle]}>
         {activeTab === "dashboard" && <DashboardSection />}
         {activeTab === "notifications" && <NotificationsSection />}
         {activeTab === "orders" && <OrdersSection />}
@@ -89,7 +114,7 @@ export default function AdminPanel() {
         {activeTab === "coupons" && <CouponsSection />}
         {activeTab === "support" && <SupportTicketsSection />}
         {activeTab === "activity" && <ActivitySection />}
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -181,6 +206,8 @@ function DashboardSection() {
         <StatCard icon="flame" label="حملات نشطة" value={stats?.activeCampaigns?.toString() || "0"} color={Colors.light.accent} />
         <StatCard icon="today" label="طلبات اليوم" value={stats?.ordersToday?.toString() || "0"} color="#E74C3C" />
         <StatCard icon="person-add" label="مستخدمين جدد (أسبوع)" value={stats?.newUsersThisWeek?.toString() || "0"} color="#1ABC9C" />
+        <StatCard icon="trending-up" label="معدل التحويل" value={`${stats?.conversionRate || "0"}%`} color="#E67E22" />
+        <StatCard icon="cart" label="متوسط قيمة الطلب" value={`${stats?.averageOrderValue || "0"} $`} color="#8E44AD" />
       </View>
 
       <SalesChart />
@@ -521,7 +548,27 @@ function UsersSection() {
       data={users || []}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.sectionPadding}
-      ListHeaderComponent={<Text style={styles.sectionTitle}>المستخدمين ({users?.length || 0})</Text>}
+      ListHeaderComponent={
+        <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={styles.sectionTitle}>المستخدمين ({users?.length || 0})</Text>
+          <Pressable
+            onPress={() => {
+              try {
+                const url = `${getApiUrl()}/api/admin/users/export/csv`;
+                if (Platform.OS === "web") {
+                  window.open(url, "_blank");
+                } else {
+                  Alert.alert("تصدير CSV", "التصدير متاح عبر المتصفح فقط حالياً");
+                }
+              } catch (e) {}
+            }}
+            style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: "#2ECC7115", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+          >
+            <Ionicons name="download-outline" size={16} color="#2ECC71" />
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#2ECC71" }}>CSV</Text>
+          </Pressable>
+        </View>
+      }
       ListEmptyComponent={<Text style={styles.emptyText}>لا يوجد مستخدمين</Text>}
       renderItem={({ item }) => (
         <View style={styles.userCard}>
@@ -1158,6 +1205,7 @@ function NotificationsSection() {
     queryKey: ["/api/admin/notifications"],
     refetchInterval: 10000,
   });
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -1181,57 +1229,128 @@ function NotificationsSection() {
     if (type === "new_order") return "cart";
     if (type === "receipt_uploaded") return "image";
     if (type === "new_user") return "person-add";
+    if (type === "broadcast") return "megaphone";
     return "notifications";
   };
   const getNotifColor = (type: string) => {
     if (type === "new_order") return "#7C3AED";
     if (type === "receipt_uploaded") return "#3498DB";
     if (type === "new_user") return "#2ECC71";
+    if (type === "broadcast") return "#E67E22";
     return Colors.light.accent;
   };
 
   return (
-    <FlatList
-      data={notifications || []}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.sectionPadding}
-      ListHeaderComponent={
-        <View>
-          <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <Text style={styles.sectionTitle}>الإشعارات ({notifications?.length || 0})</Text>
-            {unreadCount > 0 && (
-              <Pressable
-                onPress={() => markAllReadMutation.mutate()}
-                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "15", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
-              >
-                <Ionicons name="checkmark-done" size={16} color={Colors.light.accent} />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.accent }}>قراءة الكل ({unreadCount})</Text>
-              </Pressable>
-            )}
+    <>
+      <FlatList
+        data={notifications || []}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.sectionPadding}
+        ListHeaderComponent={
+          <View>
+            <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <Text style={styles.sectionTitle}>الإشعارات ({notifications?.length || 0})</Text>
+              <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+                <Pressable
+                  onPress={() => { setShowBroadcastModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: "#E67E2215", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                >
+                  <Ionicons name="megaphone-outline" size={16} color="#E67E22" />
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#E67E22" }}>إرسال إشعار</Text>
+                </Pressable>
+                {unreadCount > 0 && (
+                  <Pressable
+                    onPress={() => markAllReadMutation.mutate()}
+                    style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "15", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                  >
+                    <Ionicons name="checkmark-done" size={16} color={Colors.light.accent} />
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.accent }}>قراءة الكل ({unreadCount})</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
           </View>
+        }
+        ListEmptyComponent={<Text style={styles.emptyText}>لا توجد إشعارات</Text>}
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() => { if (!item.isRead) markReadMutation.mutate(item.id); }}
+            style={[styles.orderCard, { borderRightWidth: 3, borderRightColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#FAFBFF" }]}
+          >
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: getNotifColor(item.type) + "15", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name={getNotifIcon(item.type) as any} size={18} color={getNotifColor(item.type)} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: item.isRead ? "Inter_400Regular" : "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" }}>{item.message}</Text>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", marginTop: 4 }}>
+                  {new Date(item.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </Text>
+              </View>
+              {!item.isRead && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: getNotifColor(item.type) }} />}
+            </View>
+          </Pressable>
+        )}
+      />
+      <BroadcastNotificationModal visible={showBroadcastModal} onClose={() => setShowBroadcastModal(false)} />
+    </>
+  );
+}
+
+function BroadcastNotificationModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+
+  const broadcastMutation = useMutation({
+    mutationFn: async (data: { title: string; message: string }) => {
+      const res = await apiRequest("POST", "/api/admin/broadcast-notification", data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("تم الإرسال", `تم إرسال الإشعار إلى ${data.sentTo} مستخدم`);
+      setTitle("");
+      setMessage("");
+      onClose();
+    },
+    onError: (err: any) => Alert.alert("خطأ", err.message || "فشل إرسال الإشعار"),
+  });
+
+  const handleSend = () => {
+    if (!title.trim() || !message.trim()) {
+      Alert.alert("خطأ", "العنوان والرسالة مطلوبان");
+      return;
+    }
+    broadcastMutation.mutate({ title: title.trim(), message: message.trim() });
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.container}>
+          <View style={modalStyles.header}>
+            <Text style={modalStyles.title}>إرسال إشعار جماعي</Text>
+            <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
+          </View>
+          <ScrollView contentContainerStyle={modalStyles.scrollContent}>
+            <ModalInput label="عنوان الإشعار" value={title} onChangeText={setTitle} placeholder="أدخل عنوان الإشعار" />
+            <ModalInput label="نص الإشعار" value={message} onChangeText={setMessage} placeholder="أدخل نص الرسالة" multiline />
+            <Pressable
+              onPress={handleSend}
+              disabled={broadcastMutation.isPending}
+              style={[modalStyles.createBtn, broadcastMutation.isPending && { opacity: 0.6 }]}
+            >
+              {broadcastMutation.isPending ? <ActivityIndicator color="#fff" /> : (
+                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="send" size={18} color="#fff" />
+                  <Text style={modalStyles.createBtnText}>إرسال للجميع</Text>
+                </View>
+              )}
+            </Pressable>
+          </ScrollView>
         </View>
-      }
-      ListEmptyComponent={<Text style={styles.emptyText}>لا توجد إشعارات</Text>}
-      renderItem={({ item }) => (
-        <Pressable
-          onPress={() => { if (!item.isRead) markReadMutation.mutate(item.id); }}
-          style={[styles.orderCard, { borderRightWidth: 3, borderRightColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#FAFBFF" }]}
-        >
-          <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: getNotifColor(item.type) + "15", alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name={getNotifIcon(item.type) as any} size={18} color={getNotifColor(item.type)} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: item.isRead ? "Inter_400Regular" : "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" }}>{item.message}</Text>
-              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", marginTop: 4 }}>
-                {new Date(item.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-              </Text>
-            </View>
-            {!item.isRead && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: getNotifColor(item.type) }} />}
-          </View>
-        </Pressable>
-      )}
-    />
+      </View>
+    </Modal>
   );
 }
 

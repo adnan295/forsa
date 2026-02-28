@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, Image } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
+  withDelay,
+  Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/lib/theme-context";
 import { getApiUrl } from "@/lib/query-client";
 import { useFavorites } from "@/lib/favorites-context";
 import type { Campaign } from "@shared/schema";
@@ -38,16 +43,33 @@ function useCountdown(endsAt: string | Date | null | undefined) {
 interface Props {
   campaign: Campaign;
   onPress: () => void;
+  index?: number;
 }
 
-export default function CampaignCard({ campaign, onPress }: Props) {
+export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
+  const { isDark, colors } = useTheme();
   const scale = useSharedValue(1);
+  const entranceOpacity = useSharedValue(0);
+  const entranceTranslateY = useSharedValue(30);
   const { toggleFavorite, isFavorite } = useFavorites();
   const favorited = isFavorite(campaign.id);
   const countdown = useCountdown(campaign.endsAt);
 
+  useEffect(() => {
+    const delay = Math.min(index * 80, 400);
+    entranceOpacity.value = withDelay(
+      delay,
+      withTiming(1, { duration: 450, easing: Easing.out(Easing.cubic) })
+    );
+    entranceTranslateY.value = withDelay(
+      delay,
+      withTiming(0, { duration: 450, easing: Easing.out(Easing.cubic) })
+    );
+  }, []);
+
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.value }, { translateY: entranceTranslateY.value }],
+    opacity: entranceOpacity.value,
   }));
 
   const progress = campaign.totalQuantity > 0
@@ -59,9 +81,9 @@ export default function CampaignCard({ campaign, onPress }: Props) {
   const progressPercent = Math.round(progress * 100);
 
   function getStatusColor() {
-    if (isCompleted) return Colors.light.success;
-    if (isSoldOut) return Colors.light.warning;
-    return Colors.light.accent;
+    if (isCompleted) return colors.success;
+    if (isSoldOut) return colors.warning;
+    return colors.accent;
   }
 
   function getStatusText() {
@@ -87,14 +109,16 @@ export default function CampaignCard({ campaign, onPress }: Props) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           onPress();
         }}
-        style={styles.card}
+        style={[styles.card, { backgroundColor: colors.card }]}
       >
         <View style={styles.imageArea}>
           {campaign.imageUrl ? (
             <Image
               source={{ uri: `${getApiUrl()}${campaign.imageUrl}`.replace(/\/+/g, '/').replace(':/', '://') }}
               style={styles.campaignImage}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
             />
           ) : (
             <LinearGradient
@@ -147,34 +171,34 @@ export default function CampaignCard({ campaign, onPress }: Props) {
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
             {campaign.title}
           </Text>
 
           <View style={styles.prizeRow}>
             <View style={styles.prizeIconWrap}>
-              <Ionicons name="trophy" size={13} color={Colors.light.accent} />
+              <Ionicons name="trophy" size={13} color={colors.accent} />
             </View>
-            <Text style={styles.prizeText} numberOfLines={1}>
+            <Text style={[styles.prizeText, { color: colors.textSecondary }]} numberOfLines={1}>
               {campaign.prizeName}
             </Text>
           </View>
 
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressPercent}>{progressPercent}%</Text>
-              <Text style={styles.soldText}>
+              <Text style={[styles.progressPercent, { color: colors.accent }]}>{progressPercent}%</Text>
+              <Text style={[styles.soldText, { color: colors.textSecondary }]}>
                 {campaign.soldQuantity}/{campaign.totalQuantity}
               </Text>
             </View>
-            <View style={styles.progressBar}>
+            <View style={[styles.progressBar, { backgroundColor: colors.progressBg }]}>
               <LinearGradient
                 colors={
                   isCompleted
-                    ? [Colors.light.success, "#059669"]
+                    ? [colors.success, "#059669"]
                     : isSoldOut
-                    ? [Colors.light.warning, "#D97706"]
-                    : [Colors.light.accent, Colors.light.accentPink]
+                    ? [colors.warning, "#D97706"]
+                    : [colors.accent, colors.accentPink]
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -191,22 +215,22 @@ export default function CampaignCard({ campaign, onPress }: Props) {
               <Ionicons name="timer-outline" size={14} color="#EF4444" />
               <View style={styles.countdownUnit}>
                 <Text style={styles.countdownNum}>{countdown.days}</Text>
-                <Text style={styles.countdownLabel}>يوم</Text>
+                <Text style={[styles.countdownLabel, { color: colors.textSecondary }]}>يوم</Text>
               </View>
               <Text style={styles.countdownSep}>:</Text>
               <View style={styles.countdownUnit}>
                 <Text style={styles.countdownNum}>{String(countdown.hours).padStart(2, "0")}</Text>
-                <Text style={styles.countdownLabel}>ساعة</Text>
+                <Text style={[styles.countdownLabel, { color: colors.textSecondary }]}>ساعة</Text>
               </View>
               <Text style={styles.countdownSep}>:</Text>
               <View style={styles.countdownUnit}>
                 <Text style={styles.countdownNum}>{String(countdown.minutes).padStart(2, "0")}</Text>
-                <Text style={styles.countdownLabel}>دقيقة</Text>
+                <Text style={[styles.countdownLabel, { color: colors.textSecondary }]}>دقيقة</Text>
               </View>
               <Text style={styles.countdownSep}>:</Text>
               <View style={styles.countdownUnit}>
                 <Text style={styles.countdownNum}>{String(countdown.seconds).padStart(2, "0")}</Text>
-                <Text style={styles.countdownLabel}>ثانية</Text>
+                <Text style={[styles.countdownLabel, { color: colors.textSecondary }]}>ثانية</Text>
               </View>
             </View>
           )}
@@ -214,17 +238,17 @@ export default function CampaignCard({ campaign, onPress }: Props) {
           <View style={styles.footer}>
             {!isCompleted && !isSoldOut ? (
               <View style={styles.remainingWrap}>
-                <Ionicons name="time-outline" size={14} color={Colors.light.accent} />
-                <Text style={styles.remainingText}>{remaining} متبقي</Text>
+                <Ionicons name="time-outline" size={14} color={colors.accent} />
+                <Text style={[styles.remainingText, { color: colors.accent }]}>{remaining} متبقي</Text>
               </View>
             ) : (
               <View />
             )}
             <View style={styles.buyHint}>
-              <Text style={styles.buyHintText}>
+              <Text style={[styles.buyHintText, { color: colors.accent }]}>
                 {isCompleted ? "عرض النتائج" : isSoldOut ? "عرض" : "اشترِ الآن"}
               </Text>
-              <Ionicons name="arrow-back" size={14} color={Colors.light.accent} />
+              <Ionicons name="arrow-back" size={14} color={colors.accent} />
             </View>
           </View>
         </View>

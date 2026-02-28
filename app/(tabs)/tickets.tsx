@@ -17,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { queryClient } from "@/lib/query-client";
 import type { Ticket, Order } from "@shared/schema";
 
@@ -47,13 +48,13 @@ const getShippingIcon = (s: string): keyof typeof Ionicons.glyphMap => {
   return map[s] || "help-circle";
 };
 
-function OrderItem({ order }: { order: Order }) {
+function OrderItem({ order, colors }: { order: Order; colors: ReturnType<typeof useTheme>["colors"] }) {
   const paymentColor = getPaymentColor(order.paymentStatus);
   const shippingColor = getShippingColor(order.shippingStatus);
 
   return (
     <Pressable
-      style={styles.orderCard}
+      style={[styles.orderCard, { backgroundColor: colors.card }]}
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({ pathname: "/order/[id]", params: { id: order.id } });
@@ -62,22 +63,22 @@ function OrderItem({ order }: { order: Order }) {
       <View style={styles.orderTop}>
         <View style={styles.orderIdArea}>
           <View style={styles.orderIconWrap}>
-            <Ionicons name="receipt" size={18} color={Colors.light.accent} />
+            <Ionicons name="receipt" size={18} color={colors.accent} />
           </View>
           <View>
-            <Text style={styles.orderIdText}>#{order.id.slice(0, 8)}</Text>
-            <Text style={styles.orderDate}>
+            <Text style={[styles.orderIdText, { color: colors.text }]}>#{order.id.slice(0, 8)}</Text>
+            <Text style={[styles.orderDate, { color: colors.textSecondary }]}>
               {new Date(order.createdAt).toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" })}
             </Text>
           </View>
         </View>
         <View style={styles.orderAmountArea}>
-          <Text style={styles.orderAmount}>{parseFloat(order.totalAmount).toFixed(2)} $</Text>
-          <Text style={styles.orderQty}>{order.quantity} منتج</Text>
+          <Text style={[styles.orderAmount, { color: colors.text }]}>{parseFloat(order.totalAmount).toFixed(2)} $</Text>
+          <Text style={[styles.orderQty, { color: colors.textSecondary }]}>{order.quantity} منتج</Text>
         </View>
       </View>
 
-      <View style={styles.orderDivider} />
+      <View style={[styles.orderDivider, { backgroundColor: colors.border }]} />
 
       <View style={styles.orderPills}>
         <View style={[styles.pill, { backgroundColor: paymentColor + "12", borderColor: paymentColor + "30" }]}>
@@ -93,35 +94,35 @@ function OrderItem({ order }: { order: Order }) {
           </Text>
         </View>
         <View style={{ flex: 1 }} />
-        <Ionicons name="chevron-back" size={18} color={Colors.light.textSecondary} />
+        <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
       </View>
     </Pressable>
   );
 }
 
-function TicketItem({ ticket }: { ticket: Ticket }) {
+function TicketItem({ ticket, colors }: { ticket: Ticket; colors: ReturnType<typeof useTheme>["colors"] }) {
   const isWinner = !!ticket.isWinner;
 
   return (
-    <View style={[styles.ticketCard, isWinner && styles.winnerCard]}>
-      <View style={styles.ticketNotch} />
-      <View style={styles.ticketNotchRight} />
+    <View style={[styles.ticketCard, { backgroundColor: colors.card }, isWinner && styles.winnerCard]}>
+      <View style={[styles.ticketNotch, { backgroundColor: colors.background }]} />
+      <View style={[styles.ticketNotchRight, { backgroundColor: colors.background }]} />
 
       <View style={styles.ticketLeft}>
         <View style={[styles.ticketIconWrap, isWinner && styles.ticketIconWrapWinner]}>
           <Ionicons
             name={isWinner ? "trophy" : "ticket"}
             size={22}
-            color={isWinner ? "#FFD700" : Colors.light.accent}
+            color={isWinner ? "#FFD700" : colors.accent}
           />
         </View>
       </View>
 
-      <View style={styles.ticketDashed} />
+      <View style={[styles.ticketDashed, { borderLeftColor: colors.border }]} />
 
       <View style={styles.ticketRight}>
-        <Text style={styles.ticketNumber}>{ticket.ticketNumber}</Text>
-        <Text style={styles.ticketDate}>
+        <Text style={[styles.ticketNumber, { color: colors.text }]}>{ticket.ticketNumber}</Text>
+        <Text style={[styles.ticketDate, { color: colors.textSecondary }]}>
           {new Date(ticket.createdAt).toLocaleDateString("ar-SA", {
             month: "short",
             day: "numeric",
@@ -142,6 +143,7 @@ function TicketItem({ ticket }: { ticket: Ticket }) {
 export default function TicketsScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { isDark, colors } = useTheme();
   const [activeTab, setActiveTab] = useState<TabKey>("orders");
 
   const {
@@ -175,13 +177,13 @@ export default function TicketsScreen() {
 
   if (!user) {
     return (
-      <View style={[styles.container, styles.centered]}>
+      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
         <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top, alignItems: "center" }}>
           <View style={styles.emptyIconWrap}>
-            <Ionicons name="receipt-outline" size={40} color={Colors.light.tabIconDefault} />
+            <Ionicons name="receipt-outline" size={40} color={colors.tabIconDefault} />
           </View>
-          <Text style={styles.emptyTitle}>سجّل الدخول لعرض طلباتك</Text>
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>سجّل الدخول لعرض طلباتك</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             ستظهر طلباتك وتذاكرك هنا بعد شراء المنتجات
           </Text>
           <Pressable
@@ -205,17 +207,17 @@ export default function TicketsScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={Colors.light.accent} />
+      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
 
   const renderItem = ({ item, section }: any) => {
     if (section.key === "orders") {
-      return <OrderItem order={item} />;
+      return <OrderItem order={item} colors={colors} />;
     }
-    return <TicketItem ticket={item} />;
+    return <TicketItem ticket={item} colors={colors} />;
   };
 
   const currentData = activeTab === "orders" ? (orders || []) : (tickets || []);
@@ -230,13 +232,13 @@ export default function TicketsScreen() {
         <Ionicons
           name={activeTab === "orders" ? "bag-outline" : "sparkles-outline"}
           size={36}
-          color={activeTab === "orders" ? Colors.light.accent : Colors.light.accentPink}
+          color={activeTab === "orders" ? colors.accent : colors.accentPink}
         />
       </LinearGradient>
-      <Text style={styles.emptyTitle}>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>
         {activeTab === "orders" ? "لا توجد طلبات بعد" : "لا توجد تذاكر بعد"}
       </Text>
-      <Text style={styles.emptyText}>
+      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
         {activeTab === "orders"
           ? "اكتشف المنتجات المميزة واحصل على فرصة للفوز بهدية!"
           : "كل منتج تشتريه يمنحك فرصة للحصول على هدية!"}
@@ -259,9 +261,9 @@ export default function TicketsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.headerArea, { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 }]}>
-        <Text style={styles.screenTitle}>طلباتي</Text>
+        <Text style={[styles.screenTitle, { color: colors.text }]}>طلباتي</Text>
 
         <View style={styles.tabRow}>
           <Pressable
@@ -269,10 +271,10 @@ export default function TicketsScreen() {
               setActiveTab("orders");
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }}
-            style={[styles.tabBtn, activeTab === "orders" && styles.tabBtnActive]}
+            style={[styles.tabBtn, { backgroundColor: colors.card, borderColor: colors.border }, activeTab === "orders" && styles.tabBtnActive]}
           >
-            <Ionicons name="receipt" size={16} color={activeTab === "orders" ? "#fff" : Colors.light.textSecondary} />
-            <Text style={[styles.tabBtnText, activeTab === "orders" && styles.tabBtnTextActive]}>
+            <Ionicons name="receipt" size={16} color={activeTab === "orders" ? "#fff" : colors.textSecondary} />
+            <Text style={[styles.tabBtnText, { color: colors.textSecondary }, activeTab === "orders" && styles.tabBtnTextActive]}>
               الطلبات ({orders?.length || 0})
             </Text>
           </Pressable>
@@ -281,10 +283,10 @@ export default function TicketsScreen() {
               setActiveTab("tickets");
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }}
-            style={[styles.tabBtn, activeTab === "tickets" && styles.tabBtnActive]}
+            style={[styles.tabBtn, { backgroundColor: colors.card, borderColor: colors.border }, activeTab === "tickets" && styles.tabBtnActive]}
           >
-            <Ionicons name="ticket" size={16} color={activeTab === "tickets" ? "#fff" : Colors.light.textSecondary} />
-            <Text style={[styles.tabBtnText, activeTab === "tickets" && styles.tabBtnTextActive]}>
+            <Ionicons name="ticket" size={16} color={activeTab === "tickets" ? "#fff" : colors.textSecondary} />
+            <Text style={[styles.tabBtnText, { color: colors.textSecondary }, activeTab === "tickets" && styles.tabBtnTextActive]}>
               التذاكر ({tickets?.length || 0})
             </Text>
           </Pressable>
@@ -305,7 +307,7 @@ export default function TicketsScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={onRefresh}
-            tintColor={Colors.light.accent}
+            tintColor={colors.accent}
           />
         }
         showsVerticalScrollIndicator={false}

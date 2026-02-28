@@ -13,6 +13,11 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useCart, CartItem } from "@/lib/cart-context";
@@ -97,6 +102,10 @@ export default function CartScreen() {
   const insets = useSafeAreaInsets();
   const { items, totalItems, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
+  const checkoutScale = useSharedValue(1);
+  const checkoutAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkoutScale.value }],
+  }));
 
   return (
     <View style={styles.container}>
@@ -182,30 +191,31 @@ export default function CartScreen() {
                 <Text style={styles.summaryLabel}>الإجمالي</Text>
               </View>
             </View>
-            <Pressable
-              onPress={() => {
-                if (!user) {
-                  router.push("/auth");
-                  return;
-                }
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                router.push({ pathname: "/checkout", params: { fromCart: "true" } } as any);
-              }}
-              style={({ pressed }) => [
-                styles.checkoutBtn,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-              ]}
-            >
-              <LinearGradient
-                colors={[Colors.light.accent, Colors.light.accentDark]}
-                style={styles.checkoutBtnGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
+            <Animated.View style={checkoutAnimStyle}>
+              <Pressable
+                onPressIn={() => { checkoutScale.value = withSpring(0.95, { damping: 15, stiffness: 300 }); }}
+                onPressOut={() => { checkoutScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+                onPress={() => {
+                  if (!user) {
+                    router.push("/auth");
+                    return;
+                  }
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  router.push({ pathname: "/checkout", params: { fromCart: "true" } } as any);
+                }}
+                style={styles.checkoutBtn}
               >
-                <Ionicons name="bag-check" size={22} color="#fff" />
-                <Text style={styles.checkoutBtnText}>إتمام الشراء</Text>
-              </LinearGradient>
-            </Pressable>
+                <LinearGradient
+                  colors={[Colors.light.accent, Colors.light.accentDark]}
+                  style={styles.checkoutBtnGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Ionicons name="bag-check" size={22} color="#fff" />
+                  <Text style={styles.checkoutBtnText}>إتمام الشراء</Text>
+                </LinearGradient>
+              </Pressable>
+            </Animated.View>
           </View>
         </>
       )}

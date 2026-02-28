@@ -113,6 +113,8 @@ export interface IStorage {
     activeCampaigns: number;
     ordersToday: number;
     newUsersThisWeek: number;
+    conversionRate: string;
+    averageOrderValue: string;
     topCampaigns: { title: string; soldQuantity: number }[];
   }>;
 
@@ -637,6 +639,8 @@ export class DatabaseStorage implements IStorage {
     activeCampaigns: number;
     ordersToday: number;
     newUsersThisWeek: number;
+    conversionRate: string;
+    averageOrderValue: string;
     topCampaigns: { title: string; soldQuantity: number }[];
   }> {
     const [revenueResult] = await db
@@ -677,13 +681,27 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(campaigns.soldQuantity))
       .limit(5);
 
+    const totalOrdersCount = ordersResult?.total || 0;
+    const totalUsersCount = usersResult?.total || 0;
+    const totalRevenueNum = parseFloat(revenueResult?.total || "0");
+
+    const conversionRate = totalUsersCount > 0
+      ? ((totalOrdersCount / totalUsersCount) * 100).toFixed(1)
+      : "0.0";
+
+    const averageOrderValue = totalOrdersCount > 0
+      ? (totalRevenueNum / totalOrdersCount).toFixed(2)
+      : "0.00";
+
     return {
       totalRevenue: revenueResult?.total || "0.00",
-      totalOrders: ordersResult?.total || 0,
-      totalUsers: usersResult?.total || 0,
+      totalOrders: totalOrdersCount,
+      totalUsers: totalUsersCount,
       activeCampaigns: activeCampaignsResult?.total || 0,
       ordersToday: ordersTodayResult?.total || 0,
       newUsersThisWeek: newUsersResult?.total || 0,
+      conversionRate,
+      averageOrderValue,
       topCampaigns,
     };
   }

@@ -130,6 +130,13 @@ Comprehensive admin dashboard with 7 sections:
 
 - Store compliance: Added iOS camera/photo permissions (NSCameraUsageDescription, NSPhotoLibraryUsageDescription), Android permissions (CAMERA, READ_EXTERNAL_STORAGE, READ_MEDIA_IMAGES), expo-image-picker plugin config
 - Admin auto-seed: Server auto-creates admin user on first run using ADMIN_PASSWORD env var (defaults to admin123 if not set)
+- Price range filter: Home page has price filter chips (أقل من 50$, 50-100$, أكثر من 100$, الكل) below category tabs
+- Admin bulk notifications: POST /api/admin/broadcast-notification endpoint, modal in admin Notifications tab to send to all users
+- Admin users CSV export: GET /api/admin/users/export/csv endpoint, CSV download button in admin Users tab
+- Image caching: expo-image with cachePolicy="memory-disk" on CampaignCard and campaign detail page
+- Animations: Campaign card entrance fade-in + slide-up (staggered), button press scale animations (checkout, add to cart), admin tab transition
+- Dark mode: ThemeProvider (lib/theme-context.tsx) detects system preference via useColorScheme, Colors.dark palette in constants/colors.ts, applied to home, profile, tickets, campaign cards, tab bar
+- Admin advanced stats: Conversion rate and average order value added to admin dashboard (GET /api/admin/dashboard)
 
 ## Admin Credentials
 - Username: admin

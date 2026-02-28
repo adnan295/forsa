@@ -7,7 +7,6 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
-  Image,
   Share,
   TextInput,
 } from "react-native";
@@ -21,11 +20,13 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
   withRepeat,
   withSequence,
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
@@ -65,6 +66,15 @@ export default function CampaignDetailScreen() {
   const [addedToCart, setAddedToCart] = useState(false);
 
   const pulseScale = useSharedValue(1);
+  const buyBtnScale = useSharedValue(1);
+  const cartBtnScale = useSharedValue(1);
+
+  const buyBtnAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buyBtnScale.value }],
+  }));
+  const cartBtnAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: cartBtnScale.value }],
+  }));
 
   useEffect(() => {
     pulseScale.value = withRepeat(
@@ -149,7 +159,9 @@ export default function CampaignDetailScreen() {
             <Image
               source={{ uri: `${getApiUrl()}${campaign.imageUrl}`.replace(/\/+/g, '/').replace(':/', '://') }}
               style={styles.heroImage}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={300}
             />
           ) : null}
           <LinearGradient
@@ -501,51 +513,55 @@ export default function CampaignDetailScreen() {
               <Text style={styles.bottomQty}>{quantity} منتج</Text>
             </View>
             <View style={{ flexDirection: "row-reverse", gap: 8 }}>
-              <Pressable
-                onPress={() => {
-                  if (!user) {
-                    router.push("/auth");
-                    return;
-                  }
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  router.push({ pathname: "/checkout", params: { campaignId: id, quantity: String(quantity) } });
-                }}
-                style={({ pressed }) => [
-                  styles.buyButton,
-                  pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                ]}
-              >
-                <LinearGradient
-                  colors={[Colors.light.accent, Colors.light.accentDark]}
-                  style={styles.buyButtonGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
+              <Animated.View style={buyBtnAnimStyle}>
+                <Pressable
+                  onPressIn={() => { buyBtnScale.value = withSpring(0.93, { damping: 15, stiffness: 300 }); }}
+                  onPressOut={() => { buyBtnScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+                  onPress={() => {
+                    if (!user) {
+                      router.push("/auth");
+                      return;
+                    }
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    router.push({ pathname: "/checkout", params: { campaignId: id, quantity: String(quantity) } });
+                  }}
+                  style={styles.buyButton}
                 >
-                  <Ionicons name="flash" size={18} color="#fff" />
-                  <Text style={styles.buyButtonText}>اشترِ الآن</Text>
-                </LinearGradient>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  if (!user) {
-                    router.push("/auth");
-                    return;
-                  }
-                  if (campaign) {
-                    addItem(campaign, quantity);
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    setAddedToCart(true);
-                    setTimeout(() => setAddedToCart(false), 2000);
-                  }
-                }}
-                style={({ pressed }) => [
-                  styles.addToCartButton,
-                  pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                  addedToCart && { borderColor: Colors.light.success },
-                ]}
-              >
-                <Ionicons name={addedToCart ? "checkmark-circle" : "cart-outline"} size={20} color={addedToCart ? Colors.light.success : Colors.light.accent} />
-              </Pressable>
+                  <LinearGradient
+                    colors={[Colors.light.accent, Colors.light.accentDark]}
+                    style={styles.buyButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Ionicons name="flash" size={18} color="#fff" />
+                    <Text style={styles.buyButtonText}>اشترِ الآن</Text>
+                  </LinearGradient>
+                </Pressable>
+              </Animated.View>
+              <Animated.View style={cartBtnAnimStyle}>
+                <Pressable
+                  onPressIn={() => { cartBtnScale.value = withSpring(0.88, { damping: 15, stiffness: 300 }); }}
+                  onPressOut={() => { cartBtnScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+                  onPress={() => {
+                    if (!user) {
+                      router.push("/auth");
+                      return;
+                    }
+                    if (campaign) {
+                      addItem(campaign, quantity);
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      setAddedToCart(true);
+                      setTimeout(() => setAddedToCart(false), 2000);
+                    }
+                  }}
+                  style={[
+                    styles.addToCartButton,
+                    addedToCart && { borderColor: Colors.light.success },
+                  ]}
+                >
+                  <Ionicons name={addedToCart ? "checkmark-circle" : "cart-outline"} size={20} color={addedToCart ? Colors.light.success : Colors.light.accent} />
+                </Pressable>
+              </Animated.View>
             </View>
           </View>
         </View>

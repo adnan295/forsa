@@ -24,6 +24,7 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { useTheme } from "@/lib/theme-context";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
 import CampaignCard from "@/components/CampaignCard";
@@ -32,6 +33,14 @@ import type { Campaign } from "@shared/schema";
 
 type FilterKey = "all" | "active" | "completed";
 type CategoryKey = "all" | "electronics" | "fashion" | "beauty" | "accessories" | "other";
+type PriceRangeKey = "all" | "under50" | "50to100" | "over100";
+
+const PRICE_RANGE_TABS: { key: PriceRangeKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: "all", label: "الكل", icon: "pricetags" },
+  { key: "under50", label: "أقل من 50$", icon: "arrow-down" },
+  { key: "50to100", label: "50-100$", icon: "swap-horizontal" },
+  { key: "over100", label: "أكثر من 100$", icon: "arrow-up" },
+];
 
 const CATEGORY_TABS: { key: CategoryKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: "all", label: "الكل", icon: "grid" },
@@ -70,6 +79,7 @@ const BANNERS = [
 ];
 
 function BannerCarousel() {
+  const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
   const reversedBanners = useMemo(() => [...BANNERS].reverse(), []);
   const [activeIndex, setActiveIndex] = useState(reversedBanners.length - 1);
@@ -138,7 +148,8 @@ function BannerCarousel() {
             key={i}
             style={[
               bannerStyles.dot,
-              i === activeIndex && bannerStyles.dotActive,
+              { backgroundColor: colors.border },
+              i === activeIndex && [bannerStyles.dotActive, { backgroundColor: colors.accent }],
             ]}
           />
         ))}
@@ -162,6 +173,7 @@ function StatChip({ icon, value, label }: {
 }
 
 function RecentPurchaseBanner() {
+  const { isDark, colors } = useTheme();
   const { data: purchases } = useQuery<{ campaignTitle: string; minutesAgo: number }[]>({
     queryKey: ["/api/recent-purchases"],
     staleTime: 60000,
@@ -206,9 +218,9 @@ function RecentPurchaseBanner() {
 
   return (
     <Animated.View style={[proofStyles.container, animatedStyle]}>
-      <View style={proofStyles.banner}>
+      <View style={[proofStyles.banner, { backgroundColor: isDark ? "rgba(55, 65, 81, 0.95)" : "rgba(31, 41, 55, 0.92)" }]}>
         <View style={proofStyles.iconWrap}>
-          <Ionicons name="bag-check" size={16} color="#10B981" />
+          <Ionicons name="bag-check" size={16} color={colors.success} />
         </View>
         <Text style={proofStyles.text} numberOfLines={1}>
           مستخدم اشترى {item.campaignTitle} منذ {item.minutesAgo > 60 ? `${Math.floor(item.minutesAgo / 60)} ساعة` : `${item.minutesAgo} دقائق`}
@@ -268,12 +280,14 @@ const FILTER_TABS: { key: FilterKey; label: string; icon: keyof typeof Ionicons.
 ];
 
 export default function HomeScreen() {
+  const { isDark, colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { totalItems } = useCart();
   const [searchText, setSearchText] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [activeCategory, setActiveCategory] = useState<CategoryKey>("all");
+  const [activePriceRange, setActivePriceRange] = useState<PriceRangeKey>("all");
 
   const {
     data: campaigns,
@@ -302,6 +316,16 @@ export default function HomeScreen() {
     if (activeFilter === "active") list = list.filter(c => c.status === "active");
     else if (activeFilter === "completed") list = list.filter(c => c.status !== "active");
     if (activeCategory !== "all") list = list.filter(c => (c.category || "other") === activeCategory);
+    if (activePriceRange !== "all") {
+      list = list.filter(c => {
+        const price = parseFloat(c.productPrice) || 0;
+        if (isNaN(price)) return true;
+        if (activePriceRange === "under50") return price < 50;
+        if (activePriceRange === "50to100") return price >= 50 && price <= 100;
+        if (activePriceRange === "over100") return price > 100;
+        return true;
+      });
+    }
     if (searchText.trim()) {
       const q = searchText.trim().toLowerCase();
       list = list.filter(c =>
@@ -311,7 +335,7 @@ export default function HomeScreen() {
       );
     }
     return list;
-  }, [campaigns, activeFilter, activeCategory, searchText]);
+  }, [campaigns, activeFilter, activeCategory, activePriceRange, searchText]);
 
   const onRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
@@ -397,12 +421,12 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.searchSection}>
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color={Colors.light.textSecondary} />
+          <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Ionicons name="search" size={18} color={colors.textSecondary} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.text }]}
               placeholder="ابحث عن منتج أو جائزة..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textSecondary}
               value={searchText}
               onChangeText={setSearchText}
               writingDirection="rtl"
@@ -410,7 +434,7 @@ export default function HomeScreen() {
             />
             {searchText.length > 0 && (
               <Pressable onPress={() => setSearchText("")}>
-                <Ionicons name="close-circle" size={18} color={Colors.light.textSecondary} />
+                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
               </Pressable>
             )}
           </View>
@@ -425,16 +449,18 @@ export default function HomeScreen() {
                 }}
                 style={[
                   styles.filterChip,
-                  activeFilter === tab.key && styles.filterChipActive,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  activeFilter === tab.key && [styles.filterChipActive, { backgroundColor: colors.accent, borderColor: colors.accent }],
                 ]}
               >
                 <Ionicons
                   name={tab.icon}
                   size={14}
-                  color={activeFilter === tab.key ? "#fff" : Colors.light.textSecondary}
+                  color={activeFilter === tab.key ? "#fff" : colors.textSecondary}
                 />
                 <Text style={[
                   styles.filterChipText,
+                  { color: colors.textSecondary },
                   activeFilter === tab.key && styles.filterChipTextActive,
                 ]}>
                   {tab.label}
@@ -457,19 +483,55 @@ export default function HomeScreen() {
                 }}
                 style={[
                   styles.categoryChip,
-                  activeCategory === cat.key && styles.categoryChipActive,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  activeCategory === cat.key && [styles.categoryChipActive, { backgroundColor: isDark ? "rgba(167, 139, 250, 0.15)" : "rgba(124, 58, 237, 0.08)", borderColor: colors.accent }],
                 ]}
               >
                 <Ionicons
                   name={cat.icon}
                   size={14}
-                  color={activeCategory === cat.key ? Colors.light.accent : Colors.light.textSecondary}
+                  color={activeCategory === cat.key ? colors.accent : colors.textSecondary}
                 />
                 <Text style={[
                   styles.categoryChipText,
-                  activeCategory === cat.key && styles.categoryChipTextActive,
+                  { color: colors.textSecondary },
+                  activeCategory === cat.key && [styles.categoryChipTextActive, { color: colors.accent }],
                 ]}>
                   {cat.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.priceRow}
+          >
+            {PRICE_RANGE_TABS.map((pr) => (
+              <Pressable
+                key={pr.key}
+                onPress={() => {
+                  setActivePriceRange(pr.key);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                style={[
+                  styles.priceChip,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  activePriceRange === pr.key && [styles.priceChipActive, { backgroundColor: colors.accentPink, borderColor: colors.accentPink }],
+                ]}
+              >
+                <Ionicons
+                  name={pr.icon}
+                  size={13}
+                  color={activePriceRange === pr.key ? "#fff" : colors.textSecondary}
+                />
+                <Text style={[
+                  styles.priceChipText,
+                  { color: colors.textSecondary },
+                  activePriceRange === pr.key && styles.priceChipTextActive,
+                ]}>
+                  {pr.label}
                 </Text>
               </Pressable>
             ))}
@@ -481,15 +543,15 @@ export default function HomeScreen() {
             <Ionicons
               name={activeFilter === "completed" ? "trophy" : "flame"}
               size={18}
-              color={activeFilter === "completed" ? Colors.light.success : Colors.light.accent}
+              color={activeFilter === "completed" ? colors.success : colors.accent}
             />
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {activeFilter === "all" ? "جميع الحملات" : activeFilter === "active" ? "الحملات النشطة" : "الحملات المنتهية"}
             </Text>
-            <View style={styles.resultCount}>
-              <Text style={styles.resultCountText}>{filteredCampaigns.length}</Text>
+            <View style={[styles.resultCount, { backgroundColor: isDark ? "rgba(167, 139, 250, 0.15)" : "rgba(124, 58, 237, 0.1)" }]}>
+              <Text style={[styles.resultCountText, { color: colors.accent }]}>{filteredCampaigns.length}</Text>
             </View>
-            <View style={styles.sectionHeaderLine} />
+            <View style={[styles.sectionHeaderLine, { backgroundColor: colors.border }]} />
           </View>
         )}
       </View>
@@ -498,21 +560,22 @@ export default function HomeScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.light.accent} />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={filteredCampaigns}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <View style={styles.cardPadding}>
             <CampaignCard
               campaign={item}
+              index={index}
               onPress={() =>
                 router.push({
                   pathname: "/campaign/[id]",
@@ -526,19 +589,19 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <LinearGradient
-              colors={["rgba(124,58,237,0.08)", "rgba(236,72,153,0.08)"]}
-              style={styles.emptyIconWrap}
+              colors={isDark ? ["rgba(167,139,250,0.15)", "rgba(236,72,153,0.15)"] : ["rgba(124,58,237,0.08)", "rgba(236,72,153,0.08)"]}
+              style={[styles.emptyIconWrap, { backgroundColor: colors.progressBg }]}
             >
               <Ionicons
                 name={searchText ? "search-outline" : "sparkles-outline"}
                 size={36}
-                color={Colors.light.accent}
+                color={colors.accent}
               />
             </LinearGradient>
-            <Text style={styles.emptyTitle}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
               {searchText ? "لا توجد نتائج" : "لا توجد حملات حالياً"}
             </Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {searchText
                 ? "جرب كلمات بحث مختلفة أو تصفّح جميع الحملات"
                 : "ترقب! حملات وجوائز مذهلة في الطريق إليك"}
@@ -549,10 +612,11 @@ export default function HomeScreen() {
                   setSearchText("");
                   setActiveFilter("all");
                   setActiveCategory("all");
+                  setActivePriceRange("all");
                 }}
-                style={styles.clearSearchBtn}
+                style={[styles.clearSearchBtn, { backgroundColor: isDark ? "rgba(167, 139, 250, 0.15)" : "rgba(124, 58, 237, 0.1)" }]}
               >
-                <Text style={styles.clearSearchText}>مسح البحث</Text>
+                <Text style={[styles.clearSearchText, { color: colors.accent }]}>مسح البحث</Text>
               </Pressable>
             )}
           </View>
@@ -564,7 +628,7 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={onRefresh}
-            tintColor={Colors.light.accent}
+            tintColor={colors.accent}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -853,6 +917,36 @@ const styles = StyleSheet.create({
   },
   categoryChipTextActive: {
     color: Colors.light.accent,
+    fontFamily: "Inter_600SemiBold",
+  },
+  priceRow: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    paddingTop: 4,
+  },
+  priceChip: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  priceChipActive: {
+    backgroundColor: Colors.light.accentPink,
+    borderColor: Colors.light.accentPink,
+  },
+  priceChipText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl" as const,
+  },
+  priceChipTextActive: {
+    color: "#FFFFFF",
     fontFamily: "Inter_600SemiBold",
   },
   filterChip: {

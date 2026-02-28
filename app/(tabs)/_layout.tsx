@@ -2,11 +2,12 @@ import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
-import { Platform, StyleSheet, useColorScheme } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 
 import Colors from "@/constants/colors";
+import { useTheme } from "@/lib/theme-context";
 
 function NativeTabLayout() {
   return (
@@ -28,26 +29,26 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const { isDark, colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.light.accent,
-        tabBarInactiveTintColor: Colors.light.tabIconDefault,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.tabIconDefault,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: Platform.select({
             ios: "transparent",
-            android: "#FFFFFF",
-            web: "#FFFFFF",
+            android: isDark ? "#1F2937" : "#FFFFFF",
+            web: isDark ? "#1F2937" : "#FFFFFF",
           }),
-          borderTopWidth: 0,
+          borderTopWidth: isDark ? 1 : 0,
+          borderTopColor: colors.border,
           elevation: 0,
           height: Platform.OS === "web" ? 84 : undefined,
-          shadowColor: "#7C3AED",
+          shadowColor: isDark ? "#000" : "#7C3AED",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.06,
           shadowRadius: 12,

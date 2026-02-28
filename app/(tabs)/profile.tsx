@@ -18,6 +18,7 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest } from "@/lib/query-client";
+import { useTheme } from "@/lib/theme-context";
 
 type UserStats = {
   totalOrders: number;
@@ -36,6 +37,7 @@ function formatJoinDate(dateStr: string | undefined) {
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
+  const { isDark, colors } = useTheme();
   const isAdmin = user?.role === "admin";
 
   const { data: stats } = useQuery<UserStats>({
@@ -85,7 +87,7 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <View style={[styles.container, styles.centered]}>
+      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
         <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top, alignItems: "center", paddingHorizontal: 32 }}>
           <LinearGradient
             colors={["#7C3AED", "#EC4899"]}
@@ -93,8 +95,8 @@ export default function ProfileScreen() {
           >
             <Ionicons name="person" size={40} color="#fff" />
           </LinearGradient>
-          <Text style={styles.emptyTitle}>سجّل الدخول لحسابك</Text>
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>سجّل الدخول لحسابك</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             أدِر ملفك الشخصي، تابع طلباتك، واطلع على هداياك
           </Text>
           <Pressable
@@ -210,7 +212,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={{
         paddingTop: Platform.OS === "web" ? 67 : insets.top,
         paddingBottom: Platform.OS === "web" ? 84 + 20 : 100,
@@ -255,26 +257,29 @@ export default function ProfileScreen() {
       </LinearGradient>
 
       <View style={styles.statsCardWrapper}>
-        <View style={styles.statsCard}>
+        <View style={[styles.statsCard, { backgroundColor: colors.card }]}>
           <StatItem
             value={stats?.totalOrders?.toString() || "0"}
             label="الطلبات"
             icon="receipt"
             color="#7C3AED"
+            colors={colors}
           />
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <StatItem
             value={stats?.totalTickets?.toString() || "0"}
             label="التذاكر"
             icon="ticket"
             color="#EC4899"
+            colors={colors}
           />
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <StatItem
             value={`$${stats?.totalSpent || "0"}`}
             label="المشتريات"
             icon="wallet"
             color="#10B981"
+            colors={colors}
           />
         </View>
       </View>
@@ -312,17 +317,17 @@ export default function ProfileScreen() {
 
           {adminStats && (
             <View style={styles.adminStatsRow}>
-              <MiniStat value={adminStats.activeCampaigns.toString()} label="نشطة" color="#7C3AED" />
-              <MiniStat value={adminStats.totalCampaigns.toString()} label="الحملات" color="#3B82F6" />
-              <MiniStat value={`$${adminStats.totalRevenue}`} label="الإيرادات" color="#10B981" />
+              <MiniStat value={adminStats.activeCampaigns.toString()} label="نشطة" color="#7C3AED" colors={colors} />
+              <MiniStat value={adminStats.totalCampaigns.toString()} label="الحملات" color="#3B82F6" colors={colors} />
+              <MiniStat value={`$${adminStats.totalRevenue}`} label="الإيرادات" color="#10B981" colors={colors} />
             </View>
           )}
         </View>
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>نشاطي</Text>
-        <View style={styles.menuCard}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>نشاطي</Text>
+        <View style={[styles.menuCard, { backgroundColor: colors.card }]}>
           {menuItems.map((item, index) => (
             <React.Fragment key={item.label}>
               <Pressable
@@ -332,27 +337,27 @@ export default function ProfileScreen() {
                 }}
                 style={({ pressed }) => [
                   styles.menuItem,
-                  pressed && { backgroundColor: "#F9FAFB" },
+                  pressed && { backgroundColor: isDark ? colors.border : "#F9FAFB" },
                 ]}
               >
                 <View style={[styles.menuIconWrap, { backgroundColor: item.color + "12" }]}>
                   <Ionicons name={item.icon} size={20} color={item.color} />
                 </View>
                 <View style={styles.menuTextArea}>
-                  <Text style={styles.menuLabel}>{item.label}</Text>
-                  <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                  <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
+                  <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>{item.subtitle}</Text>
                 </View>
-                <Ionicons name="chevron-back" size={18} color={Colors.light.textSecondary} />
+                <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
               </Pressable>
-              {index < menuItems.length - 1 && <View style={styles.menuDivider} />}
+              {index < menuItems.length - 1 && <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />}
             </React.Fragment>
           ))}
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>الإعدادات والمساعدة</Text>
-        <View style={styles.menuCard}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>الإعدادات والمساعدة</Text>
+        <View style={[styles.menuCard, { backgroundColor: colors.card }]}>
           {settingsItems.map((item, index) => (
             <React.Fragment key={item.label}>
               <Pressable
@@ -362,18 +367,18 @@ export default function ProfileScreen() {
                 }}
                 style={({ pressed }) => [
                   styles.menuItem,
-                  pressed && { backgroundColor: "#F9FAFB" },
+                  pressed && { backgroundColor: isDark ? colors.border : "#F9FAFB" },
                 ]}
               >
                 <View style={[styles.menuIconWrap, { backgroundColor: item.color + "12" }]}>
                   <Ionicons name={item.icon} size={20} color={item.color} />
                 </View>
                 <View style={styles.menuTextArea}>
-                  <Text style={styles.menuLabel}>{item.label}</Text>
+                  <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
                 </View>
-                <Ionicons name="chevron-back" size={18} color={Colors.light.textSecondary} />
+                <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
               </Pressable>
-              {index < settingsItems.length - 1 && <View style={styles.menuDivider} />}
+              {index < settingsItems.length - 1 && <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />}
             </React.Fragment>
           ))}
         </View>
@@ -384,11 +389,12 @@ export default function ProfileScreen() {
           onPress={handleLogout}
           style={({ pressed }) => [
             styles.logoutButton,
+            { backgroundColor: colors.card, borderColor: isDark ? "rgba(239, 68, 68, 0.25)" : "rgba(239, 68, 68, 0.15)" },
             pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
           ]}
         >
-          <Ionicons name="log-out-outline" size={20} color={Colors.light.danger} />
-          <Text style={styles.logoutText}>تسجيل الخروج</Text>
+          <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+          <Text style={[styles.logoutText, { color: colors.danger }]}>تسجيل الخروج</Text>
         </Pressable>
       </View>
 
@@ -401,41 +407,42 @@ export default function ProfileScreen() {
           ]}
           testID="delete-account-button"
         >
-          <Ionicons name="trash-outline" size={20} color="#9CA3AF" />
-          <Text style={styles.deleteText}>حذف الحساب</Text>
+          <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
+          <Text style={[styles.deleteText, { color: colors.textSecondary }]}>حذف الحساب</Text>
         </Pressable>
       </View>
 
       <View style={styles.versionArea}>
-        <Text style={styles.versionText}>فرصة v1.0.0</Text>
-        <Text style={styles.versionSub}>صُنع بحب</Text>
+        <Text style={[styles.versionText, { color: colors.textSecondary }]}>فرصة v1.0.0</Text>
+        <Text style={[styles.versionSub, { color: isDark ? colors.border : "#D1D5DB" }]}>صُنع بحب</Text>
       </View>
     </ScrollView>
   );
 }
 
-function StatItem({ value, label, icon, color }: {
+function StatItem({ value, label, icon, color, colors }: {
   value: string;
   label: string;
   icon: string;
   color: string;
+  colors: any;
 }) {
   return (
     <View style={styles.statItem}>
       <View style={[styles.statIconWrap, { backgroundColor: color + "15" }]}>
         <Ionicons name={icon as any} size={18} color={color} />
       </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
     </View>
   );
 }
 
-function MiniStat({ value, label, color }: { value: string; label: string; color: string }) {
+function MiniStat({ value, label, color, colors }: { value: string; label: string; color: string; colors: any }) {
   return (
-    <View style={styles.miniStatItem}>
+    <View style={[styles.miniStatItem, { backgroundColor: colors.card }]}>
       <Text style={[styles.miniStatValue, { color }]}>{value}</Text>
-      <Text style={styles.miniStatLabel}>{label}</Text>
+      <Text style={[styles.miniStatLabel, { color: colors.textSecondary }]}>{label}</Text>
     </View>
   );
 }

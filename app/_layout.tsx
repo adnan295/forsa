@@ -12,6 +12,7 @@ import { queryClient, getApiUrl } from "@/lib/query-client";
 import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import { FavoritesProvider } from "@/lib/favorites-context";
+import { ThemeProvider } from "@/lib/theme-context";
 import {
   useFonts,
   Inter_400Regular,
@@ -163,18 +164,20 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <CartProvider>
-            <FavoritesProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                  <OfflineBanner />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </FavoritesProvider>
-          </CartProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <CartProvider>
+              <FavoritesProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                    <OfflineBanner />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </FavoritesProvider>
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
