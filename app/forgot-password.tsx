@@ -30,6 +30,7 @@ export default function ForgotPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [fallbackCode, setFallbackCode] = useState<string | null>(null);
 
   async function handleSendCode() {
     if (!email.trim()) {
@@ -38,8 +39,12 @@ export default function ForgotPasswordScreen() {
     }
     setLoading(true);
     try {
-      await apiRequest("POST", "/api/auth/forgot-password", { email: email.trim() });
+      const res = await apiRequest("POST", "/api/auth/forgot-password", { email: email.trim() });
+      const data = await res.json();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (data.emailFailed && data.code) {
+        setFallbackCode(data.code);
+      }
       setStep("code");
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -161,6 +166,15 @@ export default function ForgotPasswordScreen() {
 
             {step === "code" && (
               <>
+                {fallbackCode && (
+                  <View style={styles.fallbackBox}>
+                    <Ionicons name="warning" size={18} color="#92400E" />
+                    <Text style={styles.fallbackText}>
+                      تعذّر إرسال البريد الإلكتروني، رمز التحقق هو:
+                    </Text>
+                    <Text style={styles.fallbackCode}>{fallbackCode}</Text>
+                  </View>
+                )}
                 <View style={styles.inputGroup}>
                   <Ionicons name="keypad-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
                   <TextInput
@@ -382,5 +396,28 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     writingDirection: "rtl",
     textDecorationLine: "underline",
+  },
+  fallbackBox: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+  fallbackText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: "#92400E",
+    textAlign: "center",
+    writingDirection: "rtl" as const,
+  },
+  fallbackCode: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 28,
+    color: "#92400E",
+    letterSpacing: 6,
   },
 });

@@ -192,10 +192,10 @@ export async function sendEmailVerificationCode(
 export async function sendPasswordResetCode(
   to: string,
   data: { code: string; username: string }
-) {
+): Promise<boolean> {
   if (!isResendConfigured()) {
     console.log(`[Email] Resend not configured. Password reset code for ${to} is: ${data.code}`);
-    return;
+    return false;
   }
 
   const html = baseTemplate(`
@@ -209,7 +209,7 @@ export async function sendPasswordResetCode(
     </div>
   `);
 
-  await sendEmail(to, `رمز إعادة تعيين كلمة المرور - ${APP_NAME}`, html);
+  return await sendEmail(to, `رمز إعادة تعيين كلمة المرور - ${APP_NAME}`, html);
 }
 
 export async function sendShippingUpdate(

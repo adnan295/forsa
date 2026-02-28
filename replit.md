@@ -98,7 +98,7 @@ Comprehensive admin dashboard with 7 sections:
 - User notifications system: user_notifications table, bell icon with badge in home header, notifications page (app/notifications.tsx), auto-notifications for: new campaigns → all users, low stock (10%) → campaign participants, sold out → participants, draw completed → participants, winner announced → all users, you won → winner. API: GET/PUT /api/notifications, GET /api/notifications/unread-count, PUT /api/notifications/read-all
 - Shopping cart feature: CartProvider (AsyncStorage), cart page (app/cart.tsx), add-to-cart button on campaign detail, cart icon with badge in home header, POST /api/cart-purchase for multi-item checkout
 - Email notification system (nodemailer) for order confirmations, payment updates, winner notifications, shipping updates, password reset
-- Password reset flow with 6-digit codes (15min expiry), forgot-password.tsx page
+- Password reset flow with 6-digit codes (15min expiry), forgot-password.tsx page. Fallback: if email fails to send, OTP code is returned in API response and displayed on-screen in yellow warning box (same pattern as registration OTP fallback)
 - Campaign image upload in admin panel (expo-image-picker + /api/admin/campaigns/upload-image endpoint)
 - Rate limiting: authLimiter (20 req/15min) for auth routes, apiLimiter (60 req/min) for general API
 - Auto-seed default payment methods (Bank Transfer, Cash on Delivery) on first startup

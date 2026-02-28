@@ -319,9 +319,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
       await storage.createPasswordResetToken(user.id, code, expiresAt);
-      await sendPasswordResetCode(user.email, { code, username: user.username });
 
-      res.json({ message: "إذا كان البريد مسجلاً، سيتم إرسال رمز إعادة التعيين" });
+      const emailSent = await sendPasswordResetCode(user.email, { code, username: user.username });
+
+      if (!emailSent) {
+        res.json({ message: "تعذّر إرسال البريد الإلكتروني، استخدم الرمز المعروض", code, emailFailed: true });
+      } else {
+        res.json({ message: "إذا كان البريد مسجلاً، سيتم إرسال رمز إعادة التعيين" });
+      }
     } catch (error) {
       console.error("Forgot password error:", error);
       res.status(500).json({ message: "Server error" });
