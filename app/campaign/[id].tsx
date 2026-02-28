@@ -384,7 +384,7 @@ export default function CampaignDetailScreen() {
                 <Ionicons name="trophy" size={36} color="#fff" />
                 <Text style={styles.winnerTitle}>تم إعلان الفائز!</Text>
                 <Text style={styles.winnerTicket}>
-                  تذكرة السحب: {campaign.winnerTicketId}
+                  تذكرة الفوز: {campaign.winnerTicketId}
                 </Text>
               </LinearGradient>
             </View>
@@ -396,7 +396,7 @@ export default function CampaignDetailScreen() {
                 <Ionicons name="hourglass" size={22} color={Colors.light.warning} />
               </View>
               <Text style={styles.soldOutText}>
-                نفذت جميع المنتجات! السحب سيبدأ قريباً.
+                نفذت جميع المنتجات! اختيار الفائز بالهدية سيبدأ قريباً.
               </Text>
             </View>
           )}

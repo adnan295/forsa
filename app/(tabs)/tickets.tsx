@@ -182,7 +182,7 @@ export default function TicketsScreen() {
           </View>
           <Text style={styles.emptyTitle}>سجّل الدخول لعرض طلباتك</Text>
           <Text style={styles.emptyText}>
-            ستظهر طلباتك وتذاكر السحب هنا بعد شراء المنتجات
+            ستظهر طلباتك وتذاكرك هنا بعد شراء المنتجات
           </Text>
           <Pressable
             onPress={() => router.push("/auth")}
@@ -238,8 +238,8 @@ export default function TicketsScreen() {
       </Text>
       <Text style={styles.emptyText}>
         {activeTab === "orders"
-          ? "اكتشف المنتجات المميزة واحصل على فرصة للفوز بالسحب!"
-          : "كل منتج تشتريه يمنحك تذكرة سحب وفرصة للفوز!"}
+          ? "اكتشف المنتجات المميزة واحصل على فرصة للفوز بهدية!"
+          : "كل منتج تشتريه يمنحك فرصة للحصول على هدية!"}
       </Text>
       <Pressable
         onPress={() => router.push("/(tabs)/" as any)}

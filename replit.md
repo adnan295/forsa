@@ -117,6 +117,9 @@ Comprehensive admin dashboard with 7 sections:
 - Admin sales charts: Daily sales bar chart (last 7 days) in admin dashboard, GET /api/admin/sales-chart endpoint
 - Social proof banners: Animated recent purchase notifications on home page
 - Email OTP verification: 6-digit code sent on registration, POST /api/auth/verify-email, POST /api/auth/resend-verification, email_verification_tokens table, OTP input screen in auth.tsx with auto-focus and resend countdown (60s)
+- Delete account: DELETE /api/auth/delete-account endpoint, confirmation dialog in profile page, deletes all user data (orders, tickets, notifications, reviews)
+- External privacy policy and terms pages: GET /privacy-policy and GET /terms serve standalone HTML pages for App Store/Google Play submission
+- App language updated: "سحوبات" (raffles/draws) replaced with "هدايا" (gifts) throughout entire app — all UI screens, server notifications, email templates, landing page, FAQ, admin panel. "السحب" → "اختيار الفائز". Contact info placeholders in info.tsx updated with proper URLs
 
 ## Admin Credentials
 - Username: admin

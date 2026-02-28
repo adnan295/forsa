@@ -546,7 +546,7 @@ function CampaignsSection() {
     },
     onSuccess: (data) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("تم السحب!", `الفائز: ${data.winner.username}\nالتذكرة: ${data.ticket.ticketNumber}`);
+      Alert.alert("تم اختيار الفائز!", `الفائز: ${data.winner.username}\nالتذكرة: ${data.ticket.ticketNumber}`);
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
@@ -565,9 +565,9 @@ function CampaignsSection() {
   });
 
   const handleDraw = (c: any) => {
-    Alert.alert("سحب الفائز", `هل أنت متأكد من إجراء السحب لحملة "${c.title}"؟`, [
+    Alert.alert("اختيار الفائز", `هل أنت متأكد من اختيار الفائز لحملة "${c.title}"؟`, [
       { text: "إلغاء", style: "cancel" },
-      { text: "سحب", style: "destructive", onPress: () => drawMutation.mutate(c.id) },
+      { text: "اختيار", style: "destructive", onPress: () => drawMutation.mutate(c.id) },
     ]);
   };
 
@@ -579,7 +579,7 @@ function CampaignsSection() {
   };
 
   const getStatusAr = (s: string) => {
-    const map: Record<string, string> = { active: "نشط", sold_out: "نفذت الكمية", drawing: "جاري السحب", completed: "مكتمل" };
+    const map: Record<string, string> = { active: "نشط", sold_out: "نفذت الكمية", drawing: "جاري الاختيار", completed: "مكتمل" };
     return map[s] || s;
   };
   const getStatusColor = (s: string) => {
@@ -628,7 +628,7 @@ function CampaignsSection() {
               {(item.status === "sold_out" || item.status === "drawing") && (
                 <Pressable onPress={() => handleDraw(item)} style={[styles.actionBtn, { backgroundColor: "#9B59B6" }]}>
                   <Ionicons name="dice" size={16} color="#fff" />
-                  <Text style={styles.actionBtnText}>سحب</Text>
+                  <Text style={styles.actionBtnText}>اختيار</Text>
                 </Pressable>
               )}
               {item.soldQuantity === 0 && (

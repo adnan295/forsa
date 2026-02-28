@@ -83,7 +83,7 @@ export default function WinnersScreen() {
             </LinearGradient>
             <Text style={styles.emptyTitle}>لا يوجد فائزون بعد</Text>
             <Text style={styles.emptyText}>
-              ستظهر هنا نتائج السحوبات المكتملة والفائزون بالجوائز
+              ستظهر هنا نتائج الحملات المكتملة والفائزون بالهدايا
             </Text>
           </View>
         ) : (
@@ -183,7 +183,7 @@ function WinnerCard({ campaign }: { campaign: WinnerCampaign }) {
               <Ionicons name="calendar" size={14} color={Colors.light.success} />
             </View>
             <View style={styles.infoTextArea}>
-              <Text style={styles.infoLabel}>تاريخ السحب</Text>
+              <Text style={styles.infoLabel}>تاريخ الاختيار</Text>
               <Text style={styles.infoValue}>
                 {formatDrawDate(campaign.drawAt as any)}
               </Text>

@@ -945,6 +945,17 @@ export class DatabaseStorage implements IStorage {
       .set({ emailVerified: true })
       .where(eq(users.id, userId));
   }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    await db.delete(userNotifications).where(eq(userNotifications.userId, userId));
+    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+    await db.delete(reviews).where(eq(reviews.userId, userId));
+    await db.delete(tickets).where(eq(tickets.userId, userId));
+    await db.delete(orders).where(eq(orders.userId, userId));
+    const result = await db.delete(users).where(eq(users.id, userId));
+    return (result?.rowCount ?? 0) > 0;
+  }
 }
 
 export const storage = new DatabaseStorage();

@@ -66,7 +66,7 @@ export default function CampaignCard({ campaign, onPress }: Props) {
 
   function getStatusText() {
     if (isCompleted) return "مكتمل";
-    if (campaign.status === "drawing") return "جاري السحب";
+    if (campaign.status === "drawing") return "جاري الاختيار";
     if (isSoldOut) return "نفذت الكمية";
     return "نشط";
   }

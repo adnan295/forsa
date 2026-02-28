@@ -48,8 +48,8 @@ const BANNER_WIDTH = SCREEN_WIDTH - 32;
 const BANNERS = [
   {
     id: "1",
-    title: "سحوبات حصرية",
-    subtitle: "اشترِ منتجاتنا واربح جوائز قيمة",
+    title: "هدايا حصرية",
+    subtitle: "اشترِ منتجاتنا واحصل على هدايا قيمة",
     icon: "diamond" as const,
     colors: ["#7C3AED", "#A855F7", "#C084FC"] as [string, string, string],
   },

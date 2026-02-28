@@ -572,7 +572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 participantIds,
                 "sold_out",
                 "نفدت الكمية! 🔥",
-                `تم بيع كامل كمية ${campaign.title}! السحب قريباً`,
+                `تم بيع كامل كمية ${campaign.title}! اختيار الفائز قريباً`,
                 campaignId
               );
             }
@@ -680,7 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const cTickets = await storage.getTicketsByCampaign(campaignId);
               const pIds = [...new Set(cTickets.map(t => t.userId))];
               if (pIds.length > 0) {
-                await storage.createBulkUserNotifications(pIds, "sold_out", "نفدت الكمية! 🔥", `تم بيع كامل كمية ${campaign.title}! السحب قريباً`, campaignId);
+                await storage.createBulkUserNotifications(pIds, "sold_out", "نفدت الكمية! 🔥", `تم بيع كامل كمية ${campaign.title}! اختيار الفائز قريباً`, campaignId);
               }
             }
           } catch (e) {
@@ -825,8 +825,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.createBulkUserNotifications(
               participantIds,
               "draw_completed",
-              "تم إجراء السحب 🎰",
-              `تم سحب الفائز في حملة ${drawnCampaign.title}! حظاً أوفر في المرة القادمة`,
+              "تم اختيار الفائز 🎁",
+              `تم اختيار الفائز بالهدية في حملة ${drawnCampaign.title}! حظاً أوفر في المرة القادمة`,
               req.params.campaignId as string
             );
           }
@@ -1475,6 +1475,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Generate referral codes error:", error);
       res.status(500).json({ message: "Server error" });
     }
+  });
+
+  app.delete("/api/auth/delete-account", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (user.role === "admin") {
+        return res.status(403).json({ message: "لا يمكن حذف حساب المدير" });
+      }
+      await storage.deleteUser(userId);
+      req.session.destroy(() => {});
+      res.json({ message: "تم حذف الحساب بنجاح" });
+    } catch (error) {
+      console.error("Delete account error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/privacy-policy", (_req: Request, res: Response) => {
+    res.send(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سياسة الخصوصية - لاكي درو</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
+    .header { background: linear-gradient(135deg, #7C3AED, #6D28D9); padding: 40px 20px; text-align: center; }
+    .header h1 { color: #fff; font-size: 28px; margin-bottom: 8px; }
+    .header p { color: rgba(255,255,255,0.7); font-size: 14px; }
+    .container { max-width: 700px; margin: -20px auto 40px; padding: 0 16px; }
+    .card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(124,58,237,0.06); }
+    .card h2 { font-size: 18px; color: #7C3AED; margin-bottom: 12px; }
+    .card p, .card li { font-size: 15px; color: #4a4a6a; }
+    .card ul { padding-right: 20px; }
+    .card li { margin-bottom: 8px; }
+    .footer { text-align: center; padding: 24px; color: #8b8ba8; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>سياسة الخصوصية</h1>
+    <p>لاكي درو - LuckyDraw</p>
+  </div>
+  <div class="container">
+    <div class="card">
+      <h2>المعلومات التي نجمعها</h2>
+      <ul>
+        <li>بيانات الحساب: اسم المستخدم، البريد الإلكتروني</li>
+        <li>بيانات الطلبات: تاريخ الشراء، المبالغ، المنتجات</li>
+        <li>بيانات الشحن: العنوان، رقم الهاتف، المدينة</li>
+        <li>إيصالات الدفع: صور إيصالات التحويل البنكي</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>كيف نستخدم بياناتك</h2>
+      <ul>
+        <li>معالجة طلباتك وتوصيل الهدايا</li>
+        <li>التحقق من المدفوعات</li>
+        <li>شحن المنتجات والهدايا</li>
+        <li>تحسين تجربة المستخدم</li>
+        <li>التواصل معك بشأن طلباتك</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>حماية البيانات</h2>
+      <p>نستخدم تقنيات تشفير متقدمة لحماية بياناتك الشخصية. لن نشارك معلوماتك مع أطراف ثالثة إلا بموافقتك أو عند الحاجة القانونية.</p>
+    </div>
+    <div class="card">
+      <h2>حقوقك</h2>
+      <ul>
+        <li>طلب نسخة من بياناتك الشخصية</li>
+        <li>تصحيح أو تحديث بياناتك</li>
+        <li>طلب حذف حسابك وبياناتك</li>
+        <li>إلغاء الاشتراك في الإشعارات</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>التواصل</h2>
+      <p>لأي استفسار حول سياسة الخصوصية، تواصل معنا عبر البريد الإلكتروني أو صفحة التواصل في التطبيق.</p>
+    </div>
+  </div>
+  <div class="footer">
+    <p>لاكي درو - LuckyDraw &copy; ${new Date().getFullYear()}</p>
+    <p>آخر تحديث: ${new Date().toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</p>
+  </div>
+</body>
+</html>`);
+  });
+
+  app.get("/terms", (_req: Request, res: Response) => {
+    res.send(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الشروط والأحكام - لاكي درو</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
+    .header { background: linear-gradient(135deg, #8B5CF6, #7C3AED); padding: 40px 20px; text-align: center; }
+    .header h1 { color: #fff; font-size: 28px; margin-bottom: 8px; }
+    .header p { color: rgba(255,255,255,0.7); font-size: 14px; }
+    .container { max-width: 700px; margin: -20px auto 40px; padding: 0 16px; }
+    .card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(124,58,237,0.06); }
+    .card h2 { font-size: 18px; color: #7C3AED; margin-bottom: 12px; }
+    .card p { font-size: 15px; color: #4a4a6a; }
+    .footer { text-align: center; padding: 24px; color: #8b8ba8; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>الشروط والأحكام</h1>
+    <p>لاكي درو - LuckyDraw</p>
+  </div>
+  <div class="container">
+    <div class="card">
+      <h2>١. القبول بالشروط</h2>
+      <p>باستخدامك لتطبيق لاكي درو، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي جزء منها، يُرجى عدم استخدام التطبيق.</p>
+    </div>
+    <div class="card">
+      <h2>٢. الأهلية</h2>
+      <p>يجب أن يكون عمرك 18 عاماً أو أكثر لاستخدام هذا التطبيق. بالتسجيل، أنت تؤكد أنك تستوفي هذا الشرط.</p>
+    </div>
+    <div class="card">
+      <h2>٣. الحساب والأمان</h2>
+      <p>أنت مسؤول عن الحفاظ على سرية معلومات حسابك وكلمة المرور. يجب إبلاغنا فوراً عن أي استخدام غير مصرح به.</p>
+    </div>
+    <div class="card">
+      <h2>٤. عمليات الشراء والدفع</h2>
+      <p>جميع عمليات الشراء نهائية وغير قابلة للاسترجاع بعد تأكيد الدفع. يتم التحقق من جميع المدفوعات قبل تأكيد الطلب. مع كل عملية شراء تحصل على هدية مجانية.</p>
+    </div>
+    <div class="card">
+      <h2>٥. الهدايا</h2>
+      <p>يتم اختيار الهدايا بشكل عشوائي عند اكتمال بيع جميع المنتجات في الحملة. يتم شحن المنتجات والهدايا خلال 14 يوم عمل.</p>
+    </div>
+    <div class="card">
+      <h2>٦. التعديلات</h2>
+      <p>نحتفظ بالحق في تعديل هذه الشروط في أي وقت. سيتم إبلاغك بأي تغييرات جوهرية.</p>
+    </div>
+  </div>
+  <div class="footer">
+    <p>لاكي درو - LuckyDraw &copy; ${new Date().getFullYear()}</p>
+    <p>آخر تحديث: ${new Date().toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</p>
+  </div>
+</body>
+</html>`);
   });
 
   const httpServer = createServer(app);

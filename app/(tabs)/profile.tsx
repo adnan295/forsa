@@ -7,6 +7,7 @@ import {
   Pressable,
   Platform,
   Linking,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
+import { apiRequest } from "@/lib/query-client";
 
 type UserStats = {
   totalOrders: number;
@@ -56,6 +58,31 @@ export default function ProfileScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
 
+  async function handleDeleteAccount() {
+    Alert.alert(
+      "حذف الحساب",
+      "هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك وطلباتك نهائياً ولا يمكن التراجع عن هذا الإجراء.",
+      [
+        { text: "إلغاء", style: "cancel" },
+        {
+          text: "حذف نهائياً",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiRequest("DELETE", "/api/auth/delete-account");
+              await logout();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert("تم", "تم حذف حسابك بنجاح");
+            } catch (error: any) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert("خطأ", "تعذّر حذف الحساب، حاول لاحقاً");
+            }
+          },
+        },
+      ]
+    );
+  }
+
   if (!user) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -68,7 +95,7 @@ export default function ProfileScreen() {
           </LinearGradient>
           <Text style={styles.emptyTitle}>سجّل الدخول لحسابك</Text>
           <Text style={styles.emptyText}>
-            أدِر ملفك الشخصي، تابع طلباتك، واطلع على سحوباتك
+            أدِر ملفك الشخصي، تابع طلباتك، واطلع على هداياك
           </Text>
           <Pressable
             onPress={() => router.push("/auth")}
@@ -107,8 +134,8 @@ export default function ProfileScreen() {
     },
     {
       icon: "ticket-outline" as const,
-      label: "تذاكر السحب",
-      subtitle: `${stats?.totalTickets || 0} تذكرة سحب`,
+      label: "تذاكر الهدايا",
+      subtitle: `${stats?.totalTickets || 0} تذكرة`,
       color: "#EC4899",
       onPress: () => router.push("/(tabs)/tickets" as any),
     },
@@ -362,6 +389,20 @@ export default function ProfileScreen() {
         >
           <Ionicons name="log-out-outline" size={20} color={Colors.light.danger} />
           <Text style={styles.logoutText}>تسجيل الخروج</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.section}>
+        <Pressable
+          onPress={handleDeleteAccount}
+          style={({ pressed }) => [
+            styles.deleteButton,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
+          testID="delete-account-button"
+        >
+          <Ionicons name="trash-outline" size={20} color="#9CA3AF" />
+          <Text style={styles.deleteText}>حذف الحساب</Text>
         </Pressable>
       </View>
 
@@ -739,6 +780,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.light.danger,
     writingDirection: "rtl",
+  },
+  deleteButton: {
+    flexDirection: "row-reverse" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+    padding: 14,
+    borderRadius: 16,
+  },
+  deleteText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "#9CA3AF",
+    writingDirection: "rtl" as const,
   },
   versionArea: {
     alignItems: "center",

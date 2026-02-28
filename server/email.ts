@@ -84,7 +84,7 @@ function baseTemplate(content: string): string {
   <div class="container">
     <div class="header">
       <h1>${APP_NAME}</h1>
-      <p>منصة التسوق والسحوبات</p>
+      <p>منصة التسوق والهدايا</p>
     </div>
     ${content}
     <div class="footer">
@@ -142,9 +142,9 @@ export async function sendOrderConfirmation(
         <div class="info-row"><span class="info-label">المبلغ</span><span class="info-value">${data.totalAmount} ر.س</span></div>
         <div class="info-row"><span class="info-label">طريقة الدفع</span><span class="info-value">${data.paymentMethod}</span></div>
       </div>
-      <p><strong>تذاكر السحب:</strong></p>
+      <p><strong>تذاكرك:</strong></p>
       <div style="margin: 12px 0;">${ticketsHtml}</div>
-      <p>بالتوفيق في السحب!</p>
+      <p>بالتوفيق!</p>
     </div>
   `);
 
@@ -187,7 +187,7 @@ export async function sendWinnerNotification(
     <div class="body">
       <div class="winner-box">
         <h3>مبروك! أنت الفائز!</h3>
-        <p>لقد تم اختيارك كفائز في السحب</p>
+        <p>لقد تم اختيارك كفائز بالهدية</p>
       </div>
       <div class="info-box">
         <div class="info-row"><span class="info-label">الحملة</span><span class="info-value">${data.campaignTitle}</span></div>

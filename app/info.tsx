@@ -48,21 +48,21 @@ function AboutContent() {
     <>
       <ContentCard title="ما هو لاكي درو؟">
         <Text style={styles.paragraph}>
-          لاكي درو هو متجر إلكتروني يقدم منتجات مميزة بأسعار مناسبة، ومع كل عملية شراء تحصل على تذكرة سحب تؤهلك للفوز بجوائز قيمة. نقدم تجربة تسوّق آمنة وشفافة مع نظام سحب عادل يضمن فرصاً متساوية لجميع المشترين.
+          لاكي درو هو متجر إلكتروني يقدم منتجات مميزة بأسعار مناسبة، ومع كل عملية شراء تحصل على فرصة للحصول على هدايا قيمة. نقدم تجربة تسوّق آمنة وشفافة مع نظام هدايا عادل يضمن فرصاً متساوية لجميع المشترين.
         </Text>
       </ContentCard>
       <ContentCard title="كيف يعمل التطبيق؟">
         <BulletPoint text="تصفّح المنتجات المتاحة واختر ما يناسبك" />
         <BulletPoint text="اشترِ المنتج وأكمل عملية الدفع" />
-        <BulletPoint text="تحصل تلقائياً على تذكرة سحب مع كل منتج" />
+        <BulletPoint text="تحصل تلقائياً على فرصة هدية مع كل منتج" />
         <BulletPoint text="انتظر حتى تُباع جميع المنتجات في الحملة" />
-        <BulletPoint text="يتم السحب تلقائياً وبشفافية تامة" />
-        <BulletPoint text="يتم إبلاغ الفائز وشحن الجائزة" />
+        <BulletPoint text="يتم اختيار الفائز بالهدية بشفافية تامة" />
+        <BulletPoint text="يتم إبلاغ الفائز وشحن الهدية" />
       </ContentCard>
       <ContentCard title="مميزاتنا">
-        <FeatureRow icon="shield-checkmark" text="سحب عشوائي آمن ومشفّر" color="#10B981" />
+        <FeatureRow icon="shield-checkmark" text="اختيار عشوائي آمن ومشفّر" color="#10B981" />
         <FeatureRow icon="card" text="خيارات دفع متعددة" color="#3B82F6" />
-        <FeatureRow icon="gift" text="جوائز حقيقية ومضمونة" color="#F59E0B" />
+        <FeatureRow icon="gift" text="هدايا حقيقية ومضمونة" color="#F59E0B" />
         <FeatureRow icon="airplane" text="شحن سريع لجميع المناطق" color="#8B5CF6" />
         <FeatureRow icon="headset" text="دعم فني على مدار الساعة" color="#EC4899" />
       </ContentCard>
@@ -94,12 +94,12 @@ function TermsContent() {
       </ContentCard>
       <ContentCard title="٤. عمليات الشراء والدفع">
         <Text style={styles.paragraph}>
-          جميع عمليات الشراء نهائية وغير قابلة للاسترجاع بعد تأكيد الدفع. يتم التحقق من جميع المدفوعات قبل تأكيد الطلب ومنح تذكرة السحب.
+          جميع عمليات الشراء نهائية وغير قابلة للاسترجاع بعد تأكيد الدفع. يتم التحقق من جميع المدفوعات قبل تأكيد الطلب. مع كل عملية شراء تحصل على فرصة للحصول على هدية.
         </Text>
       </ContentCard>
-      <ContentCard title="٥. السحب والجوائز">
+      <ContentCard title="٥. الهدايا">
         <Text style={styles.paragraph}>
-          يتم السحب بشكل عشوائي باستخدام خوارزميات مشفّرة عند اكتمال بيع جميع المنتجات في الحملة. نتائج السحب نهائية وغير قابلة للاعتراض. يتم شحن المنتجات والجوائز خلال 14 يوم عمل.
+          يتم اختيار الفائز بالهدية بشكل عشوائي عند اكتمال بيع جميع المنتجات في الحملة. يتم شحن المنتجات والهدايا خلال 14 يوم عمل.
         </Text>
       </ContentCard>
       <ContentCard title="٦. التعديلات">
@@ -121,9 +121,9 @@ function PrivacyContent() {
         <BulletPoint text="إيصالات الدفع: صور إيصالات التحويل البنكي" />
       </ContentCard>
       <ContentCard title="كيف نستخدم بياناتك">
-        <BulletPoint text="معالجة طلباتك ومنحك تذاكر السحب" />
+        <BulletPoint text="معالجة طلباتك وتوصيل الهدايا" />
         <BulletPoint text="التحقق من المدفوعات" />
-        <BulletPoint text="شحن الجوائز للفائزين" />
+        <BulletPoint text="شحن المنتجات والهدايا للفائزين" />
         <BulletPoint text="تحسين تجربة المستخدم" />
         <BulletPoint text="التواصل معك بشأن طلباتك" />
       </ContentCard>
@@ -147,23 +147,16 @@ function ContactContent() {
     {
       icon: "mail" as const,
       label: "البريد الإلكتروني",
-      value: "support@luckydraw.app",
+      value: "info@luckydraw.app",
       color: "#3B82F6",
-      onPress: () => Linking.openURL("mailto:support@luckydraw.app"),
+      onPress: () => Linking.openURL("mailto:info@luckydraw.app"),
     },
     {
       icon: "logo-whatsapp" as const,
       label: "واتساب",
-      value: "+966 50 000 0000",
+      value: "تواصل معنا عبر واتساب",
       color: "#25D366",
       onPress: () => Linking.openURL("https://wa.me/966500000000"),
-    },
-    {
-      icon: "logo-twitter" as const,
-      label: "تويتر",
-      value: "@luckydraw_app",
-      color: "#1DA1F2",
-      onPress: () => Linking.openURL("https://twitter.com/luckydraw_app"),
     },
     {
       icon: "logo-instagram" as const,
