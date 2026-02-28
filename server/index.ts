@@ -241,14 +241,35 @@ function setupErrorHandler(app: express.Application) {
 
   try {
     const { storage } = await import("./storage");
+    const bcryptSeed = await import("bcryptjs");
     const existingMethods = await storage.getPaymentMethods();
     if (existingMethods.length === 0) {
       await storage.createPaymentMethod({ name: "Bank Transfer", nameAr: "تحويل بنكي", icon: "business", enabled: true, description: "تحويل مباشر إلى الحساب البنكي" } as any);
       await storage.createPaymentMethod({ name: "Cash on Delivery", nameAr: "الدفع عند الاستلام", icon: "cash", enabled: true, description: "ادفع نقداً عند استلام المنتج" } as any);
       console.log("[Seed] Default payment methods created");
     }
+
+    const existingAdmin = await storage.getUserByUsername("admin");
+    if (!existingAdmin) {
+      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+      const hashedPassword = await bcryptSeed.hash(adminPassword, 10);
+      await storage.createUser({
+        username: "admin",
+        email: "admin@forsa.app",
+        password: hashedPassword,
+      });
+      const adminUser = await storage.getUserByUsername("admin");
+      if (adminUser) {
+        await storage.updateUserProfile(adminUser.id, { fullName: "مدير النظام" });
+        const { db: seedDb } = await import("./db");
+        const { users } = await import("@shared/schema");
+        const { eq } = await import("drizzle-orm");
+        await seedDb.update(users).set({ role: "admin", emailVerified: true } as any).where(eq(users.id, adminUser.id));
+        console.log("[Seed] Admin user created (set ADMIN_PASSWORD env var for custom password)");
+      }
+    }
   } catch (err) {
-    console.log("[Seed] Skipped payment methods seeding:", (err as any)?.message);
+    console.log("[Seed] Skipped seeding:", (err as any)?.message);
   }
 
   setupErrorHandler(app);

@@ -128,9 +128,12 @@ Comprehensive admin dashboard with 7 sections:
 - Color theme update: All gradients updated from deep violet only to purple→pink gradient (#7C3AED → #A855F7 → #EC4899) matching the app logo across all screens, emails, and landing page
 - Splash screen: Regenerated with purple-to-pink gradient background and gift box icon matching the app logo
 
+- Store compliance: Added iOS camera/photo permissions (NSCameraUsageDescription, NSPhotoLibraryUsageDescription), Android permissions (CAMERA, READ_EXTERNAL_STORAGE, READ_MEDIA_IMAGES), expo-image-picker plugin config
+- Admin auto-seed: Server auto-creates admin user on first run using ADMIN_PASSWORD env var (defaults to admin123 if not set)
+
 ## Admin Credentials
 - Username: admin
-- Password: admin123
+- Password: Set via ADMIN_PASSWORD environment variable (defaults to admin123)
 
 ## Ports
 - Frontend (Expo): 8081
