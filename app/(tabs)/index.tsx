@@ -31,24 +31,23 @@ import CampaignCard from "@/components/CampaignCard";
 import { queryClient } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
 
-type FilterKey = "all" | "active" | "completed";
 type CategoryKey = "all" | "electronics" | "fashion" | "beauty" | "accessories" | "other";
 type PriceRangeKey = "all" | "under50" | "50to100" | "over100";
 
-const PRICE_RANGE_TABS: { key: PriceRangeKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: "all", label: "الكل", icon: "pricetags" },
-  { key: "under50", label: "أقل من 50$", icon: "arrow-down" },
-  { key: "50to100", label: "50-100$", icon: "swap-horizontal" },
-  { key: "over100", label: "أكثر من 100$", icon: "arrow-up" },
+const PRICE_RANGE_TABS: { key: PriceRangeKey; label: string }[] = [
+  { key: "all", label: "الكل" },
+  { key: "under50", label: "أقل من 50$" },
+  { key: "50to100", label: "50-100$" },
+  { key: "over100", label: "أكثر من 100$" },
 ];
 
-const CATEGORY_TABS: { key: CategoryKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: "all", label: "الكل", icon: "grid" },
-  { key: "electronics", label: "إلكترونيات", icon: "laptop" },
-  { key: "fashion", label: "أزياء", icon: "shirt" },
-  { key: "beauty", label: "جمال", icon: "sparkles" },
-  { key: "accessories", label: "إكسسوارات", icon: "watch" },
-  { key: "other", label: "أخرى", icon: "ellipsis-horizontal" },
+const CATEGORY_TABS: { key: CategoryKey; label: string }[] = [
+  { key: "all", label: "الكل" },
+  { key: "electronics", label: "إلكترونيات" },
+  { key: "fashion", label: "أزياء" },
+  { key: "beauty", label: "جمال" },
+  { key: "accessories", label: "إكسسوارات" },
+  { key: "other", label: "أخرى" },
 ];
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -273,21 +272,16 @@ const proofStyles = StyleSheet.create({
   },
 });
 
-const FILTER_TABS: { key: FilterKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: "all", label: "الكل", icon: "apps" },
-  { key: "active", label: "نشطة", icon: "flame" },
-  { key: "completed", label: "منتهية", icon: "trophy" },
-];
-
 export default function HomeScreen() {
   const { isDark, colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { totalItems } = useCart();
   const [searchText, setSearchText] = useState("");
-  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [activeCategory, setActiveCategory] = useState<CategoryKey>("all");
   const [activePriceRange, setActivePriceRange] = useState<PriceRangeKey>("all");
+  const [showPriceFilter, setShowPriceFilter] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const {
     data: campaigns,
@@ -313,8 +307,7 @@ export default function HomeScreen() {
 
   const filteredCampaigns = useMemo(() => {
     let list = campaigns || [];
-    if (activeFilter === "active") list = list.filter(c => c.status === "active");
-    else if (activeFilter === "completed") list = list.filter(c => c.status !== "active");
+    if (!showCompleted) list = list.filter(c => c.status === "active");
     if (activeCategory !== "all") list = list.filter(c => (c.category || "other") === activeCategory);
     if (activePriceRange !== "all") {
       list = list.filter(c => {
@@ -335,7 +328,7 @@ export default function HomeScreen() {
       );
     }
     return list;
-  }, [campaigns, activeFilter, activeCategory, activePriceRange, searchText]);
+  }, [campaigns, showCompleted, activeCategory, activePriceRange, searchText]);
 
   const onRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
@@ -439,121 +432,102 @@ export default function HomeScreen() {
             )}
           </View>
 
-          <View style={styles.filterRow}>
-            {FILTER_TABS.map((tab) => (
-              <Pressable
-                key={tab.key}
-                onPress={() => {
-                  setActiveFilter(tab.key);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                style={[
-                  styles.filterChip,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                  activeFilter === tab.key && [styles.filterChipActive, { backgroundColor: colors.accent, borderColor: colors.accent }],
-                ]}
-              >
-                <Ionicons
-                  name={tab.icon}
-                  size={14}
-                  color={activeFilter === tab.key ? "#fff" : colors.textSecondary}
-                />
-                <Text style={[
-                  styles.filterChipText,
-                  { color: colors.textSecondary },
-                  activeFilter === tab.key && styles.filterChipTextActive,
-                ]}>
-                  {tab.label}
-                </Text>
-              </Pressable>
-            ))}
+          <View style={styles.categoryRowWrap}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryRow}
+            >
+              {CATEGORY_TABS.map((cat) => (
+                <Pressable
+                  key={cat.key}
+                  onPress={() => {
+                    setActiveCategory(cat.key);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  style={[
+                    styles.categoryChip,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    activeCategory === cat.key && { backgroundColor: colors.accent, borderColor: colors.accent },
+                  ]}
+                >
+                  <Text style={[
+                    styles.categoryChipText,
+                    { color: colors.textSecondary },
+                    activeCategory === cat.key && { color: "#fff", fontFamily: "Inter_600SemiBold" },
+                  ]}>
+                    {cat.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Pressable
+              onPress={() => {
+                setShowPriceFilter(!showPriceFilter);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              style={[
+                styles.filterToggleBtn,
+                { backgroundColor: colors.card, borderColor: showPriceFilter || activePriceRange !== "all" ? colors.accentPink : colors.border },
+                (showPriceFilter || activePriceRange !== "all") && { backgroundColor: colors.accentPink },
+              ]}
+            >
+              <Ionicons
+                name="options-outline"
+                size={16}
+                color={showPriceFilter || activePriceRange !== "all" ? "#fff" : colors.textSecondary}
+              />
+            </Pressable>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryRow}
-          >
-            {CATEGORY_TABS.map((cat) => (
-              <Pressable
-                key={cat.key}
-                onPress={() => {
-                  setActiveCategory(cat.key);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                style={[
-                  styles.categoryChip,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                  activeCategory === cat.key && [styles.categoryChipActive, { backgroundColor: isDark ? "rgba(167, 139, 250, 0.15)" : "rgba(124, 58, 237, 0.08)", borderColor: colors.accent }],
-                ]}
-              >
-                <Ionicons
-                  name={cat.icon}
-                  size={14}
-                  color={activeCategory === cat.key ? colors.accent : colors.textSecondary}
-                />
-                <Text style={[
-                  styles.categoryChipText,
-                  { color: colors.textSecondary },
-                  activeCategory === cat.key && [styles.categoryChipTextActive, { color: colors.accent }],
-                ]}>
-                  {cat.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          {showPriceFilter && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.priceRow}
+            >
+              {PRICE_RANGE_TABS.map((pr) => (
+                <Pressable
+                  key={pr.key}
+                  onPress={() => {
+                    setActivePriceRange(pr.key);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  style={[
+                    styles.priceChip,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    activePriceRange === pr.key && { backgroundColor: colors.accentPink, borderColor: colors.accentPink },
+                  ]}
+                >
+                  <Text style={[
+                    styles.priceChipText,
+                    { color: colors.textSecondary },
+                    activePriceRange === pr.key && { color: "#fff", fontFamily: "Inter_600SemiBold" },
+                  ]}>
+                    {pr.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.priceRow}
+          <Pressable
+            onPress={() => {
+              setShowCompleted(!showCompleted);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }}
+            style={styles.showCompletedRow}
           >
-            {PRICE_RANGE_TABS.map((pr) => (
-              <Pressable
-                key={pr.key}
-                onPress={() => {
-                  setActivePriceRange(pr.key);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                style={[
-                  styles.priceChip,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                  activePriceRange === pr.key && [styles.priceChipActive, { backgroundColor: colors.accentPink, borderColor: colors.accentPink }],
-                ]}
-              >
-                <Ionicons
-                  name={pr.icon}
-                  size={13}
-                  color={activePriceRange === pr.key ? "#fff" : colors.textSecondary}
-                />
-                <Text style={[
-                  styles.priceChipText,
-                  { color: colors.textSecondary },
-                  activePriceRange === pr.key && styles.priceChipTextActive,
-                ]}>
-                  {pr.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-
-        {filteredCampaigns.length > 0 && (
-          <View style={styles.sectionHeader}>
             <Ionicons
-              name={activeFilter === "completed" ? "trophy" : "flame"}
-              size={18}
-              color={activeFilter === "completed" ? colors.success : colors.accent}
+              name={showCompleted ? "checkbox" : "square-outline"}
+              size={16}
+              color={showCompleted ? colors.accent : colors.textSecondary}
             />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {activeFilter === "all" ? "جميع الحملات" : activeFilter === "active" ? "الحملات النشطة" : "الحملات المنتهية"}
+            <Text style={[styles.showCompletedText, { color: colors.textSecondary }]}>
+              عرض المنتهية
             </Text>
-            <View style={[styles.resultCount, { backgroundColor: isDark ? "rgba(167, 139, 250, 0.15)" : "rgba(124, 58, 237, 0.1)" }]}>
-              <Text style={[styles.resultCountText, { color: colors.accent }]}>{filteredCampaigns.length}</Text>
-            </View>
-            <View style={[styles.sectionHeaderLine, { backgroundColor: colors.border }]} />
-          </View>
-        )}
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -610,9 +584,10 @@ export default function HomeScreen() {
               <Pressable
                 onPress={() => {
                   setSearchText("");
-                  setActiveFilter("all");
                   setActiveCategory("all");
                   setActivePriceRange("all");
+                  setShowCompleted(false);
+                  setShowPriceFilter(false);
                 }}
                 style={[styles.clearSearchBtn, { backgroundColor: isDark ? "rgba(167, 139, 250, 0.15)" : "rgba(124, 58, 237, 0.1)" }]}
               >
@@ -885,94 +860,71 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
   },
-  filterRow: {
+  categoryRowWrap: {
     flexDirection: "row-reverse",
+    alignItems: "center",
     gap: 8,
   },
   categoryRow: {
     flexDirection: "row-reverse",
-    gap: 8,
-    paddingTop: 4,
+    gap: 6,
   },
   categoryChip: {
-    flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: Colors.light.border,
-  },
-  categoryChipActive: {
-    backgroundColor: "rgba(124, 58, 237, 0.08)",
-    borderColor: Colors.light.accent,
   },
   categoryChipText: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
     color: Colors.light.textSecondary,
-    writingDirection: "rtl",
+    writingDirection: "rtl" as const,
   },
-  categoryChipTextActive: {
-    color: Colors.light.accent,
-    fontFamily: "Inter_600SemiBold",
+  filterToggleBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    backgroundColor: "#FFFFFF",
   },
   priceRow: {
     flexDirection: "row-reverse",
-    gap: 8,
+    gap: 6,
     paddingTop: 4,
   },
   priceChip: {
-    flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: Colors.light.border,
-  },
-  priceChipActive: {
-    backgroundColor: Colors.light.accentPink,
-    borderColor: Colors.light.accentPink,
   },
   priceChipText: {
     fontFamily: "Inter_500Medium",
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.light.textSecondary,
     writingDirection: "rtl" as const,
   },
-  priceChipTextActive: {
-    color: "#FFFFFF",
-    fontFamily: "Inter_600SemiBold",
-  },
-  filterChip: {
-    flex: 1,
+  showCompletedRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    justifyContent: "center",
     gap: 6,
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 9,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+    paddingTop: 4,
   },
-  filterChipActive: {
-    backgroundColor: Colors.light.accent,
-    borderColor: Colors.light.accent,
-  },
-  filterChipText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
+  showCompletedText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
     color: Colors.light.textSecondary,
-    writingDirection: "rtl",
-  },
-  filterChipTextActive: {
-    color: "#FFFFFF",
+    writingDirection: "rtl" as const,
   },
   resultCount: {
     backgroundColor: "rgba(124, 58, 237, 0.1)",
