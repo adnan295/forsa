@@ -136,6 +136,7 @@ Comprehensive admin dashboard with 7 sections:
 - Image caching: expo-image with cachePolicy="memory-disk" on CampaignCard and campaign detail page
 - Animations: Campaign card entrance fade-in + slide-up (staggered), button press scale animations (checkout, add to cart), admin tab transition
 - Dark mode: ThemeProvider (lib/theme-context.tsx) detects system preference via useColorScheme, Colors.dark palette in constants/colors.ts, applied to home, profile, tickets, campaign cards, tab bar
+- Full RTL conversion: All hardcoded LTR positioning (marginLeft/Right, paddingLeft/Right, left/right) converted to logical properties (marginStart/End, paddingStart/End, start/end) across all screens. Decorative elements and full-width overlays (left:0/right:0) kept as-is. I18nManager.forceRTL(true) set globally.
 - Admin advanced stats: Conversion rate and average order value added to admin dashboard (GET /api/admin/dashboard)
 
 ## Admin Credentials

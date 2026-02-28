@@ -233,8 +233,8 @@ const proofStyles = StyleSheet.create({
   container: {
     position: "absolute",
     bottom: Platform.OS === "web" ? 84 + 16 : 96,
-    left: 16,
-    right: 16,
+    start: 16,
+    end: 16,
     alignItems: "center",
     zIndex: 100,
   },
@@ -640,7 +640,7 @@ const bannerStyles = StyleSheet.create({
   },
   bannerTextArea: {
     flex: 1,
-    paddingLeft: 14,
+    paddingStart: 14,
   },
   bannerTitle: {
     fontFamily: "Inter_700Bold",
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   cartBadge: {
     position: "absolute",
     top: -4,
-    right: -4,
+    end: -4,
     minWidth: 20,
     height: 20,
     borderRadius: 10,
@@ -969,7 +969,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 1,
     backgroundColor: Colors.light.border,
-    marginLeft: 12,
+    marginStart: 12,
   },
   cardPadding: {
     paddingHorizontal: 16,

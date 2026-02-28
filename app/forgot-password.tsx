@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   backBtn: {
     position: "absolute" as const,
     top: 0,
-    right: 0,
+    end: 0,
     padding: 8,
   },
   logoArea: {
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     height: 56,
   },
   inputIcon: {
-    marginLeft: 12,
+    marginStart: 12,
   },
   input: {
     flex: 1,

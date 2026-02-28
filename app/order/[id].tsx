@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
   receiptOverlay: {
     position: "absolute",
     bottom: 10,
-    left: 10,
+    start: 10,
     backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 8,
     padding: 6,
@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   timeline: {
-    paddingRight: 4,
+    paddingEnd: 4,
   },
   timelineStep: {
     flexDirection: "row-reverse",
@@ -916,7 +916,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
-    marginRight: 12,
+    marginEnd: 12,
     paddingTop: 2,
     textAlign: "right",
     writingDirection: "rtl",
@@ -976,7 +976,7 @@ const modalStyles = StyleSheet.create({
   closeBtn: {
     position: "absolute",
     top: 50,
-    right: 20,
+    end: 20,
     zIndex: 10,
     padding: 8,
   },

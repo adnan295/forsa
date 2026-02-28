@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     position: "absolute",
     top: 14,
-    left: 14,
+    start: 14,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   favoriteButton: {
     position: "absolute",
     top: 14,
-    right: 14,
+    end: 14,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   priceTag: {
     position: "absolute",
     bottom: 14,
-    left: 14,
+    start: 14,
     flexDirection: "row",
     alignItems: "flex-end",
     backgroundColor: "rgba(124, 58, 237, 0.9)",
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "rgba(255,255,255,0.8)",
     marginBottom: 1,
-    marginRight: 2,
+    marginEnd: 2,
   },
   priceTagValue: {
     fontFamily: "Inter_700Bold",

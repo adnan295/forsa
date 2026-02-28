@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   searchIcon: {
-    marginLeft: 8,
+    marginStart: 8,
   },
   searchInput: {
     flex: 1,

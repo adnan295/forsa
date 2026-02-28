@@ -764,7 +764,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 15,
     color: Colors.light.accent,
-    marginRight: 12,
+    marginEnd: 12,
   },
   campaignTitle: {
     fontFamily: "Inter_600SemiBold",
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
     textAlign: "left",
     flex: 1,
-    marginRight: 12,
+    marginEnd: 12,
   },
   bankNote: {
     flexDirection: "row-reverse",

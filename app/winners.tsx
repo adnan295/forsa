@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   completedBadge: {
     position: "absolute",
     top: 12,
-    left: 12,
+    start: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 5,

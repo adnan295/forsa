@@ -148,7 +148,7 @@ function SalesChart() {
             <Text style={chartStyles.summaryValue}>{totalSales.toFixed(0)} $</Text>
             <Text style={chartStyles.summaryLabel}>إجمالي</Text>
           </View>
-          <View style={[chartStyles.summaryItem, { marginRight: 16 }]}>
+          <View style={[chartStyles.summaryItem, { marginEnd: 16 }]}>
             <Text style={chartStyles.summaryValue}>{totalOrders}</Text>
             <Text style={chartStyles.summaryLabel}>طلب</Text>
           </View>
@@ -1275,7 +1275,7 @@ function NotificationsSection() {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => { if (!item.isRead) markReadMutation.mutate(item.id); }}
-            style={[styles.orderCard, { borderRightWidth: 3, borderRightColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#FAFBFF" }]}
+            style={[styles.orderCard, { borderEndWidth: 3, borderEndColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#FAFBFF" }]}
           >
             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: getNotifColor(item.type) + "15", alignItems: "center", justifyContent: "center" }}>

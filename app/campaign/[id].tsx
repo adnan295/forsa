@@ -418,7 +418,7 @@ export default function CampaignDetailScreen() {
               <Ionicons name="star" size={18} color="#F59E0B" />
               <Text style={styles.detailTitle}>التقييمات والآراء</Text>
               {reviewsData && reviewsData.length > 0 && (
-                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, marginRight: "auto" }}>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, marginEnd: "auto" }}>
                   ({reviewsData.length})
                 </Text>
               )}
@@ -489,7 +489,7 @@ export default function CampaignDetailScreen() {
                     </View>
                   </View>
                   {review.comment && (
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginRight: 40 }}>{review.comment}</Text>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginEnd: 40 }}>{review.comment}</Text>
                   )}
                 </View>
               ))
@@ -863,7 +863,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.light.accent,
     marginBottom: 3,
-    marginRight: 2,
+    marginEnd: 2,
   },
   priceValue: {
     fontFamily: "Inter_700Bold",

@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   ticketNotch: {
     position: "absolute",
     top: "50%",
-    right: -8,
+    end: -8,
     width: 16,
     height: 16,
     borderRadius: 8,
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   ticketNotchRight: {
     position: "absolute",
     top: "50%",
-    left: -8,
+    start: -8,
     width: 16,
     height: 16,
     borderRadius: 8,
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   ticketRight: {
     flex: 1,
     padding: 16,
-    paddingRight: 12,
+    paddingEnd: 12,
     justifyContent: "center",
   },
   ticketNumber: {
