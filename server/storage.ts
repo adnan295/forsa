@@ -13,6 +13,7 @@ import {
   type Review,
   type AdminNotification,
   type UserNotification,
+  type SupportTicket,
   users,
   campaigns,
   orders,
@@ -25,6 +26,7 @@ import {
   userNotifications,
   passwordResetTokens,
   emailVerificationTokens,
+  supportTickets,
   insertReviewSchema,
 } from "@shared/schema";
 import { db } from "./db";
@@ -967,6 +969,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: string): Promise<boolean> {
+    await db.delete(supportTickets).where(eq(supportTickets.userId, userId));
     await db.delete(userNotifications).where(eq(userNotifications.userId, userId));
     await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
     await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
@@ -975,6 +978,65 @@ export class DatabaseStorage implements IStorage {
     await db.delete(orders).where(eq(orders.userId, userId));
     const result = await db.delete(users).where(eq(users.id, userId));
     return (result?.rowCount ?? 0) > 0;
+  }
+
+  async createSupportTicket(userId: string, data: { subject: string; message: string; priority: string }): Promise<SupportTicket> {
+    const [ticket] = await db.insert(supportTickets).values({
+      userId,
+      subject: data.subject,
+      message: data.message,
+      priority: data.priority,
+    }).returning();
+    return ticket;
+  }
+
+  async getUserSupportTickets(userId: string): Promise<SupportTicket[]> {
+    return db.select().from(supportTickets)
+      .where(eq(supportTickets.userId, userId))
+      .orderBy(desc(supportTickets.createdAt));
+  }
+
+  async getSupportTicketById(ticketId: string): Promise<SupportTicket | undefined> {
+    const [ticket] = await db.select().from(supportTickets)
+      .where(eq(supportTickets.id, ticketId));
+    return ticket;
+  }
+
+  async getAllSupportTickets(): Promise<(SupportTicket & { username: string; email: string })[]> {
+    const result = await db.select({
+      id: supportTickets.id,
+      userId: supportTickets.userId,
+      subject: supportTickets.subject,
+      message: supportTickets.message,
+      status: supportTickets.status,
+      priority: supportTickets.priority,
+      adminReply: supportTickets.adminReply,
+      repliedAt: supportTickets.repliedAt,
+      closedAt: supportTickets.closedAt,
+      createdAt: supportTickets.createdAt,
+      updatedAt: supportTickets.updatedAt,
+      username: users.username,
+      email: users.email,
+    })
+    .from(supportTickets)
+    .innerJoin(users, eq(supportTickets.userId, users.id))
+    .orderBy(desc(supportTickets.createdAt));
+    return result as any;
+  }
+
+  async updateSupportTicket(ticketId: string, data: { status?: string; adminReply?: string }): Promise<SupportTicket | undefined> {
+    const updateData: any = { updatedAt: new Date() };
+    if (data.status) updateData.status = data.status;
+    if (data.adminReply !== undefined) {
+      updateData.adminReply = data.adminReply;
+      updateData.repliedAt = new Date();
+    }
+    if (data.status === "closed") updateData.closedAt = new Date();
+    const [ticket] = await db.update(supportTickets)
+      .set(updateData)
+      .where(eq(supportTickets.id, ticketId))
+      .returning();
+    return ticket;
   }
 }
 

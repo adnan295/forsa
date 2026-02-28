@@ -48,7 +48,7 @@ function CartItemCard({ item }: { item: CartItem }) {
             <Ionicons name="trophy" size={12} color="#A78BFA" />
             <Text style={styles.itemPrize} numberOfLines={1}>{item.prizeName}</Text>
           </View>
-          <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+          <Text style={styles.itemPrice}>{item.price.toFixed(2)} ر.س</Text>
         </View>
         <Pressable
           onPress={() => {
@@ -61,7 +61,7 @@ function CartItemCard({ item }: { item: CartItem }) {
         </Pressable>
       </View>
       <View style={styles.qtyRow}>
-        <Text style={styles.itemSubtotal}>${(item.price * item.quantity).toFixed(2)}</Text>
+        <Text style={styles.itemSubtotal}>{(item.price * item.quantity).toFixed(2)} ر.س</Text>
         <View style={styles.qtyControls}>
           <Pressable
             onPress={() => {
@@ -173,7 +173,7 @@ export default function CartScreen() {
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryTotal}>${totalPrice.toFixed(2)}</Text>
+                <Text style={styles.summaryTotal}>{totalPrice.toFixed(2)} ر.س</Text>
                 <Text style={styles.summaryLabel}>الإجمالي</Text>
               </View>
             </View>

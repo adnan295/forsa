@@ -232,6 +232,30 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const supportTickets = pgTable("support_tickets", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("open"),
+  priority: text("priority").notNull().default("medium"),
+  adminReply: text("admin_reply"),
+  repliedAt: timestamp("replied_at"),
+  closedAt: timestamp("closed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertSupportTicketSchema = z.object({
+  subject: z.string().min(3, "الموضوع مطلوب"),
+  message: z.string().min(10, "الرسالة قصيرة جداً"),
+  priority: z.enum(["low", "medium", "high"]).default("medium"),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   orders: many(orders),
   tickets: many(tickets),
@@ -356,3 +380,5 @@ export type ActivityLogEntry = typeof activityLog.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type AdminNotification = typeof adminNotifications.$inferSelect;
 export type UserNotification = typeof userNotifications.$inferSelect;
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;

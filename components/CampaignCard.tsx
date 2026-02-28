@@ -139,7 +139,7 @@ export default function CampaignCard({ campaign, onPress }: Props) {
           </Pressable>
 
           <View style={styles.priceTag}>
-            <Text style={styles.priceTagCurrency}>$</Text>
+            <Text style={styles.priceTagCurrency}>ر.س</Text>
             <Text style={styles.priceTagValue}>
               {parseFloat(campaign.productPrice).toFixed(0)}
             </Text>

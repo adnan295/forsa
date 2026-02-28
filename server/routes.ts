@@ -5,7 +5,7 @@ import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
 import { pool, db } from "./db";
 import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, reviews, orders } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, reviews, orders } from "@shared/schema";
 import { sum, count, and, gte, sql } from "drizzle-orm";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
@@ -1303,13 +1303,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/orders/export/csv", requireAdmin as any, async (_req: Request, res: Response) => {
     try {
       const allOrders = await storage.getAllOrders();
+      const escapeCsv = (val: string | null | undefined): string => {
+        const str = (val ?? "").toString().replace(/\r?\n/g, " ");
+        const sanitized = /^[=+\-@]/.test(str) ? "'" + str : str;
+        return '"' + sanitized.replace(/"/g, '""') + '"';
+      };
       const csvHeader = "Order ID,Username,Campaign,Quantity,Total,Payment Method,Payment Status,Shipping Status,Tracking Number,Date\n";
       const csvRows = allOrders.map(o => 
-        `"${o.id}","${o.username}","${o.campaignTitle}",${o.quantity},"${o.totalAmount}","${o.paymentMethod || ''}","${o.paymentStatus || ''}","${o.shippingStatus || ''}","${o.trackingNumber || ''}","${o.createdAt}"`
+        [o.id, o.username, o.campaignTitle, o.quantity, o.totalAmount, o.paymentMethod, o.paymentStatus, o.shippingStatus, o.trackingNumber, o.createdAt]
+          .map(v => escapeCsv(v as any))
+          .join(",")
       ).join("\n");
-      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", "attachment; filename=orders.csv");
-      res.send(csvHeader + csvRows);
+      res.send("\uFEFF" + csvHeader + csvRows);
     } catch (error) {
       console.error("Export CSV error:", error);
       res.status(500).json({ message: "Server error" });
@@ -1636,6 +1643,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   </div>
 </body>
 </html>`);
+  });
+
+  // Support Tickets API - User endpoints
+  app.post("/api/support-tickets", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const parsed = insertSupportTicketSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: parsed.error.flatten() });
+      }
+      const ticket = await storage.createSupportTicket(req.session.userId!, parsed.data);
+      res.json(ticket);
+    } catch (error) {
+      console.error("Create support ticket error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/support-tickets", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const tickets = await storage.getUserSupportTickets(req.session.userId!);
+      res.json(tickets);
+    } catch (error) {
+      console.error("Get support tickets error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/support-tickets/:id", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const ticket = await storage.getSupportTicketById(req.params.id);
+      if (!ticket) return res.status(404).json({ message: "التذكرة غير موجودة" });
+      if (ticket.userId !== req.session.userId!) {
+        return res.status(403).json({ message: "غير مصرح" });
+      }
+      res.json(ticket);
+    } catch (error) {
+      console.error("Get support ticket error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Support Tickets API - Admin endpoints
+  app.get("/api/admin/support-tickets", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const tickets = await storage.getAllSupportTickets();
+      res.json(tickets);
+    } catch (error) {
+      console.error("Get all support tickets error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/admin/support-tickets/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { status, adminReply } = req.body;
+      if (status && !["open", "in_progress", "closed"].includes(status)) {
+        return res.status(400).json({ message: "حالة غير صالحة" });
+      }
+      const ticket = await storage.updateSupportTicket(req.params.id, { status, adminReply });
+      if (!ticket) return res.status(404).json({ message: "التذكرة غير موجودة" });
+      if (adminReply) {
+        await storage.createUserNotification(
+          ticket.userId,
+          "support_reply",
+          "رد على تذكرة الدعم 📩",
+          `تم الرد على تذكرتك: ${ticket.subject}`,
+        );
+      }
+      res.json(ticket);
+    } catch (error) {
+      console.error("Update support ticket error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
   });
 
   const httpServer = createServer(app);

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,18 @@ import {
   Pressable,
   Platform,
   Linking,
+  TextInput,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
+import { apiRequest, queryClient } from "@/lib/query-client";
+import { useAuth } from "@/lib/auth-context";
 
 type PageType = "about" | "terms" | "privacy" | "contact";
 
@@ -142,61 +148,291 @@ function PrivacyContent() {
   );
 }
 
+interface SupportTicket {
+  id: number;
+  subject: string;
+  message: string;
+  status: "open" | "in_progress" | "closed";
+  priority: "low" | "medium" | "high";
+  adminReply?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  closedAt?: string | null;
+}
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  open: { label: "مفتوحة", color: "#F59E0B", bg: "#FEF3C7" },
+  in_progress: { label: "قيد المعالجة", color: "#3B82F6", bg: "#DBEAFE" },
+  closed: { label: "مغلقة", color: "#10B981", bg: "#D1FAE5" },
+};
+
+const PRIORITY_OPTIONS: { value: "low" | "medium" | "high"; label: string; color: string }[] = [
+  { value: "low", label: "منخفضة", color: "#10B981" },
+  { value: "medium", label: "متوسطة", color: "#F59E0B" },
+  { value: "high", label: "عالية", color: "#EF4444" },
+];
+
+function TicketStatusPill({ status }: { status: string }) {
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.open;
+  return (
+    <View style={[ticketStyles.statusPill, { backgroundColor: config.bg }]}>
+      <Text style={[ticketStyles.statusPillText, { color: config.color }]}>{config.label}</Text>
+    </View>
+  );
+}
+
+function TicketDetailView({ ticket, onBack }: { ticket: SupportTicket; onBack: () => void }) {
+  const priorityConfig = PRIORITY_OPTIONS.find((p) => p.value === ticket.priority);
+  return (
+    <>
+      <Pressable onPress={onBack} style={ticketStyles.backRow}>
+        <Ionicons name="chevron-forward" size={20} color={Colors.light.accent} />
+        <Text style={ticketStyles.backText}>العودة للتذاكر</Text>
+      </Pressable>
+      <ContentCard title={ticket.subject}>
+        <View style={ticketStyles.detailMeta}>
+          <TicketStatusPill status={ticket.status} />
+          {priorityConfig && (
+            <View style={[ticketStyles.statusPill, { backgroundColor: priorityConfig.color + "20" }]}>
+              <Text style={[ticketStyles.statusPillText, { color: priorityConfig.color }]}>
+                {priorityConfig.label}
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={[styles.paragraph, { marginTop: 12 }]}>{ticket.message}</Text>
+        <Text style={ticketStyles.dateText}>
+          {new Date(ticket.createdAt).toLocaleDateString("ar-SA", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </Text>
+      </ContentCard>
+      {ticket.adminReply && (
+        <ContentCard title="رد الإدارة">
+          <View style={ticketStyles.adminReplyBox}>
+            <Ionicons name="chatbubble" size={16} color={Colors.light.accent} />
+            <Text style={[styles.paragraph, { flex: 1 }]}>{ticket.adminReply}</Text>
+          </View>
+        </ContentCard>
+      )}
+    </>
+  );
+}
+
+function TicketForm({ onCancel, onSuccess }: { onCancel: () => void; onSuccess: () => void }) {
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/support-tickets", { subject, message, priority });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/support-tickets"] });
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      Alert.alert("خطأ", error.message || "حدث خطأ أثناء إنشاء التذكرة");
+    },
+  });
+
+  const isValid = subject.trim().length > 0 && message.trim().length > 0;
+
+  return (
+    <>
+      <Pressable onPress={onCancel} style={ticketStyles.backRow}>
+        <Ionicons name="chevron-forward" size={20} color={Colors.light.accent} />
+        <Text style={ticketStyles.backText}>العودة للتذاكر</Text>
+      </Pressable>
+      <ContentCard title="تذكرة جديدة">
+        <Text style={ticketStyles.fieldLabel}>الموضوع</Text>
+        <TextInput
+          style={ticketStyles.input}
+          value={subject}
+          onChangeText={setSubject}
+          placeholder="أدخل موضوع التذكرة"
+          placeholderTextColor={Colors.light.textSecondary}
+          textAlign="right"
+        />
+        <Text style={ticketStyles.fieldLabel}>الرسالة</Text>
+        <TextInput
+          style={[ticketStyles.input, ticketStyles.textArea]}
+          value={message}
+          onChangeText={setMessage}
+          placeholder="اكتب رسالتك بالتفصيل..."
+          placeholderTextColor={Colors.light.textSecondary}
+          textAlign="right"
+          multiline
+          numberOfLines={5}
+          textAlignVertical="top"
+        />
+        <Text style={ticketStyles.fieldLabel}>الأولوية</Text>
+        <View style={ticketStyles.priorityRow}>
+          {PRIORITY_OPTIONS.map((opt) => (
+            <Pressable
+              key={opt.value}
+              onPress={() => setPriority(opt.value)}
+              style={[
+                ticketStyles.priorityOption,
+                priority === opt.value && { backgroundColor: opt.color + "20", borderColor: opt.color },
+              ]}
+            >
+              <Text
+                style={[
+                  ticketStyles.priorityOptionText,
+                  priority === opt.value && { color: opt.color, fontFamily: "Inter_600SemiBold" },
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Pressable
+          onPress={() => createMutation.mutate()}
+          disabled={!isValid || createMutation.isPending}
+          style={[ticketStyles.submitBtn, (!isValid || createMutation.isPending) && { opacity: 0.5 }]}
+        >
+          {createMutation.isPending ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <Ionicons name="send" size={18} color="#fff" />
+              <Text style={ticketStyles.submitBtnText}>إرسال التذكرة</Text>
+            </>
+          )}
+        </Pressable>
+      </ContentCard>
+    </>
+  );
+}
+
 function ContactContent() {
-  const contactItems = [
-    {
-      icon: "mail" as const,
-      label: "البريد الإلكتروني",
-      value: "info@forsa.app",
-      color: "#3B82F6",
-      onPress: () => Linking.openURL("mailto:info@forsa.app"),
-    },
-    {
-      icon: "logo-whatsapp" as const,
-      label: "واتساب",
-      value: "تواصل معنا عبر واتساب",
-      color: "#25D366",
-      // TODO: Replace with your real WhatsApp number before store submission
-      onPress: () => Linking.openURL("https://wa.me/966500000000"),
-    },
-    {
-      icon: "logo-instagram" as const,
-      label: "انستقرام",
-      value: "@forsa.app",
-      color: "#E4405F",
-      // TODO: Replace with your real Instagram handle before store submission
-      onPress: () => Linking.openURL("https://instagram.com/forsa.app"),
-    },
-  ];
+  const { user } = useAuth();
+  const [view, setView] = useState<"list" | "form" | "detail">("list");
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+
+  const ticketsQuery = useQuery<SupportTicket[]>({
+    queryKey: ["/api/support-tickets"],
+    enabled: !!user,
+  });
+
+  const tickets = ticketsQuery.data || [];
+
+  if (view === "form" && user) {
+    return (
+      <TicketForm
+        onCancel={() => setView("list")}
+        onSuccess={() => setView("list")}
+      />
+    );
+  }
+
+  if (view === "detail" && selectedTicket) {
+    return (
+      <TicketDetailView
+        ticket={selectedTicket}
+        onBack={() => {
+          setSelectedTicket(null);
+          setView("list");
+        }}
+      />
+    );
+  }
 
   return (
     <>
       <ContentCard title="تواصل معنا">
         <Text style={styles.paragraph}>
-          فريق الدعم متاح لمساعدتك على مدار الساعة. لا تتردد في التواصل معنا لأي استفسار أو ملاحظة.
+          فريق الدعم متاح لمساعدتك على مدار الساعة. أرسل تذكرة دعم وسنرد عليك في أقرب وقت.
         </Text>
       </ContentCard>
-      <View style={styles.contactList}>
-        {contactItems.map((item) => (
+
+      {user && (
+        <>
           <Pressable
-            key={item.label}
-            onPress={item.onPress}
+            onPress={() => setView("form")}
             style={({ pressed }) => [
-              styles.contactItem,
+              ticketStyles.newTicketBtn,
               pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
             ]}
           >
-            <View style={[styles.contactIconWrap, { backgroundColor: item.color + "15" }]}>
-              <Ionicons name={item.icon} size={22} color={item.color} />
-            </View>
-            <View style={styles.contactInfo}>
-              <Text style={styles.contactLabel}>{item.label}</Text>
-              <Text style={styles.contactValue}>{item.value}</Text>
-            </View>
-            <Ionicons name="open-outline" size={18} color={Colors.light.textSecondary} />
+            <LinearGradient
+              colors={[Colors.light.accent, Colors.light.accentDark]}
+              style={ticketStyles.newTicketGradient}
+            >
+              <Ionicons name="add-circle" size={22} color="#fff" />
+              <Text style={ticketStyles.newTicketText}>تذكرة دعم جديدة</Text>
+            </LinearGradient>
           </Pressable>
-        ))}
+
+          {ticketsQuery.isLoading ? (
+            <View style={ticketStyles.loadingBox}>
+              <ActivityIndicator color={Colors.light.accent} />
+            </View>
+          ) : tickets.length > 0 ? (
+            <View style={styles.contactList}>
+              {tickets.map((ticket) => (
+                <Pressable
+                  key={ticket.id}
+                  onPress={() => {
+                    setSelectedTicket(ticket);
+                    setView("detail");
+                  }}
+                  style={({ pressed }) => [
+                    styles.contactItem,
+                    pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+                  ]}
+                >
+                  <View style={[styles.contactIconWrap, { backgroundColor: Colors.light.accent + "15" }]}>
+                    <Ionicons name="ticket" size={22} color={Colors.light.accent} />
+                  </View>
+                  <View style={styles.contactInfo}>
+                    <Text style={styles.contactLabel} numberOfLines={1}>{ticket.subject}</Text>
+                    <View style={ticketStyles.ticketMetaRow}>
+                      <TicketStatusPill status={ticket.status} />
+                      <Text style={ticketStyles.ticketDate}>
+                        {new Date(ticket.createdAt).toLocaleDateString("ar-SA")}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-back" size={18} color={Colors.light.textSecondary} />
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <View style={ticketStyles.emptyBox}>
+              <Ionicons name="chatbubbles-outline" size={40} color={Colors.light.textSecondary} />
+              <Text style={ticketStyles.emptyText}>لا توجد تذاكر دعم حالياً</Text>
+            </View>
+          )}
+        </>
+      )}
+
+      <View style={styles.contactList}>
+        <Pressable
+          onPress={() => Linking.openURL("mailto:info@forsa.app")}
+          style={({ pressed }) => [
+            styles.contactItem,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <View style={[styles.contactIconWrap, { backgroundColor: "#3B82F6" + "15" }]}>
+            <Ionicons name="mail" size={22} color="#3B82F6" />
+          </View>
+          <View style={styles.contactInfo}>
+            <Text style={styles.contactLabel}>البريد الإلكتروني</Text>
+            <Text style={styles.contactValue}>info@forsa.app</Text>
+          </View>
+          <Ionicons name="open-outline" size={18} color={Colors.light.textSecondary} />
+        </Pressable>
       </View>
+
       <ContentCard title="ساعات العمل">
         <FeatureRow icon="time" text="السبت - الخميس: 9 صباحاً - 9 مساءً" color="#7C3AED" />
         <FeatureRow icon="time" text="الجمعة: 2 ظهراً - 9 مساءً" color="#EC4899" />
@@ -467,5 +703,154 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
     marginTop: 2,
+  },
+});
+
+const ticketStyles = StyleSheet.create({
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+  },
+  statusPillText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+  },
+  backRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 14,
+  },
+  backText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: Colors.light.accent,
+    writingDirection: "rtl",
+  },
+  detailMeta: {
+    flexDirection: "row-reverse",
+    gap: 8,
+    marginBottom: 4,
+  },
+  dateText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginTop: 14,
+  },
+  adminReplyBox: {
+    flexDirection: "row-reverse",
+    gap: 10,
+    backgroundColor: Colors.light.accent + "08",
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.light.accent + "20",
+  },
+  fieldLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  input: {
+    backgroundColor: Colors.light.inputBg,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: Colors.light.text,
+    writingDirection: "rtl",
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  textArea: {
+    minHeight: 120,
+  },
+  priorityRow: {
+    flexDirection: "row-reverse",
+    gap: 10,
+    marginTop: 4,
+  },
+  priorityOption: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.inputBg,
+  },
+  priorityOptionText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+  },
+  submitBtn: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.light.accent,
+    borderRadius: 16,
+    paddingVertical: 14,
+    marginTop: 20,
+  },
+  submitBtnText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: "#fff",
+  },
+  newTicketBtn: {
+    marginBottom: 14,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+  newTicketGradient: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: 18,
+  },
+  newTicketText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: "#fff",
+  },
+  loadingBox: {
+    paddingVertical: 30,
+    alignItems: "center",
+  },
+  emptyBox: {
+    alignItems: "center",
+    paddingVertical: 30,
+    gap: 10,
+    marginBottom: 14,
+  },
+  emptyText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+  },
+  ticketMetaRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  ticketDate: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: Colors.light.textSecondary,
   },
 });

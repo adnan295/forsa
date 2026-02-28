@@ -324,10 +324,10 @@ export default function CheckoutScreen() {
               <>
                 {cartItems.map((item) => (
                   <View key={item.campaignId} style={styles.cartItemRow}>
-                    <Text style={styles.cartItemPrice}>${(item.price * item.quantity).toFixed(2)}</Text>
+                    <Text style={styles.cartItemPrice}>{(item.price * item.quantity).toFixed(2)} ر.س</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.campaignTitle}>{item.title}</Text>
-                      <Text style={styles.summaryLabel}>{item.quantity} × ${item.price.toFixed(2)}</Text>
+                      <Text style={styles.summaryLabel}>{item.quantity} × {item.price.toFixed(2)} ر.س</Text>
                     </View>
                   </View>
                 ))}
@@ -336,7 +336,7 @@ export default function CheckoutScreen() {
               <>
                 <Text style={styles.campaignTitle}>{campaign!.title}</Text>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryValue}>${unitPrice.toFixed(2)}</Text>
+                  <Text style={styles.summaryValue}>{unitPrice.toFixed(2)} ر.س</Text>
                   <Text style={styles.summaryLabel}>سعر المنتج</Text>
                 </View>
                 <View style={styles.summaryRow}>
@@ -348,7 +348,7 @@ export default function CheckoutScreen() {
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text style={styles.subtotalValue}>
-                ${subtotal.toFixed(2)}
+                {subtotal.toFixed(2)} ر.س
               </Text>
               <Text style={styles.subtotalLabel}>المجموع الفرعي ({totalItemCount} منتج)</Text>
             </View>
@@ -524,8 +524,7 @@ export default function CheckoutScreen() {
                   color={Colors.light.success}
                 />
                 <Text style={styles.couponSuccessText}>
-                  تم تطبيق خصم {appliedCoupon.discountPercent}% (-$
-                  {discountAmount.toFixed(2)})
+                  تم تطبيق خصم {appliedCoupon.discountPercent}% (-{discountAmount.toFixed(2)} ر.س)
                 </Text>
               </View>
             )}
@@ -605,21 +604,21 @@ export default function CheckoutScreen() {
             <View style={styles.divider} />
             <View style={styles.totalRow}>
               <Text style={styles.totalRowValue}>
-                ${subtotal.toFixed(2)}
+                {subtotal.toFixed(2)} ر.س
               </Text>
               <Text style={styles.totalRowLabel}>المجموع الفرعي</Text>
             </View>
             {appliedCoupon && (
               <View style={styles.totalRow}>
                 <Text style={[styles.totalRowValue, { color: Colors.light.success }]}>
-                  -${discountAmount.toFixed(2)}
+                  -{discountAmount.toFixed(2)} ر.س
                 </Text>
                 <Text style={styles.totalRowLabel}>الخصم</Text>
               </View>
             )}
             <View style={styles.totalDivider} />
             <View style={styles.totalRow}>
-              <Text style={styles.grandTotal}>${total.toFixed(2)}</Text>
+              <Text style={styles.grandTotal}>{total.toFixed(2)} ر.س</Text>
               <Text style={styles.grandTotalLabel}>الإجمالي</Text>
             </View>
           </View>
@@ -645,7 +644,7 @@ export default function CheckoutScreen() {
                 <>
                   <Text style={styles.placeOrderText}>تأكيد الطلب</Text>
                   <Text style={styles.placeOrderPrice}>
-                    ${total.toFixed(2)}
+                    {total.toFixed(2)} ر.س
                   </Text>
                 </>
               )}

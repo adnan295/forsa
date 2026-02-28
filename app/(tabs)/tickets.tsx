@@ -72,7 +72,7 @@ function OrderItem({ order }: { order: Order }) {
           </View>
         </View>
         <View style={styles.orderAmountArea}>
-          <Text style={styles.orderAmount}>${parseFloat(order.totalAmount).toFixed(2)}</Text>
+          <Text style={styles.orderAmount}>{parseFloat(order.totalAmount).toFixed(2)} ر.س</Text>
           <Text style={styles.orderQty}>{order.quantity} منتج</Text>
         </View>
       </View>

@@ -25,12 +25,13 @@ import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
 
-type AdminTab = "dashboard" | "orders" | "users" | "campaigns" | "payments" | "coupons" | "notifications" | "activity";
+type AdminTab = "dashboard" | "orders" | "users" | "campaigns" | "payments" | "coupons" | "notifications" | "activity" | "support";
 
 const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "dashboard", label: "الرئيسية", icon: "grid" },
   { key: "notifications", label: "الإشعارات", icon: "notifications" },
   { key: "orders", label: "الطلبات", icon: "receipt" },
+  { key: "support", label: "تذاكر الدعم", icon: "chatbubbles" },
   { key: "users", label: "المستخدمين", icon: "people" },
   { key: "campaigns", label: "الحملات", icon: "megaphone" },
   { key: "payments", label: "الدفع", icon: "card" },
@@ -86,6 +87,7 @@ export default function AdminPanel() {
         {activeTab === "campaigns" && <CampaignsSection />}
         {activeTab === "payments" && <PaymentsSection />}
         {activeTab === "coupons" && <CouponsSection />}
+        {activeTab === "support" && <SupportTicketsSection />}
         {activeTab === "activity" && <ActivitySection />}
       </View>
     </View>
@@ -118,7 +120,7 @@ function SalesChart() {
         <Text style={styles.sectionTitle}>المبيعات (آخر 7 أيام)</Text>
         <View style={chartStyles.summaryRow}>
           <View style={chartStyles.summaryItem}>
-            <Text style={chartStyles.summaryValue}>${totalSales.toFixed(0)}</Text>
+            <Text style={chartStyles.summaryValue}>{totalSales.toFixed(0)} ر.س</Text>
             <Text style={chartStyles.summaryLabel}>إجمالي</Text>
           </View>
           <View style={[chartStyles.summaryItem, { marginRight: 16 }]}>
@@ -135,7 +137,7 @@ function SalesChart() {
           return (
             <View key={day.date} style={chartStyles.barCol}>
               <Text style={chartStyles.barValue}>
-                {val > 0 ? `$${val >= 1000 ? (val / 1000).toFixed(1) + "k" : val.toFixed(0)}` : ""}
+                {val > 0 ? `${val >= 1000 ? (val / 1000).toFixed(1) + "k" : val.toFixed(0)} ر.س` : ""}
               </Text>
               <View style={chartStyles.barTrack}>
                 <View
@@ -173,7 +175,7 @@ function DashboardSection() {
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sectionPadding}>
       <Text style={styles.sectionTitle}>نظرة عامة</Text>
       <View style={styles.statsGrid}>
-        <StatCard icon="cash" label="إجمالي الإيرادات" value={`$${stats?.totalRevenue || "0"}`} color="#9B59B6" />
+        <StatCard icon="cash" label="إجمالي الإيرادات" value={`${stats?.totalRevenue || "0"} ر.س`} color="#9B59B6" />
         <StatCard icon="receipt" label="إجمالي الطلبات" value={stats?.totalOrders?.toString() || "0"} color="#3498DB" />
         <StatCard icon="people" label="المستخدمين" value={stats?.totalUsers?.toString() || "0"} color="#2ECC71" />
         <StatCard icon="flame" label="حملات نشطة" value={stats?.activeCampaigns?.toString() || "0"} color={Colors.light.accent} />
@@ -306,7 +308,7 @@ function OrdersSection() {
               <Text style={styles.orderDetailText}>{item.campaignTitle || "حملة"}</Text>
             </View>
             <View style={styles.orderFooter}>
-              <Text style={styles.orderAmount}>${item.totalAmount}</Text>
+              <Text style={styles.orderAmount}>{item.totalAmount} ر.س</Text>
               <View style={[styles.statusPill, { backgroundColor: item.status === "paid" ? "#2ECC7120" : "#F39C1220" }]}>
                 <Text style={[styles.statusPillText, { color: item.status === "paid" ? "#2ECC71" : "#F39C12" }]}>{getOrderStatusAr(item.status)}</Text>
               </View>
@@ -525,13 +527,234 @@ function UsersSection() {
               </View>
               <View style={styles.userStat}>
                 <Ionicons name="cash" size={12} color={Colors.light.textSecondary} />
-                <Text style={styles.userStatText}>${item.totalSpent || "0"}</Text>
+                <Text style={styles.userStatText}>{item.totalSpent || "0"} ر.س</Text>
               </View>
             </View>
           </View>
         </View>
       )}
     />
+  );
+}
+
+type TicketStatusFilter = "all" | "open" | "in_progress" | "closed";
+
+function SupportTicketsSection() {
+  const { data: tickets, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/support-tickets"],
+    refetchInterval: 10000,
+  });
+  const [statusFilter, setStatusFilter] = useState<TicketStatusFilter>("all");
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
+  if (isLoading) return <LoadingView />;
+
+  const filteredTickets = (tickets || []).filter((t: any) =>
+    statusFilter === "all" ? true : t.status === statusFilter
+  );
+
+  const getStatusAr = (s: string) => {
+    const map: Record<string, string> = { open: "مفتوحة", in_progress: "قيد المعالجة", closed: "مغلقة" };
+    return map[s] || s;
+  };
+  const getStatusColor = (s: string) => {
+    const map: Record<string, string> = { open: "#F39C12", in_progress: "#3498DB", closed: "#2ECC71" };
+    return map[s] || "#666";
+  };
+  const getPriorityAr = (s: string) => {
+    const map: Record<string, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية" };
+    return map[s] || s;
+  };
+  const getPriorityColor = (s: string) => {
+    const map: Record<string, string> = { low: "#2ECC71", medium: "#F39C12", high: "#E74C3C" };
+    return map[s] || "#666";
+  };
+
+  const filters: { key: TicketStatusFilter; label: string }[] = [
+    { key: "all", label: "الكل" },
+    { key: "open", label: "مفتوحة" },
+    { key: "in_progress", label: "قيد المعالجة" },
+    { key: "closed", label: "مغلقة" },
+  ];
+
+  const openCount = (tickets || []).filter((t: any) => t.status === "open").length;
+  const inProgressCount = (tickets || []).filter((t: any) => t.status === "in_progress").length;
+
+  return (
+    <>
+      <FlatList
+        data={filteredTickets}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.sectionPadding}
+        ListHeaderComponent={
+          <View>
+            <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <Text style={styles.sectionTitle}>تذاكر الدعم ({tickets?.length || 0})</Text>
+              {(openCount > 0 || inProgressCount > 0) && (
+                <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+                  {openCount > 0 && (
+                    <View style={[styles.statusPill, { backgroundColor: "#F39C1220" }]}>
+                      <Text style={[styles.statusPillText, { color: "#F39C12" }]}>{openCount} جديدة</Text>
+                    </View>
+                  )}
+                  {inProgressCount > 0 && (
+                    <View style={[styles.statusPill, { backgroundColor: "#3498DB20" }]}>
+                      <Text style={[styles.statusPillText, { color: "#3498DB" }]}>{inProgressCount} قيد المعالجة</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+            <View style={[styles.statusPicker, { marginBottom: 16 }]}>
+              {filters.map((f) => (
+                <Pressable
+                  key={f.key}
+                  onPress={() => { setStatusFilter(f.key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  style={[styles.statusOption, statusFilter === f.key && styles.statusOptionActive]}
+                >
+                  <Text style={[styles.statusOptionText, statusFilter === f.key && styles.statusOptionTextActive]}>{f.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        }
+        ListEmptyComponent={<Text style={styles.emptyText}>لا توجد تذاكر</Text>}
+        renderItem={({ item }) => (
+          <Pressable
+            style={styles.orderCard}
+            onPress={() => { setSelectedTicket(item); setShowDetailModal(true); }}
+          >
+            <View style={styles.orderHeader}>
+              <Text style={styles.orderIdText} numberOfLines={1}>#{item.id.slice(0, 8)}</Text>
+              <View style={{ flexDirection: "row-reverse", gap: 6 }}>
+                <View style={[styles.statusPill, { backgroundColor: getStatusColor(item.status) + "20" }]}>
+                  <Text style={[styles.statusPillText, { color: getStatusColor(item.status) }]}>{getStatusAr(item.status)}</Text>
+                </View>
+                <View style={[styles.statusPill, { backgroundColor: getPriorityColor(item.priority) + "20" }]}>
+                  <Text style={[styles.statusPillText, { color: getPriorityColor(item.priority) }]}>{getPriorityAr(item.priority)}</Text>
+                </View>
+              </View>
+            </View>
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 4 }}>{item.subject}</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 8 }} numberOfLines={2}>{item.message}</Text>
+            <View style={styles.orderFooter}>
+              <View style={styles.orderRow}>
+                <Ionicons name="person" size={14} color={Colors.light.textSecondary} />
+                <Text style={styles.orderDetailText}>{item.username || "مستخدم"}</Text>
+              </View>
+              <Text style={styles.orderDate}>{new Date(item.createdAt).toLocaleDateString("ar-SA")}</Text>
+            </View>
+          </Pressable>
+        )}
+      />
+      <TicketDetailModal
+        visible={showDetailModal}
+        ticket={selectedTicket}
+        onClose={() => setShowDetailModal(false)}
+      />
+    </>
+  );
+}
+
+function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; ticket: any; onClose: () => void }) {
+  const [reply, setReply] = useState("");
+  const [status, setStatus] = useState(ticket?.status || "open");
+
+  React.useEffect(() => {
+    if (ticket) {
+      setReply(ticket.adminReply || "");
+      setStatus(ticket.status || "open");
+    }
+  }, [ticket]);
+
+  const mutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", `/api/admin/support-tickets/${ticket.id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/support-tickets"] });
+      onClose();
+    },
+    onError: (err: any) => Alert.alert("خطأ", err.message),
+  });
+
+  const getStatusAr = (s: string) => {
+    const map: Record<string, string> = { open: "مفتوحة", in_progress: "قيد المعالجة", closed: "مغلقة" };
+    return map[s] || s;
+  };
+  const getPriorityAr = (s: string) => {
+    const map: Record<string, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية" };
+    return map[s] || s;
+  };
+  const getPriorityColor = (s: string) => {
+    const map: Record<string, string> = { low: "#2ECC71", medium: "#F39C12", high: "#E74C3C" };
+    return map[s] || "#666";
+  };
+
+  const statuses = [
+    { key: "open", label: "مفتوحة" },
+    { key: "in_progress", label: "قيد المعالجة" },
+    { key: "closed", label: "مغلقة" },
+  ];
+
+  if (!ticket) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.container}>
+          <View style={modalStyles.header}>
+            <Text style={modalStyles.title}>تفاصيل التذكرة</Text>
+            <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
+          </View>
+          <ScrollView contentContainerStyle={modalStyles.scrollContent}>
+            <View style={orderMgmtStyles.infoSection}>
+              <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <Text style={orderMgmtStyles.infoSectionTitle}>{ticket.subject}</Text>
+                <View style={[styles.statusPill, { backgroundColor: getPriorityColor(ticket.priority) + "20" }]}>
+                  <Text style={[styles.statusPillText, { color: getPriorityColor(ticket.priority) }]}>{getPriorityAr(ticket.priority)}</Text>
+                </View>
+              </View>
+              <View style={orderMgmtStyles.infoRow}>
+                <Ionicons name="person" size={14} color={Colors.light.textSecondary} />
+                <Text style={orderMgmtStyles.infoText}>{ticket.username || "مستخدم"}</Text>
+              </View>
+              <View style={orderMgmtStyles.infoRow}>
+                <Ionicons name="time" size={14} color={Colors.light.textSecondary} />
+                <Text style={orderMgmtStyles.infoText}>{new Date(ticket.createdAt).toLocaleString("ar-SA")}</Text>
+              </View>
+            </View>
+
+            <View style={orderMgmtStyles.infoSection}>
+              <Text style={orderMgmtStyles.infoSectionTitle}>رسالة المستخدم</Text>
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", lineHeight: 22 }}>{ticket.message}</Text>
+            </View>
+
+            <Text style={modalStyles.inputLabel}>حالة التذكرة</Text>
+            <View style={styles.statusPicker}>
+              {statuses.map((s) => (
+                <Pressable key={s.key} onPress={() => setStatus(s.key)} style={[styles.statusOption, status === s.key && styles.statusOptionActive]}>
+                  <Text style={[styles.statusOptionText, status === s.key && styles.statusOptionTextActive]}>{s.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <ModalInput label="الرد على التذكرة" value={reply} onChangeText={setReply} placeholder="اكتب ردك هنا..." multiline />
+
+            <Pressable
+              onPress={() => mutation.mutate({ status, adminReply: reply || undefined })}
+              disabled={mutation.isPending}
+              style={[modalStyles.createBtn, mutation.isPending && { opacity: 0.6 }]}
+            >
+              {mutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>حفظ التحديث</Text>}
+            </Pressable>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -616,7 +839,7 @@ function CampaignsSection() {
             </View>
             <View style={styles.campaignInfo}>
               <Text style={styles.campaignInfoText}>الجائزة: {item.prizeName}</Text>
-              <Text style={styles.campaignInfoText}>السعر: ${item.productPrice}</Text>
+              <Text style={styles.campaignInfoText}>السعر: {item.productPrice} ر.س</Text>
               <Text style={styles.campaignInfoText}>المباع: {item.soldQuantity}/{item.totalQuantity}</Text>
             </View>
             <View style={styles.campaignProgressWrap}>
@@ -1135,7 +1358,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
             </View>
             <ModalInput label="العنوان *" value={title} onChangeText={setTitle} placeholder="اسم الحملة" />
             <ModalInput label="الوصف *" value={description} onChangeText={setDescription} placeholder="وصف المنتج" multiline />
-            <ModalInput label="السعر ($) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
+            <ModalInput label="السعر (ر.س) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
             <ModalInput label="الكمية الإجمالية *" value={quantity} onChangeText={setQuantity} placeholder="4000" keyboardType="number-pad" />
             <ModalInput label="اسم الجائزة *" value={prizeName} onChangeText={setPrizeName} placeholder="iPhone 16 Pro Max" />
             <ModalInput label="وصف الجائزة" value={prizeDesc} onChangeText={setPrizeDesc} placeholder="تفاصيل إضافية" multiline />

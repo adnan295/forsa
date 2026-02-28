@@ -86,10 +86,10 @@ Comprehensive admin dashboard with 7 sections:
 - GET /api/admin/activity-log - audit trail
 
 ## Database Tables
-- users (with fullName, phone, address, city, country, emailVerified, referralCode, referredBy), campaigns (with category, endsAt), orders (with shipping_status, tracking_number, shipping_address), tickets, payment_methods, coupons, activity_log, reviews, admin_notifications, user_notifications
+- users (with fullName, phone, address, city, country, emailVerified, referralCode, referredBy), campaigns (with category, endsAt), orders (with shipping_status, tracking_number, shipping_address), tickets, payment_methods, coupons, activity_log, reviews, admin_notifications, user_notifications, support_tickets, email_verification_tokens, password_reset_tokens
 
 ## Design
-- Luxury theme: Navy (#0A1628) + Metallic Gold (#D4A853)
+- Luxury theme: Purple (#7C3AED) + Pink (#EC4899) gradient
 - Inter font family
 - Tab-based navigation with 3 tabs
 - Full Arabic UI with RTL support
@@ -120,7 +120,11 @@ Comprehensive admin dashboard with 7 sections:
 - Email OTP verification: 6-digit code sent on registration, POST /api/auth/verify-email, POST /api/auth/resend-verification, email_verification_tokens table, OTP input screen in auth.tsx with auto-focus and resend countdown (60s)
 - Delete account: DELETE /api/auth/delete-account endpoint, confirmation dialog in profile page, deletes all user data (orders, tickets, notifications, reviews)
 - External privacy policy and terms pages: GET /privacy-policy and GET /terms serve standalone HTML pages for App Store/Google Play submission
-- App language updated: "سحوبات" (raffles/draws) replaced with "هدايا" (gifts) throughout entire app — all UI screens, server notifications, email templates, landing page, FAQ, admin panel. "السحب" → "اختيار الفائز". Contact info placeholders in info.tsx updated with proper URLs
+- App language updated: "سحوبات" (raffles/draws) replaced with "هدايا" (gifts) throughout entire app — all UI screens, server notifications, email templates, landing page, FAQ, admin panel. "السحب" → "اختيار الفائز"
+- Support tickets system: support_tickets table (id, userId, subject, message, status, priority, adminReply, repliedAt, closedAt), replaced WhatsApp/Instagram contact with in-app ticket system. User API: POST/GET /api/support-tickets, GET /api/support-tickets/:id. Admin API: GET /api/admin/support-tickets, PUT /api/admin/support-tickets/:id. Admin gets "تذاكر الدعم" tab in admin panel. User gets ticket form + list in contact page. Admin reply sends user notification.
+- Currency: Changed from $ to ر.س (Saudi Riyal) across all screens
+- Trust proxy: Added app.set("trust proxy", 1) to fix rate limiter behind Replit proxy
+- CSV export: Fixed quote escaping, newline stripping, formula injection prevention, UTF-8 BOM for Arabic support
 
 ## Admin Credentials
 - Username: admin
