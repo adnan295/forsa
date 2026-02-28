@@ -100,9 +100,14 @@ export default function CartScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+      <LinearGradient
+        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}
+      >
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-forward" size={24} color={Colors.light.text} />
+          <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
         </Pressable>
         <Text style={styles.headerTitle}>سلة المشتريات</Text>
         {items.length > 0 ? (
@@ -122,12 +127,12 @@ export default function CartScreen() {
             }}
             style={styles.clearBtn}
           >
-            <Ionicons name="trash-outline" size={20} color={Colors.light.danger} />
+            <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
           </Pressable>
         ) : (
           <View style={{ width: 40 }} />
         )}
-      </View>
+      </LinearGradient>
 
       {items.length === 0 ? (
         <View style={styles.emptyState}>
@@ -219,29 +224,26 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: Colors.light.progressBg,
+    backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
   headerTitle: {
     fontFamily: "Inter_700Bold",
     fontSize: 20,
-    color: Colors.light.text,
+    color: "#FFFFFF",
     writingDirection: "rtl",
   },
   clearBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "rgba(239,68,68,0.08)",
+    backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },

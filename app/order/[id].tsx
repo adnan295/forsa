@@ -23,6 +23,7 @@ import { useAuth } from "@/lib/auth-context";
 import { queryClient, getApiUrl } from "@/lib/query-client";
 import type { Order, Campaign } from "@shared/schema";
 import * as Clipboard from "expo-clipboard";
+import { LinearGradient } from "expo-linear-gradient";
 
 const SHIPPING_STEPS = [
   { key: "pending", label: "الطلب مستلم" },
@@ -214,21 +215,24 @@ export default function OrderDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <View
+      <LinearGradient
+        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
         style={[
           styles.header,
           { paddingTop: Platform.OS === "web" ? 67 : insets.top },
         ]}
       >
         <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-forward" size={24} color={Colors.light.text} />
+          <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>تفاصيل الطلب</Text>
           <Text style={styles.headerOrderId}>#{order.id.slice(0, 8)}</Text>
         </View>
         <View style={{ width: 40 }} />
-      </View>
+      </LinearGradient>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -638,9 +642,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
     shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.06,
@@ -650,8 +651,10 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
   headerCenter: {
     alignItems: "center",
@@ -659,14 +662,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: "Inter_700Bold",
     fontSize: 18,
-    color: Colors.light.text,
+    color: "#FFFFFF",
     textAlign: "center",
     writingDirection: "rtl",
   },
   headerOrderId: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
-    color: Colors.light.textSecondary,
+    color: "rgba(255,255,255,0.7)",
     marginTop: 2,
   },
   statusCard: {

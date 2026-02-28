@@ -241,18 +241,21 @@ export default function CheckoutScreen() {
   if (!isProfileComplete) {
     return (
       <View style={styles.container}>
-        <View
+        <LinearGradient
+          colors={["#7C3AED", "#A855F7", "#EC4899"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
           style={[
             styles.header,
             { paddingTop: Platform.OS === "web" ? 67 : insets.top },
           ]}
         >
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-forward" size={24} color={Colors.light.text} />
+            <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
           </Pressable>
           <Text style={styles.headerTitle}>إتمام الشراء</Text>
           <View style={{ width: 40 }} />
-        </View>
+        </LinearGradient>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
           <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(239,68,68,0.1)", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
             <Ionicons name="person-circle-outline" size={44} color={Colors.light.danger} />
@@ -285,18 +288,21 @@ export default function CheckoutScreen() {
 
   return (
     <View style={styles.container}>
-      <View
+      <LinearGradient
+        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
         style={[
           styles.header,
           { paddingTop: Platform.OS === "web" ? 67 : insets.top },
         ]}
       >
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-forward" size={24} color={Colors.light.text} />
+          <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
         </Pressable>
         <Text style={styles.headerTitle}>إتمام الشراء</Text>
         <View style={{ width: 40 }} />
-      </View>
+      </LinearGradient>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -677,11 +683,8 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
     shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
@@ -693,13 +696,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
   headerTitle: {
     fontFamily: "Inter_700Bold",
     fontSize: 18,
-    color: Colors.light.text,
+    color: "#FFFFFF",
     textAlign: "center",
     writingDirection: "rtl",
   },

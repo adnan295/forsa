@@ -169,18 +169,21 @@ export default function EditProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <View
+      <LinearGradient
+        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
         style={[
           styles.header,
           { paddingTop: Platform.OS === "web" ? 67 : insets.top },
         ]}
       >
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-forward" size={24} color={Colors.light.text} />
+          <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
         </Pressable>
         <Text style={styles.headerTitle}>تعديل الملف الشخصي</Text>
         <View style={{ width: 40 }} />
-      </View>
+      </LinearGradient>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -432,11 +435,8 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
     shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
@@ -450,11 +450,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
   headerTitle: {
     fontFamily: "Inter_700Bold",
     fontSize: 18,
-    color: Colors.light.text,
+    color: "#FFFFFF",
     textAlign: "center",
     writingDirection: "rtl",
   },
