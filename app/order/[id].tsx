@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { fetch } from "expo/fetch";
+import * as FileSystem from "expo-file-system";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { queryClient, getApiUrl } from "@/lib/query-client";
@@ -110,35 +110,48 @@ export default function OrderDetailScreen() {
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
-      const formData = new FormData();
-
-      if (Platform.OS === "web") {
-        if (!selectedFile) throw new Error("لم يتم اختيار ملف");
-        formData.append("receipt", selectedFile);
-      } else {
-        if (!selectedImage) throw new Error("لم يتم اختيار صورة");
-        formData.append("receipt", {
-          uri: selectedImage,
-          type: "image/jpeg",
-          name: "receipt.jpg",
-        } as any);
-      }
-
       const baseUrl = getApiUrl();
       const url = new URL(`/api/orders/${id}/receipt`, baseUrl);
 
-      const res = await fetch(url.toString(), {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "فشل رفع الإيصال");
+      if (Platform.OS === "web") {
+        if (!selectedFile) throw new Error("لم يتم اختيار ملف");
+        const formData = new FormData();
+        formData.append("receipt", selectedFile);
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "فشل رفع الإيصال");
+        }
+        return res.json();
+      } else {
+        if (!selectedImage) throw new Error("لم يتم اختيار صورة");
+        const base64 = await FileSystem.readAsStringAsync(selectedImage, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const byteChars = atob(base64);
+        const byteNumbers = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) {
+          byteNumbers[i] = byteChars.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "image/jpeg" });
+        const formData = new FormData();
+        formData.append("receipt", blob, "receipt.jpg");
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "فشل رفع الإيصال");
+        }
+        return res.json();
       }
-
-      return res.json();
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

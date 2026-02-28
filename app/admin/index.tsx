@@ -27,6 +27,7 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
@@ -1413,26 +1414,43 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
     if (!imageUri && !imageFile) return undefined;
     setUploading(true);
     try {
-      const formData = new FormData();
-      if (Platform.OS === "web" && imageFile) {
-        formData.append("image", imageFile);
-      } else if (imageUri) {
-        formData.append("image", {
-          uri: imageUri,
-          type: "image/jpeg",
-          name: "campaign.jpg",
-        } as any);
-      }
       const baseUrl = getApiUrl();
       const url = new URL("/api/admin/campaigns/upload-image", baseUrl);
-      const res = await fetch(url.toString(), {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("فشل رفع الصورة");
-      const data = await res.json();
-      return data.imageUrl;
+
+      if (Platform.OS === "web" && imageFile) {
+        const formData = new FormData();
+        formData.append("image", imageFile);
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("فشل رفع الصورة");
+        const data = await res.json();
+        return data.imageUrl;
+      } else if (imageUri) {
+        const base64 = await FileSystem.readAsStringAsync(imageUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const byteChars = atob(base64);
+        const byteNumbers = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) {
+          byteNumbers[i] = byteChars.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "image/jpeg" });
+        const formData = new FormData();
+        formData.append("image", blob, "campaign.jpg");
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("فشل رفع الصورة");
+        const data = await res.json();
+        return data.imageUrl;
+      }
+      return undefined;
     } catch (err) {
       console.error("Image upload error:", err);
       return undefined;
