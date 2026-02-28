@@ -30,12 +30,12 @@ const PAGE_CONFIG: Record<PageType, {
   about: {
     title: "عن التطبيق",
     icon: "information-circle",
-    colors: ["#7C3AED", "#6D28D9"],
+    colors: ["#7C3AED", "#EC4899"],
   },
   terms: {
     title: "الشروط والأحكام",
     icon: "document-text",
-    colors: ["#8B5CF6", "#7C3AED"],
+    colors: ["#A855F7", "#EC4899"],
   },
   privacy: {
     title: "سياسة الخصوصية",

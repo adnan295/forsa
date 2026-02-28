@@ -65,7 +65,7 @@ const BANNERS = [
     title: "عروض محدودة",
     subtitle: "لا تفوت الفرصة - الكمية محدودة",
     icon: "flash" as const,
-    colors: ["#6D28D9", "#7C3AED", "#A78BFA"] as [string, string, string],
+    colors: ["#7C3AED", "#A855F7", "#EC4899"] as [string, string, string],
   },
 ];
 
@@ -322,7 +322,7 @@ export default function HomeScreen() {
     return (
       <View>
         <LinearGradient
-          colors={["#7C3AED", "#6D28D9", "#5B21B6"]}
+          colors={["#7C3AED", "#A855F7", "#EC4899"]}
           style={styles.hero}
         >
           <View style={[styles.heroContent, { paddingTop: Platform.OS === "web" ? 67 + 20 : insets.top + 20 }]}>

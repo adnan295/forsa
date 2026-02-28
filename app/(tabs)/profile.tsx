@@ -218,7 +218,7 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <LinearGradient
-        colors={["#7C3AED", "#6D28D9", "#5B21B6"]}
+        colors={["#7C3AED", "#A855F7", "#EC4899"]}
         style={styles.headerGradient}
       >
         <View style={styles.headerContent}>

@@ -122,9 +122,11 @@ Comprehensive admin dashboard with 7 sections:
 - External privacy policy and terms pages: GET /privacy-policy and GET /terms serve standalone HTML pages for App Store/Google Play submission
 - App language updated: "سحوبات" (raffles/draws) replaced with "هدايا" (gifts) throughout entire app — all UI screens, server notifications, email templates, landing page, FAQ, admin panel. "السحب" → "اختيار الفائز"
 - Support tickets system: support_tickets table (id, userId, subject, message, status, priority, adminReply, repliedAt, closedAt), replaced WhatsApp/Instagram contact with in-app ticket system. User API: POST/GET /api/support-tickets, GET /api/support-tickets/:id. Admin API: GET /api/admin/support-tickets, PUT /api/admin/support-tickets/:id. Admin gets "تذاكر الدعم" tab in admin panel. User gets ticket form + list in contact page. Admin reply sends user notification.
-- Currency: Changed from $ to ر.س (Saudi Riyal) across all screens
+- Currency: Reverted from ر.س (Saudi Riyal) back to $ (Dollar) across all screens
 - Trust proxy: Added app.set("trust proxy", 1) to fix rate limiter behind Replit proxy
 - CSV export: Fixed quote escaping, newline stripping, formula injection prevention, UTF-8 BOM for Arabic support
+- Color theme update: All gradients updated from deep violet only to purple→pink gradient (#7C3AED → #A855F7 → #EC4899) matching the app logo across all screens, emails, and landing page
+- Splash screen: Regenerated with purple-to-pink gradient background and gift box icon matching the app logo
 
 ## Admin Credentials
 - Username: admin

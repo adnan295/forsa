@@ -55,7 +55,7 @@ function baseTemplate(content: string): string {
   <style>
     body { margin: 0; padding: 0; background-color: #f4f0ff; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; }
     .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 4px 24px rgba(124,58,237,0.08); }
-    .header { background: linear-gradient(135deg, #7C3AED, #6D28D9); padding: 32px 24px; text-align: center; }
+    .header { background: linear-gradient(135deg, #7C3AED, #EC4899); padding: 32px 24px; text-align: center; }
     .header h1 { color: #ffffff; margin: 0; font-size: 24px; }
     .header p { color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 14px; }
     .body { padding: 32px 24px; }
@@ -66,7 +66,7 @@ function baseTemplate(content: string): string {
     .info-row:last-child { border-bottom: none; }
     .info-label { color: #6b6b8a; font-size: 13px; }
     .info-value { color: #1a1a2e; font-size: 14px; font-weight: 600; }
-    .btn { display: inline-block; background: linear-gradient(135deg, #7C3AED, #6D28D9); color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 600; margin: 16px 0; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #7C3AED, #EC4899); color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 600; margin: 16px 0; }
     .footer { background: #f8f5ff; padding: 24px; text-align: center; }
     .footer p { color: #8b8ba8; font-size: 12px; margin: 4px 0; }
     .badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; }
@@ -139,7 +139,7 @@ export async function sendOrderConfirmation(
         <div class="info-row"><span class="info-label">رقم الطلب</span><span class="info-value">#${data.orderId.slice(0, 8)}</span></div>
         <div class="info-row"><span class="info-label">المنتج</span><span class="info-value">${data.campaignTitle}</span></div>
         <div class="info-row"><span class="info-label">الكمية</span><span class="info-value">${data.quantity}</span></div>
-        <div class="info-row"><span class="info-label">المبلغ</span><span class="info-value">${data.totalAmount} ر.س</span></div>
+        <div class="info-row"><span class="info-label">المبلغ</span><span class="info-value">${data.totalAmount} $</span></div>
         <div class="info-row"><span class="info-label">طريقة الدفع</span><span class="info-value">${data.paymentMethod}</span></div>
       </div>
       <p><strong>تذاكرك:</strong></p>

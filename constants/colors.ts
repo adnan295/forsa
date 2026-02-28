@@ -6,7 +6,7 @@ const Colors = {
     card: "#FFFFFF",
     tint: "#7C3AED",
     accent: "#7C3AED",
-    accentDark: "#6D28D9",
+    accentDark: "#EC4899",
     accentLight: "#A78BFA",
     accentPink: "#EC4899",
     accentPinkDark: "#DB2777",

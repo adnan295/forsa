@@ -57,7 +57,7 @@ export default function AdminPanel() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#0A1628", "#152238"]} style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+      <LinearGradient colors={["#7C3AED", "#A855F7", "#EC4899"]} style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} style={styles.headerBackBtn}>
             <Ionicons name="arrow-forward" size={24} color="#fff" />
@@ -120,7 +120,7 @@ function SalesChart() {
         <Text style={styles.sectionTitle}>المبيعات (آخر 7 أيام)</Text>
         <View style={chartStyles.summaryRow}>
           <View style={chartStyles.summaryItem}>
-            <Text style={chartStyles.summaryValue}>{totalSales.toFixed(0)} ر.س</Text>
+            <Text style={chartStyles.summaryValue}>{totalSales.toFixed(0)} $</Text>
             <Text style={chartStyles.summaryLabel}>إجمالي</Text>
           </View>
           <View style={[chartStyles.summaryItem, { marginRight: 16 }]}>
@@ -137,7 +137,7 @@ function SalesChart() {
           return (
             <View key={day.date} style={chartStyles.barCol}>
               <Text style={chartStyles.barValue}>
-                {val > 0 ? `${val >= 1000 ? (val / 1000).toFixed(1) + "k" : val.toFixed(0)} ر.س` : ""}
+                {val > 0 ? `${val >= 1000 ? (val / 1000).toFixed(1) + "k" : val.toFixed(0)} $` : ""}
               </Text>
               <View style={chartStyles.barTrack}>
                 <View
@@ -175,7 +175,7 @@ function DashboardSection() {
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sectionPadding}>
       <Text style={styles.sectionTitle}>نظرة عامة</Text>
       <View style={styles.statsGrid}>
-        <StatCard icon="cash" label="إجمالي الإيرادات" value={`${stats?.totalRevenue || "0"} ر.س`} color="#9B59B6" />
+        <StatCard icon="cash" label="إجمالي الإيرادات" value={`${stats?.totalRevenue || "0"} $`} color="#9B59B6" />
         <StatCard icon="receipt" label="إجمالي الطلبات" value={stats?.totalOrders?.toString() || "0"} color="#3498DB" />
         <StatCard icon="people" label="المستخدمين" value={stats?.totalUsers?.toString() || "0"} color="#2ECC71" />
         <StatCard icon="flame" label="حملات نشطة" value={stats?.activeCampaigns?.toString() || "0"} color={Colors.light.accent} />
@@ -308,7 +308,7 @@ function OrdersSection() {
               <Text style={styles.orderDetailText}>{item.campaignTitle || "حملة"}</Text>
             </View>
             <View style={styles.orderFooter}>
-              <Text style={styles.orderAmount}>{item.totalAmount} ر.س</Text>
+              <Text style={styles.orderAmount}>{item.totalAmount} $</Text>
               <View style={[styles.statusPill, { backgroundColor: item.status === "paid" ? "#2ECC7120" : "#F39C1220" }]}>
                 <Text style={[styles.statusPillText, { color: item.status === "paid" ? "#2ECC71" : "#F39C12" }]}>{getOrderStatusAr(item.status)}</Text>
               </View>
@@ -527,7 +527,7 @@ function UsersSection() {
               </View>
               <View style={styles.userStat}>
                 <Ionicons name="cash" size={12} color={Colors.light.textSecondary} />
-                <Text style={styles.userStatText}>{item.totalSpent || "0"} ر.س</Text>
+                <Text style={styles.userStatText}>{item.totalSpent || "0"} $</Text>
               </View>
             </View>
           </View>
@@ -839,7 +839,7 @@ function CampaignsSection() {
             </View>
             <View style={styles.campaignInfo}>
               <Text style={styles.campaignInfoText}>الجائزة: {item.prizeName}</Text>
-              <Text style={styles.campaignInfoText}>السعر: {item.productPrice} ر.س</Text>
+              <Text style={styles.campaignInfoText}>السعر: {item.productPrice} $</Text>
               <Text style={styles.campaignInfoText}>المباع: {item.soldQuantity}/{item.totalQuantity}</Text>
             </View>
             <View style={styles.campaignProgressWrap}>
@@ -1358,7 +1358,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
             </View>
             <ModalInput label="العنوان *" value={title} onChangeText={setTitle} placeholder="اسم الحملة" />
             <ModalInput label="الوصف *" value={description} onChangeText={setDescription} placeholder="وصف المنتج" multiline />
-            <ModalInput label="السعر (ر.س) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
+            <ModalInput label="السعر ($) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
             <ModalInput label="الكمية الإجمالية *" value={quantity} onChangeText={setQuantity} placeholder="4000" keyboardType="number-pad" />
             <ModalInput label="اسم الجائزة *" value={prizeName} onChangeText={setPrizeName} placeholder="iPhone 16 Pro Max" />
             <ModalInput label="وصف الجائزة" value={prizeDesc} onChangeText={setPrizeDesc} placeholder="تفاصيل إضافية" multiline />

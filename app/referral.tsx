@@ -86,7 +86,7 @@ export default function ReferralScreen() {
       </View>
 
       <LinearGradient
-        colors={["#7C3AED", "#6D28D9", "#5B21B6"]}
+        colors={["#7C3AED", "#A855F7", "#EC4899"]}
         style={styles.heroGradient}
       >
         <View style={styles.heroDecor1} />

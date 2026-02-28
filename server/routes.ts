@@ -1523,7 +1523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
-    .header { background: linear-gradient(135deg, #7C3AED, #6D28D9); padding: 40px 20px; text-align: center; }
+    .header { background: linear-gradient(135deg, #7C3AED, #EC4899); padding: 40px 20px; text-align: center; }
     .header h1 { color: #fff; font-size: 28px; margin-bottom: 8px; }
     .header p { color: rgba(255,255,255,0.7); font-size: 14px; }
     .container { max-width: 700px; margin: -20px auto 40px; padding: 0 16px; }

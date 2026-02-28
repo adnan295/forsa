@@ -141,7 +141,7 @@ export default function NotificationsScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#6D28D9", "#5B21B6"]}
+        colors={["#7C3AED", "#A855F7", "#EC4899"]}
         style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 }]}
       >
         <View style={styles.headerContent}>

@@ -85,7 +85,7 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <LinearGradient colors={["#7C3AED", "#6D28D9", "#5B21B6"]} style={styles.gradient}>
+    <LinearGradient colors={["#7C3AED", "#A855F7", "#EC4899"]} style={styles.gradient}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}

@@ -113,7 +113,7 @@ export default function FAQScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#6D28D9"]}
+        colors={["#7C3AED", "#EC4899"]}
         style={[
           styles.header,
           { paddingTop: Platform.OS === "web" ? 67 + 12 : insets.top + 12 },

@@ -153,7 +153,7 @@ export default function CampaignDetailScreen() {
             />
           ) : null}
           <LinearGradient
-            colors={campaign.imageUrl ? ["transparent", "rgba(124,58,237,0.7)", "rgba(91,33,182,0.95)"] : ["#7C3AED", "#6D28D9", "#5B21B6"]}
+            colors={campaign.imageUrl ? ["transparent", "rgba(124,58,237,0.7)", "rgba(236,72,153,0.95)"] : ["#7C3AED", "#A855F7", "#EC4899"]}
             style={styles.heroOverlay}
           >
             <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
@@ -184,7 +184,7 @@ export default function CampaignDetailScreen() {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       try {
                         await Share.share({
-                          message: `🛒 ${campaign.title}\n🎁 جائزة: ${campaign.prizeName}\n💰 السعر: ${unitPrice.toFixed(2)} ر.س\n\nاشترِ المنتج واحصل على فرصة للفوز! 🎉\n\nفرصة - تسوق واربح`,
+                          message: `🛒 ${campaign.title}\n🎁 جائزة: ${campaign.prizeName}\n💰 السعر: ${unitPrice.toFixed(2)} $\n\nاشترِ المنتج واحصل على فرصة للفوز! 🎉\n\nفرصة - تسوق واربح`,
                         });
                       } catch (e) {}
                     }}
@@ -336,8 +336,8 @@ export default function CampaignDetailScreen() {
                 </Pressable>
               </View>
               <View style={styles.quantityPriceRow}>
-                <Text style={styles.quantityPriceLabel}>{quantity} × {unitPrice.toFixed(2)} ر.س</Text>
-                <Text style={styles.quantityPriceTotal}>{totalPrice} ر.س</Text>
+                <Text style={styles.quantityPriceLabel}>{quantity} × {unitPrice.toFixed(2)} $</Text>
+                <Text style={styles.quantityPriceTotal}>{totalPrice} $</Text>
               </View>
             </View>
           )}
@@ -364,7 +364,7 @@ export default function CampaignDetailScreen() {
             <View style={styles.priceCardLeft}>
               <Text style={styles.priceLabel}>سعر المنتج</Text>
               <View style={styles.priceValueRow}>
-                <Text style={styles.priceCurrency}>ر.س</Text>
+                <Text style={styles.priceCurrency}>$</Text>
                 <Text style={styles.priceValue}>
                   {unitPrice.toFixed(2)}
                 </Text>
@@ -497,7 +497,7 @@ export default function CampaignDetailScreen() {
           <View style={styles.bottomContent}>
             <View style={styles.bottomLeft}>
               <Text style={styles.bottomPriceLabel}>الإجمالي</Text>
-              <Text style={styles.bottomPrice}>{totalPrice} ر.س</Text>
+              <Text style={styles.bottomPrice}>{totalPrice} $</Text>
               <Text style={styles.bottomQty}>{quantity} منتج</Text>
             </View>
             <View style={{ flexDirection: "row-reverse", gap: 8 }}>
