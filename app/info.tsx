@@ -156,6 +156,7 @@ function ContactContent() {
       label: "واتساب",
       value: "تواصل معنا عبر واتساب",
       color: "#25D366",
+      // TODO: Replace with your real WhatsApp number before store submission
       onPress: () => Linking.openURL("https://wa.me/966500000000"),
     },
     {
@@ -163,6 +164,7 @@ function ContactContent() {
       label: "انستقرام",
       value: "@luckydraw.app",
       color: "#E4405F",
+      // TODO: Replace with your real Instagram handle before store submission
       onPress: () => Linking.openURL("https://instagram.com/luckydraw.app"),
     },
   ];

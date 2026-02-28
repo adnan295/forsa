@@ -143,6 +143,8 @@ export interface IStorage {
   verifyEmailToken(userId: string, code: string): Promise<any>;
   markEmailTokenUsed(tokenId: string): Promise<void>;
   setEmailVerified(userId: string): Promise<void>;
+
+  getRecentPurchases(limit?: number): Promise<{ campaignTitle: string; minutesAgo: number }[]>;
 }
 
 function generateTicketNumber(): string {
@@ -944,6 +946,24 @@ export class DatabaseStorage implements IStorage {
     await db.update(users)
       .set({ emailVerified: true })
       .where(eq(users.id, userId));
+  }
+
+  async getRecentPurchases(limit: number = 5): Promise<{ campaignTitle: string; minutesAgo: number }[]> {
+    const recentOrders = await db
+      .select({
+        campaignTitle: campaigns.title,
+        createdAt: orders.createdAt,
+      })
+      .from(orders)
+      .innerJoin(campaigns, eq(orders.campaignId, campaigns.id))
+      .where(eq(orders.paymentStatus, "confirmed"))
+      .orderBy(desc(orders.createdAt))
+      .limit(limit);
+
+    return recentOrders.map((o) => {
+      const minutesAgo = Math.max(1, Math.floor((Date.now() - new Date(o.createdAt!).getTime()) / 60000));
+      return { campaignTitle: o.campaignTitle, minutesAgo };
+    });
   }
 
   async deleteUser(userId: string): Promise<boolean> {

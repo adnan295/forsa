@@ -1360,6 +1360,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/recent-purchases", async (_req: Request, res: Response) => {
+    try {
+      const purchases = await storage.getRecentPurchases(8);
+      res.json(purchases);
+    } catch (error) {
+      console.error("Get recent purchases error:", error);
+      res.json([]);
+    }
+  });
+
   app.get("/api/winners", async (_req: Request, res: Response) => {
     try {
       const allCampaigns = await storage.getCampaigns();

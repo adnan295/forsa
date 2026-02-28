@@ -161,18 +161,11 @@ function StatChip({ icon, value, label }: {
   );
 }
 
-const SOCIAL_PROOF_DATA = [
-  { name: "ساعة رولكس فاخرة", minutes: 3 },
-  { name: "سماعات آبل AirPods Max", minutes: 7 },
-  { name: "حقيبة لويس فيتون", minutes: 12 },
-  { name: "عطر شانيل الفاخر", minutes: 5 },
-  { name: "نظارة قوتشي شمسية", minutes: 9 },
-  { name: "ساعة أبل الذكية", minutes: 2 },
-  { name: "حقيبة سفر سامسونايت", minutes: 15 },
-  { name: "عطر ديور الأصلي", minutes: 8 },
-];
-
 function RecentPurchaseBanner() {
+  const { data: purchases } = useQuery<{ campaignTitle: string; minutesAgo: number }[]>({
+    queryKey: ["/api/recent-purchases"],
+    staleTime: 60000,
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(false);
   const opacity = useSharedValue(0);
@@ -183,8 +176,10 @@ function RecentPurchaseBanner() {
   }));
 
   useEffect(() => {
+    if (!purchases || purchases.length === 0) return;
+
     const showBanner = () => {
-      setCurrentIndex((prev) => (prev + 1) % SOCIAL_PROOF_DATA.length);
+      setCurrentIndex((prev) => (prev + 1) % purchases.length);
       setVisible(true);
       opacity.value = withTiming(1, { duration: 400 });
 
@@ -203,11 +198,11 @@ function RecentPurchaseBanner() {
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
-  }, []);
+  }, [purchases]);
 
-  const item = SOCIAL_PROOF_DATA[currentIndex];
+  if (!purchases || purchases.length === 0 || !visible) return null;
 
-  if (!visible) return null;
+  const item = purchases[currentIndex % purchases.length];
 
   return (
     <Animated.View style={[proofStyles.container, animatedStyle]}>
@@ -216,7 +211,7 @@ function RecentPurchaseBanner() {
           <Ionicons name="bag-check" size={16} color="#10B981" />
         </View>
         <Text style={proofStyles.text} numberOfLines={1}>
-          مستخدم اشترى {item.name} منذ {item.minutes} دقائق
+          مستخدم اشترى {item.campaignTitle} منذ {item.minutesAgo > 60 ? `${Math.floor(item.minutesAgo / 60)} ساعة` : `${item.minutesAgo} دقائق`}
         </Text>
       </View>
     </Animated.View>

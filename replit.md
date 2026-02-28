@@ -115,7 +115,8 @@ Comprehensive admin dashboard with 7 sections:
 - Winners page (app/winners.tsx): Shows completed campaigns with winner usernames, GET /api/winners endpoint
 - Referral program: Auto-generated 6-char referral codes, referral page (app/referral.tsx) with share/copy, GET /api/referral, POST /api/referral/apply, referral tracking
 - Admin sales charts: Daily sales bar chart (last 7 days) in admin dashboard, GET /api/admin/sales-chart endpoint
-- Social proof banners: Animated recent purchase notifications on home page
+- Social proof banners: Real-time recent purchase notifications on home page (GET /api/recent-purchases), hidden when no confirmed purchases exist
+- Offline detection: Red banner appears at top of screen when internet connection is lost, auto-dismisses on reconnect
 - Email OTP verification: 6-digit code sent on registration, POST /api/auth/verify-email, POST /api/auth/resend-verification, email_verification_tokens table, OTP input screen in auth.tsx with auto-focus and resend countdown (60s)
 - Delete account: DELETE /api/auth/delete-account endpoint, confirmation dialog in profile page, deletes all user data (orders, tickets, notifications, reviews)
 - External privacy policy and terms pages: GET /privacy-policy and GET /terms serve standalone HTML pages for App Store/Google Play submission
