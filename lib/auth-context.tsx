@@ -15,11 +15,18 @@ interface AuthUser {
   emailVerified?: boolean;
 }
 
+interface VerificationResult {
+  requiresVerification: true;
+  email: string;
+}
+
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<VerificationResult>;
+  verifyEmail: (email: string, code: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -55,14 +62,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data);
   }
 
-  async function register(username: string, email: string, password: string) {
+  async function register(username: string, email: string, password: string): Promise<VerificationResult> {
     const res = await apiRequest("POST", "/api/auth/register", {
       username,
       email,
       password,
     });
     const data = await res.json();
+    return data as VerificationResult;
+  }
+
+  async function verifyEmail(email: string, code: string) {
+    const res = await apiRequest("POST", "/api/auth/verify-email", { email, code });
+    const data = await res.json();
     setUser(data);
+  }
+
+  async function resendVerification(email: string) {
+    await apiRequest("POST", "/api/auth/resend-verification", { email });
   }
 
   async function logout() {
@@ -83,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo(
-    () => ({ user, isLoading, login, register, logout, refreshUser }),
+    () => ({ user, isLoading, login, register, verifyEmail, resendVerification, logout, refreshUser }),
     [user, isLoading]
   );
 

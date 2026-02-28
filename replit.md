@@ -115,6 +115,7 @@ Comprehensive admin dashboard with 7 sections:
 - Referral program: Auto-generated 6-char referral codes, referral page (app/referral.tsx) with share/copy, GET /api/referral, POST /api/referral/apply, referral tracking
 - Admin sales charts: Daily sales bar chart (last 7 days) in admin dashboard, GET /api/admin/sales-chart endpoint
 - Social proof banners: Animated recent purchase notifications on home page
+- Email OTP verification: 6-digit code sent on registration, POST /api/auth/verify-email, POST /api/auth/resend-verification, email_verification_tokens table, OTP input screen in auth.tsx with auto-focus and resend countdown (60s)
 
 ## Admin Credentials
 - Username: admin

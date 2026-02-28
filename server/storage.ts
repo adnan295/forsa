@@ -24,6 +24,7 @@ import {
   adminNotifications,
   userNotifications,
   passwordResetTokens,
+  emailVerificationTokens,
   insertReviewSchema,
 } from "@shared/schema";
 import { db } from "./db";
@@ -137,6 +138,11 @@ export interface IStorage {
   verifyPasswordResetToken(userId: string, code: string): Promise<any>;
   markResetTokenUsed(tokenId: string): Promise<void>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+
+  createEmailVerificationToken(userId: string, code: string, expiresAt: Date): Promise<any>;
+  verifyEmailToken(userId: string, code: string): Promise<any>;
+  markEmailTokenUsed(tokenId: string): Promise<void>;
+  setEmailVerified(userId: string): Promise<void>;
 }
 
 function generateTicketNumber(): string {
@@ -902,6 +908,42 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.select({ count: count() }).from(userNotifications)
       .where(and(eq(userNotifications.userId, userId), eq(userNotifications.isRead, false)));
     return result?.count || 0;
+  }
+
+  async createEmailVerificationToken(userId: string, code: string, expiresAt: Date): Promise<any> {
+    const [token] = await db.insert(emailVerificationTokens).values({
+      userId,
+      code,
+      expiresAt,
+    }).returning();
+    return token;
+  }
+
+  async verifyEmailToken(userId: string, code: string): Promise<any> {
+    const [token] = await db.select().from(emailVerificationTokens)
+      .where(
+        and(
+          eq(emailVerificationTokens.userId, userId),
+          eq(emailVerificationTokens.code, code),
+          eq(emailVerificationTokens.used, false),
+          gte(emailVerificationTokens.expiresAt, new Date())
+        )
+      )
+      .orderBy(desc(emailVerificationTokens.createdAt))
+      .limit(1);
+    return token || null;
+  }
+
+  async markEmailTokenUsed(tokenId: string): Promise<void> {
+    await db.update(emailVerificationTokens)
+      .set({ used: true })
+      .where(eq(emailVerificationTokens.id, tokenId));
+  }
+
+  async setEmailVerified(userId: string): Promise<void> {
+    await db.update(users)
+      .set({ emailVerified: true })
+      .where(eq(users.id, userId));
   }
 }
 

@@ -190,6 +190,39 @@ export async function sendWinnerNotification(
   }
 }
 
+export async function sendEmailVerificationCode(
+  to: string,
+  data: { code: string; username: string }
+) {
+  if (!isEmailConfigured()) {
+    console.log("[Email] SMTP not configured. Verification code for", to, "is:", data.code);
+    return;
+  }
+
+  const html = baseTemplate(`
+    <div class="body">
+      <h2>📧 تحقق من بريدك الإلكتروني</h2>
+      <p>مرحباً ${data.username}،</p>
+      <p>شكراً لتسجيلك في لاكي درو! استخدم الرمز التالي لتفعيل حسابك:</p>
+      <div class="code-box">${data.code}</div>
+      <p>هذا الرمز صالح لمدة <strong>15 دقيقة</strong> فقط.</p>
+      <p>إذا لم تقم بالتسجيل، يرجى تجاهل هذا البريد.</p>
+    </div>
+  `);
+
+  try {
+    await transporter.sendMail({
+      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
+      to,
+      subject: `رمز التحقق - ${APP_NAME}`,
+      html,
+    });
+    console.log("[Email] Verification code sent to", to);
+  } catch (err) {
+    console.error("[Email] Failed to send verification code:", err);
+  }
+}
+
 export async function sendPasswordResetCode(
   to: string,
   data: { code: string; username: string }

@@ -7,7 +7,7 @@ import { pool, db } from "./db";
 import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, reviews, orders } from "@shared/schema";
 import { sum, count, and, gte, sql } from "drizzle-orm";
-import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate } from "./email";
+import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import multer from "multer";
@@ -158,22 +158,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      req.session.userId = user.id;
-
       await storage.logActivity("user_register", "New user registered", `User ${user.username} registered`, user.id);
 
+      const otpCode = crypto.randomInt(100000, 999999).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      await storage.createEmailVerificationToken(user.id, otpCode, expiresAt);
+      await sendEmailVerificationCode(user.email, { code: otpCode, username: user.username });
+
       res.json({
-        id: user.id,
-        username: user.username,
+        requiresVerification: true,
         email: user.email,
-        role: user.role,
-        createdAt: user.createdAt,
+        message: "تم إرسال رمز التحقق إلى بريدك الإلكتروني",
       });
     } catch (error: any) {
       if (error?.code === "23505") {
         return res.status(409).json({ message: "Username or email already taken" });
       }
       console.error("Register error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/auth/verify-email", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email, code } = req.body;
+      if (!email || !code) {
+        return res.status(400).json({ message: "البريد الإلكتروني والرمز مطلوبان" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(400).json({ message: "بيانات غير صحيحة" });
+      }
+
+      const token = await storage.verifyEmailToken(user.id, code);
+      if (!token) {
+        return res.status(400).json({ message: "الرمز غير صحيح أو منتهي الصلاحية" });
+      }
+
+      await storage.markEmailTokenUsed(token.id);
+      await storage.setEmailVerified(user.id);
+
+      req.session.userId = user.id;
+
+      res.json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        fullName: user.fullName,
+        phone: user.phone,
+        address: user.address,
+        city: user.city,
+        country: user.country,
+        emailVerified: true,
+        createdAt: user.createdAt,
+      });
+    } catch (error) {
+      console.error("Verify email error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/auth/resend-verification", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.json({ message: "تم إرسال الرمز إذا كان البريد مسجلاً" });
+      }
+
+      if (user.emailVerified) {
+        return res.status(400).json({ message: "البريد الإلكتروني مفعّل بالفعل" });
+      }
+
+      const otpCode = crypto.randomInt(100000, 999999).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      await storage.createEmailVerificationToken(user.id, otpCode, expiresAt);
+      await sendEmailVerificationCode(user.email, { code: otpCode, username: user.username });
+
+      res.json({ message: "تم إرسال رمز تحقق جديد" });
+    } catch (error) {
+      console.error("Resend verification error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
