@@ -331,7 +331,7 @@ export default function HomeScreen() {
                 <Text style={styles.greeting}>
                   {user ? `أهلاً، ${user.username}` : "مرحباً بك"}
                 </Text>
-                <Text style={styles.heroTitle}>لاكي درو</Text>
+                <Text style={styles.heroTitle}>فرصة</Text>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 {user && (

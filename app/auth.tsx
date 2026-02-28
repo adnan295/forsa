@@ -273,7 +273,7 @@ export default function AuthScreen() {
             <View style={styles.iconCircle}>
               <Ionicons name="diamond" size={36} color="#fff" />
             </View>
-            <Text style={styles.logoText}>لاكي درو</Text>
+            <Text style={styles.logoText}>فرصة</Text>
             <Text style={styles.tagline}>
               {isLogin ? "أهلاً بعودتك" : "أنشئ حسابك"}
             </Text>

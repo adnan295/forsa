@@ -407,7 +407,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.versionArea}>
-        <Text style={styles.versionText}>لاكي درو v1.0.0</Text>
+        <Text style={styles.versionText}>فرصة v1.0.0</Text>
         <Text style={styles.versionSub}>صُنع بحب</Text>
       </View>
     </ScrollView>

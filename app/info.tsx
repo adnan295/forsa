@@ -46,9 +46,9 @@ const PAGE_CONFIG: Record<PageType, {
 function AboutContent() {
   return (
     <>
-      <ContentCard title="ما هو لاكي درو؟">
+      <ContentCard title="ما هو فرصة؟">
         <Text style={styles.paragraph}>
-          لاكي درو هو متجر إلكتروني يقدم منتجات مميزة بأسعار مناسبة، ومع كل عملية شراء تحصل على فرصة للحصول على هدايا قيمة. نقدم تجربة تسوّق آمنة وشفافة مع نظام هدايا عادل يضمن فرصاً متساوية لجميع المشترين.
+          فرصة هو متجر إلكتروني يقدم منتجات مميزة بأسعار مناسبة، ومع كل عملية شراء تحصل على فرصة للحصول على هدايا قيمة. نقدم تجربة تسوّق آمنة وشفافة مع نظام هدايا عادل يضمن فرصاً متساوية لجميع المشترين.
         </Text>
       </ContentCard>
       <ContentCard title="كيف يعمل التطبيق؟">
@@ -79,7 +79,7 @@ function TermsContent() {
     <>
       <ContentCard title="١. القبول بالشروط">
         <Text style={styles.paragraph}>
-          باستخدامك لتطبيق لاكي درو، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي جزء منها، يُرجى عدم استخدام التطبيق.
+          باستخدامك لتطبيق فرصة، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي جزء منها، يُرجى عدم استخدام التطبيق.
         </Text>
       </ContentCard>
       <ContentCard title="٢. الأهلية">
@@ -147,9 +147,9 @@ function ContactContent() {
     {
       icon: "mail" as const,
       label: "البريد الإلكتروني",
-      value: "info@luckydraw.app",
+      value: "info@forsa.app",
       color: "#3B82F6",
-      onPress: () => Linking.openURL("mailto:info@luckydraw.app"),
+      onPress: () => Linking.openURL("mailto:info@forsa.app"),
     },
     {
       icon: "logo-whatsapp" as const,
@@ -162,10 +162,10 @@ function ContactContent() {
     {
       icon: "logo-instagram" as const,
       label: "انستقرام",
-      value: "@luckydraw.app",
+      value: "@forsa.app",
       color: "#E4405F",
       // TODO: Replace with your real Instagram handle before store submission
-      onPress: () => Linking.openURL("https://instagram.com/luckydraw.app"),
+      onPress: () => Linking.openURL("https://instagram.com/forsa.app"),
     },
   ];
 

@@ -46,7 +46,7 @@ export default function ReferralScreen() {
     if (!data?.referralCode) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      const message = `انضم إلى لاكي درو واحصل على فرصة للفوز بجوائز رائعة!\n\nاستخدم رمز الإحالة: ${data.referralCode}`;
+      const message = `انضم إلى فرصة واحصل على فرصة للفوز بهدايا رائعة!\n\nاستخدم رمز الإحالة: ${data.referralCode}`;
       await Share.share({ message });
     } catch (e) {}
   }

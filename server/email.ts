@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const APP_NAME = "لاكي درو - LuckyDraw";
+const APP_NAME = "فرصة - Forsa";
 
 let connectionSettings: any;
 
@@ -215,7 +215,7 @@ export async function sendEmailVerificationCode(
     <div class="body">
       <h2>تحقق من بريدك الإلكتروني</h2>
       <p>مرحباً ${data.username}،</p>
-      <p>شكراً لتسجيلك في لاكي درو! استخدم الرمز التالي لتفعيل حسابك:</p>
+      <p>شكراً لتسجيلك في فرصة! استخدم الرمز التالي لتفعيل حسابك:</p>
       <div class="code-box">${data.code}</div>
       <p>هذا الرمز صالح لمدة <strong>15 دقيقة</strong> فقط.</p>
       <p>إذا لم تقم بالتسجيل، يرجى تجاهل هذا البريد.</p>

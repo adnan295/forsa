@@ -23,7 +23,7 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | null>(null);
-const CART_STORAGE_KEY = "luckydraw_cart";
+const CART_STORAGE_KEY = "forsa_cart";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);

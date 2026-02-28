@@ -1,7 +1,7 @@
-# LuckyDraw - E-Commerce Raffle Platform
+# Forsa (فرصة) - E-Commerce Gifts Platform
 
 ## Overview
-Mobile-first e-commerce application with an automated raffle system. Products are sold in limited quantities with real-time inventory tracking via progress bars. When a campaign sells out, the system triggers a random draw to select a winner from all ticket holders. Full Arabic UI with RTL support.
+Mobile-first e-commerce application with an automated gift/prize system. Products are sold in limited quantities with real-time inventory tracking via progress bars. When a campaign sells out, the system triggers a random selection to choose a gift winner from all buyers. Full Arabic UI with RTL support.
 
 ## Tech Stack
 - **Frontend**: Expo (React Native) with expo-router file-based routing

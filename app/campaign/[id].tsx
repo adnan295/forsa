@@ -184,7 +184,7 @@ export default function CampaignDetailScreen() {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       try {
                         await Share.share({
-                          message: `🛒 ${campaign.title}\n🎁 جائزة: ${campaign.prizeName}\n💰 السعر: $${unitPrice.toFixed(2)}\n\nاشترِ المنتج واحصل على فرصة للفوز! 🎉\n\nلاكي درو - تسوق واربح`,
+                          message: `🛒 ${campaign.title}\n🎁 جائزة: ${campaign.prizeName}\n💰 السعر: $${unitPrice.toFixed(2)}\n\nاشترِ المنتج واحصل على فرصة للفوز! 🎉\n\nفرصة - تسوق واربح`,
                         });
                       } catch (e) {}
                     }}

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "LuckyDraw",
-    "slug": "lucky-draw",
+    "name": "Forsa",
+    "slug": "forsa",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "luckydraw",
+    "scheme": "forsa",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,10 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.luckydraw"
+      "bundleIdentifier": "com.forsa"
     },
     "android": {
-      "package": "com.luckydraw",
+      "package": "com.forsa",
       "adaptiveIcon": {
         "backgroundColor": "#0A1628",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
