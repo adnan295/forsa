@@ -18,7 +18,10 @@
       "bundleIdentifier": "com.forsa",
       "infoPlist": {
         "NSCameraUsageDescription": "نحتاج الوصول للكاميرا لتصوير إيصال الدفع",
-        "NSPhotoLibraryUsageDescription": "نحتاج الوصول لمعرض الصور لاختيار إيصال الدفع أو صورة المنتج"
+        "NSPhotoLibraryUsageDescription": "نحتاج الوصول لمعرض الصور لاختيار إيصال الدفع أو صورة المنتج",
+        "UIRequiredDeviceCapabilities": ["arm64"],
+        "WKCompanionAppBundleIdentifier": "",
+        "UIDeviceFamily": [1]
       }
     },
     "android": {
