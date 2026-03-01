@@ -1738,6 +1738,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
 </html>`);
   });
 
+  app.get("/support", (_req: Request, res: Response) => {
+    res.send(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الدعم الفني - فرصة</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
+    .header { background: linear-gradient(135deg, #7C3AED, #EC4899); padding: 40px 20px; text-align: center; }
+    .header h1 { color: #fff; font-size: 28px; margin-bottom: 8px; }
+    .header p { color: rgba(255,255,255,0.7); font-size: 14px; }
+    .container { max-width: 700px; margin: -20px auto 40px; padding: 0 16px; }
+    .card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(124,58,237,0.06); }
+    .card h2 { font-size: 18px; color: #7C3AED; margin-bottom: 12px; }
+    .card p, .card li { font-size: 15px; color: #4a4a6a; }
+    .card ul { padding-right: 20px; }
+    .card li { margin-bottom: 8px; }
+    .email-link { color: #7C3AED; text-decoration: none; font-weight: 600; }
+    .email-link:hover { text-decoration: underline; }
+    .footer { text-align: center; padding: 24px; color: #8b8ba8; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>الدعم الفني</h1>
+    <p>فرصة - Forsa</p>
+  </div>
+  <div class="container">
+    <div class="card">
+      <h2>كيف يمكننا مساعدتك؟</h2>
+      <p>فريق الدعم الفني في فرصة جاهز لمساعدتك في أي استفسار أو مشكلة تواجهك.</p>
+    </div>
+    <div class="card">
+      <h2>الدعم من داخل التطبيق</h2>
+      <p>أسهل وأسرع طريقة للتواصل معنا هي من خلال نظام تذاكر الدعم داخل التطبيق:</p>
+      <ul>
+        <li>افتح التطبيق وانتقل إلى <strong>الملف الشخصي</strong></li>
+        <li>اضغط على <strong>تواصل معنا</strong></li>
+        <li>أرسل تذكرة دعم وسنرد عليك في أقرب وقت</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>البريد الإلكتروني</h2>
+      <p>يمكنك أيضاً التواصل معنا عبر البريد الإلكتروني:</p>
+      <p><a href="mailto:support@forsa.today" class="email-link">support@forsa.today</a></p>
+    </div>
+    <div class="card">
+      <h2>الأسئلة الشائعة</h2>
+      <ul>
+        <li><strong>كيف أشتري منتج؟</strong> — تصفح المنتجات، اختر المنتج، وأكمل عملية الشراء بالطريقة المناسبة لك.</li>
+        <li><strong>كيف يتم اختيار الفائز؟</strong> — عند بيع جميع القطع، يتم اختيار فائز عشوائي تلقائياً من جميع المشترين.</li>
+        <li><strong>هل أحصل على المنتج حتى لو لم أفز؟</strong> — نعم! المنتج مضمون لك، والهدية فرصة إضافية.</li>
+        <li><strong>كيف أتابع طلبي؟</strong> — من تبويب "طلباتي" يمكنك متابعة حالة الطلب والشحن.</li>
+        <li><strong>كيف أرفع إيصال الدفع؟</strong> — ادخل على تفاصيل الطلب واضغط "رفع الإيصال" واختر صورة الإيصال من جهازك.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>أوقات الاستجابة</h2>
+      <p>نسعى للرد على جميع الاستفسارات خلال <strong>24 ساعة</strong> من استلامها.</p>
+    </div>
+  </div>
+  <div class="footer">
+    <p>فرصة - Forsa &copy; ${new Date().getFullYear()}</p>
+  </div>
+</body>
+</html>`);
+  });
+
   // Support Tickets API - User endpoints
   app.post("/api/support-tickets", requireAuth as any, async (req: Request, res: Response) => {
     try {
