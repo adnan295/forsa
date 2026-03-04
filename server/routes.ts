@@ -267,7 +267,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid input" });
       }
 
-      const user = await storage.getUserByUsername(parsed.data.username);
+      const input = parsed.data.username;
+      let user = await storage.getUserByUsername(input);
+      if (!user && input.includes("@")) {
+        user = await storage.getUserByEmail(input);
+      }
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
       }

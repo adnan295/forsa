@@ -303,12 +303,13 @@ export default function AuthScreen() {
               <Ionicons name="person-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="اسم المستخدم"
+                placeholder={isLogin ? "اسم المستخدم أو البريد الإلكتروني" : "اسم المستخدم"}
                 placeholderTextColor="rgba(255,255,255,0.4)"
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
                 autoCorrect={false}
+                keyboardType={isLogin ? "email-address" : "default"}
                 testID="username-input"
               />
             </View>
