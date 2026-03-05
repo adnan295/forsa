@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "com.forsa",
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "READ_MEDIA_IMAGES"],
+      "permissions": ["CAMERA"],
       "adaptiveIcon": {
         "backgroundColor": "#7C3AED",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -50,7 +50,10 @@
         "expo-image-picker",
         {
           "photosPermission": "نحتاج الوصول لمعرض الصور لاختيار إيصال الدفع أو صورة المنتج",
-          "cameraPermission": "نحتاج الوصول للكاميرا لتصوير إيصال الدفع"
+          "cameraPermission": "نحتاج الوصول للكاميرا لتصوير إيصال الدفع",
+          "android": {
+            "useAndroidPhotoPicker": true
+          }
         }
       ]
     ],
