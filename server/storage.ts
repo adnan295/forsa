@@ -14,6 +14,7 @@ import {
   type AdminNotification,
   type UserNotification,
   type SupportTicket,
+  type CampaignProduct,
   users,
   campaigns,
   orders,
@@ -27,6 +28,7 @@ import {
   passwordResetTokens,
   emailVerificationTokens,
   supportTickets,
+  campaignProducts,
   insertReviewSchema,
 } from "@shared/schema";
 import { db } from "./db";
@@ -222,9 +224,97 @@ export class DatabaseStorage implements IStorage {
     return !!deleted;
   }
 
+  async getCampaignProducts(campaignId: string): Promise<CampaignProduct[]> {
+    return db
+      .select()
+      .from(campaignProducts)
+      .where(eq(campaignProducts.campaignId, campaignId))
+      .orderBy(campaignProducts.sortOrder);
+  }
+
+  async getCampaignProduct(id: string): Promise<CampaignProduct | undefined> {
+    const [product] = await db
+      .select()
+      .from(campaignProducts)
+      .where(eq(campaignProducts.id, id));
+    return product || undefined;
+  }
+
+  async createCampaignProduct(data: {
+    campaignId: string;
+    name: string;
+    nameAr?: string;
+    imageUrl?: string;
+    price: string;
+    quantity: number;
+    sortOrder?: number;
+  }): Promise<CampaignProduct> {
+    const [product] = await db
+      .insert(campaignProducts)
+      .values({
+        campaignId: data.campaignId,
+        name: data.name,
+        nameAr: data.nameAr,
+        imageUrl: data.imageUrl,
+        price: data.price,
+        quantity: data.quantity,
+        sortOrder: data.sortOrder || 0,
+      })
+      .returning();
+    return product;
+  }
+
+  async updateCampaignProduct(id: string, data: Partial<CampaignProduct>): Promise<CampaignProduct | undefined> {
+    const [updated] = await db
+      .update(campaignProducts)
+      .set(data)
+      .where(eq(campaignProducts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteCampaignProduct(id: string): Promise<boolean> {
+    const [deleted] = await db
+      .delete(campaignProducts)
+      .where(eq(campaignProducts.id, id))
+      .returning();
+    return !!deleted;
+  }
+
+  async syncCampaignAggregates(campaignId: string): Promise<void> {
+    const products = await this.getCampaignProducts(campaignId);
+    if (products.length === 0) {
+      await this.updateCampaign(campaignId, {
+        totalQuantity: 0,
+        soldQuantity: 0,
+        productPrice: "0.00",
+      });
+      return;
+    }
+
+    const totalQty = products.reduce((s, p) => s + p.quantity, 0);
+    const soldQty = products.reduce((s, p) => s + p.soldQuantity, 0);
+    const minPrice = Math.min(...products.map(p => parseFloat(p.price)));
+
+    const allSoldOut = products.every(p => p.soldQuantity >= p.quantity);
+
+    const updateData: Partial<Campaign> = {
+      totalQuantity: totalQty,
+      soldQuantity: soldQty,
+      productPrice: minPrice.toFixed(2),
+    };
+
+    if (allSoldOut && soldQty >= totalQty) {
+      updateData.status = "sold_out";
+    }
+
+    await this.updateCampaign(campaignId, updateData);
+  }
+
   async createOrder(data: {
     userId: string;
     campaignId: string;
+    productId?: string;
     quantity: number;
     totalAmount: string;
     paymentMethod?: string;
@@ -243,6 +333,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         userId: data.userId,
         campaignId: data.campaignId,
+        productId: data.productId,
         quantity: data.quantity,
         totalAmount: data.totalAmount,
         paymentMethod: data.paymentMethod || "stripe",
@@ -337,17 +428,38 @@ export class DatabaseStorage implements IStorage {
     quantity: number,
     paymentMethod: string,
     shippingData?: { fullName: string; phone: string; city: string; address: string; country?: string },
-    couponCode?: string
+    couponCode?: string,
+    productId?: string
   ): Promise<{ order: Order; tickets: Ticket[] }> {
     const campaign = await this.getCampaign(campaignId);
     if (!campaign) throw new Error("Campaign not found");
     if (campaign.status !== "active") throw new Error("Campaign is not active");
 
-    const remaining = campaign.totalQuantity - campaign.soldQuantity;
-    if (quantity > remaining)
-      throw new Error(`Only ${remaining} items remaining`);
+    const products = await this.getCampaignProducts(campaignId);
+    let unitPrice: number;
 
-    let totalAmount = parseFloat(campaign.productPrice) * quantity;
+    if (products.length > 0) {
+      if (!productId) throw new Error("Product variant must be selected");
+      const product = products.find(p => p.id === productId);
+      if (!product) throw new Error("Product variant not found");
+
+      const productRemaining = product.quantity - product.soldQuantity;
+      if (quantity > productRemaining)
+        throw new Error(`فقط ${productRemaining} قطعة متبقية من هذا الموديل`);
+
+      unitPrice = parseFloat(product.price);
+
+      await this.updateCampaignProduct(productId, {
+        soldQuantity: product.soldQuantity + quantity,
+      });
+    } else {
+      const remaining = campaign.totalQuantity - campaign.soldQuantity;
+      if (quantity > remaining)
+        throw new Error(`Only ${remaining} items remaining`);
+      unitPrice = parseFloat(campaign.productPrice);
+    }
+
+    let totalAmount = unitPrice * quantity;
     let discountAmount: string | undefined;
     let appliedCouponCode: string | undefined;
 
@@ -368,6 +480,7 @@ export class DatabaseStorage implements IStorage {
     const order = await this.createOrder({
       userId,
       campaignId,
+      productId: productId || undefined,
       quantity,
       totalAmount: totalAmount.toFixed(2),
       paymentMethod,
@@ -392,14 +505,16 @@ export class DatabaseStorage implements IStorage {
       createdTickets.push(ticket);
     }
 
-    const newSoldQty = campaign.soldQuantity + quantity;
-    const updateData: Partial<Campaign> = { soldQuantity: newSoldQty };
-
-    if (newSoldQty >= campaign.totalQuantity) {
-      updateData.status = "sold_out";
+    if (products.length > 0) {
+      await this.syncCampaignAggregates(campaignId);
+    } else {
+      const newSoldQty = campaign.soldQuantity + quantity;
+      const updateData: Partial<Campaign> = { soldQuantity: newSoldQty };
+      if (newSoldQty >= campaign.totalQuantity) {
+        updateData.status = "sold_out";
+      }
+      await this.updateCampaign(campaignId, updateData);
     }
-
-    await this.updateCampaign(campaignId, updateData);
 
     return { order, tickets: createdTickets };
   }

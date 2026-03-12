@@ -9,6 +9,7 @@ import {
   Platform,
   Share,
   TextInput,
+  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -32,7 +33,9 @@ import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
 import { useFavorites } from "@/lib/favorites-context";
 import { getApiUrl } from "@/lib/query-client";
-import type { Campaign } from "@shared/schema";
+import type { Campaign, CampaignProduct } from "@shared/schema";
+
+type CampaignWithProducts = Campaign & { products?: CampaignProduct[] };
 
 function useCountdown(endsAt: string | Date | null | undefined) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
@@ -64,6 +67,7 @@ export default function CampaignDetailScreen() {
   const { toggleFavorite, isFavorite } = useFavorites();
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   const pulseScale = useSharedValue(1);
   const buyBtnScale = useSharedValue(1);
@@ -94,7 +98,7 @@ export default function CampaignDetailScreen() {
   const {
     data: campaign,
     isLoading,
-  } = useQuery<Campaign>({
+  } = useQuery<CampaignWithProducts>({
     queryKey: ["/api/campaigns", id],
     refetchInterval: 5000,
     staleTime: 3000,
@@ -137,16 +141,24 @@ export default function CampaignDetailScreen() {
     );
   }
 
+  const hasProducts = (campaign.products?.length ?? 0) > 0;
+  const selectedProduct = hasProducts
+    ? campaign.products!.find((p) => p.id === selectedProductId) || null
+    : null;
+
   const progress = campaign.totalQuantity > 0
     ? campaign.soldQuantity / campaign.totalQuantity
     : 0;
-  const remaining = campaign.totalQuantity - campaign.soldQuantity;
+  const remaining = selectedProduct
+    ? selectedProduct.quantity - selectedProduct.soldQuantity
+    : campaign.totalQuantity - campaign.soldQuantity;
   const isActive = campaign.status === "active";
   const isCompleted = campaign.status === "completed";
   const isSoldOut = campaign.status === "sold_out" || campaign.status === "drawing";
-  const unitPrice = parseFloat(campaign.productPrice);
+  const unitPrice = selectedProduct ? parseFloat(selectedProduct.price) : parseFloat(campaign.productPrice);
   const totalPrice = (unitPrice * quantity).toFixed(2);
   const maxQty = Math.min(remaining, 10);
+  const needsVariant = hasProducts && !selectedProductId;
 
   return (
     <View style={styles.container}>
@@ -312,11 +324,71 @@ export default function CampaignDetailScreen() {
             </View>
           )}
 
-          {isActive && (
+          {isActive && hasProducts && (
             <View style={styles.quantityCard}>
+              <View style={styles.quantityHeader}>
+                <Ionicons name="color-palette-outline" size={18} color={Colors.light.accent} />
+                <Text style={styles.quantityTitle}>اختر الموديل</Text>
+              </View>
+              {campaign.products!.map((product) => {
+                const pRemaining = product.quantity - product.soldQuantity;
+                const pSoldOut = pRemaining <= 0;
+                const isSelected = selectedProductId === product.id;
+                return (
+                  <Pressable
+                    key={product.id}
+                    onPress={() => {
+                      if (!pSoldOut) {
+                        setSelectedProductId(product.id);
+                        setQuantity(1);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                    }}
+                    disabled={pSoldOut}
+                    style={[
+                      styles.variantOption,
+                      isSelected && styles.variantOptionSelected,
+                      pSoldOut && styles.variantOptionDisabled,
+                    ]}
+                  >
+                    <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, flex: 1 }}>
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={20} color={Colors.light.accent} />
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={[
+                          styles.variantName,
+                          isSelected && { color: Colors.light.accent },
+                          pSoldOut && { color: Colors.light.textSecondary },
+                        ]}>
+                          {product.nameAr || product.name}
+                        </Text>
+                        <Text style={styles.variantSub}>
+                          {pSoldOut ? "نفذت الكمية" : `متبقي ${pRemaining} قطعة`}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[
+                      styles.variantPrice,
+                      isSelected && { color: Colors.light.accent },
+                      pSoldOut && { color: Colors.light.textSecondary },
+                    ]}>
+                      {parseFloat(product.price).toFixed(2)} $
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          {isActive && (
+            <View style={[styles.quantityCard, needsVariant && { opacity: 0.5 }]} pointerEvents={needsVariant ? "none" : "auto"}>
               <View style={styles.quantityHeader}>
                 <Ionicons name="layers-outline" size={18} color={Colors.light.accent} />
                 <Text style={styles.quantityTitle}>اختر الكمية</Text>
+                {needsVariant && (
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.danger, marginEnd: "auto" }}>اختر الموديل أولاً</Text>
+                )}
               </View>
               <View style={styles.quantityControls}>
                 <Pressable
@@ -522,8 +594,12 @@ export default function CampaignDetailScreen() {
                       router.push("/auth");
                       return;
                     }
+                    if (needsVariant) {
+                      Alert.alert("تنبيه", "يرجى اختيار الموديل أولاً");
+                      return;
+                    }
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    router.push({ pathname: "/checkout", params: { campaignId: id, quantity: String(quantity) } });
+                    router.push({ pathname: "/checkout", params: { campaignId: id, quantity: String(quantity), productId: selectedProductId || "" } });
                   }}
                   style={styles.buyButton}
                 >
@@ -547,8 +623,12 @@ export default function CampaignDetailScreen() {
                       router.push("/auth");
                       return;
                     }
+                    if (needsVariant) {
+                      Alert.alert("تنبيه", "يرجى اختيار الموديل أولاً");
+                      return;
+                    }
                     if (campaign) {
-                      addItem(campaign, quantity);
+                      addItem(campaign, quantity, selectedProduct || undefined);
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                       setAddedToCart(true);
                       setTimeout(() => setAddedToCart(false), 2000);
@@ -1056,5 +1136,43 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 20,
     color: "#EF4444",
+  },
+  variantOption: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F9FAFB",
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 10,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  variantOptionSelected: {
+    borderColor: Colors.light.accent,
+    backgroundColor: "rgba(124,58,237,0.04)",
+  },
+  variantOptionDisabled: {
+    opacity: 0.5,
+  },
+  variantName: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl" as const,
+  },
+  variantSub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl" as const,
+    marginTop: 2,
+  },
+  variantPrice: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    color: Colors.light.text,
   },
 });

@@ -52,7 +52,7 @@ server/
   templates/
     landing-page.html   # Static landing page
 shared/
-  schema.ts             # Drizzle schema (users, campaigns, orders, tickets, payment_methods, coupons, activity_log)
+  schema.ts             # Drizzle schema (users, campaigns, campaign_products, orders, tickets, payment_methods, coupons, activity_log)
 ```
 
 ## Key Features
@@ -86,7 +86,7 @@ Comprehensive admin dashboard with 7 sections:
 - GET /api/admin/activity-log - audit trail
 
 ## Database Tables
-- users (with fullName, phone, address, city, country, emailVerified, referralCode, referredBy), campaigns (with category, endsAt), orders (with shipping_status, tracking_number, shipping_address), tickets, payment_methods, coupons, activity_log, reviews, admin_notifications, user_notifications, support_tickets, email_verification_tokens, password_reset_tokens
+- users (with fullName, phone, address, city, country, emailVerified, referralCode, referredBy), campaigns (with category, endsAt), campaign_products (name, nameAr, imageUrl, price, quantity, soldQuantity, sortOrder — variants for multi-model campaigns), orders (with shipping_status, tracking_number, shipping_address, productId), tickets, payment_methods, coupons, activity_log, reviews, admin_notifications, user_notifications, support_tickets, email_verification_tokens, password_reset_tokens
 
 ## Design
 - Luxury theme: Purple (#7C3AED) + Pink (#EC4899) gradient
@@ -139,6 +139,7 @@ Comprehensive admin dashboard with 7 sections:
 - Dark mode: ThemeProvider (lib/theme-context.tsx) detects system preference via useColorScheme, Colors.dark palette in constants/colors.ts, applied to home, profile, tickets, campaign cards, tab bar
 - Full RTL conversion: All hardcoded LTR positioning (marginLeft/Right, paddingLeft/Right, left/right) converted to logical properties (marginStart/End, paddingStart/End, start/end) across all screens. Decorative elements and full-width overlays (left:0/right:0) kept as-is. I18nManager.forceRTL(true) set globally.
 - Admin advanced stats: Conversion rate and average order value added to admin dashboard (GET /api/admin/dashboard)
+- Multi-variant campaigns: campaign_products table for product variants (e.g., different storage/color options). Each variant has name, nameAr, price, quantity, soldQuantity. Admin can toggle "موديلات متعددة" when creating campaigns. Campaign detail shows variant selector. Cart and checkout pass productId. Campaign-level price/quantity/soldQuantity are auto-aggregated via syncCampaignAggregates(). Admin CRUD: POST/PUT/DELETE /api/admin/campaigns/:id/products, /api/admin/campaign-products/:id
 
 ## Admin Credentials
 - Username: admin

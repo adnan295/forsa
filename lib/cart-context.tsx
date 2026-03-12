@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { Campaign } from "@shared/schema";
+import type { Campaign, CampaignProduct } from "@shared/schema";
 
 export interface CartItem {
   campaignId: string;
+  productId?: string;
+  productName?: string;
   title: string;
   price: number;
   quantity: number;
@@ -14,9 +16,9 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (campaign: Campaign, quantity: number) => void;
-  removeItem: (campaignId: string) => void;
-  updateQuantity: (campaignId: string, quantity: number) => void;
+  addItem: (campaign: Campaign, quantity: number, product?: CampaignProduct) => void;
+  removeItem: (campaignId: string, productId?: string) => void;
+  updateQuantity: (campaignId: string, quantity: number, productId?: string) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -24,6 +26,10 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null);
 const CART_STORAGE_KEY = "forsa_cart";
+
+function itemKey(item: { campaignId: string; productId?: string }) {
+  return item.productId ? `${item.campaignId}:${item.productId}` : item.campaignId;
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -46,25 +52,40 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, loaded]);
 
-  const addItem = useCallback((campaign: Campaign, quantity: number) => {
+  const addItem = useCallback((campaign: Campaign, quantity: number, product?: CampaignProduct) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.campaignId === campaign.id);
-      const remaining = campaign.totalQuantity - campaign.soldQuantity;
+      const matchKey = product ? `${campaign.id}:${product.id}` : campaign.id;
+      const existing = prev.find((i) => itemKey(i) === matchKey);
+
+      let remaining: number;
+      let unitPrice: number;
+
+      if (product) {
+        remaining = product.quantity - product.soldQuantity;
+        unitPrice = parseFloat(product.price);
+      } else {
+        remaining = campaign.totalQuantity - campaign.soldQuantity;
+        unitPrice = parseFloat(campaign.productPrice);
+      }
+
       const maxQty = Math.min(remaining, 10);
+
       if (existing) {
         const newQty = Math.min(existing.quantity + quantity, maxQty);
         return prev.map((i) =>
-          i.campaignId === campaign.id ? { ...i, quantity: newQty, maxQuantity: maxQty } : i
+          itemKey(i) === matchKey ? { ...i, quantity: newQty, maxQuantity: maxQty, price: unitPrice } : i
         );
       }
       return [
         ...prev,
         {
           campaignId: campaign.id,
+          productId: product?.id,
+          productName: product?.nameAr || product?.name,
           title: campaign.title,
-          price: parseFloat(campaign.productPrice),
+          price: unitPrice,
           quantity: Math.min(quantity, maxQty),
-          imageUrl: campaign.imageUrl,
+          imageUrl: product?.imageUrl || campaign.imageUrl,
           prizeName: campaign.prizeName,
           maxQuantity: maxQty,
         },
@@ -72,18 +93,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const removeItem = useCallback((campaignId: string) => {
-    setItems((prev) => prev.filter((i) => i.campaignId !== campaignId));
+  const removeItem = useCallback((campaignId: string, productId?: string) => {
+    const matchKey = productId ? `${campaignId}:${productId}` : campaignId;
+    setItems((prev) => prev.filter((i) => itemKey(i) !== matchKey));
   }, []);
 
-  const updateQuantity = useCallback((campaignId: string, quantity: number) => {
+  const updateQuantity = useCallback((campaignId: string, quantity: number, productId?: string) => {
+    const matchKey = productId ? `${campaignId}:${productId}` : campaignId;
     if (quantity <= 0) {
-      setItems((prev) => prev.filter((i) => i.campaignId !== campaignId));
+      setItems((prev) => prev.filter((i) => itemKey(i) !== matchKey));
       return;
     }
     setItems((prev) =>
       prev.map((i) =>
-        i.campaignId === campaignId
+        itemKey(i) === matchKey
           ? { ...i, quantity: Math.min(quantity, i.maxQuantity) }
           : i
       )

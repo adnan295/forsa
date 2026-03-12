@@ -48,6 +48,7 @@ export default function CheckoutScreen() {
     campaignId: string;
     quantity: string;
     fromCart: string;
+    productId: string;
   }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -61,6 +62,7 @@ export default function CheckoutScreen() {
   const isCartMode = params.fromCart === "true";
   const campaignId = params.campaignId;
   const qty = parseInt(params.quantity || "1", 10) || 1;
+  const productId = params.productId || undefined;
 
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
@@ -134,6 +136,7 @@ export default function CheckoutScreen() {
           items: cartItems.map((item) => ({
             campaignId: item.campaignId,
             quantity: item.quantity,
+            productId: item.productId,
           })),
           paymentMethod: selectedMethod?.name,
           shippingFullName,
@@ -148,6 +151,7 @@ export default function CheckoutScreen() {
         const res = await apiRequest("POST", "/api/purchase", {
           campaignId,
           quantity: qty,
+          productId,
           paymentMethod: selectedMethod?.name,
           shippingFullName,
           shippingPhone,
@@ -338,11 +342,14 @@ export default function CheckoutScreen() {
             <View style={styles.divider} />
             {isCartMode ? (
               <>
-                {cartItems.map((item) => (
-                  <View key={item.campaignId} style={styles.cartItemRow}>
+                {cartItems.map((item, idx) => (
+                  <View key={`${item.campaignId}-${item.productId || idx}`} style={styles.cartItemRow}>
                     <Text style={styles.cartItemPrice}>{(item.price * item.quantity).toFixed(2)} $</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.campaignTitle}>{item.title}</Text>
+                      {item.productName && (
+                        <Text style={[styles.summaryLabel, { color: Colors.light.accent, marginBottom: 2 }]}>{item.productName}</Text>
+                      )}
                       <Text style={styles.summaryLabel}>{item.quantity} × {item.price.toFixed(2)} $</Text>
                     </View>
                   </View>

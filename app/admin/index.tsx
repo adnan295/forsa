@@ -917,6 +917,11 @@ function CampaignsSection() {
               <Text style={styles.campaignInfoText}>الجائزة: {item.prizeName}</Text>
               <Text style={styles.campaignInfoText}>السعر: {item.productPrice} $</Text>
               <Text style={styles.campaignInfoText}>المباع: {item.soldQuantity}/{item.totalQuantity}</Text>
+              {item.products && item.products.length > 0 && (
+                <Text style={[styles.campaignInfoText, { color: Colors.light.accent }]}>
+                  الموديلات: {item.products.length} ({item.products.map((p: any) => p.nameAr || p.name).join("، ")})
+                </Text>
+              )}
             </View>
             <View style={styles.campaignProgressWrap}>
               <View style={styles.campaignProgressBg}>
@@ -1371,6 +1376,14 @@ const CATEGORY_OPTIONS: { key: string; label: string }[] = [
   { key: "other", label: "أخرى" },
 ];
 
+interface ProductVariant {
+  key: string;
+  name: string;
+  nameAr: string;
+  price: string;
+  quantity: string;
+}
+
 function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -1383,6 +1396,8 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
+  const [hasVariants, setHasVariants] = useState(false);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
 
   const pickCampaignImage = async () => {
     if (Platform.OS === "web") {
@@ -1468,31 +1483,82 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       onClose();
-      setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc(""); setCategory("other"); setEndsAtText(""); setImageUri(null); setImageFile(null);
+      setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc(""); setCategory("other"); setEndsAtText(""); setImageUri(null); setImageFile(null); setHasVariants(false); setVariants([]);
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
+  const addVariant = () => {
+    setVariants((prev) => [
+      ...prev,
+      { key: Date.now().toString(), name: "", nameAr: "", price: "", quantity: "" },
+    ]);
+  };
+
+  const removeVariant = (key: string) => {
+    setVariants((prev) => prev.filter((v) => v.key !== key));
+  };
+
+  const updateVariant = (key: string, field: keyof ProductVariant, value: string) => {
+    setVariants((prev) =>
+      prev.map((v) => (v.key === key ? { ...v, [field]: value } : v))
+    );
+  };
+
   const handleCreate = async () => {
-    if (!title || !description || !price || !quantity || !prizeName) {
+    if (!title || !description || !prizeName) {
       Alert.alert("خطأ", "يرجى ملء جميع الحقول المطلوبة");
       return;
     }
+
+    if (hasVariants) {
+      if (variants.length === 0) {
+        Alert.alert("خطأ", "يرجى إضافة موديل واحد على الأقل");
+        return;
+      }
+      for (const v of variants) {
+        if (!v.name || !v.price || !v.quantity) {
+          Alert.alert("خطأ", "يرجى ملء جميع حقول الموديلات (الاسم، السعر، الكمية)");
+          return;
+        }
+      }
+    } else {
+      if (!price || !quantity) {
+        Alert.alert("خطأ", "يرجى ملء السعر والكمية");
+        return;
+      }
+    }
+
     let imageUrl: string | undefined;
     if (imageUri || imageFile) {
       imageUrl = await uploadImage();
     }
-    mutation.mutate({
+
+    const campaignData: any = {
       title,
       description,
-      productPrice: price,
-      totalQuantity: parseInt(quantity),
       prizeName,
       prizeDescription: prizeDesc || undefined,
       category,
       endsAt: endsAtText && !isNaN(new Date(endsAtText).getTime()) ? new Date(endsAtText).toISOString() : undefined,
       imageUrl,
-    });
+    };
+
+    if (hasVariants) {
+      campaignData.productPrice = variants[0].price;
+      campaignData.totalQuantity = variants.reduce((s, v) => s + parseInt(v.quantity || "0"), 0);
+      campaignData.products = variants.map((v) => ({
+        name: v.name,
+        nameAr: v.nameAr || v.name,
+        price: v.price,
+        quantity: v.quantity,
+      }));
+    } else {
+      campaignData.productPrice = price;
+      campaignData.totalQuantity = parseInt(quantity);
+    }
+
+    mutation.mutate(campaignData);
   };
 
   return (
@@ -1523,8 +1589,56 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
             </View>
             <ModalInput label="العنوان *" value={title} onChangeText={setTitle} placeholder="اسم الحملة" />
             <ModalInput label="الوصف *" value={description} onChangeText={setDescription} placeholder="وصف المنتج" multiline />
-            <ModalInput label="السعر ($) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
-            <ModalInput label="الكمية الإجمالية *" value={quantity} onChangeText={setQuantity} placeholder="4000" keyboardType="number-pad" />
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", marginBottom: 12, backgroundColor: "#F3F4F6", borderRadius: 12, padding: 14 }}>
+              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+                <Ionicons name="color-palette-outline" size={20} color={Colors.light.accent} />
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>موديلات متعددة</Text>
+              </View>
+              <Switch
+                value={hasVariants}
+                onValueChange={(v) => {
+                  setHasVariants(v);
+                  if (v && variants.length === 0) addVariant();
+                }}
+                trackColor={{ true: Colors.light.accent }}
+              />
+            </View>
+
+            {!hasVariants ? (
+              <>
+                <ModalInput label="السعر ($) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
+                <ModalInput label="الكمية الإجمالية *" value={quantity} onChangeText={setQuantity} placeholder="4000" keyboardType="number-pad" />
+              </>
+            ) : (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 8 }}>الموديلات ({variants.length})</Text>
+                {variants.map((v, idx) => (
+                  <View key={v.key} style={{ backgroundColor: "#F9FAFB", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: Colors.light.border }}>
+                    <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.accent }}>موديل {idx + 1}</Text>
+                      <Pressable onPress={() => removeVariant(v.key)}>
+                        <Ionicons name="close-circle" size={22} color={Colors.light.danger} />
+                      </Pressable>
+                    </View>
+                    <ModalInput label="الاسم (إنجليزي) *" value={v.name} onChangeText={(t) => updateVariant(v.key, "name", t)} placeholder="256GB Black" />
+                    <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateVariant(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
+                    <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+                      <View style={{ flex: 1 }}>
+                        <ModalInput label="السعر ($) *" value={v.price} onChangeText={(t) => updateVariant(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <ModalInput label="الكمية *" value={v.quantity} onChangeText={(t) => updateVariant(v.key, "quantity", t)} placeholder="1000" keyboardType="number-pad" />
+                      </View>
+                    </View>
+                  </View>
+                ))}
+                <Pressable onPress={addVariant} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed" }}>
+                  <Ionicons name="add-circle" size={20} color={Colors.light.accent} />
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.accent }}>إضافة موديل</Text>
+                </Pressable>
+              </View>
+            )}
+
             <ModalInput label="اسم الجائزة *" value={prizeName} onChangeText={setPrizeName} placeholder="iPhone 16 Pro Max" />
             <ModalInput label="وصف الجائزة" value={prizeDesc} onChangeText={setPrizeDesc} placeholder="تفاصيل إضافية" multiline />
             <View style={modalStyles.inputGroup}>

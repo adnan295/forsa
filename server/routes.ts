@@ -415,7 +415,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/campaigns", async (_req: Request, res: Response) => {
     try {
       const allCampaigns = await storage.getCampaigns();
-      res.json(allCampaigns);
+      const campaignsWithProducts = await Promise.all(
+        allCampaigns.map(async (c) => {
+          const products = await storage.getCampaignProducts(c.id);
+          return { ...c, products };
+        })
+      );
+      res.json(campaignsWithProducts);
     } catch (error) {
       console.error("Get campaigns error:", error);
       res.status(500).json({ message: "Server error" });
@@ -428,7 +434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
-      res.json(campaign);
+      const products = await storage.getCampaignProducts(campaign.id);
+      res.json({ ...campaign, products });
     } catch (error) {
       console.error("Get campaign error:", error);
       res.status(500).json({ message: "Server error" });
@@ -437,11 +444,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/campaigns", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const parsed = insertCampaignSchema.safeParse(req.body);
+      const { products: productsData, ...campaignData } = req.body;
+      const parsed = insertCampaignSchema.safeParse(campaignData);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
       }
       const campaign = await storage.createCampaign(parsed.data);
+
+      if (productsData && Array.isArray(productsData) && productsData.length > 0) {
+        for (let i = 0; i < productsData.length; i++) {
+          const p = productsData[i];
+          const qty = parseInt(p.quantity);
+          const prc = parseFloat(p.price);
+          if (!p.name || isNaN(qty) || qty <= 0 || isNaN(prc) || prc <= 0) {
+            return res.status(400).json({ message: `Invalid variant data at index ${i}` });
+          }
+          await storage.createCampaignProduct({
+            campaignId: campaign.id,
+            name: p.name,
+            nameAr: p.nameAr || p.name,
+            imageUrl: p.imageUrl,
+            price: prc.toFixed(2),
+            quantity: qty,
+            sortOrder: i,
+          });
+        }
+        await storage.syncCampaignAggregates(campaign.id);
+      }
 
       try {
         const allUsers = await storage.getAllUsers();
@@ -459,7 +488,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Notification error:", e);
       }
 
-      res.json(campaign);
+      const products = await storage.getCampaignProducts(campaign.id);
+      const updatedCampaign = await storage.getCampaign(campaign.id);
+      res.json({ ...updatedCampaign, products });
     } catch (error) {
       console.error("Create campaign error:", error);
       res.status(500).json({ message: "Server error" });
@@ -472,9 +503,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
-      res.json(campaign);
+      const products = await storage.getCampaignProducts(campaign.id);
+      res.json({ ...campaign, products });
     } catch (error) {
       console.error("Update campaign error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/admin/campaigns/:id/products", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const campaignId = req.params.id as string;
+      const campaign = await storage.getCampaign(campaignId);
+      if (!campaign) return res.status(404).json({ message: "Campaign not found" });
+
+      const { name, nameAr, imageUrl, price, quantity, sortOrder } = req.body;
+      if (!name || !price || !quantity) {
+        return res.status(400).json({ message: "Name, price and quantity are required" });
+      }
+
+      const product = await storage.createCampaignProduct({
+        campaignId,
+        name,
+        nameAr,
+        imageUrl,
+        price: String(price),
+        quantity: parseInt(quantity),
+        sortOrder: sortOrder || 0,
+      });
+      await storage.syncCampaignAggregates(campaignId);
+      res.json(product);
+    } catch (error) {
+      console.error("Add product error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/admin/campaign-products/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const product = await storage.updateCampaignProduct(req.params.id as string, req.body);
+      if (!product) return res.status(404).json({ message: "Product not found" });
+      await storage.syncCampaignAggregates(product.campaignId);
+      res.json(product);
+    } catch (error) {
+      console.error("Update product error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/admin/campaign-products/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const product = await storage.getCampaignProduct(req.params.id as string);
+      if (!product) return res.status(404).json({ message: "Product not found" });
+      const deleted = await storage.deleteCampaignProduct(req.params.id as string);
+      if (deleted) {
+        await storage.syncCampaignAggregates(product.campaignId);
+      }
+      res.json({ success: deleted });
+    } catch (error) {
+      console.error("Delete product error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -512,6 +599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         campaignId,
         quantity = 1,
         paymentMethod = "card",
+        productId,
         shippingFullName,
         shippingPhone,
         shippingCity,
@@ -539,7 +627,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity,
         paymentMethod,
         shippingData,
-        couponCode
+        couponCode,
+        productId
       );
 
       await storage.logActivity(
@@ -645,7 +734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allTickets: any[] = [];
 
       for (const item of items) {
-        const { campaignId, quantity } = item;
+        const { campaignId, quantity, productId } = item;
         if (!campaignId || !quantity) continue;
 
         const result = await storage.purchaseProduct(
@@ -654,7 +743,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity,
           paymentMethod,
           shippingData,
-          couponCode
+          couponCode,
+          productId
         );
 
         allOrders.push(result.order);

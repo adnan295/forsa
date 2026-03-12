@@ -49,6 +49,9 @@ function CartItemCard({ item }: { item: CartItem }) {
         </View>
         <View style={styles.itemInfo}>
           <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
+          {item.productName && (
+            <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.accent, textAlign: "right", writingDirection: "rtl" as const, marginBottom: 2 }}>{item.productName}</Text>
+          )}
           <View style={styles.itemPrizeRow}>
             <Ionicons name="trophy" size={12} color="#A78BFA" />
             <Text style={styles.itemPrize} numberOfLines={1}>{item.prizeName}</Text>
@@ -58,7 +61,7 @@ function CartItemCard({ item }: { item: CartItem }) {
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            removeItem(item.campaignId);
+            removeItem(item.campaignId, item.productId);
           }}
           style={styles.removeBtn}
         >
@@ -71,7 +74,7 @@ function CartItemCard({ item }: { item: CartItem }) {
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              updateQuantity(item.campaignId, item.quantity - 1);
+              updateQuantity(item.campaignId, item.quantity - 1, item.productId);
             }}
             style={styles.qtyBtn}
           >
@@ -84,7 +87,7 @@ function CartItemCard({ item }: { item: CartItem }) {
             onPress={() => {
               if (item.quantity < item.maxQuantity) {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                updateQuantity(item.campaignId, item.quantity + 1);
+                updateQuantity(item.campaignId, item.quantity + 1, item.productId);
               }
             }}
             style={[styles.qtyBtn, item.quantity >= item.maxQuantity && { opacity: 0.4 }]}
@@ -169,7 +172,7 @@ export default function CartScreen() {
         <>
           <FlatList
             data={items}
-            keyExtractor={(item) => item.campaignId}
+            keyExtractor={(item) => item.productId ? `${item.campaignId}:${item.productId}` : item.campaignId}
             renderItem={({ item }) => <CartItemCard item={item} />}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}

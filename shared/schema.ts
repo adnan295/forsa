@@ -90,6 +90,7 @@ export const orders = pgTable("orders", {
   campaignId: varchar("campaign_id")
     .notNull()
     .references(() => campaigns.id),
+  productId: varchar("product_id"),
   quantity: integer("quantity").notNull().default(1),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   status: orderStatusEnum("status").notNull().default("pending"),
@@ -262,13 +263,38 @@ export const usersRelations = relations(users, ({ many }) => ({
   reviews: many(reviews),
 }));
 
+export const campaignProducts = pgTable("campaign_products", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id")
+    .notNull()
+    .references(() => campaigns.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  nameAr: text("name_ar"),
+  imageUrl: text("image_url"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  quantity: integer("quantity").notNull(),
+  soldQuantity: integer("sold_quantity").notNull().default(0),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const campaignsRelations = relations(campaigns, ({ many, one }) => ({
   orders: many(orders),
   tickets: many(tickets),
   reviews: many(reviews),
+  products: many(campaignProducts),
   winner: one(users, {
     fields: [campaigns.winnerId],
     references: [users.id],
+  }),
+}));
+
+export const campaignProductsRelations = relations(campaignProducts, ({ one }) => ({
+  campaign: one(campaigns, {
+    fields: [campaignProducts.campaignId],
+    references: [campaigns.id],
   }),
 }));
 
@@ -382,3 +408,4 @@ export type AdminNotification = typeof adminNotifications.$inferSelect;
 export type UserNotification = typeof userNotifications.$inferSelect;
 export type SupportTicket = typeof supportTickets.$inferSelect;
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+export type CampaignProduct = typeof campaignProducts.$inferSelect;
