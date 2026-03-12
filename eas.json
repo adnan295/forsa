@@ -21,7 +21,8 @@
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "credentialsSource": "local"
       },
       "env": {
         "EXPO_PUBLIC_DOMAIN": "forsa.today"
