@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <title>حذف الحساب - APP_NAME_PLACEHOLDER</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
+        background: #F9FAFB;
+        color: #1F2937;
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+
+      .hero {
+        background: linear-gradient(135deg, #7C3AED 0%, #A855F7 40%, #EC4899 100%);
+        padding: 40px 20px 60px;
+        text-align: center;
+      }
+
+      .hero-logo {
+        font-size: 32px;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 12px;
+        letter-spacing: -0.5px;
+      }
+
+      .hero-title {
+        font-size: 26px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 8px;
+      }
+
+      .hero-subtitle {
+        font-size: 15px;
+        color: rgba(255,255,255,0.85);
+        max-width: 520px;
+        margin: 0 auto;
+      }
+
+      .container {
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 40px 20px 60px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        border: 1px solid #E5E7EB;
+      }
+
+      .card-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7C3AED, #EC4899);
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      .step-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .step-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        padding: 16px;
+        background: #F9FAFB;
+        border-radius: 10px;
+        border: 1px solid #E5E7EB;
+      }
+
+      .step-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7C3AED, #EC4899);
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      .step-content strong {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 2px;
+      }
+
+      .step-content span {
+        font-size: 13px;
+        color: #6B7280;
+      }
+
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      .data-table th {
+        background: #F3F4F6;
+        padding: 10px 14px;
+        text-align: right;
+        font-weight: 600;
+        color: #374151;
+        border-bottom: 1px solid #E5E7EB;
+      }
+
+      .data-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #F3F4F6;
+        color: #4B5563;
+        vertical-align: top;
+      }
+
+      .data-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      .badge-deleted {
+        display: inline-block;
+        background: #FEE2E2;
+        color: #B91C1C;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 20px;
+      }
+
+      .badge-retained {
+        display: inline-block;
+        background: #FEF3C7;
+        color: #92400E;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 20px;
+      }
+
+      .alert {
+        display: flex;
+        gap: 12px;
+        background: #FFF7ED;
+        border: 1px solid #FED7AA;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-top: 20px;
+        font-size: 13px;
+        color: #92400E;
+        align-items: flex-start;
+      }
+
+      .alert-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+        line-height: 1.3;
+      }
+
+      .contact-box {
+        text-align: center;
+        padding: 24px;
+        background: linear-gradient(135deg, #F5F3FF, #FDF4FF);
+        border-radius: 12px;
+        border: 1px solid #E9D5FF;
+      }
+
+      .contact-box p {
+        color: #6B7280;
+        font-size: 14px;
+        margin-bottom: 12px;
+      }
+
+      .contact-link {
+        display: inline-block;
+        background: linear-gradient(135deg, #7C3AED, #EC4899);
+        color: white;
+        text-decoration: none;
+        padding: 10px 24px;
+        border-radius: 30px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .footer {
+        text-align: center;
+        color: #9CA3AF;
+        font-size: 12px;
+        padding: 20px;
+        border-top: 1px solid #E5E7EB;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="hero">
+      <div class="hero-logo">APP_NAME_PLACEHOLDER</div>
+      <div class="hero-title">طلب حذف الحساب والبيانات</div>
+      <div class="hero-subtitle">نحترم حقك في التحكم ببياناتك الشخصية. يمكنك حذف حسابك وجميع بياناتك في أي وقت.</div>
+    </div>
+
+    <div class="container">
+
+      <div class="card">
+        <div class="card-title">
+          <span class="badge">1</span>
+          خطوات حذف حسابك من داخل التطبيق
+        </div>
+        <ol class="step-list">
+          <li class="step-item">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong>افتح تطبيق APP_NAME_PLACEHOLDER</strong>
+              <span>قم بتسجيل الدخول إلى حسابك</span>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong>اذهب إلى صفحة الملف الشخصي</strong>
+              <span>اضغط على أيقونة الملف الشخصي في شريط التنقل السفلي</span>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <strong>اضغط على "حذف الحساب"</strong>
+              <span>ستجد الزر في أسفل صفحة الملف الشخصي</span>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <strong>تأكيد الحذف</strong>
+              <span>سيظهر لك تأكيد يُعلمك بأن جميع بياناتك ستُحذف نهائياً. اضغط على "تأكيد" للمتابعة.</span>
+            </div>
+          </li>
+        </ol>
+
+        <div class="alert">
+          <span class="alert-icon">⚠️</span>
+          <span>عملية الحذف فورية ونهائية ولا يمكن التراجع عنها. تأكد من أنك لا تحتاج إلى بياناتك قبل المتابعة.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span class="badge">2</span>
+          البيانات التي يتم حذفها والاحتفاظ بها
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>نوع البيانات</th>
+              <th>الإجراء</th>
+              <th>التفاصيل</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>معلومات الحساب (الاسم، البريد الإلكتروني، اسم المستخدم، كلمة المرور)</td>
+              <td><span class="badge-deleted">تُحذف فوراً</span></td>
+              <td>تُحذف بشكل نهائي عند تأكيد الطلب</td>
+            </tr>
+            <tr>
+              <td>بيانات الملف الشخصي (رقم الهاتف، العنوان، المدينة، الدولة)</td>
+              <td><span class="badge-deleted">تُحذف فوراً</span></td>
+              <td>تُحذف بشكل نهائي عند تأكيد الطلب</td>
+            </tr>
+            <tr>
+              <td>التذاكر والمشاركات في الحملات</td>
+              <td><span class="badge-deleted">تُحذف فوراً</span></td>
+              <td>تُحذف جميع التذاكر المرتبطة بحسابك</td>
+            </tr>
+            <tr>
+              <td>الطلبات وصور الإيصالات</td>
+              <td><span class="badge-deleted">تُحذف فوراً</span></td>
+              <td>تُحذف سجلات الطلبات وصور الإيصالات المرفوعة</td>
+            </tr>
+            <tr>
+              <td>التقييمات والمراجعات</td>
+              <td><span class="badge-deleted">تُحذف فوراً</span></td>
+              <td>تُحذف جميع التقييمات التي أضفتها</td>
+            </tr>
+            <tr>
+              <td>الإشعارات وطلبات الدعم</td>
+              <td><span class="badge-deleted">تُحذف فوراً</span></td>
+              <td>تُحذف جميع الإشعارات وسجلات تواصلك مع الدعم</td>
+            </tr>
+            <tr>
+              <td>سجلات المعاملات المالية المكتملة</td>
+              <td><span class="badge-retained">تُحتفظ بها</span></td>
+              <td>قد تُحتفظ ببعض سجلات الدفع لأغراض المحاسبة والامتثال القانوني لمدة تصل إلى 7 سنوات وفقاً للأنظمة المالية المعمول بها، دون ارتباطها بهويتك الشخصية.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span class="badge">3</span>
+          لا يمكنك الوصول إلى التطبيق؟ تواصل معنا مباشرة
+        </div>
+        <div class="contact-box">
+          <p>إذا لم تتمكن من تسجيل الدخول أو تواجه مشكلة في حذف حسابك من داخل التطبيق، يمكنك إرسال طلب حذف إلينا مباشرة عبر البريد الإلكتروني.</p>
+          <a class="contact-link" href="mailto:support@forsa.app?subject=طلب حذف الحساب&body=أرجو حذف حسابي وجميع بياناتي المرتبطة به.%0A%0Aاسم المستخدم أو البريد الإلكتروني المسجل: ">
+            إرسال طلب الحذف عبر البريد
+          </a>
+          <p style="margin-top: 14px; font-size: 12px; color: #9CA3AF;">سيتم معالجة طلبك خلال 7 أيام عمل</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      <p>APP_NAME_PLACEHOLDER &copy; 2025 &mdash; جميع الحقوق محفوظة</p>
+    </div>
+
+  </body>
+</html>
