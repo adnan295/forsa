@@ -19,14 +19,21 @@
       "infoPlist": {
         "NSCameraUsageDescription": "نحتاج الوصول للكاميرا لتصوير إيصال الدفع",
         "NSPhotoLibraryUsageDescription": "نحتاج الوصول لمعرض الصور لاختيار إيصال الدفع أو صورة المنتج",
-        "UIRequiredDeviceCapabilities": ["arm64"],
+        "UIRequiredDeviceCapabilities": [
+          "arm64"
+        ],
         "WKCompanionAppBundleIdentifier": "",
-        "UIDeviceFamily": [1]
+        "UIDeviceFamily": [
+          1
+        ]
       }
     },
     "android": {
       "package": "today.forsa",
-      "permissions": ["CAMERA"],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#7C3AED",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -60,6 +67,14 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "origin": "https://replit.com/"
+      },
+      "eas": {
+        "projectId": "e753d7dd-1651-4cc5-ae69-b77ba5629277"
+      }
     }
   }
 }
