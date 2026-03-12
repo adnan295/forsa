@@ -440,21 +440,18 @@ export class DatabaseStorage implements IStorage {
 
     const products = await this.getCampaignProducts(campaignId);
     let unitPrice: number;
+    let selectedProduct: CampaignProduct | undefined;
 
     if (products.length > 0) {
       if (!productId) throw new Error("Product variant must be selected");
-      const product = products.find(p => p.id === productId);
-      if (!product) throw new Error("Product variant not found");
+      selectedProduct = products.find(p => p.id === productId);
+      if (!selectedProduct) throw new Error("Product variant not found");
 
-      const productRemaining = product.quantity - product.soldQuantity;
+      const productRemaining = selectedProduct.quantity - selectedProduct.soldQuantity;
       if (quantity > productRemaining)
         throw new Error(`فقط ${productRemaining} قطعة متبقية من هذا الموديل`);
 
-      unitPrice = parseFloat(product.price);
-
-      await this.updateCampaignProduct(productId, {
-        soldQuantity: product.soldQuantity + quantity,
-      });
+      unitPrice = parseFloat(selectedProduct.price);
     } else {
       const remaining = campaign.totalQuantity - campaign.soldQuantity;
       if (quantity > remaining)
@@ -509,7 +506,10 @@ export class DatabaseStorage implements IStorage {
       createdTickets.push(ticket);
     }
 
-    if (products.length > 0) {
+    if (selectedProduct && productId) {
+      await this.updateCampaignProduct(productId, {
+        soldQuantity: selectedProduct.soldQuantity + quantity,
+      });
       await this.syncCampaignAggregates(campaignId);
     } else {
       const newSoldQty = campaign.soldQuantity + quantity;
