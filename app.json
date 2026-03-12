@@ -25,7 +25,7 @@
       }
     },
     "android": {
-      "package": "com.forsa",
+      "package": "today.forsa",
       "permissions": ["CAMERA"],
       "adaptiveIcon": {
         "backgroundColor": "#7C3AED",
