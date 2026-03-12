@@ -541,7 +541,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/campaign-products/:id", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const product = await storage.updateCampaignProduct(req.params.id as string, req.body);
+      const { price, quantity, ...rest } = req.body;
+      const updateData: any = { ...rest };
+      if (price !== undefined) {
+        const prc = parseFloat(price);
+        if (isNaN(prc) || prc <= 0) return res.status(400).json({ message: "Invalid price" });
+        updateData.price = prc.toFixed(2);
+      }
+      if (quantity !== undefined) {
+        const qty = parseInt(quantity);
+        if (isNaN(qty) || qty <= 0) return res.status(400).json({ message: "Invalid quantity" });
+        updateData.quantity = qty;
+      }
+      const product = await storage.updateCampaignProduct(req.params.id as string, updateData);
       if (!product) return res.status(404).json({ message: "Product not found" });
       await storage.syncCampaignAggregates(product.campaignId);
       res.json(product);

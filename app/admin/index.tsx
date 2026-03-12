@@ -837,6 +837,7 @@ function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; tic
 function CampaignsSection() {
   const { data: campaigns, isLoading } = useQuery<any[]>({ queryKey: ["/api/campaigns"] });
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<any>(null);
 
   const drawMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -936,6 +937,10 @@ function CampaignsSection() {
               </View>
             </View>
             <View style={styles.campaignActions}>
+              <Pressable onPress={() => setEditingCampaign(item)} style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}>
+                <Ionicons name="create" size={16} color="#fff" />
+                <Text style={styles.actionBtnText}>الموديلات</Text>
+              </Pressable>
               {(item.status === "sold_out" || item.status === "drawing") && (
                 <Pressable onPress={() => handleDraw(item)} style={[styles.actionBtn, { backgroundColor: "#9B59B6" }]}>
                   <Ionicons name="dice" size={16} color="#fff" />
@@ -959,7 +964,187 @@ function CampaignsSection() {
         )}
       />
       <CreateCampaignModal visible={showCreateModal} onClose={() => setShowCreateModal(false)} />
+      {editingCampaign && (
+        <EditCampaignProductsModal campaign={editingCampaign} onClose={() => setEditingCampaign(null)} />
+      )}
     </>
+  );
+}
+
+function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClose: () => void }) {
+  const existingProducts: any[] = campaign.products || [];
+  const [products, setProducts] = useState<ProductVariant[]>(
+    existingProducts.map((p: any) => ({
+      key: p.id,
+      name: p.name || "",
+      nameAr: p.nameAr || "",
+      price: String(p.price),
+      quantity: String(p.quantity),
+      imageUrl: p.imageUrl || "",
+    }))
+  );
+  const [newProducts, setNewProducts] = useState<ProductVariant[]>([]);
+
+  const addNewProduct = () => {
+    setNewProducts((prev) => [
+      ...prev,
+      { key: Date.now().toString(), name: "", nameAr: "", price: "", quantity: "", imageUrl: "" },
+    ]);
+  };
+
+  const updateProduct = (key: string, field: keyof ProductVariant, value: string) => {
+    setProducts((prev) => prev.map((v) => (v.key === key ? { ...v, [field]: value } : v)));
+  };
+
+  const updateNewProduct = (key: string, field: keyof ProductVariant, value: string) => {
+    setNewProducts((prev) => prev.map((v) => (v.key === key ? { ...v, [field]: value } : v)));
+  };
+
+  const removeNewProduct = (key: string) => {
+    setNewProducts((prev) => prev.filter((v) => v.key !== key));
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/campaign-products/${productId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+    },
+    onError: (err: any) => Alert.alert("خطأ", err.message),
+  });
+
+  const handleDeleteProduct = (p: ProductVariant) => {
+    Alert.alert("حذف الموديل", `هل تريد حذف "${p.nameAr || p.name}"؟`, [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "حذف", style: "destructive", onPress: () => {
+          deleteMutation.mutate(p.key);
+          setProducts((prev) => prev.filter((v) => v.key !== p.key));
+        },
+      },
+    ]);
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      for (const p of products) {
+        const orig = existingProducts.find((ep: any) => ep.id === p.key);
+        if (orig && (orig.name !== p.name || orig.nameAr !== p.nameAr || String(orig.price) !== p.price || String(orig.quantity) !== p.quantity || (orig.imageUrl || "") !== p.imageUrl)) {
+          await apiRequest("PUT", `/api/admin/campaign-products/${p.key}`, {
+            name: p.name,
+            nameAr: p.nameAr,
+            price: p.price,
+            quantity: parseInt(p.quantity),
+            imageUrl: p.imageUrl || undefined,
+          });
+        }
+      }
+      for (const p of newProducts) {
+        if (!p.name || !p.price || !p.quantity) continue;
+        await apiRequest("POST", `/api/admin/campaigns/${campaign.id}/products`, {
+          name: p.name,
+          nameAr: p.nameAr || p.name,
+          price: p.price,
+          quantity: parseInt(p.quantity),
+          imageUrl: p.imageUrl || undefined,
+        });
+      }
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      onClose();
+    },
+    onError: (err: any) => Alert.alert("خطأ", err.message),
+  });
+
+  return (
+    <Modal visible={true} animationType="slide" transparent>
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.container}>
+          <View style={modalStyles.header}>
+            <Text style={modalStyles.title}>موديلات: {campaign.title}</Text>
+            <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
+          </View>
+          <ScrollView style={modalStyles.body} showsVerticalScrollIndicator={false}>
+            {products.length > 0 && (
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" as const, marginBottom: 8 }}>الموديلات الحالية ({products.length})</Text>
+            )}
+            {products.map((v, idx) => (
+              <View key={v.key} style={{ backgroundColor: "#F9FAFB", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: Colors.light.border }}>
+                <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.accent }}>موديل {idx + 1}</Text>
+                  <Pressable onPress={() => handleDeleteProduct(v)}>
+                    <Ionicons name="trash-outline" size={20} color={Colors.light.danger} />
+                  </Pressable>
+                </View>
+                <ModalInput label="الاسم (إنجليزي)" value={v.name} onChangeText={(t) => updateProduct(v.key, "name", t)} placeholder="256GB Black" />
+                <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateProduct(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
+                <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <ModalInput label="السعر ($)" value={v.price} onChangeText={(t) => updateProduct(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ModalInput label="الكمية" value={v.quantity} onChangeText={(t) => updateProduct(v.key, "quantity", t)} placeholder="1000" keyboardType="number-pad" />
+                  </View>
+                </View>
+                <ModalInput label="رابط الصورة" value={v.imageUrl} onChangeText={(t) => updateProduct(v.key, "imageUrl", t)} placeholder="https://example.com/image.jpg" />
+              </View>
+            ))}
+
+            {newProducts.length > 0 && (
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#2ECC71", textAlign: "right", writingDirection: "rtl" as const, marginBottom: 8, marginTop: 4 }}>موديلات جديدة ({newProducts.length})</Text>
+            )}
+            {newProducts.map((v, idx) => (
+              <View key={v.key} style={{ backgroundColor: "#F0FFF4", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#2ECC7140" }}>
+                <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#2ECC71" }}>جديد {idx + 1}</Text>
+                  <Pressable onPress={() => removeNewProduct(v.key)}>
+                    <Ionicons name="close-circle" size={22} color={Colors.light.danger} />
+                  </Pressable>
+                </View>
+                <ModalInput label="الاسم (إنجليزي) *" value={v.name} onChangeText={(t) => updateNewProduct(v.key, "name", t)} placeholder="256GB Black" />
+                <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateNewProduct(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
+                <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <ModalInput label="السعر ($) *" value={v.price} onChangeText={(t) => updateNewProduct(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ModalInput label="الكمية *" value={v.quantity} onChangeText={(t) => updateNewProduct(v.key, "quantity", t)} placeholder="1000" keyboardType="number-pad" />
+                  </View>
+                </View>
+                <ModalInput label="رابط الصورة" value={v.imageUrl} onChangeText={(t) => updateNewProduct(v.key, "imageUrl", t)} placeholder="https://example.com/image.jpg" />
+              </View>
+            ))}
+
+            <Pressable onPress={addNewProduct} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed", marginBottom: 16 }}>
+              <Ionicons name="add-circle" size={20} color={Colors.light.accent} />
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.accent }}>إضافة موديل جديد</Text>
+            </Pressable>
+          </ScrollView>
+
+          <View style={modalStyles.footer}>
+            <Pressable onPress={onClose} style={modalStyles.cancelBtn}>
+              <Text style={modalStyles.cancelText}>إلغاء</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => saveMutation.mutate()}
+              style={[modalStyles.submitBtn, saveMutation.isPending && { opacity: 0.6 }]}
+              disabled={saveMutation.isPending}
+            >
+              {saveMutation.isPending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={modalStyles.submitText}>حفظ التغييرات</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
