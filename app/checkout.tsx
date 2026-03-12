@@ -80,7 +80,7 @@ export default function CheckoutScreen() {
 
   const isProfileComplete = !!(user?.fullName && user?.phone && user?.address && user?.city && user?.country);
 
-  const { data: campaign, isLoading: campaignLoading } = useQuery<Campaign>({
+  const { data: campaign, isLoading: campaignLoading } = useQuery<Campaign & { products?: any[] }>({
     queryKey: ["/api/campaigns", campaignId],
     enabled: !isCartMode && !!campaignId,
   });
@@ -94,7 +94,9 @@ export default function CheckoutScreen() {
   const selectedMethod =
     paymentMethods?.find((m) => m.id === selectedMethodId) || null;
 
-  const unitPrice = campaign ? parseFloat(campaign.productPrice) : 0;
+  const selectedVariant = campaign?.products?.find((p: any) => String(p.id) === String(productId));
+  const unitPrice = selectedVariant ? parseFloat(selectedVariant.price) : (campaign ? parseFloat(campaign.productPrice) : 0);
+  const variantName = selectedVariant?.nameAr || selectedVariant?.name || undefined;
   const subtotal = isCartMode
     ? cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
     : unitPrice * qty;
@@ -358,6 +360,9 @@ export default function CheckoutScreen() {
             ) : (
               <>
                 <Text style={styles.campaignTitle}>{campaign!.title}</Text>
+                {variantName && (
+                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.accent, textAlign: "right", writingDirection: "rtl" as const, marginBottom: 4 }}>{variantName}</Text>
+                )}
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryValue}>{unitPrice.toFixed(2)} $</Text>
                   <Text style={styles.summaryLabel}>سعر المنتج</Text>

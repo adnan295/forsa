@@ -70,6 +70,7 @@ export interface IStorage {
     userId: string;
     campaignId: string;
     orderId: string;
+    productId?: string;
   }): Promise<Ticket>;
   getTicketsByUser(userId: string): Promise<Ticket[]>;
   getTicketsByCampaign(campaignId: string): Promise<Ticket[]>;
@@ -375,6 +376,7 @@ export class DatabaseStorage implements IStorage {
     userId: string;
     campaignId: string;
     orderId: string;
+    productId?: string;
   }): Promise<Ticket> {
     const ticketNumber = generateTicketNumber();
     const [ticket] = await db
@@ -384,6 +386,7 @@ export class DatabaseStorage implements IStorage {
         userId: data.userId,
         campaignId: data.campaignId,
         orderId: data.orderId,
+        productId: data.productId || null,
       })
       .returning();
     return ticket;
@@ -501,6 +504,7 @@ export class DatabaseStorage implements IStorage {
         userId,
         campaignId,
         orderId: order.id,
+        productId: productId || undefined,
       });
       createdTickets.push(ticket);
     }

@@ -918,9 +918,16 @@ function CampaignsSection() {
               <Text style={styles.campaignInfoText}>السعر: {item.productPrice} $</Text>
               <Text style={styles.campaignInfoText}>المباع: {item.soldQuantity}/{item.totalQuantity}</Text>
               {item.products && item.products.length > 0 && (
-                <Text style={[styles.campaignInfoText, { color: Colors.light.accent }]}>
-                  الموديلات: {item.products.length} ({item.products.map((p: any) => p.nameAr || p.name).join("، ")})
-                </Text>
+                <View>
+                  <Text style={[styles.campaignInfoText, { color: Colors.light.accent }]}>
+                    الموديلات: {item.products.length}
+                  </Text>
+                  {item.products.map((p: any) => (
+                    <Text key={p.id} style={[styles.campaignInfoText, { fontSize: 11, color: Colors.light.textLight, paddingStart: 8 }]}>
+                      • {p.nameAr || p.name}: {p.soldQuantity}/{p.quantity} ({p.price} $)
+                    </Text>
+                  ))}
+                </View>
               )}
             </View>
             <View style={styles.campaignProgressWrap}>
@@ -1382,6 +1389,7 @@ interface ProductVariant {
   nameAr: string;
   price: string;
   quantity: string;
+  imageUrl: string;
 }
 
 function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -1491,7 +1499,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
   const addVariant = () => {
     setVariants((prev) => [
       ...prev,
-      { key: Date.now().toString(), name: "", nameAr: "", price: "", quantity: "" },
+      { key: Date.now().toString(), name: "", nameAr: "", price: "", quantity: "", imageUrl: "" },
     ]);
   };
 
@@ -1552,6 +1560,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
         nameAr: v.nameAr || v.name,
         price: v.price,
         quantity: v.quantity,
+        imageUrl: v.imageUrl || undefined,
       }));
     } else {
       campaignData.productPrice = price;
@@ -1630,6 +1639,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
                         <ModalInput label="الكمية *" value={v.quantity} onChangeText={(t) => updateVariant(v.key, "quantity", t)} placeholder="1000" keyboardType="number-pad" />
                       </View>
                     </View>
+                    <ModalInput label="رابط الصورة (اختياري)" value={v.imageUrl} onChangeText={(t) => updateVariant(v.key, "imageUrl", t)} placeholder="https://example.com/image.jpg" />
                   </View>
                 ))}
                 <Pressable onPress={addVariant} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed" }}>

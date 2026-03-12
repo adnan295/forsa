@@ -124,6 +124,7 @@ export const tickets = pgTable("tickets", {
   orderId: varchar("order_id")
     .notNull()
     .references(() => orders.id),
+  productId: varchar("product_id"),
   isWinner: boolean("is_winner").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
