@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "8yzGhbxBMQ9cAHWBTH0wE"
+uri = "file://attached_assets/generated_images/forsa-feature-graphic-1024x500.png"
+type = "image"
+title = "Forsa — Google Play Feature Graphic (1024x500)"
