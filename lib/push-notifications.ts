@@ -53,15 +53,25 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 }
 
+function handleNotificationData(data: Record<string, any> | undefined) {
+  if (!data) return;
+  if (data.campaignId) {
+    router.push(`/campaign/${data.campaignId}`);
+  } else if (data.orderId) {
+    router.push(`/order/${data.orderId}`);
+  }
+}
+
 export function setupNotificationHandlers() {
+  Notifications.getLastNotificationResponseAsync().then((response) => {
+    if (response) {
+      handleNotificationData(response.notification.request.content.data);
+    }
+  });
+
   const subscription = Notifications.addNotificationResponseReceivedListener(
     (response) => {
-      const data = response.notification.request.content.data;
-      if (data?.campaignId) {
-        router.push(`/campaign/${data.campaignId}`);
-      } else if (data?.orderId) {
-        router.push(`/order/${data.orderId}`);
-      }
+      handleNotificationData(response.notification.request.content.data);
     }
   );
 
