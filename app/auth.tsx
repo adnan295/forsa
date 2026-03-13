@@ -112,19 +112,22 @@ export default function AuthScreen() {
   }, [resendTimer]);
 
   async function handleSubmit() {
-    if (!username.trim() || !password.trim()) {
-      Alert.alert("خطأ", "يرجى ملء جميع الحقول");
-      return;
-    }
-    if (!isLogin && !email.trim()) {
-      Alert.alert("خطأ", "يرجى إدخال البريد الإلكتروني");
-      return;
+    if (isLogin) {
+      if (!email.trim() || !password.trim()) {
+        Alert.alert("خطأ", "يرجى ملء جميع الحقول");
+        return;
+      }
+    } else {
+      if (!username.trim() || !email.trim() || !password.trim()) {
+        Alert.alert("خطأ", "يرجى ملء جميع الحقول");
+        return;
+      }
     }
 
     setLoading(true);
     try {
       if (isLogin) {
-        await login(username.trim(), password);
+        await login(email.trim(), password);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.back();
       } else {
@@ -299,37 +302,36 @@ export default function AuthScreen() {
           </View>
 
           <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Ionicons name="person-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder={isLogin ? "اسم المستخدم أو البريد الإلكتروني" : "اسم المستخدم"}
-                placeholderTextColor="rgba(255,255,255,0.4)"
-                value={username}
-                onChangeText={setUsername}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType={isLogin ? "email-address" : "default"}
-                testID="username-input"
-              />
-            </View>
-
             {!isLogin && (
               <View style={styles.inputGroup}>
-                <Ionicons name="mail-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
+                <Ionicons name="person-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="البريد الإلكتروني"
+                  placeholder="اسم المستخدم"
                   placeholderTextColor="rgba(255,255,255,0.4)"
-                  value={email}
-                  onChangeText={setEmail}
+                  value={username}
+                  onChangeText={setUsername}
                   autoCapitalize="none"
-                  keyboardType="email-address"
                   autoCorrect={false}
-                  testID="email-input"
+                  testID="username-input"
                 />
               </View>
             )}
+
+            <View style={styles.inputGroup}>
+              <Ionicons name="mail-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="البريد الإلكتروني"
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
+                testID="email-input"
+              />
+            </View>
 
             <View style={styles.inputGroup}>
               <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
