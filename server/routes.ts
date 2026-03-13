@@ -17,6 +17,40 @@ import { mkdirSync } from "fs";
 mkdirSync("uploads/receipts", { recursive: true });
 mkdirSync("uploads/campaigns", { recursive: true });
 
+async function sendPushNotifications(userIds: string[], title: string, body: string, data?: Record<string, string>) {
+  try {
+    const rawTokens = await storage.getUserPushTokensByIds(userIds);
+    const tokens = [...new Set(rawTokens)];
+    if (tokens.length === 0) return;
+
+    const messages = tokens.map(token => ({
+      to: token,
+      sound: "default" as const,
+      title,
+      body,
+      data: data || {},
+    }));
+
+    const chunks: typeof messages[] = [];
+    for (let i = 0; i < messages.length; i += 100) {
+      chunks.push(messages.slice(i, i + 100));
+    }
+
+    for (const chunk of chunks) {
+      await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(chunk),
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.error("Push notification error:", e);
+  }
+}
+
 const receiptStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, "uploads/receipts/");
@@ -301,7 +335,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
+  app.post("/api/auth/logout", async (req: Request, res: Response) => {
+    if (req.session?.userId) {
+      await storage.updateUserPushToken(req.session.userId, null).catch(() => {});
+    }
     req.session.destroy(() => {
       res.json({ message: "Logged out" });
     });
@@ -389,6 +426,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
     });
+  });
+
+  app.put("/api/auth/push-token", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const { pushToken } = req.body;
+      if (!pushToken || typeof pushToken !== "string") {
+        return res.status(400).json({ message: "pushToken is required" });
+      }
+      await storage.updateUserPushToken(req.session.userId!, pushToken);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   app.get("/api/user/stats", requireAuth as any, async (req: Request, res: Response) => {
@@ -483,6 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `تم إضافة منتج جديد: ${campaign.title}`,
             campaign.id
           );
+          sendPushNotifications(userIds, "منتج جديد 🎉", `تم إضافة منتج جديد: ${campaign.title}`, { campaignId: campaign.id });
         }
       } catch (e) {
         console.error("Notification error:", e);
@@ -684,6 +735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 `بقي ${remaining} قطعة فقط من ${campaign.title}! سارع بالشراء`,
                 campaignId
               );
+              sendPushNotifications(participantIds, "الكمية قاربت على النفاد ⚡", `بقي ${remaining} قطعة فقط من ${campaign.title}! سارع بالشراء`, { campaignId });
             }
           }
           if (remaining <= 0) {
@@ -697,6 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 `تم بيع كامل كمية ${campaign.title}! اختيار الفائز قريباً`,
                 campaignId
               );
+              sendPushNotifications(participantIds, "نفدت الكمية! 🔥", `تم بيع كامل كمية ${campaign.title}! اختيار الفائز قريباً`, { campaignId });
             }
           }
         } catch (e) {
@@ -797,6 +850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const pIds = [...new Set(cTickets.map(t => t.userId))];
               if (pIds.length > 0) {
                 await storage.createBulkUserNotifications(pIds, "low_stock", "الكمية قاربت على النفاد ⚡", `بقي ${remaining} قطعة فقط من ${campaign.title}! سارع بالشراء`, campaignId);
+                sendPushNotifications(pIds, "الكمية قاربت على النفاد ⚡", `بقي ${remaining} قطعة فقط من ${campaign.title}! سارع بالشراء`, { campaignId });
               }
             }
             if (remaining <= 0) {
@@ -804,6 +858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const pIds = [...new Set(cTickets.map(t => t.userId))];
               if (pIds.length > 0) {
                 await storage.createBulkUserNotifications(pIds, "sold_out", "نفدت الكمية! 🔥", `تم بيع كامل كمية ${campaign.title}! اختيار الفائز قريباً`, campaignId);
+                sendPushNotifications(pIds, "نفدت الكمية! 🔥", `تم بيع كامل كمية ${campaign.title}! اختيار الفائز قريباً`, { campaignId });
               }
             }
           } catch (e) {
@@ -941,6 +996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `لقد فزت بجائزة ${drawnCampaign.prizeName} في حملة ${drawnCampaign.title} بالتذكرة ${result.ticket.ticketNumber}!`,
             req.params.campaignId as string
           );
+          sendPushNotifications([result.winner.id], "مبروك أنت الفائز! 🏆🎉", `لقد فزت بجائزة ${drawnCampaign.prizeName} في حملة ${drawnCampaign.title}!`, { campaignId: req.params.campaignId as string });
 
           const campaignTickets = await storage.getTicketsByCampaign(req.params.campaignId as string);
           const participantIds = [...new Set(campaignTickets.map(t => t.userId))].filter(id => id !== result.winner.id);
@@ -952,6 +1008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               `تم اختيار الفائز بالهدية في حملة ${drawnCampaign.title}! حظاً أوفر في المرة القادمة`,
               req.params.campaignId as string
             );
+            sendPushNotifications(participantIds, "تم اختيار الفائز 🎁", `تم اختيار الفائز بالهدية في حملة ${drawnCampaign.title}! حظاً أوفر في المرة القادمة`, { campaignId: req.params.campaignId as string });
           }
 
           const allUsers = await storage.getAllUsers();
@@ -966,6 +1023,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               `تم اختيار الفائز في حملة ${drawnCampaign.title}!`,
               req.params.campaignId as string
             );
+            sendPushNotifications(nonParticipantIds, "فائز جديد! 🎊", `تم اختيار الفائز في حملة ${drawnCampaign.title}!`, { campaignId: req.params.campaignId as string });
           }
         } catch (e) {
           console.error("Notification error:", e);
@@ -1417,6 +1475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "لا يوجد مستخدمين لإرسال الإشعار إليهم" });
       }
       await storage.createBulkUserNotifications(userIds, "broadcast", title, message);
+      sendPushNotifications(userIds, title, message);
       await storage.logActivity("broadcast_notification", "إشعار جماعي", `تم إرسال إشعار "${title}" إلى ${userIds.length} مستخدم`, req.session.userId!);
       res.json({ success: true, sentTo: userIds.length });
     } catch (error) {
@@ -1979,6 +2038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "رد على تذكرة الدعم 📩",
           `تم الرد على تذكرتك: ${ticket.subject}`,
         );
+        sendPushNotifications([ticket.userId], "رد على تذكرة الدعم 📩", `تم الرد على تذكرتك: ${ticket.subject}`);
       }
       res.json(ticket);
     } catch (error) {

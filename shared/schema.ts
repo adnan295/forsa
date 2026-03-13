@@ -55,6 +55,7 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   referralCode: text("referral_code").unique(),
   referredBy: varchar("referred_by"),
+  pushToken: text("push_token"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

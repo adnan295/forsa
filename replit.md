@@ -43,6 +43,7 @@ lib/
   favorites-context.tsx # Favorites provider (AsyncStorage-based)
   cart-context.tsx       # Cart provider (AsyncStorage-based)
   query-client.ts       # React Query config + API helpers
+  push-notifications.ts # Expo push notifications (register token, handle taps)
 server/
   index.ts              # Express server entry
   routes.ts             # API routes (auth, campaigns, purchases, admin, receipts)
@@ -65,6 +66,7 @@ shared/
 - Unique ticket numbers (LD-{timestamp}-{random})
 - Cryptographically secure random winner selection
 - Session-based authentication
+- Push notifications via Expo Push API (new campaigns, low stock, sold out, winner announcements, support replies, admin broadcasts)
 
 ## Admin Panel (app/admin/index.tsx)
 Comprehensive admin dashboard with 7 sections:

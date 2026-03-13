@@ -32,7 +32,7 @@ import {
   insertReviewSchema,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, count, sum, gte } from "drizzle-orm";
+import { eq, desc, and, sql, count, sum, gte, inArray } from "drizzle-orm";
 import { randomBytes } from "crypto";
 
 export interface IStorage {
@@ -139,6 +139,9 @@ export interface IStorage {
   markUserNotificationRead(id: string, userId: string): Promise<boolean>;
   markAllUserNotificationsRead(userId: string): Promise<boolean>;
   getUnreadUserNotificationCount(userId: string): Promise<number>;
+
+  updateUserPushToken(userId: string, pushToken: string | null): Promise<void>;
+  getUserPushTokensByIds(userIds: string[]): Promise<string[]>;
 
   getUserByEmail(email: string): Promise<User | undefined>;
   createPasswordResetToken(userId: string, code: string, expiresAt: Date): Promise<any>;
@@ -1049,6 +1052,21 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.select({ count: count() }).from(userNotifications)
       .where(and(eq(userNotifications.userId, userId), eq(userNotifications.isRead, false)));
     return result?.count || 0;
+  }
+
+  async updateUserPushToken(userId: string, pushToken: string | null): Promise<void> {
+    if (pushToken) {
+      await db.update(users).set({ pushToken: null }).where(eq(users.pushToken, pushToken));
+    }
+    await db.update(users).set({ pushToken }).where(eq(users.id, userId));
+  }
+
+  async getUserPushTokensByIds(userIds: string[]): Promise<string[]> {
+    if (userIds.length === 0) return [];
+    const result = await db.select({ pushToken: users.pushToken })
+      .from(users)
+      .where(inArray(users.id, userIds));
+    return result.map(r => r.pushToken).filter((t): t is string => !!t);
   }
 
   async createEmailVerificationToken(userId: string, code: string, expiresAt: Date): Promise<any> {
