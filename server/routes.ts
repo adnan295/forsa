@@ -1110,6 +1110,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               status: shippingStatus,
               trackingNumber,
             });
+            const statusText = shippingStatus === "processing" ? "جاري التجهيز" : shippingStatus === "shipped" ? "تم الشحن" : "تم التوصيل";
+            await storage.createUserNotification(
+              shippingOrder.userId,
+              "shipping_update",
+              `تحديث الشحن: ${statusText} 📦`,
+              `طلبك من ${shippingCampaign.title} — ${statusText}`,
+              shippingOrder.campaignId
+            );
+            sendPushNotifications([shippingOrder.userId], `تحديث الشحن: ${statusText} 📦`, `طلبك من ${shippingCampaign.title} — ${statusText}`, { orderId: shippingOrder.id });
           }
         }
       }
