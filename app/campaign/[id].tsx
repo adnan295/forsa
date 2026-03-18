@@ -105,6 +105,7 @@ export default function CampaignDetailScreen() {
   });
 
   const countdown = useCountdown(campaign?.endsAt);
+  const flashCountdown = useCountdown((campaign as any)?.flashSaleEndsAt);
 
   const { data: reviewsData } = useQuery<{ username: string; rating: number; comment: string | null; createdAt: string }[]>({
     queryKey: ["/api/reviews", id],
@@ -238,6 +239,25 @@ export default function CampaignDetailScreen() {
         </View>
 
         <View style={styles.content}>
+          {!!(campaign as any).isFlashSale && !flashCountdown.expired && (
+            <View style={{ backgroundColor: "#FEF2F2", borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: "#FECACA", flexDirection: "row-reverse", alignItems: "center", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#EF4444", writingDirection: "rtl" as const }}>🔥 عرض محدود - ينتهي قريباً!</Text>
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 18, color: "#DC2626", marginTop: 4 }}>
+                  {String(flashCountdown.hours).padStart(2, "0")}:{String(flashCountdown.minutes).padStart(2, "0")}:{String(flashCountdown.seconds).padStart(2, "0")}
+                </Text>
+                {(campaign as any).originalPrice && (
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "#EF4444", marginTop: 2, writingDirection: "rtl" as const }}>
+                    السعر الأصلي: <Text style={{ textDecorationLine: "line-through" }}>${parseFloat((campaign as any).originalPrice).toFixed(2)}</Text> ← ${parseFloat(campaign.productPrice).toFixed(2)}
+                  </Text>
+                )}
+              </View>
+              <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="flash" size={28} color="#EF4444" />
+              </View>
+            </View>
+          )}
+
           <View style={styles.progressCard}>
             <View style={styles.progressHeader}>
               <View style={styles.progressTitleRow}>

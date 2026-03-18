@@ -45,6 +45,11 @@ export default function ProfileScreen() {
     enabled: !!user,
   });
 
+  const { data: walletData } = useQuery<{ balance: number; transactions: any[] }>({
+    queryKey: ["/api/user/wallet"],
+    enabled: !!user,
+  });
+
   const { data: adminStats } = useQuery<{
     totalCampaigns: number;
     activeCampaigns: number;
@@ -283,6 +288,35 @@ export default function ProfileScreen() {
           />
         </View>
       </View>
+
+      {walletData !== undefined && (
+        <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
+          <Pressable
+            onPress={() => router.push("/referral" as any)}
+            style={{ borderRadius: 20, overflow: "hidden" }}
+          >
+            <LinearGradient
+              colors={["#059669", "#10B981", "#34D399"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ padding: 18, flexDirection: "row-reverse", alignItems: "center", gap: 14 }}
+            >
+              <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="wallet" size={26} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#fff", writingDirection: "rtl" as const }}>
+                  {parseFloat(String(walletData.balance || 0)).toFixed(2)} $
+                </Text>
+                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.85)", writingDirection: "rtl" as const }}>
+                  رصيد المحفظة · اضغط لعرض تفاصيل الإحالة
+                </Text>
+              </View>
+              <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.7)" />
+            </LinearGradient>
+          </Pressable>
+        </View>
+      )}
 
       {isAdmin && (
         <View style={styles.section}>

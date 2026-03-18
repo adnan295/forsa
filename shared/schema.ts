@@ -56,6 +56,7 @@ export const users = pgTable("users", {
   referralCode: text("referral_code").unique(),
   referredBy: varchar("referred_by"),
   pushToken: text("push_token"),
+  walletBalance: decimal("wallet_balance", { precision: 10, scale: 2 }).notNull().default("0"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -76,6 +77,9 @@ export const campaigns = pgTable("campaigns", {
   status: campaignStatusEnum("status").notNull().default("active"),
   winnerId: varchar("winner_id"),
   winnerTicketId: varchar("winner_ticket_id"),
+  isFlashSale: boolean("is_flash_sale").notNull().default(false),
+  flashSaleEndsAt: timestamp("flash_sale_ends_at"),
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   drawAt: timestamp("draw_at"),
   endsAt: timestamp("ends_at"),
@@ -253,6 +257,20 @@ export const supportTickets = pgTable("support_tickets", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  type: text("type").notNull(),
+  description: text("description").notNull(),
+  referenceId: varchar("reference_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertSupportTicketSchema = z.object({
   subject: z.string().min(3, "الموضوع مطلوب"),
   message: z.string().min(10, "الرسالة قصيرة جداً"),
@@ -360,6 +378,9 @@ export const insertCampaignSchema = createInsertSchema(campaigns).pick({
   prizeImageUrl: true,
   category: true,
   endsAt: true,
+  isFlashSale: true,
+  flashSaleEndsAt: true,
+  originalPrice: true,
 });
 
 export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick({
@@ -411,3 +432,4 @@ export type UserNotification = typeof userNotifications.$inferSelect;
 export type SupportTicket = typeof supportTickets.$inferSelect;
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 export type CampaignProduct = typeof campaignProducts.$inferSelect;
+export type WalletTransaction = typeof walletTransactions.$inferSelect;

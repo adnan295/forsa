@@ -54,6 +54,8 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
   const { toggleFavorite, isFavorite } = useFavorites();
   const favorited = isFavorite(campaign.id);
   const countdown = useCountdown(campaign.endsAt);
+  const flashCountdown = useCountdown((campaign as any).flashSaleEndsAt);
+  const isActiveFlashSale = !!(campaign as any).isFlashSale && !flashCountdown.expired;
 
   useEffect(() => {
     const delay = Math.min(index * 80, 400);
@@ -162,7 +164,18 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             />
           </Pressable>
 
+          {isActiveFlashSale && (
+            <View style={styles.flashBadge}>
+              <Text style={styles.flashBadgeText}>🔥 عرض محدود</Text>
+            </View>
+          )}
+
           <View style={styles.priceTag}>
+            {isActiveFlashSale && (campaign as any).originalPrice && (
+              <Text style={styles.originalPrice}>
+                ${parseFloat((campaign as any).originalPrice).toFixed(0)}
+              </Text>
+            )}
             <Text style={styles.priceTagCurrency}>$</Text>
             <Text style={styles.priceTagValue}>
               {parseFloat(campaign.productPrice).toFixed(0)}
@@ -209,6 +222,26 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
               />
             </View>
           </View>
+
+          {isActiveFlashSale && (
+            <View style={[styles.countdownRow, { backgroundColor: "rgba(239,68,68,0.1)", borderWidth: 1, borderColor: "rgba(239,68,68,0.2)" }]}>
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 11, color: "#EF4444", writingDirection: "rtl" as const, marginEnd: 4 }}>🔥 ينتهي:</Text>
+              <View style={styles.countdownUnit}>
+                <Text style={styles.countdownNum}>{String(flashCountdown.hours).padStart(2, "0")}</Text>
+                <Text style={[styles.countdownLabel, { color: colors.textSecondary }]}>ساعة</Text>
+              </View>
+              <Text style={styles.countdownSep}>:</Text>
+              <View style={styles.countdownUnit}>
+                <Text style={styles.countdownNum}>{String(flashCountdown.minutes).padStart(2, "0")}</Text>
+                <Text style={[styles.countdownLabel, { color: colors.textSecondary }]}>دقيقة</Text>
+              </View>
+              <Text style={styles.countdownSep}>:</Text>
+              <View style={styles.countdownUnit}>
+                <Text style={styles.countdownNum}>{String(flashCountdown.seconds).padStart(2, "0")}</Text>
+                <Text style={[styles.countdownLabel, { color: colors.textSecondary }]}>ثانية</Text>
+              </View>
+            </View>
+          )}
 
           {campaign.endsAt && !isCompleted && !isSoldOut && !countdown.expired && (
             <View style={styles.countdownRow}>
@@ -339,6 +372,21 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     writingDirection: "rtl",
   },
+  flashBadge: {
+    position: "absolute",
+    bottom: 56,
+    start: 14,
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  flashBadgeText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 11,
+    color: "#FFFFFF",
+    writingDirection: "rtl",
+  },
   priceTag: {
     position: "absolute",
     bottom: 14,
@@ -349,6 +397,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 14,
+    gap: 4,
+  },
+  originalPrice: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.6)",
+    textDecorationLine: "line-through",
+    marginBottom: 2,
   },
   priceTagCurrency: {
     fontFamily: "Inter_500Medium",

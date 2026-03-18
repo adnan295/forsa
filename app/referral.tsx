@@ -26,6 +26,11 @@ type ReferralData = {
   referredUsers: { username: string; joinedAt: string }[];
 };
 
+type WalletData = {
+  balance: number;
+  transactions: { type: string; amount: string; description: string; createdAt: string }[];
+};
+
 export default function ReferralScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -34,6 +39,15 @@ export default function ReferralScreen() {
     queryKey: ["/api/referral"],
     enabled: !!user,
   });
+
+  const { data: walletData } = useQuery<WalletData>({
+    queryKey: ["/api/user/wallet"],
+    enabled: !!user,
+  });
+
+  const referralEarnings = walletData?.transactions
+    .filter((t) => t.type === "referral_reward")
+    .reduce((sum, t) => sum + parseFloat(t.amount), 0) ?? 0;
 
   async function handleCopyCode() {
     if (!data?.referralCode) return;
@@ -97,7 +111,7 @@ export default function ReferralScreen() {
           </View>
           <Text style={styles.heroTitle}>ادعُ أصدقاءك</Text>
           <Text style={styles.heroSubtitle}>
-            شارك رمز الإحالة مع أصدقائك وتابع من انضم عن طريقك
+            ادعُ صديقاً واحصل على 10 ريال في محفظتك، ويحصل صديقك على 5 ريال ترحيباً
           </Text>
         </View>
       </LinearGradient>
@@ -142,6 +156,20 @@ export default function ReferralScreen() {
           </View>
           <Text style={styles.statValue}>{data?.referralCount ?? 0}</Text>
           <Text style={styles.statLabel}>دعوات ناجحة</Text>
+        </View>
+        <View style={styles.statsCard}>
+          <View style={[styles.statIconWrap, { backgroundColor: "#10B98115" }]}>
+            <Ionicons name="wallet" size={24} color="#10B981" />
+          </View>
+          <Text style={styles.statValue}>{referralEarnings.toFixed(0)} ر</Text>
+          <Text style={styles.statLabel}>أرباح الإحالة</Text>
+        </View>
+        <View style={styles.statsCard}>
+          <View style={[styles.statIconWrap, { backgroundColor: "#F59E0B15" }]}>
+            <Ionicons name="cash" size={24} color="#F59E0B" />
+          </View>
+          <Text style={styles.statValue}>{walletData?.balance ? parseFloat(String(walletData.balance)).toFixed(0) : 0} ر</Text>
+          <Text style={styles.statLabel}>رصيد المحفظة</Text>
         </View>
       </View>
 
@@ -341,11 +369,14 @@ const styles = StyleSheet.create({
   statsSection: {
     paddingHorizontal: 16,
     marginTop: 24,
+    flexDirection: "row-reverse",
+    gap: 10,
   },
   statsCard: {
+    flex: 1,
     backgroundColor: "#fff",
     borderRadius: 20,
-    padding: 24,
+    padding: 16,
     alignItems: "center",
     shadowColor: "#7C3AED",
     shadowOffset: { width: 0, height: 4 },
@@ -354,17 +385,18 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   statIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statValue: {
     fontFamily: "Inter_700Bold",
-    fontSize: 36,
+    fontSize: 22,
     color: Colors.light.text,
+    textAlign: "center",
   },
   statLabel: {
     fontFamily: "Inter_400Regular",

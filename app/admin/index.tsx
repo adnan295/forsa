@@ -1591,6 +1591,9 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
   const [uploading, setUploading] = useState(false);
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [isFlashSale, setIsFlashSale] = useState(false);
+  const [originalPriceText, setOriginalPriceText] = useState("");
+  const [flashSaleEndsAtText, setFlashSaleEndsAtText] = useState("");
 
   const pickCampaignImage = async () => {
     if (Platform.OS === "web") {
@@ -1676,7 +1679,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       onClose();
-      setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc(""); setCategory("other"); setEndsAtText(""); setImageUri(null); setImageFile(null); setHasVariants(false); setVariants([]);
+      setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc(""); setCategory("other"); setEndsAtText(""); setImageUri(null); setImageFile(null); setHasVariants(false); setVariants([]); setIsFlashSale(false); setOriginalPriceText(""); setFlashSaleEndsAtText("");
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
@@ -1735,6 +1738,9 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
       category,
       endsAt: endsAtText && !isNaN(new Date(endsAtText).getTime()) ? new Date(endsAtText).toISOString() : undefined,
       imageUrl,
+      isFlashSale,
+      originalPrice: isFlashSale && originalPriceText ? originalPriceText : undefined,
+      flashSaleEndsAt: isFlashSale && flashSaleEndsAtText && !isNaN(new Date(flashSaleEndsAtText).getTime()) ? new Date(flashSaleEndsAtText).toISOString() : undefined,
     };
 
     if (hasVariants) {
@@ -1851,6 +1857,26 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
               </View>
             </View>
             <ModalInput label="تاريخ الانتهاء (اختياري)" value={endsAtText} onChangeText={setEndsAtText} placeholder="2025-12-31T23:59" />
+
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", marginBottom: 12, backgroundColor: "#FFF1F1", borderRadius: 12, padding: 14 }}>
+              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+                <Text style={{ fontSize: 18 }}>🔥</Text>
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>عرض محدود (Flash Sale)</Text>
+              </View>
+              <Switch
+                value={isFlashSale}
+                onValueChange={setIsFlashSale}
+                trackColor={{ true: "#EF4444" }}
+              />
+            </View>
+
+            {isFlashSale && (
+              <View style={{ backgroundColor: "#FFF5F5", borderRadius: 12, padding: 12, marginBottom: 12, gap: 8 }}>
+                <ModalInput label="السعر الأصلي قبل الخصم ($)" value={originalPriceText} onChangeText={setOriginalPriceText} placeholder="49.99" keyboardType="decimal-pad" />
+                <ModalInput label="ينتهي العرض في" value={flashSaleEndsAtText} onChangeText={setFlashSaleEndsAtText} placeholder="2025-06-30T23:59" />
+              </View>
+            )}
+
             <Pressable
               onPress={handleCreate}
               disabled={mutation.isPending || uploading}

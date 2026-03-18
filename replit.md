@@ -57,6 +57,9 @@ shared/
 ```
 
 ## Key Features
+- **Referral Rewards**: 10 SAR wallet credit to referrer + 5 SAR welcome bonus to new user on referral
+- **Flash Sales**: Fire badge, discounted price with original price struck through, live countdown on cards and detail page
+- **Wallet System**: wallet_balance on users, wallet_transactions table, wallet toggle at checkout for partial payment
 - Campaign listing with real-time progress bars
 - Full checkout flow with payment method selection, bank transfer details, coupon codes, shipping address
 - Receipt upload for bank transfer payments (expo-image-picker for mobile, file input for web)

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
+  Switch,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -71,6 +72,7 @@ export default function CheckoutScreen() {
     discountPercent: number;
   } | null>(null);
   const [couponError, setCouponError] = useState("");
+  const [useWallet, setUseWallet] = useState(false);
 
   const [shippingFullName, setShippingFullName] = useState(user?.fullName || "");
   const [shippingPhone, setShippingPhone] = useState(user?.phone || "");
@@ -91,6 +93,11 @@ export default function CheckoutScreen() {
     queryKey: ["/api/payment-methods"],
   });
 
+  const { data: walletData } = useQuery<{ balance: number; transactions: any[] }>({
+    queryKey: ["/api/user/wallet"],
+    enabled: !!user,
+  });
+
   const selectedMethod =
     paymentMethods?.find((m) => m.id === selectedMethodId) || null;
 
@@ -106,7 +113,10 @@ export default function CheckoutScreen() {
   const discountAmount = appliedCoupon
     ? (subtotal * appliedCoupon.discountPercent) / 100
     : 0;
-  const total = subtotal - discountAmount;
+  const walletBalance = walletData?.balance ? parseFloat(String(walletData.balance)) : 0;
+  const afterCoupon = subtotal - discountAmount;
+  const walletDeduction = useWallet ? Math.min(walletBalance, afterCoupon) : 0;
+  const total = afterCoupon - walletDeduction;
 
   const couponMutation = useMutation({
     mutationFn: async () => {
@@ -147,6 +157,8 @@ export default function CheckoutScreen() {
           shippingAddress,
           shippingCountry,
           couponCode: appliedCoupon?.code || undefined,
+          useWallet,
+          walletAmount: walletDeduction,
         });
         return res.json();
       } else {
@@ -161,6 +173,8 @@ export default function CheckoutScreen() {
           shippingAddress,
           shippingCountry,
           couponCode: appliedCoupon?.code || undefined,
+          useWallet,
+          walletAmount: walletDeduction,
         });
         return res.json();
       }
@@ -170,6 +184,7 @@ export default function CheckoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/wallet"] });
 
       if (isCartMode) {
         clearCart();
@@ -568,6 +583,44 @@ export default function CheckoutScreen() {
             ) : null}
           </View>
 
+          {walletBalance > 0 && (
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="wallet-outline" size={20} color="#10B981" />
+                <Text style={styles.sectionTitle}>المحفظة</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, flex: 1 }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(16,185,129,0.1)", alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="wallet" size={20} color="#10B981" />
+                  </View>
+                  <View>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" as const }}>
+                      استخدام رصيد المحفظة
+                    </Text>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "#10B981", textAlign: "right", writingDirection: "rtl" as const }}>
+                      الرصيد: {walletBalance.toFixed(2)} $
+                    </Text>
+                    {useWallet && walletDeduction > 0 && (
+                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#059669", textAlign: "right", writingDirection: "rtl" as const }}>
+                        خصم: -{walletDeduction.toFixed(2)} $
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <Switch
+                  value={useWallet}
+                  onValueChange={(v) => {
+                    setUseWallet(v);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  trackColor={{ true: "#10B981" }}
+                />
+              </View>
+            </View>
+          )}
+
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
               <Ionicons name="location-outline" size={20} color={Colors.light.accent} />
@@ -641,7 +694,15 @@ export default function CheckoutScreen() {
                 <Text style={[styles.totalRowValue, { color: Colors.light.success }]}>
                   -{discountAmount.toFixed(2)} $
                 </Text>
-                <Text style={styles.totalRowLabel}>الخصم</Text>
+                <Text style={styles.totalRowLabel}>خصم الكوبون</Text>
+              </View>
+            )}
+            {useWallet && walletDeduction > 0 && (
+              <View style={styles.totalRow}>
+                <Text style={[styles.totalRowValue, { color: "#10B981" }]}>
+                  -{walletDeduction.toFixed(2)} $
+                </Text>
+                <Text style={styles.totalRowLabel}>خصم المحفظة 💳</Text>
               </View>
             )}
             <View style={styles.totalDivider} />

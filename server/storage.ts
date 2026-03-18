@@ -15,6 +15,7 @@ import {
   type UserNotification,
   type SupportTicket,
   type CampaignProduct,
+  type WalletTransaction,
   users,
   campaigns,
   orders,
@@ -29,6 +30,7 @@ import {
   emailVerificationTokens,
   supportTickets,
   campaignProducts,
+  walletTransactions,
   insertReviewSchema,
 } from "@shared/schema";
 import { db } from "./db";
@@ -142,6 +144,11 @@ export interface IStorage {
 
   updateUserPushToken(userId: string, pushToken: string | null): Promise<void>;
   getUserPushTokensByIds(userIds: string[]): Promise<string[]>;
+
+  getWalletBalance(userId: string): Promise<number>;
+  addWalletCredit(userId: string, amount: number, type: string, description: string, referenceId?: string): Promise<void>;
+  deductWalletBalance(userId: string, amount: number, description: string, referenceId?: string): Promise<boolean>;
+  getWalletTransactions(userId: string): Promise<WalletTransaction[]>;
 
   getUserByEmail(email: string): Promise<User | undefined>;
   createPasswordResetToken(userId: string, code: string, expiresAt: Date): Promise<any>;
@@ -1067,6 +1074,35 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(inArray(users.id, userIds));
     return result.map(r => r.pushToken).filter((t): t is string => !!t);
+  }
+
+  async getWalletBalance(userId: string): Promise<number> {
+    const [u] = await db.select({ walletBalance: users.walletBalance }).from(users).where(eq(users.id, userId));
+    return parseFloat(u?.walletBalance || "0");
+  }
+
+  async addWalletCredit(userId: string, amount: number, type: string, description: string, referenceId?: string): Promise<void> {
+    await db.update(users)
+      .set({ walletBalance: sql`wallet_balance + ${amount}` })
+      .where(eq(users.id, userId));
+    await db.insert(walletTransactions).values({ userId, amount: String(amount), type, description, referenceId });
+  }
+
+  async deductWalletBalance(userId: string, amount: number, description: string, referenceId?: string): Promise<boolean> {
+    const balance = await this.getWalletBalance(userId);
+    if (balance < amount) return false;
+    await db.update(users)
+      .set({ walletBalance: sql`wallet_balance - ${amount}` })
+      .where(eq(users.id, userId));
+    await db.insert(walletTransactions).values({ userId, amount: String(-amount), type: "debit", description, referenceId });
+    return true;
+  }
+
+  async getWalletTransactions(userId: string): Promise<WalletTransaction[]> {
+    return db.select().from(walletTransactions)
+      .where(eq(walletTransactions.userId, userId))
+      .orderBy(desc(walletTransactions.createdAt))
+      .limit(50);
   }
 
   async createEmailVerificationToken(userId: string, code: string, expiresAt: Date): Promise<any> {

@@ -189,6 +189,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const referrer = await storage.getUserByReferralCode(appliedCode);
         if (referrer && referrer.id !== user.id) {
           await storage.setUserReferredBy(user.id, referrer.id);
+          await storage.addWalletCredit(referrer.id, 10, "referral_reward", `مكافأة إحالة: انضم ${user.username} باستخدام رمزك`, user.id);
+          await storage.createUserNotification(referrer.id, "referral_reward", "مكافأة إحالة 🎉", `انضم ${user.username} باستخدام رمز إحالتك! تمت إضافة 10 ريال إلى محفظتك`);
+          sendPushNotifications([referrer.id], "مكافأة إحالة 🎉", `انضم ${user.username} باستخدام رمزك! +10 ريال في محفظتك`);
+          await storage.addWalletCredit(user.id, 5, "welcome_bonus", "مكافأة ترحيبية للمنضمين عبر رمز إحالة", referrer.id);
         }
       }
 
@@ -669,6 +673,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         shippingAddress,
         shippingCountry,
         couponCode,
+        useWallet = false,
+        walletAmount = 0,
       } = req.body;
       if (!campaignId) {
         return res.status(400).json({ message: "Campaign ID required" });
@@ -693,6 +699,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         couponCode,
         productId
       );
+
+      if (useWallet && walletAmount > 0) {
+        await storage.deductWalletBalance(
+          req.session.userId!,
+          walletAmount,
+          `خصم محفظة - طلب ${result.order.id}`,
+          result.order.id
+        );
+      }
 
       await storage.logActivity(
         "purchase",
@@ -779,6 +794,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         shippingAddress,
         shippingCountry,
         couponCode,
+        useWallet = false,
+        walletAmount = 0,
       } = req.body;
 
       if (!items || !Array.isArray(items) || items.length === 0) {
@@ -867,6 +884,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      if (useWallet && walletAmount > 0) {
+        await storage.deductWalletBalance(
+          req.session.userId!,
+          walletAmount,
+          `خصم محفظة - طلب سلة (${allOrders.length} طلب)`,
+          allOrders[0]?.id
+        );
+      }
+
       res.json({
         orders: allOrders,
         tickets: allTickets,
@@ -875,6 +901,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Cart purchase error:", error);
       res.status(400).json({ message: error.message || "Cart purchase failed" });
+    }
+  });
+
+  app.get("/api/user/wallet", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const balance = await storage.getWalletBalance(req.session.userId!);
+      const transactions = await storage.getWalletTransactions(req.session.userId!);
+      res.json({ balance, transactions });
+    } catch (error) {
+      console.error("Wallet error:", error);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
