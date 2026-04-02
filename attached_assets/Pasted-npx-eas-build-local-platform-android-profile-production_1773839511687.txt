@@ -1,0 +1,254 @@
+npx eas build --local --platform android --profile production --clear-cache 
+★ eas-cli@18.4.0 is now available.
+To upgrade, run:
+npm install -g eas-cli
+Proceeding with outdated version.
+
+Found eas-cli in your project dependencies.
+It's recommended to use the "cli.version" field in eas.json to enforce the eas-cli version for your project.
+Learn more
+
+
+⚠️ Detected that your app uses Expo Go for development, this is not recommended when building production apps.
+Learn more
+To suppress this warning, set EAS_BUILD_NO_EXPO_GO_WARNING=true.
+
+The field "cli.appVersionSource" is not set, but it will be required in the future. Learn more
+Resolved "production" environment for the build. Learn more
+Environment variables with visibility "Plain text" and "Sensitive" loaded from the "production" environment on EAS: EXPO_PUBLIC_DOMAIN.
+Environment variables loaded from the "production" build profile "env" configuration: EXPO_PUBLIC_DOMAIN.
+The following environment variables are defined in both the "production" build profile "env" configuration and the "production" environment on EAS: EXPO_PUBLIC_DOMAIN. The values from the build profile configuration will be used.
+
+The field "cli.appVersionSource" is not set, but it will be required in the future. Learn more
+✔ Using local Android credentials (credentials.json)
+✔ Compressed project files 1s (49.8 MB)
+✔ Computed project fingerprint
+ANDROID_NDK_HOME environment variable was not specified, continuing build without NDK
+[SETUP_WORKINGDIR] Preparing workingdir /var/folders/1_/3v83m6qs49j022s54jq_9xkr0000gn/T/eas-build-local-nodejs/09708907-68e8-44d1-8e79-6ee34d80759b
+[START_BUILD] Starting build
+  "job": {
+    "type": "managed",
+    "platform": "android",
+    "projectRootDirectory": ".",
+    "projectArchive": {
+      "type": "PATH",
+      "path": "/var/folders/1_/3v83m6qs49j022s54jq_9xkr0000gn/T/eas-cli-nodejs/7a119e46-0d21-40ee-b5e8-b16b98649b8c.tar.gz"
+    },
+    "builderEnvironment": {
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "forsa.today"
+      }
+    },
+    "cache": {
+      "disabled": false,
+      "paths": [],
+      "clear": true
+    },
+    "updates": {},
+    "buildType": "app-bundle",
+    "username": "deaa_292092",
+    "experimental": {},
+    "mode": "build",
+    "triggeredBy": "EAS_CLI",
+    "appId": "e753d7dd-1651-4cc5-ae69-b77ba5629277",
+    "initiatingUserId": "bdb4591f-074b-4e9c-8d6d-0f7d06dbbc98"
+  }
+Local build, skipping project archive refresh
+[READ_EAS_JSON] Using eas.json:
+[READ_EAS_JSON] {
+  "cli": {
+    "version": ">= 3.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "forsa.today"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "local"
+      },
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "forsa.today"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle",
+        "credentialsSource": "local"
+      },
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "forsa.today"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
+
+[READ_PACKAGE_JSON] Using package.json:
+[READ_PACKAGE_JSON] {
+  "name": "expo-app",
+  "main": "expo-router/entry",
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "patch-package",
+    "expo:dev": "EXPO_PACKAGER_PROXY_URL=https://$REPLIT_DEV_DOMAIN REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN:5000 npx expo start --localhost",
+    "server:dev": "NODE_ENV=development tsx server/index.ts",
+    "expo:start:static:build": "npx expo start --no-dev --minify --localhost",
+    "expo:static:build": "node scripts/build.js",
+    "server:build": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=server_dist",
+    "server:prod": "NODE_ENV=production node server_dist/index.js",
+    "db:push": "drizzle-kit push",
+    "start": "npx expo start",
+    "lint": "npx expo lint",
+    "lint:fix": "npx expo lint --fix"
+  },
+  "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo/vector-icons": "^15.0.3",
+    "@octokit/rest": "^21.1.1",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@replit/connectors-sdk": "^0.2.0",
+    "@stardazed/streams-text-encoding": "^1.0.2",
+    "@tanstack/react-query": "^5.83.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/connect-pg-simple": "^7.0.3",
+    "@types/crypto-js": "^4.2.2",
+    "@types/express-session": "^1.18.2",
+    "@types/multer": "^2.0.0",
+    "@types/nodemailer": "^7.0.11",
+    "@types/pg": "^8.16.0",
+    "@types/ws": "^8.18.1",
+    "@ungap/structured-clone": "^1.3.0",
+    "bcryptjs": "^3.0.3",
+    "connect-pg-simple": "^10.0.0",
+    "crypto-js": "^4.2.0",
+    "drizzle-orm": "^0.39.3",
+    "drizzle-zod": "^0.7.0",
+    "expo": "~54.0.27",
+    "expo-blur": "~15.0.8",
+    "expo-clipboard": "^8.0.8",
+    "expo-constants": "~18.0.11",
+    "expo-font": "~14.0.10",
+    "expo-glass-effect": "~0.1.4",
+    "expo-haptics": "~15.0.8",
+    "expo-image": "~3.0.11",
+    "expo-image-picker": "~17.0.9",
+    "expo-linear-gradient": "~15.0.8",
+    "expo-linking": "~8.0.10",
+    "expo-location": "~19.0.8",
+    "expo-notifications": "^0.32.16",
+    "expo-router": "~6.0.17",
+    "expo-splash-screen": "~31.0.12",
+    "expo-status-bar": "~3.0.9",
+    "expo-symbols": "~1.0.8",
+    "expo-system-ui": "~6.0.9",
+    "expo-web-browser": "~15.0.10",
+    "express": "^5.0.1",
+    "express-rate-limit": "^8.2.1",
+    "express-session": "^1.19.0",
+    "http-proxy-middleware": "^3.0.5",
+    "multer": "^2.0.2",
+    "nodemailer": "^8.0.1",
+    "pg": "^8.16.3",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-keyboard-controller": "^1.20.6",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-svg": "15.12.1",
+    "react-native-web": "^0.21.0",
+    "react-native-worklets": "0.5.1",
+    "resend": "^4.0.0",
+    "tsx": "^4.20.6",
+    "ws": "^8.18.0",
+    "zod": "^3.24.2",
+    "zod-validation-error": "^3.4.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@expo/ngrok": "^4.1.0",
+    "@types/express": "^5.0.0",
+    "@types/react": "~19.1.10",
+    "babel-plugin-react-compiler": "^19.0.0-beta-e993439-20250117",
+    "drizzle-kit": "^0.31.4",
+    "eas-cli": "^18.3.0",
+    "eslint": "^9.31.0",
+    "eslint-config-expo": "~10.0.0",
+    "patch-package": "^8.0.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}
+[INSTALL_DEPENDENCIES] Running "npm ci --include=dev" in /var/folders/1_/3v83m6qs49j022s54jq_9xkr0000gn/T/eas-build-local-nodejs/09708907-68e8-44d1-8e79-6ee34d80759b/build directory
+[INSTALL_DEPENDENCIES] npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+[INSTALL_DEPENDENCIES] npm warn deprecated lodash.get@4.4.2: This package is deprecated. Use the optional chaining (?.) operator instead.
+[INSTALL_DEPENDENCIES] npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+[INSTALL_DEPENDENCIES] npm warn deprecated rimraf@2.4.5: Rimraf versions prior to v4 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@6.0.4: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+[INSTALL_DEPENDENCIES] npm warn deprecated uuid@3.4.0: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+[INSTALL_DEPENDENCIES] npm warn deprecated @xmldom/xmldom@0.7.13: this version is no longer supported, please update to at least 0.8.*
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+[INSTALL_DEPENDENCIES] npm warn deprecated tar@7.5.7: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+[INSTALL_DEPENDENCIES] npm error code EACCES
+[INSTALL_DEPENDENCIES] npm error syscall open
+[INSTALL_DEPENDENCIES] npm error path /Users/snjallr/.npm/_cacache/index-v5/57/fb/8c9adf6a64af9ea0d80a6b4174e0b34efd0696c7400d00836d58c6fd6ae6
+[INSTALL_DEPENDENCIES] npm error errno -13
+[INSTALL_DEPENDENCIES] npm error
+[INSTALL_DEPENDENCIES] npm error Your cache folder contains root-owned files, due to a bug in
+[INSTALL_DEPENDENCIES] npm error previous versions of npm which has since been addressed.
+[INSTALL_DEPENDENCIES] npm error
+[INSTALL_DEPENDENCIES] npm error To permanently fix this problem, please run:
+[INSTALL_DEPENDENCIES] npm error   sudo chown -R 501:20 "/Users/snjallr/.npm"
+[INSTALL_DEPENDENCIES] npm error A complete log of this run can be found in: /Users/snjallr/.npm/_logs/2026-03-18T12_57_47_349Z-debug-0.log
+[INSTALL_DEPENDENCIES] 
+Error: npm ci --include=dev exited with non-zero code: 243
+    at ChildProcess.completionListener (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/spawn-async/build/spawnAsync.js:42:23)
+    at Object.onceWrapper (node:events:623:26)
+    at ChildProcess.emit (node:events:508:28)
+    at maybeClose (node:internal/child_process:1101:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:305:5)
+    ...
+    at spawnAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/spawn-async/build/spawnAsync.js:7:23)
+    at spawn (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/turtle-spawn/dist/index.js:16:47)
+    at installDependenciesAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/common/installDependencies.js:59:50)
+    at runInstallDependenciesAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/common/setup.js:178:107)
+    at /Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/common/setup.js:86:15
+    at BuildContext.runBuildPhase (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/context.js:123:34)
+    at setupAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/common/setup.js:75:15)
+    at async buildAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/builders/android.js:41:5)
+    at async runBuilderWithHooksAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/builders/common.js:12:13)
+    at async Object.androidBuilder (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/builders/android.js:28:16)
+
+Build failed
+Unknown error. See logs of the Install dependencies build phase for more information.
+Error: Unknown error. See logs of the Install dependencies build phase for more information.
+    at resolveBuildPhaseErrorAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/buildErrors/detectError.js:64:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async BuildContext.handleBuildPhaseErrorAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/context.js:190:28)
+    at async BuildContext.runBuildPhase (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/context.js:135:35)
+    at async setupAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/common/setup.js:75:5)
+    at async buildAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/builders/android.js:41:5)
+    at async runBuilderWithHooksAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/builders/common.js:12:13)
+    at async Object.androidBuilder (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/builders/android.js:28:16)
+    at async buildAndroidAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/eas-cli-local-build-plugin/dist/android.js:43:12)
+    at async buildAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/eas-cli-local-build-plugin/dist/build.js:54:29)
+npx -y eas-cli-local-build-plugin@18.2.0 eyJqb2IiOnsidHlwZSI6Im1hbmFnZWQiLCJwbGF0Zm9ybSI6ImFuZHJvaWQiLCJwcm9qZWN0Um9vdERpcmVjdG9yeSI6Ii4iLCJwcm9qZWN0QXJjaGl2ZSI6eyJ0eXBlIjoiUEFUSCIsInBhdGgiOiIvdmFyL2ZvbGRlcnMvMV8vM3Y4M202cXM0OWowMjJzNTRqcV85eGtyMDAwMGduL1QvZWFzLWNsaS1ub2RlanMvN2ExMTllNDYtMGQyMS00MGVlLWI1ZTgtYjE2Yjk4NjQ5YjhjLnRhci5neiJ9LCJidWlsZGVyRW52aXJvbm1lbnQiOnsiZW52Ijp7IkVYUE9fUFVCTElDX0RPTUFJTiI6ImZvcnNhLnRvZGF5In19LCJjYWNoZSI6eyJkaXNhYmxlZCI6ZmFsc2UsInBhdGhzIjpbXSwiY2xlYXIiOnRydWV9LCJzZWNyZXRzIjp7ImJ1aWxkQ3JlZGVudGlhbHMiOnsia2V5c3RvcmUiOnsiZGF0YUJhc2U2NCI6Ik1JSUtzZ0lCQXpDQ0Nsd0dDU3FHU0liM0RRRUhBYUNDQ2swRWdncEpNSUlLUlRDQ0Jhd0dDU3FHU0liM0RRRUhBYUNDQlowRWdnV1pNSUlGbFRDQ0JaRUdDeXFHU0liM0RRRU1DZ0VDb0lJRlFEQ0NCVHd3WmdZSktvWklodmNOQVFVTk1Ga3dPQVlKS29aSWh2Y05BUVVNTUNzRUZMdXhLZXRSSVFKVHZJYlJrQ1JsVXFpbmsyYm1BZ0luRUFJQklEQU1CZ2dxaGtpRzl3MENDUVVBTUIwR0NXQ0dTQUZsQXdRQktnUVFUWXg3ZEUzZHdOVUswaFNiOCt2TlZ3U0NCTkRPVDdSZjZvUkp0V2I3elBEVGs5N1RuL1NIcURKZld4TDVFaEV2cTFHTVVmSldpYnQ2VFhqK0NQZ20rc3prUC9pZFhkdCt1cnpJcDE3RWNPS2NuMlcxQWNzcjdMZVpqdjlITDB2R0lIUWNuZXp5ZllZS2Nab1N3OW1IWklyT2F6ZGMyS1BvOHRibEk5alN6MmxwcmZpTEIrVU9mZjYxZkViNlBnVEZpU1JGc2lidytMeG1xcTlTczRPZ2RzL0E2b01xS0VvY2N3Sms5L1RRWkUreVZpanFBVlhKa0loUkk1NVMwVk5FVFdXMTA5akl1blkzVVRmK3h4WGFMMzl5V2c4S1dxTEE0bjlGaTc2cjhQb0tGVjl5cmR0aEhVUVI5MTVmM0dWODdKTkVZVkhjcUVhcjZUQlgrd2Zzdjl5cXlNdFNkRmV0aEMwLzh2eW5lTDlNaWlvbHd2aUVEYWRqcjBISnc5OGNJdWRsMlBJRk1QRDBZT3MycVpKR29FUE1lY2hNZjZ5a21mcEs1dEMvUmxSd244dXFmTnJ3TDE2aHVNc1VnNXFvNDJKVmlQdjRpTk1nL3I0ZWdNUXlJei9id2tUN05hYy9QS3Vjait5UnRqRkFOOVgyK3ZmZlpLU1Uxb2NBaG5hWHU0di9heVRTRys3a2FHZFlIcDdaZ0hIazNpM01tTCsrSUFaQnVqb1ZHaVBJMk8vWnUvbEd3Nk1CQU9qT3RUMnNuSWFMOGgrbVNaaFc5OVpKUzM2RVFzMmlXRXZzYUdZMnZIVHRFRERVdCsxUjNKZGxiOC8vclY2NkU2S3F0SkpIL3hOQ1E4TFdvTUVzOEVuZ0lJZVZwSk5SdVZFdHBEcHArUVdtRk9iTXlGSTJjUmcyblpadFB6NER0VU1XZFI3ZXRyc3FuRGQreitucGhVbnRHQy9zeWJmd2lYb2R4NEE1YjdSdVZpRlh3ejgrRUFyMlYwcnpMUjdXWkllL3hNVG8wbWRJeE8rQ2dscW5od2dZSlhDQk9xckFud2hPT1M0NERBR2hZQ3doMkJXNk9HekN2UlhGN1RvSjVBL2l2b2o1cktJQzVpNnZEQU0xZFoxWGovTFljQUE0RFJ6WTBoQW9ELzRlQTlUNCtlbGNyZFZ0VmpMK2ZoS1Q2WkpRYUNUNVN0SHNmOHhUMHF6UU5jb2YzL1VyaHo3OWNXeHJIK1VMWFNpLzBqWGhaRENBcEtVWm1ESWVmWng2bUhIdlBPcVRnYzVmVDVadmY2Nkl4MlBqQU0wREtXcDBFYUdvZG50YjFvL1JkdHV5aUtPcnl2eUJ0a2h2S3pSeVl1MkJ2enpvMmgyVzVTaTg1U1FrSTBpYzF6OWlIQ1g0L1JsUENxNHlYT0hIZ1N1MXF3eU1DNjVHV1dSZ0JSTnk4eXk4OXY3Qktra1p0V1JHaDMrYnhlZmNvTnhEWXRwRk1vbjhDdTBVUFl6Z1poYldnRWtscDh5dkFVUHlqNEZGOUtOZjdkQ3N3cGd6ZkVoVGpjUk4yckZ4eHBoaGtmSmFWSER1UUtqM0EydUg2OFZ6ZlZsQlcyRHRORStTTStyZDlGOGx4WjdsMU9pWDk5RFFnTnZMaS9pRTUwNms1TXF0SVRMTnZMQXlVclhqdW82TGx1VHZKZmUyWG0wRkZPeHU5SHlidmhUVkVtNkorQ01Td3lnSXo1eFl1L01mVDJxd1QrNWtzZ3kyQk42TGExcER0YUZtYmYyY0tHNkxyZkpCNU5Gc0JkdVN6TkJZa2NnNGVwWUNWQytzUjhSWUZJNFlLcVU4aE43eUNkQVhLZm1ReEpCQmRReWlMU01vUnMzSHNyZk4xKy9EOHFzcWJJUnR2SnBKTEJQU2dQV0xHUW45ajZ0cU9MRVN2dWVtUzB2WVpZaG9xSTI1NFdSZWFMN2U4MWlkbUMrdFUzYUFuZ1QzbGR6U1o5ZGk2ZElISnhiT08yUjhaME8wMUZRcVBxdzVlTzVmOGhvdmtPSXZIM29WQVpQZHlERWlsMWtrOEt3bEV1SEc1NjdNVjVHVjRIa05UampoajNmMjUyWVNzVDhCRGR0d0c3TkFlWlRpazdBS1RPa0VudU02OVhPbWxEVnlSZzlrSjd2NjdXNFBhbGVNc0FHQ3ZhUzJuZEhvOVNhS0NPdFlFdWVmaGx3QUZYRGdMM2dMcHZZTjhGV21yekUrTUJrR0NTcUdTSWIzRFFFSkZERU1IZ29BWmdCdkFISUFjd0JoTUNFR0NTcUdTSWIzRFFFSkZURVVCQkpVYVcxbElERTNOek16TVRRNE1qZzNPREF3Z2dTUkJna3Foa2lHOXcwQkJ3YWdnZ1NDTUlJRWZnSUJBRENDQkhjR0NTcUdTSWIzRFFFSEFUQm1CZ2txaGtpRzl3MEJCUTB3V1RBNEJna3Foa2lHOXcwQkJRd3dLd1FVcUpPLzd4bllUaCtFZUM0NkxGek1ZY1RwczV3Q0FpY1FBZ0VnTUF3R0NDcUdTSWIzRFFJSkJRQXdIUVlKWUlaSUFXVURCQUVxQkJBdmtPS2FlcTV6WGVkS0VKOVNuZk1KZ0lJRUFER1UycWJ0aHFhRnZ3WHN2bUlRd0FheVVGaWRqVkFNKzQ2MGd0b1ZTVUZnVzdQd2tqWEJOQVZMeUJtTTMrcVNqdDdZWVByazFseEc4UWdMZUk5TjRzTGJSb1RtZVA1Vkk3cWRSYWNpUTgyZkNiRm1OOXZqWVBYRWwzcktFelBYNG0wV05GeS9udDJFbjc2Wlg1YzhXT1ZEVFBJL1E2MUlCdnQvUnJGRGhNamprZC9SNnJzTTFpUSt3VmlRUGw0L0JKQ1AvQ2paTW5LMFNrSU9waTNXaFpZZlB2TXJWSUh6dWpGc1dSMkQxakZWZXhVYmhSWDdsZTFnZ3g2MFJRZi9LcDU2Vk1vamNBOXlVK28wN3NjL2IyVzYvRGVBaWNMNVBPZHFPd2Rta0dRMnlvR0s3WW50bDhrSjh4L1QwZlZaYVg5YmhpM2pKSTdDdzQvWGRaVDh6NEJ3cTM3S3NyQ092THBrcEFuWGVlWVM2MVlJNlp3UGxCdUF5ZGZJd1JRMmNTVVJZcUw4RW9YbnI2d2E5ZjYzTXVoSWh1ckRZWHZEejRBdlFqeWpuRjBLcFZ5V01ldHFETFQ4b1F6RUZvRmNEN1NDRWl5RkNVRHZmREdJcFZlMThwenBObFBJNS9DNHV6bkYyOG1XZEhPYjZKdnJDSEh4bElQZmVhMktqb3NjZ0pqRnhIcVp1cWo3bkF4cDZWQUVBRiszUGRiQ2FGbmdGNmsxUHBscTI4TE1jeW4vRGREUzdqckdQMnJvaVFxRDdsNVlyYlZIck00MytSM3MyNHVnVmVrMDloQS9mK0RVRlVFVEZuRnZOUmNHcmlKdEVpQjg2OE1vTFYvbjFWc1JobmdJRXkvTFhyeG5Wbmk1bzB1YWJxMXExV0R6M1V2VFhWU01aTUNFa2xsMDdET2JDenF4SEJGV0l1dnpoTCt2TTBtNzhhZzBNWVVDc2p2MzNJSFl3dzNmZkFkNDZkdnNxcXZKSFlFZ2gzYkx1QUtqSzB5WkFDN1hjTTJiZ24rMDJtVXZFWmlHZmtYSUhOZXRwWTBVMHkvQ1llOWJNQnhkNXZKcjF3d0VIV3RZbzFqUmpWaXVTVDJSb1ZDL2xuNUVSNkFhZnhIVDRLZTVhTkw4Rndkd3RJRnJFeDFTZEY4VkthZmFXbFZpVkZPTExJeXpDV0NHZlBjam1BWjN3dEM5MFNIM2VUeDZxSkNPUEV4VVIzc041SFZTN1NHblBpVlZMNkhES1QzYkNCWjhSNWEzRXZwUENHOXpzeURjRjlIOHphUG5SQ1BWZDJlUzZxcUtGOXhLdUsydlkzM0hnYnBDMXFTb3lGQlN0MUdNY28rbHpTYks4VkVUVndtL1JEUmFJK2JmbFEwOHA5ejFnOHdYdXVJRFM5b0xaVTM2SjlUdXBCdW83SGhHQTNEeVRBOXQ2VTBBMDhJS3c4dGFXc3EyVk42b21OSDJWeTcwTlY4dG5ZQkdwWkwzUU1pM2hzRFZxMHRGUzk5b0Y5U3hZOHNuNFNvL1dnaVBWOGxhN00wY0F3NFl6ZHl2cXZxQTE2Y2RnUjQzOFBWWk5Zb2ljMDJZUFA4OVRTYVpDTzlCQXBzakFqdjFlSnJsK3h6VVFlVHN3czloeGtmbTVOclFZeTdOVHRwYzZ4NGN4VWcvd0Z5ZnZhUkhLTmZwTzlNMjZyZkh5SjZPUW9KeHExamh6VllyS1dzT0RoaUlKZ3k3SUJCZDRoN2pVUUFIRW85dURjUUlqMHhuNWpWbTUwSkZDVC9aUEFsWkRSRmdyWVBndjBaSXBCSXRLdWpMZ0VzZVNkcGNRMm1nOE1rd1RUQXhNQTBHQ1dDR1NBRmxBd1FDQVFVQUJDRFFjMDlVWDNzRGsxbUJKQ3B2b05udjBheXdJQ1pKNG1iY2VQbGJpdWxvemdRVW1hWG16NW4wQ213SmZSVjlSRmF2RmxudTNZNENBaWNRIiwia2V5c3RvcmVQYXNzd29yZCI6ImFkbi4xMjMkMWhkc2FqLmUzIiwia2V5QWxpYXMiOiJmb3JzYSIsImtleVBhc3N3b3JkIjoiYWRuLjEyMyQxaGRzYWouZTMifX19LCJ1cGRhdGVzIjp7fSwiYnVpbGRUeXBlIjoiYXBwLWJ1bmRsZSIsInVzZXJuYW1lIjoiZGVhYV8yOTIwOTIiLCJleHBlcmltZW50YWwiOnt9LCJtb2RlIjoiYnVpbGQiLCJ0cmlnZ2VyZWRCeSI6IkVBU19DTEkiLCJhcHBJZCI6ImU3NTNkN2RkLTE2NTEtNGNjNS1hZTY5LWI3N2JhNTYyOTI3NyIsImluaXRpYXRpbmdVc2VySWQiOiJiZGI0NTkxZi0wNzRiLTRlOWMtOGQ2ZC0wZjdkMDZkYmJjOTgifSwibWV0YWRhdGEiOnsidHJhY2tpbmdDb250ZXh0Ijp7InRyYWNraW5nX2lkIjoiZmZmYTE2ZDUtMjJmMS00NGZjLWJhZWEtNjEzMzllNmUzZDVmIiwicGxhdGZvcm0iOiJhbmRyb2lkIiwic2RrX3ZlcnNpb24iOiI1NC4wLjAiLCJhY2NvdW50X2lkIjoiYTM2Nzk0ZmYtN2FmNy00OGViLTgxMzctOTM4YzYyZjJkYjVkIiwicHJvamVjdF9pZCI6ImU3NTNkN2RkLTE2NTEtNGNjNS1hZTY5LWI3N2JhNTYyOTI3NyIsInByb2plY3RfdHlwZSI6Im1hbmFnZWQiLCJkZXZfY2xpZW50IjpmYWxzZSwibm9fd2FpdCI6ZmFsc2UsInJ1bl9mcm9tX2NpIjpmYWxzZSwibG9jYWwiOnRydWV9LCJhcHBCdWlsZFZlcnNpb24iOiIyIiwiYXBwVmVyc2lvbiI6IjEuMC4xIiwiY2xpVmVyc2lvbiI6IjE4LjMuMCIsIndvcmtmbG93IjoibWFuYWdlZCIsImNyZWRlbnRpYWxzU291cmNlIjoibG9jYWwiLCJzZGtWZXJzaW9uIjoiNTQuMC4wIiwiZmluZ2VycHJpbnRIYXNoIjoiYTcxNjJlODQ5M2VlMDJhMWY5ZmE1ZjNjMTM2ZWRlMjc5YjgyNmMzZCIsInJlYWN0TmF0aXZlVmVyc2lvbiI6IjAuODEuNSIsImRpc3RyaWJ1dGlvbiI6InN0b3JlIiwiYXBwTmFtZSI6IkZvcnNhIiwiYXBwSWRlbnRpZmllciI6InRvZGF5LmZvcnNhIiwiYnVpbGRQcm9maWxlIjoicHJvZHVjdGlvbiIsImdpdENvbW1pdEhhc2giOiJjZWU1YWQxMmMxNmFhNTMyNGJkMDYzMTc4NzQwNjY1ODVjYzEyNjVlIiwiZ2l0Q29tbWl0TWVzc2FnZSI6ImFiYyIsImlzR2l0V29ya2luZ1RyZWVEaXJ0eSI6ZmFsc2UsInVzZXJuYW1lIjoiZGVhYV8yOTIwOTIiLCJydW5XaXRoTm9XYWl0RmxhZyI6ZmFsc2UsInJ1bkZyb21DSSI6ZmFsc2UsImRldmVsb3BtZW50Q2xpZW50IjpmYWxzZSwicmVxdWlyZWRQYWNrYWdlTWFuYWdlciI6Im5wbSIsInNpbXVsYXRvciI6ZmFsc2V9fQ== exited with non-zero code: 1
+    Error: build command failed.
