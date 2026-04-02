@@ -19,6 +19,33 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 
+const ERROR_MAP: Record<string, string> = {
+  "Invalid credentials": "البريد الإلكتروني أو كلمة السر غير صحيحة",
+  "User not found": "المستخدم غير موجود",
+  "Username or email already taken": "البريد الإلكتروني أو اسم المستخدم مستخدم بالفعل",
+  "Email already taken": "البريد الإلكتروني مستخدم بالفعل",
+  "Invalid or expired code": "الرمز غير صحيح أو منتهي الصلاحية",
+  "Email already verified": "البريد الإلكتروني مفعّل بالفعل",
+  "Not authenticated": "يرجى تسجيل الدخول أولاً",
+  "Invalid referral code": "رمز الإحالة غير صحيح",
+  "Insufficient wallet balance": "رصيد المحفظة غير كافٍ",
+  "Campaign not found": "الحملة غير موجودة",
+  "Campaign is sold out": "الحملة مكتملة",
+};
+
+function translateError(msg: string): string {
+  if (!msg) return "حدث خطأ ما، يرجى المحاولة مجدداً";
+  for (const [en, ar] of Object.entries(ERROR_MAP)) {
+    if (msg.includes(en)) return ar;
+  }
+  try {
+    const json = JSON.parse(msg);
+    return json.message || msg;
+  } catch {
+    return msg;
+  }
+}
+
 function OTPInput({ value, onChange }: { value: string[]; onChange: (val: string[]) => void }) {
   const inputs = useRef<(TextInput | null)[]>([]);
 
@@ -145,7 +172,7 @@ export default function AuthScreen() {
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const msg = error?.message || "حدث خطأ ما";
-      Alert.alert("خطأ", msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
+      Alert.alert("خطأ", translateError(msg));
     } finally {
       setLoading(false);
     }
@@ -166,7 +193,7 @@ export default function AuthScreen() {
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const msg = error?.message || "الرمز غير صحيح";
-      Alert.alert("خطأ", msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
+      Alert.alert("خطأ", translateError(msg));
       setOtpDigits(["", "", "", "", "", ""]);
     } finally {
       setLoading(false);

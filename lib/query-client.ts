@@ -20,7 +20,13 @@ export function getApiUrl(): string {
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    try {
+      const json = JSON.parse(text);
+      throw new Error(json.message || json.error || text);
+    } catch (e: any) {
+      if (e.message && e.message !== text) throw e;
+      throw new Error(text);
+    }
   }
 }
 

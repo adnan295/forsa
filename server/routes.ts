@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(response);
     } catch (error: any) {
       if (error?.code === "23505") {
-        return res.status(409).json({ message: "Username or email already taken" });
+        return res.status(409).json({ message: "البريد الإلكتروني أو اسم المستخدم مستخدم بالفعل" });
       }
       console.error("Register error:", error);
       res.status(500).json({ message: "Server error" });
@@ -311,12 +311,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user = await storage.getUserByEmail(input);
       }
       if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
       }
 
       const valid = await bcrypt.compare(parsed.data.password, user.password);
       if (!valid) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
       }
 
       req.session.userId = user.id;
