@@ -32,7 +32,7 @@ import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
 
-type AdminTab = "dashboard" | "orders" | "users" | "campaigns" | "payments" | "coupons" | "notifications" | "activity" | "support";
+type AdminTab = "dashboard" | "orders" | "users" | "campaigns" | "payments" | "coupons" | "notifications" | "activity" | "support" | "settings";
 
 const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "dashboard", label: "الرئيسية", icon: "grid" },
@@ -44,6 +44,7 @@ const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "payments", label: "الدفع", icon: "card" },
   { key: "coupons", label: "الكوبونات", icon: "pricetag" },
   { key: "activity", label: "السجل", icon: "time" },
+  { key: "settings", label: "الإعدادات", icon: "settings" },
 ];
 
 export default function AdminPanel() {
@@ -115,6 +116,7 @@ export default function AdminPanel() {
         {activeTab === "coupons" && <CouponsSection />}
         {activeTab === "support" && <SupportTicketsSection />}
         {activeTab === "activity" && <ActivitySection />}
+        {activeTab === "settings" && <AccountSettingsSection />}
       </Animated.View>
     </View>
   );
@@ -2067,7 +2069,7 @@ function CreateCouponModal({ visible, onClose }: { visible: boolean; onClose: ()
   );
 }
 
-function ModalInput({ label, value, onChangeText, placeholder, multiline, keyboardType }: { label: string; value: string; onChangeText: (t: string) => void; placeholder: string; multiline?: boolean; keyboardType?: any }) {
+function ModalInput({ label, value, onChangeText, placeholder, multiline, keyboardType, secureTextEntry }: { label: string; value: string; onChangeText: (t: string) => void; placeholder: string; multiline?: boolean; keyboardType?: any; secureTextEntry?: boolean }) {
   return (
     <View style={modalStyles.inputGroup}>
       <Text style={modalStyles.inputLabel}>{label}</Text>
@@ -2079,10 +2081,128 @@ function ModalInput({ label, value, onChangeText, placeholder, multiline, keyboa
         placeholderTextColor={Colors.light.tabIconDefault}
         multiline={multiline}
         keyboardType={keyboardType}
+        secureTextEntry={secureTextEntry}
       />
     </View>
   );
 }
+
+function AccountSettingsSection() {
+  const { user } = useAuth();
+  const [email, setEmail] = useState(user?.email || "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminUsername, setNewAdminUsername] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
+
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("PUT", "/api/admin/account-settings", data),
+    onSuccess: () => {
+      Alert.alert("✅ تم", "تم تحديث الإعدادات بنجاح");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (err: any) => {
+      Alert.alert("خطأ", err?.message || "حدث خطأ");
+    },
+  });
+
+  const createAdminMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/admin/create-admin", data),
+    onSuccess: () => {
+      Alert.alert("✅ تم", "تم إنشاء حساب الأدمن بنجاح");
+      setNewAdminEmail("");
+      setNewAdminUsername("");
+      setNewAdminPassword("");
+    },
+    onError: (err: any) => {
+      Alert.alert("خطأ", err?.message || "حدث خطأ");
+    },
+  });
+
+  const handleUpdateAccount = () => {
+    if (newPassword && newPassword !== confirmPassword) {
+      Alert.alert("خطأ", "كلمة السر الجديدة وتأكيدها غير متطابقتين");
+      return;
+    }
+    const payload: any = {};
+    if (email && email !== user?.email) payload.email = email;
+    if (newPassword) {
+      payload.currentPassword = currentPassword;
+      payload.newPassword = newPassword;
+    }
+    if (Object.keys(payload).length === 0) {
+      Alert.alert("تنبيه", "لم تقم بأي تغيير");
+      return;
+    }
+    updateMutation.mutate(payload);
+  };
+
+  const handleCreateAdmin = () => {
+    if (!newAdminEmail || !newAdminUsername || !newAdminPassword) {
+      Alert.alert("خطأ", "جميع الحقول مطلوبة");
+      return;
+    }
+    createAdminMutation.mutate({ email: newAdminEmail, username: newAdminUsername, password: newAdminPassword });
+  };
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <View style={settingsStyles.card}>
+        <Text style={settingsStyles.cardTitle}>تغيير البريد الإلكتروني</Text>
+        <ModalInput label="البريد الإلكتروني" value={email} onChangeText={setEmail} placeholder="admin@example.com" keyboardType="email-address" />
+      </View>
+
+      <View style={settingsStyles.card}>
+        <Text style={settingsStyles.cardTitle}>تغيير كلمة السر</Text>
+        <ModalInput label="كلمة السر الحالية" value={currentPassword} onChangeText={setCurrentPassword} placeholder="••••••••" secureTextEntry />
+        <ModalInput label="كلمة السر الجديدة" value={newPassword} onChangeText={setNewPassword} placeholder="••••••••" secureTextEntry />
+        <ModalInput label="تأكيد كلمة السر" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="••••••••" secureTextEntry />
+      </View>
+
+      <Pressable
+        style={[settingsStyles.saveBtn, updateMutation.isPending && { opacity: 0.6 }]}
+        onPress={handleUpdateAccount}
+        disabled={updateMutation.isPending}
+      >
+        {updateMutation.isPending
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={settingsStyles.saveBtnText}>حفظ التغييرات</Text>
+        }
+      </Pressable>
+
+      <View style={[settingsStyles.card, { marginTop: 24 }]}>
+        <Text style={settingsStyles.cardTitle}>إضافة حساب أدمن جديد</Text>
+        <ModalInput label="البريد الإلكتروني" value={newAdminEmail} onChangeText={setNewAdminEmail} placeholder="admin2@example.com" keyboardType="email-address" />
+        <ModalInput label="اسم المستخدم" value={newAdminUsername} onChangeText={setNewAdminUsername} placeholder="admin2" />
+        <ModalInput label="كلمة السر" value={newAdminPassword} onChangeText={setNewAdminPassword} placeholder="••••••••" secureTextEntry />
+      </View>
+
+      <Pressable
+        style={[settingsStyles.createBtn, createAdminMutation.isPending && { opacity: 0.6 }]}
+        onPress={handleCreateAdmin}
+        disabled={createAdminMutation.isPending}
+      >
+        {createAdminMutation.isPending
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={settingsStyles.saveBtnText}>إنشاء حساب أدمن</Text>
+        }
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+const settingsStyles = StyleSheet.create({
+  card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  cardTitle: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 14 },
+  saveBtn: { backgroundColor: Colors.light.accent, borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center" },
+  createBtn: { backgroundColor: "#2ECC71", borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center" },
+  saveBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#fff", writingDirection: "rtl" },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },

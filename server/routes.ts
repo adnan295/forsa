@@ -2093,6 +2093,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/admin/account-settings", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { email, currentPassword, newPassword } = req.body;
+      const adminId = (req.session as any).userId;
+      const admin = await storage.getUserById(adminId);
+      if (!admin) return res.status(404).json({ message: "المستخدم غير موجود" });
+
+      if (email && email !== admin.email) {
+        const existing = await storage.getUserByEmail(email);
+        if (existing && existing.id !== adminId) {
+          return res.status(409).json({ message: "هذا البريد الإلكتروني مستخدم بالفعل" });
+        }
+        await storage.updateUserEmail(adminId, email);
+      }
+
+      if (newPassword) {
+        if (!currentPassword) return res.status(400).json({ message: "يجب إدخال كلمة السر الحالية" });
+        const valid = await bcrypt.compare(currentPassword, admin.password);
+        if (!valid) return res.status(401).json({ message: "كلمة السر الحالية غير صحيحة" });
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await storage.updateUserPassword(adminId, hashed);
+      }
+
+      return res.json({ message: "تم تحديث الإعدادات بنجاح" });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "حدث خطأ" });
+    }
+  });
+
+  app.post("/api/admin/create-admin", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { email, username, password } = req.body;
+      if (!email || !username || !password) {
+        return res.status(400).json({ message: "جميع الحقول مطلوبة" });
+      }
+      const existing = await storage.getUserByEmail(email);
+      if (existing) return res.status(409).json({ message: "البريد الإلكتروني مستخدم بالفعل" });
+
+      const hashed = await bcrypt.hash(password, 10);
+      const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const newAdmin = await storage.createUser({
+        email,
+        username,
+        password: hashed,
+        role: "admin",
+        emailVerified: true,
+        referralCode,
+      } as any);
+
+      return res.status(201).json({ message: "تم إنشاء حساب الأدمن بنجاح", user: { id: newAdmin.id, email: newAdmin.email, username: newAdmin.username } });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "حدث خطأ" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

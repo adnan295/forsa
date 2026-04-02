@@ -155,6 +155,7 @@ export interface IStorage {
   verifyPasswordResetToken(userId: string, code: string): Promise<any>;
   markResetTokenUsed(tokenId: string): Promise<void>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+  updateUserEmail(userId: string, email: string): Promise<void>;
 
   createEmailVerificationToken(userId: string, code: string, expiresAt: Date): Promise<any>;
   verifyEmailToken(userId: string, code: string): Promise<any>;
@@ -1005,6 +1006,12 @@ export class DatabaseStorage implements IStorage {
   async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
     await db.update(users)
       .set({ password: hashedPassword })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserEmail(userId: string, email: string): Promise<void> {
+    await db.update(users)
+      .set({ email })
       .where(eq(users.id, userId));
   }
 
