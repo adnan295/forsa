@@ -2335,6 +2335,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/users/:id/reset-password", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const resetSchema = z.object({
+        newPassword: z.string().min(6, "كلمة السر يجب أن تكون 6 أحرف على الأقل"),
+      });
+      const parsed = resetSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0].message });
+      }
+      const { newPassword } = parsed.data;
+      const user = await storage.getUser(req.params.id as string);
+      if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await storage.updateUserPassword(req.params.id as string, hashed);
+      return res.json({ message: "تم إعادة تعيين كلمة السر بنجاح" });
+    } catch (err) {
+      console.error("Reset password error:", err);
+      return res.status(500).json({ message: "حدث خطأ أثناء إعادة تعيين كلمة السر" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

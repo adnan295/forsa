@@ -256,6 +256,7 @@
     <div class="nav-item" onclick="goSection('notifications')" data-section="notifications"><span class="nav-icon">🔔</span><span>الإشعارات</span></div>
     <div class="nav-item" onclick="goSection('support')" data-section="support"><span class="nav-icon">🎧</span><span>الدعم</span></div>
     <div class="nav-item" onclick="goSection('activity')" data-section="activity"><span class="nav-icon">📋</span><span>السجل</span></div>
+    <div class="nav-item" onclick="goSection('permissions')" data-section="permissions"><span class="nav-icon">🛡️</span><span>الصلاحيات</span></div>
     <div class="nav-item" onclick="goSection('settings')" data-section="settings"><span class="nav-icon">⚙️</span><span>الإعدادات</span></div>
   </nav>
   <div class="sidebar-footer">
@@ -448,6 +449,35 @@
             <thead><tr><th>النشاط</th><th>المستخدم</th><th>التفاصيل</th><th>الوقت</th></tr></thead>
             <tbody id="activityTable"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERMISSIONS -->
+    <div id="sec-permissions" class="hidden">
+      <div class="section-row">
+        <div class="section-card">
+          <div class="section-title">🛡️ المدراء الحاليون</div>
+          <div id="adminsList"><div class="empty-state">جاري التحميل...</div></div>
+        </div>
+        <div class="section-card">
+          <div class="section-title">
+            ⬆️ ترقية مستخدم لمدير
+            <input class="form-input" id="permUsersSearch" placeholder="🔍 بحث بالاسم أو البريد..." style="font-size:12px;padding:5px 10px;width:180px;margin:0" oninput="filterPermUsers()" />
+          </div>
+          <div id="permUsersList"><div class="empty-state">جاري التحميل...</div></div>
+        </div>
+      </div>
+      <div class="section-row">
+        <div class="section-card" style="max-width:480px">
+          <div class="section-title">🔑 إعادة تعيين كلمة السر</div>
+          <div class="form-group">
+            <label class="form-label">اختر المستخدم</label>
+            <select class="form-input" id="resetPwdUser"><option value="">-- اختر مستخدماً --</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">كلمة السر الجديدة</label><input class="form-input" id="resetPwdNew" type="password" placeholder="••••••••" /></div>
+          <div class="form-group"><label class="form-label">تأكيد كلمة السر</label><input class="form-input" id="resetPwdConfirm" type="password" placeholder="••••••••" /></div>
+          <button class="btn-primary" style="background:linear-gradient(135deg,#7C3AED,#EC4899)" onclick="doResetPassword()">🔑 إعادة التعيين</button>
         </div>
       </div>
     </div>
@@ -701,7 +731,7 @@ async function api(method, url, body) {
 }
 
 // ===== NAVIGATION =====
-const TITLES = { dashboard:'لوحة الرئيسية', orders:'الطلبات', users:'المستخدمون', campaigns:'الحملات', coupons:'الكوبونات', payments:'طرق الدفع', notifications:'الإشعارات', support:'تذاكر الدعم', activity:'سجل النشاط', settings:'الإعدادات' };
+const TITLES = { dashboard:'لوحة الرئيسية', orders:'الطلبات', users:'المستخدمون', campaigns:'الحملات', coupons:'الكوبونات', payments:'طرق الدفع', notifications:'الإشعارات', support:'تذاكر الدعم', activity:'سجل النشاط', permissions:'إدارة الصلاحيات', settings:'الإعدادات' };
 
 function goSection(name) {
   document.querySelectorAll('[id^="sec-"]').forEach(el => el.classList.add('hidden'));
@@ -710,7 +740,7 @@ function goSection(name) {
   document.querySelector(`[data-section="${name}"]`).classList.add('active');
   document.getElementById('pageTitle').textContent = TITLES[name] || name;
   currentSection = name;
-  const loaders = { orders:loadOrders, users:loadUsers, campaigns:loadCampaigns, coupons:loadCoupons, payments:loadPayments, notifications:loadNotifications, support:loadSupport, activity:loadActivity };
+  const loaders = { orders:loadOrders, users:loadUsers, campaigns:loadCampaigns, coupons:loadCoupons, payments:loadPayments, notifications:loadNotifications, support:loadSupport, activity:loadActivity, permissions:loadPermissions };
   if (loaders[name]) loaders[name]();
 }
 
@@ -1376,7 +1406,97 @@ async function loadActivity() {
   } catch (e) { toast(e.message, 'error'); }
 }
 
-// ===== SETTINGS =====
+// ===== PERMISSIONS =====
+let _permAllUsers = [];
+
+async function loadPermissions() {
+  try {
+    _permAllUsers = await api('GET', '/api/admin/users');
+    renderAdminsList();
+    renderPermUsersList();
+    populateResetSelect();
+  } catch (e) {
+    toast('فشل تحميل بيانات المستخدمين', 'error');
+  }
+}
+
+function renderAdminsList() {
+  const admins = _permAllUsers.filter(u => u.role === 'admin');
+  const el = document.getElementById('adminsList');
+  if (!admins.length) { el.innerHTML = '<div class="empty-state">لا يوجد مدراء حالياً</div>'; return; }
+  el.innerHTML = `<table class="data-table"><thead><tr><th>المستخدم</th><th>البريد الإلكتروني</th><th>الإجراء</th></tr></thead><tbody>
+    ${admins.map(u => `<tr>
+      <td><strong>${esc(u.username)}</strong></td>
+      <td>${esc(u.email)}</td>
+      <td>${u.id === currentUser?.id
+        ? '<span class="badge badge-purple">أنت</span>'
+        : `<button class="btn-danger btn-sm" onclick="revokeAdmin('${esc(u.id)}','${jsEsc(u.username)}')">سحب الصلاحية</button>`
+      }</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderPermUsersList() {
+  const q = (document.getElementById('permUsersSearch')?.value || '').toLowerCase();
+  const regular = _permAllUsers.filter(u => u.role !== 'admin' && (
+    !q || u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+  ));
+  const el = document.getElementById('permUsersList');
+  if (!regular.length) { el.innerHTML = '<div class="empty-state">لا يوجد مستخدمون عاديون</div>'; return; }
+  el.innerHTML = `<table class="data-table"><thead><tr><th>المستخدم</th><th>البريد الإلكتروني</th><th>الإجراء</th></tr></thead><tbody>
+    ${regular.map(u => `<tr>
+      <td><strong>${esc(u.username)}</strong></td>
+      <td>${esc(u.email)}</td>
+      <td><button class="btn-primary btn-sm" onclick="promoteUser('${esc(u.id)}','${jsEsc(u.username)}')">⬆️ ترقية لمدير</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function filterPermUsers() { renderPermUsersList(); }
+
+function populateResetSelect() {
+  const sel = document.getElementById('resetPwdUser');
+  sel.innerHTML = '<option value="">-- اختر مستخدماً --</option>' +
+    _permAllUsers.map(u => `<option value="${esc(u.id)}">${esc(u.username)} (${esc(u.role === 'admin' ? 'أدمن' : 'مستخدم')})</option>`).join('');
+}
+
+async function revokeAdmin(id, username) {
+  if (!confirm(`هل أنت متأكد من سحب صلاحية الأدمن من "${username}"؟`)) return;
+  try {
+    await api('PUT', `/api/admin/users/${id}`, { role: 'user' });
+    toast(`تم سحب صلاحية الأدمن من ${username}`, 'success');
+    await loadPermissions();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function promoteUser(id, username) {
+  if (!confirm(`هل أنت متأكد من ترقية "${username}" لأدمن؟`)) return;
+  try {
+    await api('PUT', `/api/admin/users/${id}`, { role: 'admin' });
+    toast(`تمت ترقية ${username} لأدمن بنجاح`, 'success');
+    await loadPermissions();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function doResetPassword() {
+  const userId = document.getElementById('resetPwdUser').value;
+  const newPwd = document.getElementById('resetPwdNew').value;
+  const confirmPwd = document.getElementById('resetPwdConfirm').value;
+  if (!userId) { toast('يرجى اختيار مستخدم', 'error'); return; }
+  if (!newPwd) { toast('يرجى إدخال كلمة السر الجديدة', 'error'); return; }
+  if (newPwd.length < 6) { toast('كلمة السر يجب أن تكون 6 أحرف على الأقل', 'error'); return; }
+  if (newPwd !== confirmPwd) { toast('كلمة السر وتأكيدها غير متطابقتين', 'error'); return; }
+  const user = _permAllUsers.find(u => u.id === userId);
+  if (!confirm(`هل أنت متأكد من إعادة تعيين كلمة سر "${user?.username || userId}"؟`)) return;
+  try {
+    await api('POST', `/api/admin/users/${userId}/reset-password`, { newPassword: newPwd });
+    toast('تم إعادة تعيين كلمة السر بنجاح', 'success');
+    document.getElementById('resetPwdUser').value = '';
+    document.getElementById('resetPwdNew').value = '';
+    document.getElementById('resetPwdConfirm').value = '';
+  } catch (e) { toast(e.message, 'error'); }
+}
+
 async function saveSettings() {
   const email = document.getElementById('settingsEmail').value.trim();
   const currentPassword = document.getElementById('settingsCurrentPwd').value;
