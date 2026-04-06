@@ -426,7 +426,8 @@
         <select id="supportStatusFilter" onchange="loadSupport()">
           <option value="">كل التذاكر</option>
           <option value="open">مفتوحة</option>
-          <option value="resolved">محلولة</option>
+          <option value="in_progress">قيد المتابعة</option>
+          <option value="closed">محلولة</option>
         </select>
       </div>
       <div id="supportList"></div>
@@ -601,7 +602,7 @@ let currentChartPeriod = 'weekly';
 // ===== INIT =====
 async function init() {
   try {
-    const u = await api('GET', '/api/me');
+    const u = await api('GET', '/api/auth/me');
     if (!u || u.role !== 'admin') { window.location.href = '/admin/login'; return; }
     currentUser = u;
     document.getElementById('sidebarName').textContent = u.username || 'أدمن';
@@ -845,11 +846,11 @@ function openOrderModal(id) {
 }
 
 async function confirmPayment(id) {
-  try { await api('PUT', `/api/admin/orders/${id}/payment`, { status: 'confirmed' }); allOrders = []; await loadOrders(); toast('تم قبول الدفع', 'success'); } catch (e) { toast(e.message, 'error'); }
+  try { await api('PUT', `/api/admin/orders/${id}/payment`, { paymentStatus: 'confirmed' }); allOrders = []; await loadOrders(); toast('تم قبول الدفع', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 async function rejectPayment(id) {
-  const reason = prompt('سبب الرفض (اختياري):') || '';
-  try { await api('PUT', `/api/admin/orders/${id}/payment`, { status: 'rejected', reason }); allOrders = []; await loadOrders(); toast('تم رفض الدفع', 'success'); } catch (e) { toast(e.message, 'error'); }
+  const rejectionReason = prompt('سبب الرفض (اختياري):') || '';
+  try { await api('PUT', `/api/admin/orders/${id}/payment`, { paymentStatus: 'rejected', rejectionReason }); allOrders = []; await loadOrders(); toast('تم رفض الدفع', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 async function updateShipping(id) {
   const tracking = document.getElementById('modalTracking')?.value || '';
@@ -1146,7 +1147,7 @@ async function sendBroadcast() {
   const body = document.getElementById('notifBody').value.trim();
   if (!title || !body) { toast('يرجى ملء العنوان والنص', 'error'); return; }
   try {
-    await api('POST', '/api/admin/broadcast-notification', { title, body });
+    await api('POST', '/api/admin/broadcast-notification', { title, message: body });
     document.getElementById('notifTitle').value = '';
     document.getElementById('notifBody').value = '';
     toast('تم إرسال الإشعار للجميع ✅', 'success');
@@ -1169,7 +1170,7 @@ async function loadSupport() {
             <div style="font-weight:700">${esc(t.subject || 'تذكرة دعم')}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:4px;word-break:break-word">${esc(t.message)}</div>
             <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              ${t.status === 'open' ? '<span class="badge badge-yellow">مفتوحة</span>' : '<span class="badge badge-green">محلولة</span>'}
+              ${t.status === 'open' ? '<span class="badge badge-yellow">مفتوحة</span>' : t.status === 'in_progress' ? '<span class="badge badge-blue">قيد المتابعة</span>' : '<span class="badge badge-green">محلولة</span>'}
               <span style="font-size:11px;color:var(--muted)">${fmtDate(t.createdAt)}</span>
               <span style="font-size:11px;color:var(--muted)">· ${esc(t.userEmail || t.userId || '—')}</span>
             </div>
@@ -1195,7 +1196,7 @@ async function sendSupportReply() {
 
 async function resolveTicket() {
   const reply = document.getElementById('supportReply').value.trim();
-  try { await api('PUT', `/api/admin/support-tickets/${currentSupportId}`, { status: 'resolved', adminReply: reply || undefined }); closeModal('supportModal'); loadSupport(); toast('تم حل التذكرة', 'success'); } catch (e) { toast(e.message, 'error'); }
+  try { await api('PUT', `/api/admin/support-tickets/${currentSupportId}`, { status: 'closed', adminReply: reply || undefined }); closeModal('supportModal'); loadSupport(); toast('تم حل التذكرة', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 
 // ===== ACTIVITY =====
