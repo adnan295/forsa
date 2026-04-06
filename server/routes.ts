@@ -1267,6 +1267,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/admin/campaigns/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { title, description, price, totalQuantity, imageUrl, endsAt, isFlashSale, originalPrice, flashSaleEndsAt } = req.body;
+      const updateData: Record<string, any> = {};
+      if (title !== undefined) updateData.title = title;
+      if (description !== undefined) updateData.description = description;
+      if (price !== undefined) updateData.price = String(price);
+      if (totalQuantity !== undefined) updateData.totalQuantity = Number(totalQuantity);
+      if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+      if (endsAt !== undefined) updateData.endsAt = endsAt ? new Date(endsAt) : null;
+      if (isFlashSale !== undefined) updateData.isFlashSale = isFlashSale;
+      if (originalPrice !== undefined) updateData.originalPrice = originalPrice ? String(originalPrice) : null;
+      if (flashSaleEndsAt !== undefined) updateData.flashSaleEndsAt = flashSaleEndsAt ? new Date(flashSaleEndsAt) : null;
+      const updated = await storage.updateCampaign(req.params.id as string, updateData);
+      if (!updated) return res.status(404).json({ message: "Campaign not found" });
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Update campaign error:", error);
+      res.status(400).json({ message: error.message || "Failed to update campaign" });
+    }
+  });
+
   app.delete("/api/admin/campaigns/:id", requireAdmin as any, async (req: Request, res: Response) => {
     try {
       const deleted = await storage.deleteCampaign(req.params.id as string);
