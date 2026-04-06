@@ -1235,8 +1235,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: user.id,
             username: user.username,
             email: user.email,
+            fullName: user.fullName,
+            phone: user.phone,
             role: user.role,
             emailVerified: user.emailVerified,
+            walletBalance: user.walletBalance,
+            referralCode: user.referralCode,
+            referredBy: user.referredBy,
             createdAt: user.createdAt,
             ...stats,
           };
@@ -1276,7 +1281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           orderCount: count(),
         })
         .from(orders)
-        .where(eq(orders.paymentStatus as any, "confirmed"))
+        .where(sql`${orders.paymentStatus} = 'confirmed'`)
         .groupBy(orders.userId)
         .orderBy(desc(sum(orders.totalAmount)))
         .limit(10);
@@ -1335,13 +1340,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existing = await storage.getUserByEmail(email);
       if (existing) return res.status(400).json({ message: "البريد الإلكتروني مستخدم بالفعل" });
       const hashed = await bcrypt.hash(password, 10);
-      const newUser = await storage.createUser({
+      const referralCode = crypto.randomBytes(4).toString("hex").toUpperCase();
+      const [newUser] = await db.insert(users).values({
         username,
         email,
         password: hashed,
-        role: role || "user",
-        referralCode: crypto.randomBytes(4).toString("hex").toUpperCase(),
-      } as any);
+        role: (role === "admin" ? "admin" : "user") as "user" | "admin",
+        referralCode,
+      }).returning();
       res.status(201).json({ id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role });
     } catch (error: any) {
       console.error("Create user error:", error);

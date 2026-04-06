@@ -655,6 +655,17 @@ function esc(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+function jsEsc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/</g, '\\u003C')
+    .replace(/>/g, '\\u003E');
+}
 
 // ===== STATE =====
 let currentSection = 'dashboard';
@@ -970,7 +981,7 @@ function renderUsers(users) {
           <button class="btn-primary btn-sm" onclick="openUserModal('${esc(u.id)}')">عرض</button>
           <button class="btn-secondary btn-sm" onclick="openEditUserModal('${esc(u.id)}')">تعديل</button>
           ${!u.emailVerified ? `<button class="btn-success btn-sm" onclick="verifyUser('${esc(u.id)}')">تفعيل</button>` : ''}
-          ${u.role !== 'admin' ? `<button class="btn-danger btn-sm" onclick="deleteUser('${esc(u.id)}','${esc(u.username)}')">حذف</button>` : ''}
+          ${u.role !== 'admin' ? `<button class="btn-danger btn-sm" onclick="deleteUser('${esc(u.id)}','${jsEsc(u.username)}')">حذف</button>` : ''}
         </div>
       </td>
     </tr>`).join('');
@@ -1221,7 +1232,7 @@ async function loadPayments() {
             <span class="badge badge-blue" style="margin-top:8px">${esc(p.type || 'bank_transfer')}</span>
           </div>
           <div class="action-btns">
-            <button class="btn-secondary btn-sm" onclick="openEditPayment('${esc(p.id)}','${esc(p.name||'')}','${esc(p.nameAr||'')}','${esc(p.bankName||'')}','${esc(p.iban||'')}','${esc(p.accountName||'')}','${esc(p.icon||'bank')}',${!!p.enabled})">✏️ تعديل</button>
+            <button class="btn-secondary btn-sm" onclick="openEditPayment('${esc(p.id)}','${jsEsc(p.name||'')}','${jsEsc(p.nameAr||'')}','${jsEsc(p.bankName||'')}','${jsEsc(p.iban||'')}','${jsEsc(p.accountName||'')}','${jsEsc(p.icon||'bank')}',${!!p.enabled})">✏️ تعديل</button>
             <button class="btn-danger btn-sm" onclick="deletePayment('${esc(p.id)}')">🗑</button>
           </div>
         </div>
