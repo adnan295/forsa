@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "node:http";
 import session from "express-session";
@@ -1333,10 +1334,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/users", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const { username, email, password, role } = req.body;
-      if (!username || !email || !password) {
-        return res.status(400).json({ message: "اسم المستخدم والبريد وكلمة المرور مطلوبة" });
+      const createUserSchema = z.object({
+        username: z.string().min(2).max(50),
+        email: z.string().email(),
+        password: z.string().min(6),
+        role: z.enum(["user", "admin"]).optional().default("user"),
+      });
+      const parsed = createUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "بيانات غير صالحة", errors: parsed.error.flatten() });
       }
+      const { username, email, password, role } = parsed.data;
       const existing = await storage.getUserByEmail(email);
       if (existing) return res.status(400).json({ message: "البريد الإلكتروني مستخدم بالفعل" });
       const hashed = await bcrypt.hash(password, 10);
@@ -1345,25 +1353,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username,
         email,
         password: hashed,
-        role: (role === "admin" ? "admin" : "user") as "user" | "admin",
+        role: role as "user" | "admin",
         referralCode,
       }).returning();
       res.status(201).json({ id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Create user error:", error);
-      res.status(500).json({ message: error.message || "Server error" });
+      res.status(500).json({ message: "حدث خطأ أثناء إنشاء المستخدم" });
     }
   });
 
   app.put("/api/admin/users/:id", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const { email, role, walletBalance } = req.body;
+      const updateUserSchema = z.object({
+        email: z.string().email().optional(),
+        role: z.enum(["user", "admin"]).optional(),
+        walletBalance: z.union([z.string(), z.number()]).transform(v => parseFloat(String(v))).pipe(z.number().min(0).max(1000000)).optional(),
+      });
+      const parsed = updateUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "بيانات غير صالحة", errors: parsed.error.flatten() });
+      }
+      const { email, role, walletBalance } = parsed.data;
       const user = await storage.getUser(req.params.id as string);
       if (!user) return res.status(404).json({ message: "User not found" });
-      const updates: Record<string, any> = {};
+      const updates: Record<string, string> = {};
       if (email !== undefined) updates.email = email;
-      if (role !== undefined && ["user", "admin"].includes(role)) updates.role = role;
-      if (walletBalance !== undefined) updates.walletBalance = String(parseFloat(walletBalance));
+      if (role !== undefined) updates.role = role;
+      if (walletBalance !== undefined) updates.walletBalance = walletBalance.toFixed(2);
       if (Object.keys(updates).length > 0) {
         await db.update(users).set(updates).where(eq(users.id, req.params.id as string));
       }
