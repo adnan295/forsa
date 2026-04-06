@@ -1375,6 +1375,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "بيانات غير صالحة", errors: parsed.error.flatten() });
       }
       const { email, role, walletBalance } = parsed.data;
+      const adminId = (req.session as any).userId;
+      if (role === "user" && req.params.id === adminId) {
+        return res.status(403).json({ message: "لا يمكنك سحب صلاحية الأدمن من نفسك" });
+      }
       const user = await storage.getUser(req.params.id as string);
       if (!user) return res.status(404).json({ message: "User not found" });
       const updates: Record<string, string> = {};

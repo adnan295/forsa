@@ -1424,10 +1424,11 @@ function renderAdminsList() {
   const admins = _permAllUsers.filter(u => u.role === 'admin');
   const el = document.getElementById('adminsList');
   if (!admins.length) { el.innerHTML = '<div class="empty-state">لا يوجد مدراء حالياً</div>'; return; }
-  el.innerHTML = `<table class="data-table"><thead><tr><th>المستخدم</th><th>البريد الإلكتروني</th><th>الإجراء</th></tr></thead><tbody>
+  el.innerHTML = `<table class="data-table"><thead><tr><th>المستخدم</th><th>البريد الإلكتروني</th><th>تاريخ الانضمام</th><th>الإجراء</th></tr></thead><tbody>
     ${admins.map(u => `<tr>
       <td><strong>${esc(u.username)}</strong></td>
       <td>${esc(u.email)}</td>
+      <td>${fmtDate(u.createdAt)}</td>
       <td>${u.id === currentUser?.id
         ? '<span class="badge badge-purple">أنت</span>'
         : `<button class="btn-danger btn-sm" onclick="revokeAdmin('${esc(u.id)}','${jsEsc(u.username)}')">سحب الصلاحية</button>`
