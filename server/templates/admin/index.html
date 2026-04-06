@@ -547,8 +547,9 @@
     <div class="modal-body">
       <div class="form-group"><label class="form-label">عنوان الحملة *</label><input class="form-input" id="campTitle" placeholder="اسم الحملة" /></div>
       <div class="form-group"><label class="form-label">الوصف *</label><textarea class="form-input" id="campDesc" placeholder="وصف الحملة" rows="3"></textarea></div>
+      <div class="form-group"><label class="form-label">اسم الجائزة *</label><input class="form-input" id="campPrizeName" placeholder="مثال: آيفون 15 برو" /></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">السعر (ريال) *</label><input class="form-input" id="campPrice" type="number" placeholder="29.99" /></div>
+        <div class="form-group"><label class="form-label">سعر الاشتراك (ريال) *</label><input class="form-input" id="campPrice" type="number" placeholder="29.99" /></div>
         <div class="form-group"><label class="form-label">الكمية الإجمالية *</label><input class="form-input" id="campQty" type="number" placeholder="1000" /></div>
       </div>
       <div class="form-group"><label class="form-label">رابط الصورة</label><input class="form-input" id="campImage" placeholder="https://..." /></div>
@@ -595,17 +596,30 @@
   <div class="modal">
     <div class="modal-header"><div class="modal-title" id="paymentModalTitle">طريقة دفع جديدة</div><button class="modal-close" onclick="closeModal('paymentModal')">✕</button></div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">اسم البنك / الخدمة *</label><input class="form-input" id="pmBank" placeholder="البنك الأهلي" /></div>
-      <div class="form-group"><label class="form-label">رقم الآيبان / الحساب *</label><input class="form-input" id="pmIban" placeholder="SA0000000000000000000000" style="direction:ltr" /></div>
-      <div class="form-group"><label class="form-label">اسم صاحب الحساب</label><input class="form-input" id="pmAccountName" placeholder="الاسم كما في الحساب" /></div>
-      <div class="form-group"><label class="form-label">نوع الدفع</label>
-        <select class="form-input" id="pmType">
-          <option value="bank_transfer">تحويل بنكي</option>
-          <option value="stc_pay">STC Pay</option>
-          <option value="mada">مدى</option>
-          <option value="other">أخرى</option>
-        </select>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">الاسم بالإنجليزية *</label><input class="form-input" id="pmName" placeholder="Bank Transfer" style="direction:ltr" /></div>
+        <div class="form-group"><label class="form-label">الاسم بالعربية *</label><input class="form-input" id="pmNameAr" placeholder="تحويل بنكي" /></div>
       </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">الأيقونة</label>
+          <select class="form-input" id="pmIcon">
+            <option value="bank">🏦 بنك</option>
+            <option value="card">💳 بطاقة</option>
+            <option value="mobile">📱 محمول</option>
+            <option value="cash">💵 نقداً</option>
+            <option value="wallet">👛 محفظة</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">الحالة</label>
+          <select class="form-input" id="pmEnabled">
+            <option value="true">مفعّل</option>
+            <option value="false">معطّل</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">اسم البنك / الخدمة</label><input class="form-input" id="pmBank" placeholder="البنك الأهلي" /></div>
+      <div class="form-group"><label class="form-label">رقم الآيبان / الحساب</label><input class="form-input" id="pmIban" placeholder="SA0000000000000000000000" style="direction:ltr" /></div>
+      <div class="form-group"><label class="form-label">اسم صاحب الحساب</label><input class="form-input" id="pmAccountName" placeholder="الاسم كما في الحساب" /></div>
     </div>
     <div class="modal-footer">
       <button class="btn-primary" onclick="savePayment()">💾 حفظ</button>
@@ -760,10 +774,10 @@ async function loadDashboard() {
       </div>`).join('') : '<div class="empty"><p>لا يوجد مستخدمون</p></div>';
 
     // Top campaigns
-    const sorted = [...allCampaigns].sort((a, b) => (b.currentQuantity || 0) - (a.currentQuantity || 0)).slice(0, 5);
+    const sorted = [...allCampaigns].sort((a, b) => ((b.soldQuantity || b.currentQuantity || 0) - (a.soldQuantity || a.currentQuantity || 0))).slice(0, 5);
     const tcEl = document.getElementById('topCampaignsList');
     tcEl.innerHTML = sorted.length ? sorted.map(c => {
-      const sold = c.currentQuantity || 0;
+      const sold = c.soldQuantity || c.currentQuantity || 0;
       const total = c.totalQuantity || 1;
       const pct = Math.min(100, Math.round((sold / total) * 100));
       return `<div class="info-row">
@@ -1057,16 +1071,16 @@ function renderCampaigns(camps) {
   const tb = document.getElementById('campaignsTable');
   if (!camps.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📣</div><p>لا توجد حملات</p></div></td></tr>'; return; }
   tb.innerHTML = camps.map(c => {
-    const sold = c.currentQuantity || 0;
+    const sold = c.soldQuantity || c.currentQuantity || 0;
     const total = c.totalQuantity || 1;
     const pct = Math.min(100, Math.round((sold / total) * 100));
-    const isComplete = c.isSoldOut || sold >= total;
+    const isComplete = c.status === 'completed' || c.isSoldOut || sold >= total;
     return `<tr>
       <td>
         <div style="font-weight:600">${esc(c.title)}</div>
         ${c.isFlashSale ? '<span class="badge badge-red" style="margin-top:4px">🔥 عرض محدود</span>' : ''}
       </td>
-      <td>${parseFloat(c.price||0).toFixed(2)} ﷼</td>
+      <td>${parseFloat(c.productPrice||c.price||0).toFixed(2)} ﷼</td>
       <td>${esc(total.toLocaleString())}</td>
       <td>${esc(sold.toLocaleString())}</td>
       <td>
@@ -1092,7 +1106,7 @@ function renderCampaigns(camps) {
 function openCampaignModal() {
   editingCampaignId = null;
   document.getElementById('campaignModalTitle').textContent = 'حملة جديدة';
-  ['campTitle','campDesc','campPrice','campQty','campImage','campEndsAt','campOrigPrice','campFlashEnd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['campTitle','campDesc','campPrizeName','campPrice','campQty','campImage','campEndsAt','campOrigPrice','campFlashEnd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('campFlash').checked = false;
   document.getElementById('flashFields').classList.add('hidden');
   document.getElementById('campaignModal').classList.remove('hidden');
@@ -1105,7 +1119,8 @@ function openEditCampaign(id) {
   document.getElementById('campaignModalTitle').textContent = 'تعديل الحملة';
   document.getElementById('campTitle').value = c.title || '';
   document.getElementById('campDesc').value = c.description || '';
-  document.getElementById('campPrice').value = c.price || '';
+  document.getElementById('campPrizeName').value = c.prizeName || '';
+  document.getElementById('campPrice').value = c.productPrice || c.price || '';
   document.getElementById('campQty').value = c.totalQuantity || '';
   document.getElementById('campImage').value = c.imageUrl || '';
   if (c.endsAt) document.getElementById('campEndsAt').value = new Date(c.endsAt).toISOString().slice(0,16);
@@ -1124,6 +1139,8 @@ async function saveCampaign() {
   const body = {
     title: document.getElementById('campTitle').value.trim(),
     description: document.getElementById('campDesc').value.trim(),
+    prizeName: document.getElementById('campPrizeName').value.trim(),
+    productPrice: document.getElementById('campPrice').value,
     price: document.getElementById('campPrice').value,
     totalQuantity: document.getElementById('campQty').value,
     imageUrl: document.getElementById('campImage').value.trim() || null,
@@ -1132,7 +1149,8 @@ async function saveCampaign() {
     originalPrice: document.getElementById('campOrigPrice').value || null,
     flashSaleEndsAt: document.getElementById('campFlashEnd').value || null,
   };
-  if (!body.title || !body.price || !body.totalQuantity) { toast('يرجى ملء الحقول المطلوبة (العنوان، السعر، الكمية)', 'error'); return; }
+  if (!body.title || !body.productPrice || !body.totalQuantity) { toast('يرجى ملء الحقول المطلوبة (العنوان، السعر، الكمية)', 'error'); return; }
+  if (!editingCampaignId && !body.prizeName) { toast('يرجى إدخال اسم الجائزة', 'error'); return; }
   try {
     if (editingCampaignId) { await api('PUT', `/api/admin/campaigns/${editingCampaignId}`, body); toast('تم تحديث الحملة', 'success'); }
     else { await api('POST', '/api/campaigns', body); toast('تم إنشاء الحملة', 'success'); }
@@ -1203,7 +1221,7 @@ async function loadPayments() {
             <span class="badge badge-blue" style="margin-top:8px">${esc(p.type || 'bank_transfer')}</span>
           </div>
           <div class="action-btns">
-            <button class="btn-secondary btn-sm" onclick="openEditPayment('${esc(p.id)}', '${esc(p.bankName||p.name||'')}', '${esc(p.iban||p.accountNumber||'')}', '${esc(p.accountName||'')}', '${esc(p.type||'bank_transfer')}')">✏️ تعديل</button>
+            <button class="btn-secondary btn-sm" onclick="openEditPayment('${esc(p.id)}','${esc(p.name||'')}','${esc(p.nameAr||'')}','${esc(p.bankName||'')}','${esc(p.iban||'')}','${esc(p.accountName||'')}','${esc(p.icon||'bank')}',${!!p.enabled})">✏️ تعديل</button>
             <button class="btn-danger btn-sm" onclick="deletePayment('${esc(p.id)}')">🗑</button>
           </div>
         </div>
@@ -1214,24 +1232,38 @@ async function loadPayments() {
 function openPaymentModal() {
   editingPaymentId = null;
   document.getElementById('paymentModalTitle').textContent = 'طريقة دفع جديدة';
-  ['pmBank','pmIban','pmAccountName'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('pmType').value = 'bank_transfer';
+  ['pmName','pmNameAr','pmBank','pmIban','pmAccountName'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pmIcon').value = 'bank';
+  document.getElementById('pmEnabled').value = 'true';
   document.getElementById('paymentModal').classList.remove('hidden');
 }
 
-function openEditPayment(id, bank, iban, accountName, type) {
+function openEditPayment(id, name, nameAr, bank, iban, accountName, icon, enabled) {
   editingPaymentId = id;
   document.getElementById('paymentModalTitle').textContent = 'تعديل طريقة الدفع';
-  document.getElementById('pmBank').value = bank;
-  document.getElementById('pmIban').value = iban;
-  document.getElementById('pmAccountName').value = accountName;
-  document.getElementById('pmType').value = type;
+  document.getElementById('pmName').value = name || '';
+  document.getElementById('pmNameAr').value = nameAr || '';
+  document.getElementById('pmBank').value = bank || '';
+  document.getElementById('pmIban').value = iban || '';
+  document.getElementById('pmAccountName').value = accountName || '';
+  document.getElementById('pmIcon').value = icon || 'bank';
+  document.getElementById('pmEnabled').value = enabled ? 'true' : 'false';
   document.getElementById('paymentModal').classList.remove('hidden');
 }
 
 async function savePayment() {
-  const body = { bankName: document.getElementById('pmBank').value.trim(), iban: document.getElementById('pmIban').value.trim(), accountName: document.getElementById('pmAccountName').value.trim(), type: document.getElementById('pmType').value };
-  if (!body.bankName || !body.iban) { toast('يرجى ملء اسم البنك والآيبان', 'error'); return; }
+  const name = document.getElementById('pmName').value.trim();
+  const nameAr = document.getElementById('pmNameAr').value.trim();
+  if (!editingPaymentId && (!name || !nameAr)) { toast('يرجى إدخال الاسم بالعربية والإنجليزية', 'error'); return; }
+  const body = {
+    name: name || undefined,
+    nameAr: nameAr || undefined,
+    icon: document.getElementById('pmIcon').value,
+    enabled: document.getElementById('pmEnabled').value === 'true',
+    bankName: document.getElementById('pmBank').value.trim() || undefined,
+    iban: document.getElementById('pmIban').value.trim() || undefined,
+    accountName: document.getElementById('pmAccountName').value.trim() || undefined,
+  };
   try {
     if (editingPaymentId) await api('PUT', `/api/admin/payment-methods/${editingPaymentId}`, body);
     else await api('POST', '/api/admin/payment-methods', body);

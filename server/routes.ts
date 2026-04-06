@@ -1362,6 +1362,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.update(users).set(updates).where(eq(users.id, req.params.id as string));
       }
       const updated = await storage.getUser(req.params.id as string);
+      if (updated) {
+        const { password: _pw, ...safeUser } = updated as any;
+        return res.json(safeUser);
+      }
       res.json(updated);
     } catch (error) {
       console.error("Update user error:", error);
@@ -1389,7 +1393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData: Record<string, any> = {};
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
-      if (price !== undefined) updateData.price = String(price);
+      if (price !== undefined) updateData.productPrice = String(price);
       if (totalQuantity !== undefined) updateData.totalQuantity = Number(totalQuantity);
       if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
       if (endsAt !== undefined) updateData.endsAt = endsAt ? new Date(endsAt) : null;
