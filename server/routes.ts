@@ -5,8 +5,8 @@ import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
 import { pool, db } from "./db";
 import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, reviews, orders } from "@shared/schema";
-import { sum, count, and, gte, sql } from "drizzle-orm";
+import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, reviews, orders, users } from "@shared/schema";
+import { sum, count, and, gte, sql, eq, desc } from "drizzle-orm";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -1263,6 +1263,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "تم تفعيل البريد الإلكتروني بنجاح" });
     } catch (error) {
       console.error("Admin verify user error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/top-spenders", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const result = await db
+        .select({
+          userId: orders.userId,
+          totalSpent: sum(orders.totalAmount),
+          orderCount: count(),
+        })
+        .from(orders)
+        .where(eq(orders.paymentStatus as any, "confirmed"))
+        .groupBy(orders.userId)
+        .orderBy(desc(sum(orders.totalAmount)))
+        .limit(10);
+
+      const withNames = await Promise.all(result.map(async (row) => {
+        const user = await storage.getUser(row.userId);
+        return {
+          userId: row.userId,
+          username: user?.username || "—",
+          email: user?.email || "—",
+          totalSpent: row.totalSpent || "0",
+          orderCount: row.orderCount,
+        };
+      }));
+      res.json(withNames);
+    } catch (error) {
+      console.error("Top spenders error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/payment-method-stats", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const result = await db
+        .select({ method: orders.paymentMethod, cnt: count() })
+        .from(orders)
+        .groupBy(orders.paymentMethod);
+      const labelMap: Record<string, string> = {
+        bank_transfer: "تحويل بنكي",
+        online: "دفع إلكتروني",
+        wallet: "محفظة",
+        card: "بطاقة",
+        cash: "نقداً",
+        cash_on_delivery: "الدفع عند الاستلام",
+        stripe: "بطاقة إلكترونية",
+        paypal: "باي بال",
+      };
+      const data = result.map(r => ({
+        method: r.method || "other",
+        label: labelMap[r.method || ""] || r.method || "أخرى",
+        count: r.cnt,
+      }));
+      res.json(data);
+    } catch (error) {
+      console.error("Payment method stats error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/admin/users", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { username, email, password, role } = req.body;
+      if (!username || !email || !password) {
+        return res.status(400).json({ message: "اسم المستخدم والبريد وكلمة المرور مطلوبة" });
+      }
+      const existing = await storage.getUserByEmail(email);
+      if (existing) return res.status(400).json({ message: "البريد الإلكتروني مستخدم بالفعل" });
+      const hashed = await bcrypt.hash(password, 10);
+      const newUser = await storage.createUser({
+        username,
+        email,
+        password: hashed,
+        role: role || "user",
+        referralCode: crypto.randomBytes(4).toString("hex").toUpperCase(),
+      } as any);
+      res.status(201).json({ id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role });
+    } catch (error: any) {
+      console.error("Create user error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+
+  app.put("/api/admin/users/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { email, role, walletBalance } = req.body;
+      const user = await storage.getUser(req.params.id as string);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const updates: Record<string, any> = {};
+      if (email !== undefined) updates.email = email;
+      if (role !== undefined && ["user", "admin"].includes(role)) updates.role = role;
+      if (walletBalance !== undefined) updates.walletBalance = String(parseFloat(walletBalance));
+      if (Object.keys(updates).length > 0) {
+        await db.update(users).set(updates).where(eq(users.id, req.params.id as string));
+      }
+      const updated = await storage.getUser(req.params.id as string);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.params.id as string);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.role === "admin") return res.status(400).json({ message: "لا يمكن حذف حساب الأدمن" });
+      const deleted = await storage.deleteUser(req.params.id as string);
+      if (!deleted) return res.status(500).json({ message: "فشل الحذف" });
+      res.json({ message: "تم حذف المستخدم" });
+    } catch (error) {
+      console.error("Delete user error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

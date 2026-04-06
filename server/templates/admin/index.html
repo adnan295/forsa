@@ -296,7 +296,7 @@
           <canvas id="salesChart" height="200"></canvas>
         </div>
         <div class="chart-card">
-          <div class="chart-header"><div class="chart-title">حالة الطلبات</div></div>
+          <div class="chart-header"><div class="chart-title">توزيع طرق الدفع</div></div>
           <canvas id="ordersChart" height="200"></canvas>
         </div>
       </div>
@@ -320,6 +320,12 @@
         <div class="section-card">
           <div class="section-title">إحصائيات الإحالات والمحفظة</div>
           <div id="referralStats" class="loading">جاري التحميل...</div>
+        </div>
+      </div>
+      <div class="section-row">
+        <div class="section-card">
+          <div class="section-title">أعلى المستخدمين إنفاقاً</div>
+          <div id="topSpendersList" class="loading">جاري التحميل...</div>
         </div>
       </div>
     </div>
@@ -353,7 +359,8 @@
     <div id="sec-users" class="hidden">
       <div class="filter-bar">
         <input class="search-input" type="text" placeholder="بحث بالاسم أو البريد..." id="userSearch" oninput="filterUsers()" />
-        <button class="btn-primary" onclick="window.open('/api/admin/users/export/csv','_blank')">📥 تصدير CSV</button>
+        <button class="btn-primary" onclick="openCreateUserModal()">➕ مستخدم جديد</button>
+        <button class="btn-secondary" onclick="window.open('/api/admin/users/export/csv','_blank')">📥 تصدير CSV</button>
       </div>
       <div class="chart-card">
         <div class="table-wrap">
@@ -486,6 +493,50 @@
     <div class="modal-header"><div class="modal-title" id="userModalTitle">تفاصيل المستخدم</div><button class="modal-close" onclick="closeModal('userModal')">✕</button></div>
     <div class="modal-body" id="userModalBody"></div>
     <div class="modal-footer" id="userModalFooter"></div>
+  </div>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay hidden" id="editUserModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">تعديل المستخدم</div><button class="modal-close" onclick="closeModal('editUserModal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editUserId" />
+      <div class="form-group"><label class="form-label">البريد الإلكتروني *</label><input class="form-input" id="editUserEmail" type="email" placeholder="user@example.com" /></div>
+      <div class="form-group"><label class="form-label">الدور</label>
+        <select class="form-input" id="editUserRole">
+          <option value="user">مستخدم</option>
+          <option value="admin">أدمن</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">رصيد المحفظة (ريال)</label><input class="form-input" id="editUserWallet" type="number" step="0.01" min="0" placeholder="0.00" /></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="saveEditUser()">حفظ التغييرات</button>
+      <button class="btn-secondary" onclick="closeModal('editUserModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE USER MODAL -->
+<div class="modal-overlay hidden" id="createUserModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">إنشاء مستخدم جديد</div><button class="modal-close" onclick="closeModal('createUserModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">اسم المستخدم *</label><input class="form-input" id="newUserUsername" placeholder="username" /></div>
+      <div class="form-group"><label class="form-label">البريد الإلكتروني *</label><input class="form-input" id="newUserEmail" type="email" placeholder="user@example.com" /></div>
+      <div class="form-group"><label class="form-label">كلمة المرور *</label><input class="form-input" id="newUserPassword" type="password" placeholder="••••••••" /></div>
+      <div class="form-group"><label class="form-label">الدور</label>
+        <select class="form-input" id="newUserRole">
+          <option value="user">مستخدم</option>
+          <option value="admin">أدمن</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="saveCreateUser()">إنشاء المستخدم</button>
+      <button class="btn-secondary" onclick="closeModal('createUserModal')">إلغاء</button>
+    </div>
   </div>
 </div>
 
@@ -674,9 +725,21 @@ async function loadDashboard() {
 
     // Charts
     renderSalesChart(chartData || []);
-    const statusCounts = {};
-    allOrders.forEach(o => { statusCounts[o.paymentStatus] = (statusCounts[o.paymentStatus] || 0) + 1; });
-    renderOrdersChart(statusCounts);
+    try {
+      const pmStats = await api('GET', '/api/admin/payment-method-stats');
+      renderPaymentDistChart(pmStats || []);
+    } catch (e) { renderPaymentDistChart([]); }
+
+    // Top spenders
+    try {
+      const spenders = await api('GET', '/api/admin/top-spenders');
+      const tsEl = document.getElementById('topSpendersList');
+      tsEl.innerHTML = (spenders || []).length ? spenders.map((s, i) => `
+        <div class="info-row">
+          <span class="info-key"><span style="color:var(--purple);font-weight:700">#${i+1}</span> ${esc(s.username)}</span>
+          <span class="info-val">${parseFloat(s.totalSpent).toFixed(0)} ﷼ <span style="color:var(--muted);font-size:11px">(${esc(s.orderCount)} طلب)</span></span>
+        </div>`).join('') : '<div class="empty"><p>لا توجد بيانات</p></div>';
+    } catch (e) { document.getElementById('topSpendersList').innerHTML = '<div class="empty"><p>تعذّر التحميل</p></div>'; }
 
     // Recent orders
     const recentO = [...allOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6);
@@ -746,16 +809,17 @@ function renderSalesChart(data) {
   });
 }
 
-function renderOrdersChart(counts) {
+function renderPaymentDistChart(data) {
   const ctx = document.getElementById('ordersChart').getContext('2d');
   if (ordersChart) ordersChart.destroy();
-  const labelMap = { confirmed:'مؤكد', pending_payment:'انتظار الدفع', pending_review:'قيد المراجعة', rejected:'مرفوض', shipped:'تم الشحن', delivered:'تم التسليم' };
-  const keys = Object.keys(counts);
-  if (!keys.length) { ordersChart = null; return; }
+  if (!data || !data.length) { ordersChart = null; return; }
   ordersChart = new Chart(ctx, {
     type: 'doughnut',
-    data: { labels: keys.map(k => labelMap[k] || k), datasets: [{ data: keys.map(k => counts[k]),
-      backgroundColor: ['#10B981','#F59E0B','#A855F7','#EF4444','#3B82F6','#6366F1'], borderWidth: 0 }] },
+    data: {
+      labels: data.map(d => d.label),
+      datasets: [{ data: data.map(d => d.count),
+        backgroundColor: ['#A855F7','#3B82F6','#10B981','#F59E0B','#EF4444','#6366F1'], borderWidth: 0 }]
+    },
     options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { family: 'inherit' }, boxWidth: 12 } } }, cutout: '65%' }
   });
 }
@@ -890,7 +954,9 @@ function renderUsers(users) {
       <td>
         <div class="action-btns">
           <button class="btn-primary btn-sm" onclick="openUserModal('${esc(u.id)}')">عرض</button>
+          <button class="btn-secondary btn-sm" onclick="openEditUserModal('${esc(u.id)}')">تعديل</button>
           ${!u.emailVerified ? `<button class="btn-success btn-sm" onclick="verifyUser('${esc(u.id)}')">تفعيل</button>` : ''}
+          ${u.role !== 'admin' ? `<button class="btn-danger btn-sm" onclick="deleteUser('${esc(u.id)}','${esc(u.username)}')">حذف</button>` : ''}
         </div>
       </td>
     </tr>`).join('');
@@ -922,6 +988,59 @@ function openUserModal(id) {
 
 async function verifyUser(id) {
   try { await api('PUT', `/api/admin/verify-user/${id}`); allUsers = []; await loadUsers(); toast('تم تفعيل المستخدم', 'success'); } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteUser(id, username) {
+  if (!confirm(`هل أنت متأكد من حذف المستخدم "${username}"؟ هذه العملية لا يمكن التراجع عنها.`)) return;
+  try { await api('DELETE', `/api/admin/users/${id}`); allUsers = []; await loadUsers(); toast('تم حذف المستخدم', 'success'); } catch (e) { toast(e.message, 'error'); }
+}
+
+function openEditUserModal(id) {
+  const u = allUsers.find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('editUserId').value = id;
+  document.getElementById('editUserEmail').value = u.email || '';
+  document.getElementById('editUserRole').value = u.role || 'user';
+  document.getElementById('editUserWallet').value = parseFloat(u.walletBalance || 0).toFixed(2);
+  document.getElementById('editUserModal').classList.remove('hidden');
+}
+
+async function saveEditUser() {
+  const id = document.getElementById('editUserId').value;
+  const email = document.getElementById('editUserEmail').value.trim();
+  const role = document.getElementById('editUserRole').value;
+  const walletBalance = document.getElementById('editUserWallet').value;
+  if (!email) { toast('البريد الإلكتروني مطلوب', 'error'); return; }
+  try {
+    await api('PUT', `/api/admin/users/${id}`, { email, role, walletBalance });
+    allUsers = [];
+    await loadUsers();
+    closeModal('editUserModal');
+    toast('تم تحديث المستخدم', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function openCreateUserModal() {
+  document.getElementById('newUserUsername').value = '';
+  document.getElementById('newUserEmail').value = '';
+  document.getElementById('newUserPassword').value = '';
+  document.getElementById('newUserRole').value = 'user';
+  document.getElementById('createUserModal').classList.remove('hidden');
+}
+
+async function saveCreateUser() {
+  const username = document.getElementById('newUserUsername').value.trim();
+  const email = document.getElementById('newUserEmail').value.trim();
+  const password = document.getElementById('newUserPassword').value;
+  const role = document.getElementById('newUserRole').value;
+  if (!username || !email || !password) { toast('يرجى ملء جميع الحقول', 'error'); return; }
+  try {
+    await api('POST', '/api/admin/users', { username, email, password, role });
+    allUsers = [];
+    await loadUsers();
+    closeModal('createUserModal');
+    toast('تم إنشاء المستخدم', 'success');
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 // ===== CAMPAIGNS =====
