@@ -1729,10 +1729,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/sales-chart", requireAdmin as any, async (_req: Request, res: Response) => {
+  app.get("/api/admin/sales-chart", requireAdmin as any, async (req: Request, res: Response) => {
     try {
+      const period = (req.query.period as string) || "weekly";
+      const numDays = period === "monthly" ? 30 : period === "daily" ? 7 : 7;
       const days: { date: string; total: string; count: number }[] = [];
-      for (let i = 6; i >= 0; i--) {
+      for (let i = numDays - 1; i >= 0; i--) {
         const dayStart = new Date();
         dayStart.setDate(dayStart.getDate() - i);
         dayStart.setHours(0, 0, 0, 0);

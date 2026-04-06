@@ -39,10 +39,6 @@
     .nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
     .nav-item.active { background: rgba(124,58,237,0.25); color: #fff; border-right-color: var(--purple-light); }
     .nav-item .nav-icon { font-size: 18px; width: 22px; text-align: center; }
-    .nav-item .badge {
-      margin-right: auto; background: var(--danger); color: #fff;
-      font-size: 10px; padding: 2px 7px; border-radius: 10px;
-    }
     .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
     .user-info { display: flex; align-items: center; gap: 10px; }
     .user-avatar {
@@ -66,11 +62,10 @@
       display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50;
     }
     .page-title { font-size: 20px; font-weight: 700; }
-    .topbar-actions { display: flex; align-items: center; gap: 12px; }
     .refresh-btn {
       background: var(--bg); border: 1px solid var(--border); color: var(--muted);
       padding: 8px 14px; border-radius: 10px; cursor: pointer; font-size: 13px; font-family: inherit;
-      display: flex; align-items: center; gap: 6px; transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s;
     }
     .refresh-btn:hover { border-color: var(--purple); color: var(--purple); }
     .content { padding: 28px; }
@@ -78,13 +73,14 @@
     /* KPI CARDS */
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .kpi-card {
-      background: var(--card); border-radius: 16px; padding: 20px 24px;
+      border-radius: 16px; padding: 20px 24px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 8px;
+      color: #fff;
     }
-    .kpi-card.purple { background: linear-gradient(135deg, #7C3AED, #A855F7); color: #fff; }
-    .kpi-card.pink { background: linear-gradient(135deg, #EC4899, #F472B6); color: #fff; }
-    .kpi-card.green { background: linear-gradient(135deg, #059669, #34D399); color: #fff; }
-    .kpi-card.orange { background: linear-gradient(135deg, #D97706, #FBBF24); color: #fff; }
+    .kpi-card.purple { background: linear-gradient(135deg, #7C3AED, #A855F7); }
+    .kpi-card.pink { background: linear-gradient(135deg, #EC4899, #F472B6); }
+    .kpi-card.green { background: linear-gradient(135deg, #059669, #34D399); }
+    .kpi-card.orange { background: linear-gradient(135deg, #D97706, #FBBF24); }
     .kpi-label { font-size: 12px; opacity: 0.8; font-weight: 500; }
     .kpi-value { font-size: 28px; font-weight: 800; }
     .kpi-sub { font-size: 11px; opacity: 0.7; }
@@ -163,9 +159,7 @@
       padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
       cursor: pointer; font-family: inherit;
     }
-    .btn-sm {
-      padding: 5px 12px; font-size: 12px; border-radius: 7px;
-    }
+    .btn-sm { padding: 5px 12px !important; font-size: 12px !important; border-radius: 7px !important; }
     .action-btns { display: flex; gap: 6px; flex-wrap: nowrap; }
 
     /* MODALS */
@@ -202,18 +196,10 @@
     .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
     .toggle-label { font-size: 13px; font-weight: 600; }
     .toggle-sub { font-size: 11px; color: var(--muted); }
-    .toggle {
-      position: relative; width: 44px; height: 24px; cursor: pointer;
-    }
+    .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
     .toggle input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute; inset: 0; background: #d1d5db; border-radius: 24px; transition: 0.2s;
-    }
-    .slider:before {
-      content: ''; position: absolute; width: 18px; height: 18px;
-      background: #fff; border-radius: 50%; right: 3px; top: 3px; transition: 0.2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    }
+    .slider { position: absolute; inset: 0; background: #d1d5db; border-radius: 24px; transition: 0.2s; }
+    .slider:before { content: ''; position: absolute; width: 18px; height: 18px; background: #fff; border-radius: 50%; right: 3px; top: 3px; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
     .toggle input:checked + .slider { background: var(--purple); }
     .toggle input:checked + .slider:before { transform: translateX(-20px); }
 
@@ -228,17 +214,9 @@
     .toast.error { background: #991b1b; }
     @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-    /* EMPTY STATE */
     .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
     .empty .empty-icon { font-size: 40px; margin-bottom: 12px; }
-    .empty p { font-size: 14px; }
-
-    /* MISC */
     .loading { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
-    .stat-mini { text-align: center; }
-    .stat-mini-val { font-size: 22px; font-weight: 800; color: var(--purple); }
-    .stat-mini-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .mini-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     .divider { height: 1px; background: var(--border); margin: 20px 0; }
     .info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f9fafb; font-size: 13px; }
     .info-row:last-child { border-bottom: none; }
@@ -248,9 +226,9 @@
       width: 34px; height: 34px; border-radius: 50%;
       background: linear-gradient(135deg, var(--purple), var(--pink));
       color: #fff; font-weight: 700; font-size: 13px;
-      display: inline-flex; align-items: center; justify-content: center;
+      display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .section-hidden { display: none; }
+    .hidden { display: none !important; }
 
     @media (max-width: 900px) {
       .sidebar { width: 60px; }
@@ -263,14 +241,10 @@
 </head>
 <body>
 
-<!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sidebar-logo">
     <span class="icon">💎</span>
-    <div>
-      <div class="name">فرصة</div>
-      <div class="sub">لوحة التحكم</div>
-    </div>
+    <div><div class="name">فرصة</div><div class="sub">لوحة التحكم</div></div>
   </div>
   <nav id="sidebarNav">
     <div class="nav-item active" onclick="goSection('dashboard')" data-section="dashboard"><span class="nav-icon">📊</span><span>الرئيسية</span></div>
@@ -287,33 +261,26 @@
   <div class="sidebar-footer">
     <div class="user-info">
       <div class="user-avatar" id="sidebarAvatar">أ</div>
-      <div>
-        <div class="user-name" id="sidebarName">الأدمن</div>
-        <div class="user-email" id="sidebarEmail"></div>
-      </div>
+      <div><div class="user-name" id="sidebarName">الأدمن</div><div class="user-email" id="sidebarEmail"></div></div>
       <button class="logout-btn" onclick="doLogout()" title="تسجيل الخروج">⏻</button>
     </div>
   </div>
 </aside>
 
-<!-- MAIN -->
 <main class="main">
   <div class="topbar">
     <div class="page-title" id="pageTitle">لوحة الرئيسية</div>
-    <div class="topbar-actions">
-      <button class="refresh-btn" onclick="refreshCurrent()">🔄 تحديث</button>
-    </div>
+    <button class="refresh-btn" onclick="refreshCurrent()">🔄 تحديث</button>
   </div>
-
   <div class="content">
 
     <!-- DASHBOARD -->
     <div id="sec-dashboard">
-      <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi-grid">
         <div class="kpi-card purple"><div class="kpi-icon">💰</div><div class="kpi-label">إجمالي الإيرادات</div><div class="kpi-value" id="kpiRevenue">—</div><div class="kpi-sub">ريال سعودي</div></div>
-        <div class="kpi-card pink"><div class="kpi-icon">📦</div><div class="kpi-label">إجمالي الطلبات</div><div class="kpi-value" id="kpiOrders">—</div><div class="kpi-sub">طلب</div></div>
-        <div class="kpi-card green"><div class="kpi-icon">👥</div><div class="kpi-label">المستخدمون</div><div class="kpi-value" id="kpiUsers">—</div><div class="kpi-sub">مستخدم مسجّل</div></div>
-        <div class="kpi-card orange"><div class="kpi-icon">📣</div><div class="kpi-label">الحملات النشطة</div><div class="kpi-value" id="kpiCampaigns">—</div><div class="kpi-sub">حملة</div></div>
+        <div class="kpi-card pink"><div class="kpi-icon">📦</div><div class="kpi-label">طلبات اليوم</div><div class="kpi-value" id="kpiToday">—</div><div class="kpi-sub">طلب جديد</div></div>
+        <div class="kpi-card green"><div class="kpi-icon">👥</div><div class="kpi-label">إجمالي المستخدمين</div><div class="kpi-value" id="kpiUsers">—</div><div class="kpi-sub">مستخدم مسجّل</div></div>
+        <div class="kpi-card orange"><div class="kpi-icon">📈</div><div class="kpi-label">معدل التحويل</div><div class="kpi-value" id="kpiConversion">—</div><div class="kpi-sub">% من الطلبات مؤكدة</div></div>
       </div>
 
       <div class="charts-row">
@@ -357,7 +324,7 @@
     </div>
 
     <!-- ORDERS -->
-    <div id="sec-orders" class="section-hidden">
+    <div id="sec-orders" class="hidden">
       <div class="filter-bar">
         <input class="search-input" type="text" placeholder="بحث برقم الطلب أو اسم المستخدم..." id="orderSearch" oninput="filterOrders()" />
         <select id="orderStatusFilter" onchange="filterOrders()">
@@ -369,14 +336,12 @@
           <option value="shipped">تم الشحن</option>
           <option value="delivered">تم التسليم</option>
         </select>
-        <button class="btn-primary" onclick="exportOrders()">📥 تصدير CSV</button>
+        <button class="btn-primary" onclick="window.open('/api/admin/orders/export/csv','_blank')">📥 تصدير CSV</button>
       </div>
       <div class="chart-card">
         <div class="table-wrap">
           <table>
-            <thead><tr>
-              <th>رقم الطلب</th><th>المستخدم</th><th>الحملة</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>
-            </tr></thead>
+            <thead><tr><th>رقم الطلب</th><th>المستخدم</th><th>الحملة</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th></tr></thead>
             <tbody id="ordersTable"></tbody>
           </table>
         </div>
@@ -384,17 +349,15 @@
     </div>
 
     <!-- USERS -->
-    <div id="sec-users" class="section-hidden">
+    <div id="sec-users" class="hidden">
       <div class="filter-bar">
         <input class="search-input" type="text" placeholder="بحث بالاسم أو البريد..." id="userSearch" oninput="filterUsers()" />
-        <button class="btn-primary" onclick="exportUsers()">📥 تصدير CSV</button>
+        <button class="btn-primary" onclick="window.open('/api/admin/users/export/csv','_blank')">📥 تصدير CSV</button>
       </div>
       <div class="chart-card">
         <div class="table-wrap">
           <table>
-            <thead><tr>
-              <th>المستخدم</th><th>البريد الإلكتروني</th><th>الرصيد</th><th>الطلبات</th><th>تاريخ التسجيل</th><th>الحالة</th><th>إجراءات</th>
-            </tr></thead>
+            <thead><tr><th>المستخدم</th><th>البريد الإلكتروني</th><th>الرصيد</th><th>الطلبات</th><th>تاريخ التسجيل</th><th>الحالة</th><th>إجراءات</th></tr></thead>
             <tbody id="usersTable"></tbody>
           </table>
         </div>
@@ -402,17 +365,15 @@
     </div>
 
     <!-- CAMPAIGNS -->
-    <div id="sec-campaigns" class="section-hidden">
+    <div id="sec-campaigns" class="hidden">
       <div class="filter-bar">
         <input class="search-input" type="text" placeholder="بحث عن حملة..." id="campaignSearch" oninput="filterCampaigns()" />
-        <button class="btn-primary" onclick="openCreateCampaignModal()">➕ حملة جديدة</button>
+        <button class="btn-primary" onclick="openCampaignModal()">➕ حملة جديدة</button>
       </div>
       <div class="chart-card">
         <div class="table-wrap">
           <table>
-            <thead><tr>
-              <th>الحملة</th><th>السعر</th><th>الكمية</th><th>المباع</th><th>نسبة الاكتمال</th><th>الحالة</th><th>إجراءات</th>
-            </tr></thead>
+            <thead><tr><th>الحملة</th><th>السعر</th><th>الكمية</th><th>المباع</th><th>نسبة الاكتمال</th><th>الحالة</th><th>إجراءات</th></tr></thead>
             <tbody id="campaignsTable"></tbody>
           </table>
         </div>
@@ -420,16 +381,14 @@
     </div>
 
     <!-- COUPONS -->
-    <div id="sec-coupons" class="section-hidden">
+    <div id="sec-coupons" class="hidden">
       <div class="filter-bar">
-        <button class="btn-primary" onclick="openCreateCouponModal()">➕ كوبون جديد</button>
+        <button class="btn-primary" onclick="openCouponModal()">➕ كوبون جديد</button>
       </div>
       <div class="chart-card">
         <div class="table-wrap">
           <table>
-            <thead><tr>
-              <th>الكود</th><th>الخصم</th><th>الحد الأقصى</th><th>الاستخدامات</th><th>تاريخ الانتهاء</th><th>إجراءات</th>
-            </tr></thead>
+            <thead><tr><th>الكود</th><th>الخصم</th><th>الحد الأقصى</th><th>الاستخدامات</th><th>تاريخ الانتهاء</th><th>إجراءات</th></tr></thead>
             <tbody id="couponsTable"></tbody>
           </table>
         </div>
@@ -437,20 +396,20 @@
     </div>
 
     <!-- PAYMENT METHODS -->
-    <div id="sec-payments" class="section-hidden">
+    <div id="sec-payments" class="hidden">
       <div class="filter-bar">
-        <button class="btn-primary" onclick="openCreatePaymentModal()">➕ طريقة دفع جديدة</button>
+        <button class="btn-primary" onclick="openPaymentModal()">➕ طريقة دفع جديدة</button>
       </div>
       <div id="paymentsList"></div>
     </div>
 
     <!-- NOTIFICATIONS -->
-    <div id="sec-notifications" class="section-hidden">
+    <div id="sec-notifications" class="hidden">
       <div class="section-row">
         <div class="section-card">
           <div class="section-title">إرسال إشعار جماعي</div>
           <div class="form-group"><label class="form-label">عنوان الإشعار</label><input class="form-input" id="notifTitle" placeholder="عنوان الإشعار" /></div>
-          <div class="form-group"><label class="form-label">نص الإشعار</label><textarea class="form-input" id="notifBody" placeholder="اكتب رسالتك هنا..."></textarea></div>
+          <div class="form-group"><label class="form-label">نص الإشعار</label><textarea class="form-input" id="notifBody" placeholder="اكتب رسالتك هنا..." rows="4"></textarea></div>
           <button class="btn-primary" onclick="sendBroadcast()">📨 إرسال للجميع</button>
         </div>
         <div class="section-card">
@@ -461,7 +420,7 @@
     </div>
 
     <!-- SUPPORT -->
-    <div id="sec-support" class="section-hidden">
+    <div id="sec-support" class="hidden">
       <div class="filter-bar">
         <select id="supportStatusFilter" onchange="loadSupport()">
           <option value="">كل التذاكر</option>
@@ -473,7 +432,7 @@
     </div>
 
     <!-- ACTIVITY -->
-    <div id="sec-activity" class="section-hidden">
+    <div id="sec-activity" class="hidden">
       <div class="chart-card">
         <div class="table-wrap">
           <table>
@@ -485,7 +444,7 @@
     </div>
 
     <!-- SETTINGS -->
-    <div id="sec-settings" class="section-hidden">
+    <div id="sec-settings" class="hidden">
       <div class="section-row">
         <div class="section-card">
           <div class="section-title">تغيير بيانات الحساب</div>
@@ -506,14 +465,13 @@
       </div>
     </div>
 
-  </div><!-- /content -->
+  </div>
 </main>
 
-<!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
 
 <!-- ORDER MODAL -->
-<div class="modal-overlay section-hidden" id="orderModal">
+<div class="modal-overlay hidden" id="orderModal">
   <div class="modal">
     <div class="modal-header"><div class="modal-title">تفاصيل الطلب</div><button class="modal-close" onclick="closeModal('orderModal')">✕</button></div>
     <div class="modal-body" id="orderModalBody"></div>
@@ -521,20 +479,21 @@
 </div>
 
 <!-- USER MODAL -->
-<div class="modal-overlay section-hidden" id="userModal">
+<div class="modal-overlay hidden" id="userModal">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">تفاصيل المستخدم</div><button class="modal-close" onclick="closeModal('userModal')">✕</button></div>
+    <div class="modal-header"><div class="modal-title" id="userModalTitle">تفاصيل المستخدم</div><button class="modal-close" onclick="closeModal('userModal')">✕</button></div>
     <div class="modal-body" id="userModalBody"></div>
+    <div class="modal-footer" id="userModalFooter"></div>
   </div>
 </div>
 
-<!-- CREATE CAMPAIGN MODAL -->
-<div class="modal-overlay section-hidden" id="campaignModal">
+<!-- CAMPAIGN MODAL -->
+<div class="modal-overlay hidden" id="campaignModal">
   <div class="modal">
     <div class="modal-header"><div class="modal-title" id="campaignModalTitle">حملة جديدة</div><button class="modal-close" onclick="closeModal('campaignModal')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">عنوان الحملة *</label><input class="form-input" id="campTitle" placeholder="اسم الحملة" /></div>
-      <div class="form-group"><label class="form-label">الوصف *</label><textarea class="form-input" id="campDesc" placeholder="وصف الحملة"></textarea></div>
+      <div class="form-group"><label class="form-label">الوصف *</label><textarea class="form-input" id="campDesc" placeholder="وصف الحملة" rows="3"></textarea></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">السعر (ريال) *</label><input class="form-input" id="campPrice" type="number" placeholder="29.99" /></div>
         <div class="form-group"><label class="form-label">الكمية الإجمالية *</label><input class="form-input" id="campQty" type="number" placeholder="1000" /></div>
@@ -545,10 +504,10 @@
         <div><div class="toggle-label">🔥 عرض محدود (Flash Sale)</div><div class="toggle-sub">تفعيل سعر مخفض لوقت محدد</div></div>
         <label class="toggle"><input type="checkbox" id="campFlash" onchange="toggleFlashFields()" /><span class="slider"></span></label>
       </div>
-      <div id="flashFields" style="display:none;margin-top:12px">
+      <div id="flashFields" class="hidden" style="margin-top:12px">
         <div class="form-row">
-          <div class="form-group"><label class="form-label">السعر الأصلي</label><input class="form-input" id="campOrigPrice" type="number" placeholder="59.99" /></div>
-          <div class="form-group"><label class="form-label">انتهاء العرض</label><input class="form-input" id="campFlashEnd" type="datetime-local" /></div>
+          <div class="form-group"><label class="form-label">السعر الأصلي قبل الخصم</label><input class="form-input" id="campOrigPrice" type="number" placeholder="59.99" /></div>
+          <div class="form-group"><label class="form-label">انتهاء العرض المحدود</label><input class="form-input" id="campFlashEnd" type="datetime-local" /></div>
         </div>
       </div>
     </div>
@@ -559,14 +518,14 @@
   </div>
 </div>
 
-<!-- CREATE COUPON MODAL -->
-<div class="modal-overlay section-hidden" id="couponModal">
+<!-- COUPON MODAL -->
+<div class="modal-overlay hidden" id="couponModal">
   <div class="modal">
     <div class="modal-header"><div class="modal-title">كوبون جديد</div><button class="modal-close" onclick="closeModal('couponModal')">✕</button></div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">كود الكوبون *</label><input class="form-input" id="couponCode" placeholder="SAVE20" /></div>
+      <div class="form-group"><label class="form-label">كود الكوبون *</label><input class="form-input" id="couponCode" placeholder="SAVE20" style="direction:ltr" /></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">نسبة الخصم % *</label><input class="form-input" id="couponDiscount" type="number" placeholder="20" /></div>
+        <div class="form-group"><label class="form-label">نسبة الخصم % *</label><input class="form-input" id="couponDiscount" type="number" min="1" max="100" placeholder="20" /></div>
         <div class="form-group"><label class="form-label">الحد الأقصى للاستخدام</label><input class="form-input" id="couponMax" type="number" placeholder="100" /></div>
       </div>
       <div class="form-group"><label class="form-label">تاريخ الانتهاء</label><input class="form-input" id="couponExpiry" type="datetime-local" /></div>
@@ -578,13 +537,13 @@
   </div>
 </div>
 
-<!-- CREATE PAYMENT METHOD MODAL -->
-<div class="modal-overlay section-hidden" id="paymentModal">
+<!-- PAYMENT MODAL -->
+<div class="modal-overlay hidden" id="paymentModal">
   <div class="modal">
     <div class="modal-header"><div class="modal-title" id="paymentModalTitle">طريقة دفع جديدة</div><button class="modal-close" onclick="closeModal('paymentModal')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">اسم البنك / الخدمة *</label><input class="form-input" id="pmBank" placeholder="البنك الأهلي" /></div>
-      <div class="form-group"><label class="form-label">رقم الآيبان / الحساب *</label><input class="form-input" id="pmIban" placeholder="SA0000000000000000000000" /></div>
+      <div class="form-group"><label class="form-label">رقم الآيبان / الحساب *</label><input class="form-input" id="pmIban" placeholder="SA0000000000000000000000" style="direction:ltr" /></div>
       <div class="form-group"><label class="form-label">اسم صاحب الحساب</label><input class="form-input" id="pmAccountName" placeholder="الاسم كما في الحساب" /></div>
       <div class="form-group"><label class="form-label">نوع الدفع</label>
         <select class="form-input" id="pmType">
@@ -602,155 +561,181 @@
   </div>
 </div>
 
-<!-- SUPPORT REPLY MODAL -->
-<div class="modal-overlay section-hidden" id="supportModal">
+<!-- SUPPORT MODAL -->
+<div class="modal-overlay hidden" id="supportModal">
   <div class="modal">
     <div class="modal-header"><div class="modal-title">الرد على التذكرة</div><button class="modal-close" onclick="closeModal('supportModal')">✕</button></div>
     <div class="modal-body" id="supportModalBody"></div>
-    <div class="modal-footer">
-      <div class="form-group" style="flex:1;margin:0">
-        <textarea class="form-input" id="supportReply" placeholder="اكتب ردك هنا..." rows="3"></textarea>
+    <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:10px">
+      <textarea class="form-input" id="supportReply" placeholder="اكتب ردك هنا..." rows="3"></textarea>
+      <div style="display:flex;gap:8px">
+        <button class="btn-primary" onclick="sendSupportReply()">📨 إرسال الرد</button>
+        <button class="btn-success" onclick="resolveTicket()">✅ حل التذكرة</button>
+        <button class="btn-secondary" onclick="closeModal('supportModal')">إغلاق</button>
       </div>
-    </div>
-    <div class="modal-footer" style="padding-top:0">
-      <button class="btn-primary" onclick="sendSupportReply()">📨 إرسال الرد</button>
-      <button class="btn-success" onclick="resolveTicket()">✅ حل التذكرة</button>
-      <button class="btn-secondary" onclick="closeModal('supportModal')">إلغاء</button>
     </div>
   </div>
 </div>
 
 <script>
-// ===================== STATE =====================
+// ===== XSS SAFETY =====
+function esc(str) {
+  if (str == null) return '—';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ===== STATE =====
 let currentSection = 'dashboard';
 let currentUser = null;
 let allOrders = [], allUsers = [], allCampaigns = [];
 let salesChart = null, ordersChart = null;
 let editingCampaignId = null, editingPaymentId = null, currentSupportId = null;
+let currentChartPeriod = 'weekly';
 
-// ===================== INIT =====================
+// ===== INIT =====
 async function init() {
   try {
-    const res = await api('GET', '/api/me');
-    if (!res || res.role !== 'admin') { window.location.href = '/admin/login'; return; }
-    currentUser = res;
-    document.getElementById('sidebarName').textContent = res.username || 'أدمن';
-    document.getElementById('sidebarEmail').textContent = res.email || '';
-    document.getElementById('sidebarAvatar').textContent = (res.username || 'أ')[0].toUpperCase();
-    document.getElementById('settingsEmail').value = res.email || '';
+    const u = await api('GET', '/api/me');
+    if (!u || u.role !== 'admin') { window.location.href = '/admin/login'; return; }
+    currentUser = u;
+    document.getElementById('sidebarName').textContent = u.username || 'أدمن';
+    document.getElementById('sidebarEmail').textContent = u.email || '';
+    document.getElementById('sidebarAvatar').textContent = (u.username || 'أ')[0].toUpperCase();
+    document.getElementById('settingsEmail').value = u.email || '';
     loadDashboard();
   } catch { window.location.href = '/admin/login'; }
 }
 
-// ===================== API =====================
+// ===== API =====
 async function api(method, url, body) {
   const opts = { method, credentials: 'include', headers: {} };
-  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
   const res = await fetch(url, opts);
-  if (res.status === 401) { window.location.href = '/admin/login'; return; }
+  if (res.status === 401) { window.location.href = '/admin/login'; return null; }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'خطأ');
+  if (!res.ok) throw new Error(data.message || 'خطأ في الخادم');
   return data;
 }
 
-// ===================== NAVIGATION =====================
-const SECTION_TITLES = {
-  dashboard: 'لوحة الرئيسية', orders: 'الطلبات', users: 'المستخدمون',
-  campaigns: 'الحملات', coupons: 'الكوبونات', payments: 'طرق الدفع',
-  notifications: 'الإشعارات', support: 'تذاكر الدعم', activity: 'سجل النشاط', settings: 'الإعدادات'
-};
+// ===== NAVIGATION =====
+const TITLES = { dashboard:'لوحة الرئيسية', orders:'الطلبات', users:'المستخدمون', campaigns:'الحملات', coupons:'الكوبونات', payments:'طرق الدفع', notifications:'الإشعارات', support:'تذاكر الدعم', activity:'سجل النشاط', settings:'الإعدادات' };
 
 function goSection(name) {
-  document.querySelectorAll('[id^="sec-"]').forEach(el => el.classList.add('section-hidden'));
-  document.getElementById('sec-' + name).classList.remove('section-hidden');
+  document.querySelectorAll('[id^="sec-"]').forEach(el => el.classList.add('hidden'));
+  document.getElementById('sec-' + name).classList.remove('hidden');
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.querySelector(`[data-section="${name}"]`).classList.add('active');
-  document.getElementById('pageTitle').textContent = SECTION_TITLES[name] || name;
+  document.getElementById('pageTitle').textContent = TITLES[name] || name;
   currentSection = name;
-  const loaders = { orders: loadOrders, users: loadUsers, campaigns: loadCampaigns,
-    coupons: loadCoupons, payments: loadPayments, notifications: loadNotifications,
-    support: loadSupport, activity: loadActivity };
+  const loaders = { orders:loadOrders, users:loadUsers, campaigns:loadCampaigns, coupons:loadCoupons, payments:loadPayments, notifications:loadNotifications, support:loadSupport, activity:loadActivity };
   if (loaders[name]) loaders[name]();
 }
 
-function refreshCurrent() { if (currentSection === 'dashboard') loadDashboard(); else goSection(currentSection); }
+function refreshCurrent() {
+  allOrders = []; allUsers = []; allCampaigns = [];
+  if (currentSection === 'dashboard') loadDashboard(); else goSection(currentSection);
+}
 
-// ===================== DASHBOARD =====================
+// ===== DASHBOARD =====
 async function loadDashboard() {
   try {
-    const [stats, chart, orders, users, campaigns] = await Promise.all([
-      api('GET', '/api/admin/stats'),
-      api('GET', '/api/admin/sales-chart'),
+    const [orders, users, campaigns, chartData] = await Promise.all([
       api('GET', '/api/admin/orders'),
       api('GET', '/api/admin/users'),
-      api('GET', '/api/campaigns')
+      api('GET', '/api/campaigns'),
+      api('GET', '/api/admin/sales-chart?period=' + currentChartPeriod)
     ]);
+    allOrders = orders || [];
+    allUsers = users || [];
+    allCampaigns = campaigns || [];
 
-    // KPIs
-    const revenue = (orders || []).filter(o => o.paymentStatus === 'confirmed').reduce((s, o) => s + parseFloat(o.totalAmount || 0), 0);
-    document.getElementById('kpiRevenue').textContent = revenue.toLocaleString('ar-SA', {maximumFractionDigits:0});
-    document.getElementById('kpiOrders').textContent = (orders || []).length.toLocaleString();
-    document.getElementById('kpiUsers').textContent = (users || []).length.toLocaleString();
-    const activeCamps = (campaigns || []).filter(c => c.status === 'active' || c.isSoldOut === false);
-    document.getElementById('kpiCampaigns').textContent = activeCamps.length.toLocaleString();
+    // KPI 1: Total Revenue (confirmed orders only)
+    const revenue = allOrders.filter(o => o.paymentStatus === 'confirmed').reduce((s, o) => s + parseFloat(o.totalAmount || 0), 0);
+    document.getElementById('kpiRevenue').textContent = revenue.toLocaleString('ar-SA', { maximumFractionDigits: 0 });
 
-    // Sales Chart
-    renderSalesChart(chart || []);
+    // KPI 2: Today's orders
+    const todayOrders = allOrders.filter(o => isToday(o.createdAt));
+    document.getElementById('kpiToday').textContent = todayOrders.length.toLocaleString();
 
-    // Orders donut chart
+    // KPI 3: Users
+    document.getElementById('kpiUsers').textContent = allUsers.length.toLocaleString();
+
+    // KPI 4: Conversion rate (confirmed / total orders)
+    const confirmed = allOrders.filter(o => o.paymentStatus === 'confirmed').length;
+    const convRate = allOrders.length > 0 ? Math.round((confirmed / allOrders.length) * 100) : 0;
+    document.getElementById('kpiConversion').textContent = convRate + '%';
+
+    // Charts
+    renderSalesChart(chartData || []);
     const statusCounts = {};
-    (orders || []).forEach(o => { statusCounts[o.paymentStatus] = (statusCounts[o.paymentStatus] || 0) + 1; });
+    allOrders.forEach(o => { statusCounts[o.paymentStatus] = (statusCounts[o.paymentStatus] || 0) + 1; });
     renderOrdersChart(statusCounts);
 
-    // Recent Orders
-    const recent = [...(orders || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6);
-    document.getElementById('recentOrdersList').innerHTML = recent.length ? recent.map(o => `
+    // Recent orders
+    const recentO = [...allOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6);
+    const roEl = document.getElementById('recentOrdersList');
+    roEl.innerHTML = recentO.length ? recentO.map(o => `
       <div class="info-row">
-        <span class="info-key">#${o.id?.slice(0,8) || '—'} · ${o.campaignTitle || '—'}</span>
-        <span>${statusBadge(o.paymentStatus)}</span>
+        <span class="info-key">#${esc((o.id || '').slice(0, 8))} · ${esc(o.campaignTitle)}</span>
+        ${statusBadge(o.paymentStatus)}
       </div>`).join('') : '<div class="empty"><p>لا توجد طلبات</p></div>';
 
-    // Recent Users
-    const recentU = [...(users || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6);
-    document.getElementById('recentUsersList').innerHTML = recentU.length ? recentU.map(u => `
+    // Recent users
+    const recentU = [...allUsers].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6);
+    const ruEl = document.getElementById('recentUsersList');
+    ruEl.innerHTML = recentU.length ? recentU.map(u => `
       <div class="info-row">
-        <span class="info-key">${u.username || u.email || '—'}</span>
-        <span class="info-val">${fmtDate(u.createdAt)}</span>
+        <span class="info-key">${esc(u.username || u.email)}</span>
+        <span class="info-val" style="font-size:11px;color:var(--muted)">${fmtDate(u.createdAt)}</span>
       </div>`).join('') : '<div class="empty"><p>لا يوجد مستخدمون</p></div>';
 
-    // Top campaigns by sold
-    const sorted = [...(campaigns || [])].sort((a, b) => (b.soldCount || b.currentQuantity || 0) - (a.soldCount || a.currentQuantity || 0)).slice(0, 5);
-    document.getElementById('topCampaignsList').innerHTML = sorted.length ? sorted.map(c => {
-      const sold = c.soldCount || c.currentQuantity || 0;
+    // Top campaigns
+    const sorted = [...allCampaigns].sort((a, b) => (b.currentQuantity || 0) - (a.currentQuantity || 0)).slice(0, 5);
+    const tcEl = document.getElementById('topCampaignsList');
+    tcEl.innerHTML = sorted.length ? sorted.map(c => {
+      const sold = c.currentQuantity || 0;
       const total = c.totalQuantity || 1;
       const pct = Math.min(100, Math.round((sold / total) * 100));
-      return `<div class="info-row"><span class="info-key">${c.title || '—'}</span>
-        <span class="info-val">${pct}% (${sold}/${total})</span></div>`;
+      return `<div class="info-row">
+        <span class="info-key">${esc(c.title)}</span>
+        <span class="info-val">${pct}% <span style="color:var(--muted);font-weight:400">(${esc(sold)}/${esc(total)})</span></span>
+      </div>`;
     }).join('') : '<div class="empty"><p>لا توجد حملات</p></div>';
 
     // Referral & wallet stats
-    const totalWallet = (users || []).reduce((s, u) => s + parseFloat(u.walletBalance || 0), 0);
-    const referred = (users || []).filter(u => u.referredBy).length;
+    const totalWallet = allUsers.reduce((s, u) => s + parseFloat(u.walletBalance || 0), 0);
+    const referred = allUsers.filter(u => u.referredBy).length;
     document.getElementById('referralStats').innerHTML = `
       <div class="info-row"><span class="info-key">إجمالي رصيد المحافظ</span><span class="info-val">${totalWallet.toFixed(0)} ريال</span></div>
       <div class="info-row"><span class="info-key">مستخدمون بإحالة</span><span class="info-val">${referred}</span></div>
-      <div class="info-row"><span class="info-key">معدل التحويل</span><span class="info-val">${orders.length ? Math.round((orders.filter(o=>o.paymentStatus==='confirmed').length/orders.length)*100) : 0}%</span></div>
-      <div class="info-row"><span class="info-key">طلبات اليوم</span><span class="info-val">${orders.filter(o=>isToday(o.createdAt)).length}</span></div>`;
+      <div class="info-row"><span class="info-key">معدل التحويل</span><span class="info-val">${convRate}%</span></div>
+      <div class="info-row"><span class="info-key">طلبات اليوم</span><span class="info-val">${todayOrders.length}</span></div>
+      <div class="info-row"><span class="info-key">طلبات مؤكدة</span><span class="info-val">${confirmed}</span></div>`;
 
-    allOrders = orders || []; allUsers = users || []; allCampaigns = campaigns || [];
-  } catch(e) { toast('خطأ في تحميل البيانات: ' + e.message, 'error'); }
+  } catch (e) { toast('خطأ في تحميل البيانات: ' + e.message, 'error'); }
 }
 
 function renderSalesChart(data) {
   const ctx = document.getElementById('salesChart').getContext('2d');
   if (salesChart) salesChart.destroy();
-  const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-  const labels = data.map(d => { const dt = new Date(d.date + 'T00:00:00'); return days[dt.getDay()]; });
+  const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const labels = data.map(d => {
+    const dt = new Date(d.date + 'T00:00:00');
+    if (currentChartPeriod === 'monthly') {
+      return (dt.getMonth() + 1) + '/' + dt.getDate();
+    }
+    return days[dt.getDay()];
+  });
   const values = data.map(d => parseFloat(d.total));
   salesChart = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets: [{ label: 'المبيعات (ريال)', data: values,
-      backgroundColor: 'rgba(124,58,237,0.8)', borderRadius: 8, borderSkipped: false }] },
+      backgroundColor: 'rgba(124,58,237,0.8)', borderRadius: 6, borderSkipped: false }] },
     options: { responsive: true, plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, grid: { color: '#f3f4f6' } }, x: { grid: { display: false } } } }
   });
@@ -759,38 +744,42 @@ function renderSalesChart(data) {
 function renderOrdersChart(counts) {
   const ctx = document.getElementById('ordersChart').getContext('2d');
   if (ordersChart) ordersChart.destroy();
-  const labels = { confirmed:'مؤكد', pending_payment:'انتظار الدفع', pending_review:'قيد المراجعة', rejected:'مرفوض', shipped:'تم الشحن', delivered:'تم التسليم' };
+  const labelMap = { confirmed:'مؤكد', pending_payment:'انتظار الدفع', pending_review:'قيد المراجعة', rejected:'مرفوض', shipped:'تم الشحن', delivered:'تم التسليم' };
   const keys = Object.keys(counts);
+  if (!keys.length) { ordersChart = null; return; }
   ordersChart = new Chart(ctx, {
     type: 'doughnut',
-    data: { labels: keys.map(k => labels[k] || k), datasets: [{ data: keys.map(k => counts[k]),
+    data: { labels: keys.map(k => labelMap[k] || k), datasets: [{ data: keys.map(k => counts[k]),
       backgroundColor: ['#10B981','#F59E0B','#A855F7','#EF4444','#3B82F6','#6366F1'], borderWidth: 0 }] },
     options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { family: 'inherit' }, boxWidth: 12 } } }, cutout: '65%' }
   });
 }
 
-function switchPeriod(period, btn) {
+async function switchPeriod(period, btn) {
   document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
-  // Re-render with same data for simplicity
+  currentChartPeriod = period;
+  try {
+    const data = await api('GET', '/api/admin/sales-chart?period=' + period);
+    renderSalesChart(data || []);
+  } catch (e) { toast('خطأ في تحميل بيانات المخطط', 'error'); }
 }
 
-// ===================== ORDERS =====================
+// ===== ORDERS =====
 async function loadOrders() {
   try {
-    if (!allOrders.length) allOrders = await api('GET', '/api/admin/orders');
+    if (!allOrders.length) allOrders = await api('GET', '/api/admin/orders') || [];
     renderOrders(allOrders);
-  } catch(e) { toast(e.message, 'error'); }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 function filterOrders() {
   const q = document.getElementById('orderSearch').value.toLowerCase();
   const status = document.getElementById('orderStatusFilter').value;
-  const filtered = allOrders.filter(o =>
-    (!q || (o.id||'').includes(q) || (o.username||'').toLowerCase().includes(q) || (o.campaignTitle||'').toLowerCase().includes(q)) &&
+  renderOrders(allOrders.filter(o =>
+    (!q || (o.id||'').toLowerCase().includes(q) || (o.username||'').toLowerCase().includes(q) || (o.campaignTitle||'').toLowerCase().includes(q)) &&
     (!status || o.paymentStatus === status)
-  );
-  renderOrders(filtered);
+  ));
 }
 
 function renderOrders(orders) {
@@ -798,76 +787,83 @@ function renderOrders(orders) {
   if (!orders.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">🧾</div><p>لا توجد طلبات</p></div></td></tr>'; return; }
   tb.innerHTML = orders.map(o => `
     <tr>
-      <td><code style="font-size:11px">${(o.id||'').slice(0,8)}</code></td>
-      <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar-circle">${(o.username||'?')[0].toUpperCase()}</div>${o.username||o.userId?.slice(0,8)||'—'}</div></td>
-      <td>${o.campaignTitle||'—'}</td>
+      <td><code style="font-size:11px">${esc((o.id||'').slice(0, 8))}</code></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="avatar-circle">${esc((o.username || '?')[0].toUpperCase())}</div>
+          ${esc(o.username || o.userId?.slice(0, 8) || '—')}
+        </div>
+      </td>
+      <td>${esc(o.campaignTitle)}</td>
       <td><strong>${parseFloat(o.totalAmount||0).toFixed(2)} ﷼</strong></td>
       <td>${statusBadge(o.paymentStatus)}</td>
       <td>${fmtDate(o.createdAt)}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-primary btn-sm" onclick="openOrderModal('${o.id}')">عرض</button>
+          <button class="btn-primary btn-sm" onclick="openOrderModal('${esc(o.id)}')">عرض</button>
           ${o.paymentStatus === 'pending_review' ? `
-            <button class="btn-success btn-sm" onclick="confirmPayment('${o.id}')">✓</button>
-            <button class="btn-danger btn-sm" onclick="rejectPayment('${o.id}')">✗</button>` : ''}
+            <button class="btn-success btn-sm" onclick="confirmPayment('${esc(o.id)}')">✓ قبول</button>
+            <button class="btn-danger btn-sm" onclick="rejectPayment('${esc(o.id)}')">✗ رفض</button>` : ''}
         </div>
       </td>
     </tr>`).join('');
 }
 
-async function openOrderModal(id) {
-  const order = allOrders.find(o => o.id === id);
-  if (!order) return;
+function openOrderModal(id) {
+  const o = allOrders.find(x => x.id === id);
+  if (!o) return;
   const body = document.getElementById('orderModalBody');
-  body.innerHTML = `
-    <div class="info-row"><span class="info-key">رقم الطلب</span><span class="info-val"><code>${order.id}</code></span></div>
-    <div class="info-row"><span class="info-key">المستخدم</span><span class="info-val">${order.username||order.userId||'—'}</span></div>
-    <div class="info-row"><span class="info-key">الحملة</span><span class="info-val">${order.campaignTitle||'—'}</span></div>
-    <div class="info-row"><span class="info-key">المبلغ</span><span class="info-val">${parseFloat(order.totalAmount||0).toFixed(2)} ريال</span></div>
-    <div class="info-row"><span class="info-key">الحالة</span><span class="info-val">${statusBadge(order.paymentStatus)}</span></div>
-    <div class="info-row"><span class="info-key">طريقة الدفع</span><span class="info-val">${order.paymentMethod||'—'}</span></div>
-    <div class="info-row"><span class="info-key">تاريخ الطلب</span><span class="info-val">${fmtDate(order.createdAt)}</span></div>
-    ${order.shippingAddress ? `<div class="info-row"><span class="info-key">عنوان الشحن</span><span class="info-val">${order.shippingAddress}</span></div>` : ''}
-    ${order.trackingNumber ? `<div class="info-row"><span class="info-key">رقم التتبع</span><span class="info-val">${order.trackingNumber}</span></div>` : ''}
-    ${order.receiptUrl ? `<div style="margin-top:12px"><p style="font-size:12px;color:var(--muted);margin-bottom:6px">وصل الدفع:</p><img src="${order.receiptUrl}" style="max-width:100%;border-radius:8px" /></div>` : ''}
-    <div class="divider"></div>
-    <div class="form-group"><label class="form-label">تحديث الشحن</label><input class="form-input" id="modalTracking_${order.id}" value="${order.trackingNumber||''}" placeholder="رقم التتبع" /></div>
-    <div class="form-group"><label class="form-label">عنوان الشحن</label><input class="form-input" id="modalAddress_${order.id}" value="${order.shippingAddress||''}" placeholder="عنوان الشحن" /></div>
+  const rows = [
+    ['رقم الطلب', `<code>${esc(o.id)}</code>`],
+    ['المستخدم', esc(o.username || o.userId || '—')],
+    ['الحملة', esc(o.campaignTitle)],
+    ['المبلغ', `${parseFloat(o.totalAmount||0).toFixed(2)} ريال`],
+    ['الحالة', statusBadge(o.paymentStatus)],
+    ['طريقة الدفع', esc(o.paymentMethod)],
+    ['تاريخ الطلب', fmtDate(o.createdAt)],
+  ];
+  if (o.shippingAddress) rows.push(['عنوان الشحن', esc(o.shippingAddress)]);
+  if (o.trackingNumber) rows.push(['رقم التتبع', esc(o.trackingNumber)]);
+  let html = rows.map(([k, v]) => `<div class="info-row"><span class="info-key">${k}</span><span class="info-val">${v}</span></div>`).join('');
+  if (o.receiptUrl) {
+    const safeUrl = encodeURI(o.receiptUrl).replace(/"/g, '');
+    html += `<div style="margin-top:12px"><p style="font-size:12px;color:var(--muted);margin-bottom:6px">وصل الدفع:</p><img src="${safeUrl}" style="max-width:100%;border-radius:8px;display:block" /></div>`;
+  }
+  html += `<div class="divider"></div>
+    <div class="form-group"><label class="form-label">رقم التتبع</label><input class="form-input" id="modalTracking" value="${esc(o.trackingNumber||'')}" placeholder="رقم تتبع الشحن" /></div>
+    <div class="form-group"><label class="form-label">عنوان الشحن</label><input class="form-input" id="modalAddress" value="${esc(o.shippingAddress||'')}" placeholder="عنوان الشحن" /></div>
     <div class="action-btns" style="margin-top:8px">
-      <button class="btn-primary" onclick="updateShipping('${order.id}')">📦 تحديث الشحن</button>
-      ${order.paymentStatus==='pending_review'?`<button class="btn-success" onclick="confirmPayment('${order.id}');closeModal('orderModal')">✓ قبول الدفع</button><button class="btn-danger" onclick="rejectPayment('${order.id}');closeModal('orderModal')">✗ رفض</button>`:''}
+      <button class="btn-primary" onclick="updateShipping('${esc(o.id)}')">📦 تحديث الشحن</button>
+      ${o.paymentStatus==='pending_review'?`<button class="btn-success" onclick="confirmPayment('${esc(o.id)}');closeModal('orderModal')">✓ قبول</button><button class="btn-danger" onclick="rejectPayment('${esc(o.id)}');closeModal('orderModal')">✗ رفض</button>`:''}
     </div>`;
-  document.getElementById('orderModal').classList.remove('section-hidden');
+  body.innerHTML = html;
+  document.getElementById('orderModal').classList.remove('hidden');
 }
 
 async function confirmPayment(id) {
-  try { await api('PUT', `/api/admin/orders/${id}/payment`, { status: 'confirmed' }); allOrders = []; await loadOrders(); toast('تم قبول الدفع', 'success'); } catch(e) { toast(e.message, 'error'); }
+  try { await api('PUT', `/api/admin/orders/${id}/payment`, { status: 'confirmed' }); allOrders = []; await loadOrders(); toast('تم قبول الدفع', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 async function rejectPayment(id) {
-  const reason = prompt('سبب الرفض (اختياري):');
-  try { await api('PUT', `/api/admin/orders/${id}/payment`, { status: 'rejected', reason }); allOrders = []; await loadOrders(); toast('تم رفض الدفع', 'success'); } catch(e) { toast(e.message, 'error'); }
+  const reason = prompt('سبب الرفض (اختياري):') || '';
+  try { await api('PUT', `/api/admin/orders/${id}/payment`, { status: 'rejected', reason }); allOrders = []; await loadOrders(); toast('تم رفض الدفع', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 async function updateShipping(id) {
-  const tracking = document.getElementById(`modalTracking_${id}`)?.value;
-  const address = document.getElementById(`modalAddress_${id}`)?.value;
-  try { await api('PUT', `/api/admin/orders/${id}/shipping`, { trackingNumber: tracking, shippingAddress: address }); allOrders = []; toast('تم تحديث الشحن', 'success'); } catch(e) { toast(e.message, 'error'); }
+  const tracking = document.getElementById('modalTracking')?.value || '';
+  const address = document.getElementById('modalAddress')?.value || '';
+  try { await api('PUT', `/api/admin/orders/${id}/shipping`, { trackingNumber: tracking, shippingAddress: address }); allOrders = []; toast('تم تحديث الشحن', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 
-async function exportOrders() {
-  window.open('/api/admin/orders/export/csv', '_blank');
-}
-
-// ===================== USERS =====================
+// ===== USERS =====
 async function loadUsers() {
   try {
-    if (!allUsers.length) allUsers = await api('GET', '/api/admin/users');
+    if (!allUsers.length) allUsers = await api('GET', '/api/admin/users') || [];
     renderUsers(allUsers);
-  } catch(e) { toast(e.message, 'error'); }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 function filterUsers() {
   const q = document.getElementById('userSearch').value.toLowerCase();
-  renderUsers(allUsers.filter(u => (u.username||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q)));
+  renderUsers(allUsers.filter(u => (u.username||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || (u.fullName||'').toLowerCase().includes(q)));
 }
 
 function renderUsers(users) {
@@ -875,46 +871,57 @@ function renderUsers(users) {
   if (!users.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><p>لا يوجد مستخدمون</p></div></td></tr>'; return; }
   tb.innerHTML = users.map(u => `
     <tr>
-      <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar-circle">${(u.username||'?')[0].toUpperCase()}</div><div><div style="font-weight:600">${u.username||'—'}</div><div style="font-size:11px;color:var(--muted)">${u.fullName||''}</div></div></div></td>
-      <td>${u.email||'—'}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="avatar-circle">${esc((u.username||'?')[0].toUpperCase())}</div>
+          <div><div style="font-weight:600">${esc(u.username||'—')}</div><div style="font-size:11px;color:var(--muted)">${esc(u.fullName||'')}</div></div>
+        </div>
+      </td>
+      <td>${esc(u.email||'—')}</td>
       <td><span style="font-weight:700;color:var(--purple)">${parseFloat(u.walletBalance||0).toFixed(2)} ﷼</span></td>
-      <td>${u.orderCount||0}</td>
+      <td>${esc(u.orderCount||0)}</td>
       <td>${fmtDate(u.createdAt)}</td>
       <td>${u.emailVerified ? '<span class="badge badge-green">مفعّل</span>' : '<span class="badge badge-yellow">غير مفعّل</span>'}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-primary btn-sm" onclick="openUserModal('${u.id}')">عرض</button>
-          ${!u.emailVerified ? `<button class="btn-success btn-sm" onclick="verifyUser('${u.id}')">تفعيل</button>` : ''}
+          <button class="btn-primary btn-sm" onclick="openUserModal('${esc(u.id)}')">عرض</button>
+          ${!u.emailVerified ? `<button class="btn-success btn-sm" onclick="verifyUser('${esc(u.id)}')">تفعيل</button>` : ''}
         </div>
       </td>
     </tr>`).join('');
 }
 
-async function openUserModal(id) {
+function openUserModal(id) {
   const u = allUsers.find(x => x.id === id);
   if (!u) return;
-  document.getElementById('userModalBody').innerHTML = `
-    <div class="info-row"><span class="info-key">المستخدم</span><span class="info-val">${u.username||'—'}</span></div>
-    <div class="info-row"><span class="info-key">الاسم الكامل</span><span class="info-val">${u.fullName||'—'}</span></div>
-    <div class="info-row"><span class="info-key">البريد</span><span class="info-val">${u.email||'—'}</span></div>
-    <div class="info-row"><span class="info-key">الهاتف</span><span class="info-val">${u.phone||'—'}</span></div>
-    <div class="info-row"><span class="info-key">رصيد المحفظة</span><span class="info-val" style="color:var(--purple)">${parseFloat(u.walletBalance||0).toFixed(2)} ريال</span></div>
-    <div class="info-row"><span class="info-key">كود الإحالة</span><span class="info-val"><code>${u.referralCode||'—'}</code></span></div>
-    <div class="info-row"><span class="info-key">تاريخ التسجيل</span><span class="info-val">${fmtDate(u.createdAt)}</span></div>
-    <div class="info-row"><span class="info-key">الحالة</span><span class="info-val">${u.emailVerified?'<span class="badge badge-green">مفعّل</span>':'<span class="badge badge-yellow">غير مفعّل</span>'}</span></div>
-    <div class="info-row"><span class="info-key">الدور</span><span class="info-val">${u.role==='admin'?'<span class="badge badge-purple">أدمن</span>':'<span class="badge badge-gray">مستخدم</span>'}</span></div>`;
-  document.getElementById('userModal').classList.remove('section-hidden');
+  const rows = [
+    ['المستخدم', esc(u.username)],
+    ['الاسم الكامل', esc(u.fullName)],
+    ['البريد', esc(u.email)],
+    ['الهاتف', esc(u.phone)],
+    ['رصيد المحفظة', `<span style="color:var(--purple)">${parseFloat(u.walletBalance||0).toFixed(2)} ريال</span>`],
+    ['كود الإحالة', `<code>${esc(u.referralCode)}</code>`],
+    ['تاريخ التسجيل', fmtDate(u.createdAt)],
+    ['الحالة', u.emailVerified ? '<span class="badge badge-green">مفعّل</span>' : '<span class="badge badge-yellow">غير مفعّل</span>'],
+    ['الدور', u.role === 'admin' ? '<span class="badge badge-purple">أدمن</span>' : '<span class="badge badge-gray">مستخدم</span>'],
+  ];
+  document.getElementById('userModalBody').innerHTML = rows.map(([k, v]) =>
+    `<div class="info-row"><span class="info-key">${k}</span><span class="info-val">${v}</span></div>`
+  ).join('');
+  const footerActions = [];
+  if (!u.emailVerified) footerActions.push(`<button class="btn-success" onclick="verifyUser('${esc(u.id)}');closeModal('userModal')">✓ تفعيل الحساب</button>`);
+  footerActions.push(`<button class="btn-secondary" onclick="closeModal('userModal')">إغلاق</button>`);
+  document.getElementById('userModalFooter').innerHTML = footerActions.join('');
+  document.getElementById('userModal').classList.remove('hidden');
 }
 
 async function verifyUser(id) {
-  try { await api('PUT', `/api/admin/verify-user/${id}`); allUsers = []; await loadUsers(); toast('تم تفعيل المستخدم', 'success'); } catch(e) { toast(e.message, 'error'); }
+  try { await api('PUT', `/api/admin/verify-user/${id}`); allUsers = []; await loadUsers(); toast('تم تفعيل المستخدم', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 
-async function exportUsers() { window.open('/api/admin/users/export/csv', '_blank'); }
-
-// ===================== CAMPAIGNS =====================
+// ===== CAMPAIGNS =====
 async function loadCampaigns() {
-  try { allCampaigns = await api('GET', '/api/campaigns'); renderCampaigns(allCampaigns); } catch(e) { toast(e.message, 'error'); }
+  try { allCampaigns = await api('GET', '/api/campaigns') || []; renderCampaigns(allCampaigns); } catch (e) { toast(e.message, 'error'); }
 }
 
 function filterCampaigns() {
@@ -929,41 +936,42 @@ function renderCampaigns(camps) {
     const sold = c.currentQuantity || 0;
     const total = c.totalQuantity || 1;
     const pct = Math.min(100, Math.round((sold / total) * 100));
-    const soldOut = c.isSoldOut || sold >= total;
+    const isComplete = c.isSoldOut || sold >= total;
     return `<tr>
-      <td><div style="font-weight:600">${c.title||'—'}</div><div style="font-size:11px;color:var(--muted)">${c.isFlashSale?'🔥 عرض محدود':''}</div></td>
+      <td>
+        <div style="font-weight:600">${esc(c.title)}</div>
+        ${c.isFlashSale ? '<span class="badge badge-red" style="margin-top:4px">🔥 عرض محدود</span>' : ''}
+      </td>
       <td>${parseFloat(c.price||0).toFixed(2)} ﷼</td>
-      <td>${total.toLocaleString()}</td>
-      <td>${sold.toLocaleString()}</td>
+      <td>${esc(total.toLocaleString())}</td>
+      <td>${esc(sold.toLocaleString())}</td>
       <td>
         <div style="display:flex;align-items:center;gap:8px">
           <div style="flex:1;background:#f3f4f6;border-radius:4px;height:6px;overflow:hidden">
             <div style="width:${pct}%;background:linear-gradient(90deg,#7C3AED,#EC4899);height:100%"></div>
           </div>
-          <span style="font-size:11px;font-weight:600;color:var(--muted)">${pct}%</span>
+          <span style="font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap">${pct}%</span>
         </div>
       </td>
-      <td>${soldOut ? '<span class="badge badge-red">مكتمل</span>' : '<span class="badge badge-green">نشط</span>'}</td>
+      <td>${isComplete ? '<span class="badge badge-red">مكتمل</span>' : '<span class="badge badge-green">نشط</span>'}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-primary btn-sm" onclick="openEditCampaign('${c.id}')">✏️</button>
-          ${soldOut ? `<button class="btn-success btn-sm" onclick="runDraw('${c.id}')">🎰 سحب</button>` : ''}
-          <button class="btn-danger btn-sm" onclick="deleteCampaign('${c.id}')">🗑</button>
+          <button class="btn-primary btn-sm" onclick="openEditCampaign('${esc(c.id)}')">✏️ تعديل</button>
+          ${isComplete ? `<button class="btn-success btn-sm" onclick="runDraw('${esc(c.id)}')">🎰 سحب</button>` : ''}
+          <button class="btn-danger btn-sm" onclick="deleteCampaign('${esc(c.id)}')">🗑</button>
         </div>
       </td>
     </tr>`;
   }).join('');
 }
 
-function openCreateCampaignModal() {
+function openCampaignModal() {
   editingCampaignId = null;
   document.getElementById('campaignModalTitle').textContent = 'حملة جديدة';
-  ['campTitle','campDesc','campPrice','campQty','campImage','campEndsAt','campOrigPrice','campFlashEnd'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
+  ['campTitle','campDesc','campPrice','campQty','campImage','campEndsAt','campOrigPrice','campFlashEnd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('campFlash').checked = false;
-  document.getElementById('flashFields').style.display = 'none';
-  document.getElementById('campaignModal').classList.remove('section-hidden');
+  document.getElementById('flashFields').classList.add('hidden');
+  document.getElementById('campaignModal').classList.remove('hidden');
 }
 
 function openEditCampaign(id) {
@@ -976,215 +984,234 @@ function openEditCampaign(id) {
   document.getElementById('campPrice').value = c.price || '';
   document.getElementById('campQty').value = c.totalQuantity || '';
   document.getElementById('campImage').value = c.imageUrl || '';
-  if (c.endsAt) document.getElementById('campEndsAt').value = c.endsAt.slice(0,16);
+  if (c.endsAt) document.getElementById('campEndsAt').value = new Date(c.endsAt).toISOString().slice(0,16);
   document.getElementById('campFlash').checked = !!c.isFlashSale;
-  document.getElementById('flashFields').style.display = c.isFlashSale ? 'block' : 'none';
+  document.getElementById('flashFields').classList.toggle('hidden', !c.isFlashSale);
   if (c.originalPrice) document.getElementById('campOrigPrice').value = c.originalPrice;
-  if (c.flashSaleEndsAt) document.getElementById('campFlashEnd').value = c.flashSaleEndsAt.slice(0,16);
-  document.getElementById('campaignModal').classList.remove('section-hidden');
+  if (c.flashSaleEndsAt) document.getElementById('campFlashEnd').value = new Date(c.flashSaleEndsAt).toISOString().slice(0,16);
+  document.getElementById('campaignModal').classList.remove('hidden');
 }
 
 function toggleFlashFields() {
-  document.getElementById('flashFields').style.display = document.getElementById('campFlash').checked ? 'block' : 'none';
+  document.getElementById('flashFields').classList.toggle('hidden', !document.getElementById('campFlash').checked);
 }
 
 async function saveCampaign() {
   const body = {
-    title: document.getElementById('campTitle').value,
-    description: document.getElementById('campDesc').value,
+    title: document.getElementById('campTitle').value.trim(),
+    description: document.getElementById('campDesc').value.trim(),
     price: document.getElementById('campPrice').value,
     totalQuantity: document.getElementById('campQty').value,
-    imageUrl: document.getElementById('campImage').value,
+    imageUrl: document.getElementById('campImage').value.trim() || null,
     endsAt: document.getElementById('campEndsAt').value || null,
     isFlashSale: document.getElementById('campFlash').checked,
     originalPrice: document.getElementById('campOrigPrice').value || null,
     flashSaleEndsAt: document.getElementById('campFlashEnd').value || null,
   };
-  if (!body.title || !body.price || !body.totalQuantity) { toast('يرجى ملء الحقول المطلوبة', 'error'); return; }
+  if (!body.title || !body.price || !body.totalQuantity) { toast('يرجى ملء الحقول المطلوبة (العنوان، السعر، الكمية)', 'error'); return; }
   try {
-    if (editingCampaignId) {
-      await api('PUT', `/api/admin/campaigns/${editingCampaignId}`, body);
-      toast('تم تحديث الحملة', 'success');
-    } else {
-      await api('POST', '/api/campaigns', body);
-      toast('تم إنشاء الحملة', 'success');
-    }
+    if (editingCampaignId) { await api('PUT', `/api/admin/campaigns/${editingCampaignId}`, body); toast('تم تحديث الحملة', 'success'); }
+    else { await api('POST', '/api/campaigns', body); toast('تم إنشاء الحملة', 'success'); }
     closeModal('campaignModal'); allCampaigns = []; loadCampaigns();
-  } catch(e) { toast(e.message, 'error'); }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 async function deleteCampaign(id) {
-  if (!confirm('هل أنت متأكد من حذف هذه الحملة؟')) return;
-  try { await api('DELETE', `/api/admin/campaigns/${id}`); allCampaigns = []; loadCampaigns(); toast('تم الحذف', 'success'); } catch(e) { toast(e.message, 'error'); }
+  if (!confirm('هل أنت متأكد من حذف هذه الحملة؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+  try { await api('DELETE', `/api/admin/campaigns/${id}`); allCampaigns = []; loadCampaigns(); toast('تم حذف الحملة', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 
 async function runDraw(id) {
   if (!confirm('هل تريد تشغيل السحب العشوائي لهذه الحملة؟')) return;
-  try { const r = await api('POST', `/api/admin/draw/${id}`); toast(`🎉 الفائز: ${r.winner?.username || r.winner?.userId || 'غير معروف'}`, 'success'); } catch(e) { toast(e.message, 'error'); }
+  try {
+    const r = await api('POST', `/api/admin/draw/${id}`);
+    toast(`🎉 الفائز: ${esc(r?.winner?.username || r?.winner?.userId || 'غير معروف')}`, 'success');
+    allCampaigns = []; loadCampaigns();
+  } catch (e) { toast(e.message, 'error'); }
 }
 
-// ===================== COUPONS =====================
+// ===== COUPONS =====
 async function loadCoupons() {
   try {
-    const data = await api('GET', '/api/admin/coupons');
+    const data = await api('GET', '/api/admin/coupons') || [];
     const tb = document.getElementById('couponsTable');
     if (!data.length) { tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🏷️</div><p>لا توجد كوبونات</p></div></td></tr>'; return; }
     tb.innerHTML = data.map(c => `<tr>
-      <td><code style="font-weight:700;color:var(--purple)">${c.code}</code></td>
-      <td><strong>${c.discountPercent}%</strong></td>
-      <td>${c.maxUses || '∞'}</td>
-      <td>${c.usedCount || 0}</td>
+      <td><code style="font-weight:700;color:var(--purple)">${esc(c.code)}</code></td>
+      <td><strong>${esc(c.discountPercent)}%</strong></td>
+      <td>${esc(c.maxUses || '∞')}</td>
+      <td>${esc(c.usedCount || 0)}</td>
       <td>${c.expiresAt ? fmtDate(c.expiresAt) : '—'}</td>
-      <td><button class="btn-danger btn-sm" onclick="deleteCoupon('${c.id}')">🗑 حذف</button></td>
+      <td><button class="btn-danger btn-sm" onclick="deleteCoupon('${esc(c.id)}')">🗑 حذف</button></td>
     </tr>`).join('');
-  } catch(e) { toast(e.message, 'error'); }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
-function openCreateCouponModal() { document.getElementById('couponModal').classList.remove('section-hidden'); }
+function openCouponModal() {
+  ['couponCode','couponDiscount','couponMax','couponExpiry'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('couponModal').classList.remove('hidden');
+}
 
 async function saveCoupon() {
-  const body = { code: document.getElementById('couponCode').value, discountPercent: document.getElementById('couponDiscount').value, maxUses: document.getElementById('couponMax').value || null, expiresAt: document.getElementById('couponExpiry').value || null };
-  if (!body.code || !body.discountPercent) { toast('يرجى ملء الحقول المطلوبة', 'error'); return; }
-  try { await api('POST', '/api/admin/coupons', body); closeModal('couponModal'); loadCoupons(); toast('تم إنشاء الكوبون', 'success'); } catch(e) { toast(e.message, 'error'); }
+  const body = { code: document.getElementById('couponCode').value.trim(), discountPercent: Number(document.getElementById('couponDiscount').value), maxUses: document.getElementById('couponMax').value ? Number(document.getElementById('couponMax').value) : null, expiresAt: document.getElementById('couponExpiry').value || null };
+  if (!body.code || !body.discountPercent) { toast('يرجى ملء الكود ونسبة الخصم', 'error'); return; }
+  try { await api('POST', '/api/admin/coupons', body); closeModal('couponModal'); loadCoupons(); toast('تم إنشاء الكوبون', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 
 async function deleteCoupon(id) {
   if (!confirm('حذف هذا الكوبون؟')) return;
-  try { await api('DELETE', `/api/admin/coupons/${id}`); loadCoupons(); toast('تم الحذف', 'success'); } catch(e) { toast(e.message, 'error'); }
+  try { await api('DELETE', `/api/admin/coupons/${id}`); loadCoupons(); toast('تم حذف الكوبون', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 
-// ===================== PAYMENT METHODS =====================
+// ===== PAYMENT METHODS =====
 async function loadPayments() {
   try {
-    const data = await api('GET', '/api/admin/payment-methods');
+    const data = await api('GET', '/api/admin/payment-methods') || [];
     const el = document.getElementById('paymentsList');
-    if (!data.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">💳</div><p>لا توجد طرق دفع</p></div>'; return; }
+    if (!data.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">💳</div><p>لا توجد طرق دفع مضافة</p></div>'; return; }
     el.innerHTML = data.map(p => `
       <div class="section-card" style="margin-bottom:12px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between">
           <div>
-            <div style="font-weight:700;font-size:16px;margin-bottom:4px">${p.bankName||p.name||'—'}</div>
-            <div style="font-size:13px;color:var(--muted)">${p.iban||p.accountNumber||'—'}</div>
-            ${p.accountName ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${p.accountName}</div>` : ''}
-            <span class="badge badge-blue" style="margin-top:8px">${p.type||'bank_transfer'}</span>
+            <div style="font-weight:700;font-size:16px;margin-bottom:4px">${esc(p.bankName || p.name)}</div>
+            <div style="font-size:13px;color:var(--muted)">${esc(p.iban || p.accountNumber)}</div>
+            ${p.accountName ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(p.accountName)}</div>` : ''}
+            <span class="badge badge-blue" style="margin-top:8px">${esc(p.type || 'bank_transfer')}</span>
           </div>
           <div class="action-btns">
-            <button class="btn-secondary btn-sm" onclick="openEditPayment(${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️</button>
+            <button class="btn-secondary btn-sm" onclick="openEditPayment(${p.id}, '${esc(p.bankName||p.name||'')}', '${esc(p.iban||p.accountNumber||'')}', '${esc(p.accountName||'')}', '${esc(p.type||'bank_transfer')}')">✏️ تعديل</button>
             <button class="btn-danger btn-sm" onclick="deletePayment('${p.id}')">🗑</button>
           </div>
         </div>
       </div>`).join('');
-  } catch(e) { toast(e.message, 'error'); }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
-function openCreatePaymentModal() { editingPaymentId = null; document.getElementById('paymentModalTitle').textContent = 'طريقة دفع جديدة'; ['pmBank','pmIban','pmAccountName'].forEach(id => document.getElementById(id).value = ''); document.getElementById('paymentModal').classList.remove('section-hidden'); }
+function openPaymentModal() {
+  editingPaymentId = null;
+  document.getElementById('paymentModalTitle').textContent = 'طريقة دفع جديدة';
+  ['pmBank','pmIban','pmAccountName'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pmType').value = 'bank_transfer';
+  document.getElementById('paymentModal').classList.remove('hidden');
+}
 
-function openEditPayment(p) { editingPaymentId = p.id; document.getElementById('paymentModalTitle').textContent = 'تعديل طريقة الدفع'; document.getElementById('pmBank').value = p.bankName||p.name||''; document.getElementById('pmIban').value = p.iban||p.accountNumber||''; document.getElementById('pmAccountName').value = p.accountName||''; document.getElementById('pmType').value = p.type||'bank_transfer'; document.getElementById('paymentModal').classList.remove('section-hidden'); }
+function openEditPayment(id, bank, iban, accountName, type) {
+  editingPaymentId = id;
+  document.getElementById('paymentModalTitle').textContent = 'تعديل طريقة الدفع';
+  document.getElementById('pmBank').value = bank;
+  document.getElementById('pmIban').value = iban;
+  document.getElementById('pmAccountName').value = accountName;
+  document.getElementById('pmType').value = type;
+  document.getElementById('paymentModal').classList.remove('hidden');
+}
 
 async function savePayment() {
-  const body = { bankName: document.getElementById('pmBank').value, iban: document.getElementById('pmIban').value, accountName: document.getElementById('pmAccountName').value, type: document.getElementById('pmType').value };
-  if (!body.bankName || !body.iban) { toast('يرجى ملء الحقول المطلوبة', 'error'); return; }
+  const body = { bankName: document.getElementById('pmBank').value.trim(), iban: document.getElementById('pmIban').value.trim(), accountName: document.getElementById('pmAccountName').value.trim(), type: document.getElementById('pmType').value };
+  if (!body.bankName || !body.iban) { toast('يرجى ملء اسم البنك والآيبان', 'error'); return; }
   try {
     if (editingPaymentId) await api('PUT', `/api/admin/payment-methods/${editingPaymentId}`, body);
     else await api('POST', '/api/admin/payment-methods', body);
     closeModal('paymentModal'); loadPayments(); toast('تم الحفظ', 'success');
-  } catch(e) { toast(e.message, 'error'); }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 async function deletePayment(id) {
-  if (!confirm('حذف طريقة الدفع؟')) return;
-  try { await api('DELETE', `/api/admin/payment-methods/${id}`); loadPayments(); toast('تم الحذف', 'success'); } catch(e) { toast(e.message, 'error'); }
+  if (!confirm('حذف طريقة الدفع هذه؟')) return;
+  try { await api('DELETE', `/api/admin/payment-methods/${id}`); loadPayments(); toast('تم الحذف', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 
-// ===================== NOTIFICATIONS =====================
+// ===== NOTIFICATIONS =====
 async function loadNotifications() {
   try {
-    const data = await api('GET', '/api/admin/notifications');
+    const data = await api('GET', '/api/admin/notifications') || [];
     const el = document.getElementById('notificationsList');
-    if (!data.length) { el.innerHTML = '<div class="empty"><p>لا توجد إشعارات</p></div>'; return; }
-    el.innerHTML = data.slice(0,10).map(n => `
+    if (!data.length) { el.innerHTML = '<div class="empty"><p>لا توجد إشعارات مُرسلة</p></div>'; return; }
+    el.innerHTML = data.slice(0, 10).map(n => `
       <div class="info-row">
-        <div><div style="font-weight:600;font-size:13px">${n.title||'—'}</div><div style="font-size:11px;color:var(--muted)">${n.body||''}</div></div>
+        <div>
+          <div style="font-weight:600;font-size:13px">${esc(n.title)}</div>
+          <div style="font-size:11px;color:var(--muted)">${esc(n.body || n.message)}</div>
+        </div>
         <div style="font-size:11px;color:var(--muted);white-space:nowrap">${fmtDate(n.createdAt)}</div>
       </div>`).join('');
-  } catch(e) { toast(e.message, 'error'); }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 async function sendBroadcast() {
-  const title = document.getElementById('notifTitle').value;
-  const body = document.getElementById('notifBody').value;
+  const title = document.getElementById('notifTitle').value.trim();
+  const body = document.getElementById('notifBody').value.trim();
   if (!title || !body) { toast('يرجى ملء العنوان والنص', 'error'); return; }
   try {
     await api('POST', '/api/admin/broadcast-notification', { title, body });
     document.getElementById('notifTitle').value = '';
     document.getElementById('notifBody').value = '';
-    toast('تم إرسال الإشعار للجميع', 'success');
+    toast('تم إرسال الإشعار للجميع ✅', 'success');
     loadNotifications();
-  } catch(e) { toast(e.message, 'error'); }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
-// ===================== SUPPORT =====================
+// ===== SUPPORT =====
 async function loadSupport() {
   try {
-    const data = await api('GET', '/api/admin/support-tickets');
+    const data = await api('GET', '/api/admin/support-tickets') || [];
     const status = document.getElementById('supportStatusFilter').value;
     const filtered = status ? data.filter(t => t.status === status) : data;
     const el = document.getElementById('supportList');
-    if (!filtered.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🎧</div><p>لا توجد تذاكر</p></div>'; return; }
+    if (!filtered.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🎧</div><p>لا توجد تذاكر دعم</p></div>'; return; }
     el.innerHTML = filtered.map(t => `
       <div class="section-card" style="margin-bottom:12px">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between">
-          <div style="flex:1">
-            <div style="font-weight:700">${t.subject||'تذكرة دعم'}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px">${t.message||''}</div>
-            <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
-              ${t.status==='open'?'<span class="badge badge-yellow">مفتوحة</span>':'<span class="badge badge-green">محلولة</span>'}
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700">${esc(t.subject || 'تذكرة دعم')}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;word-break:break-word">${esc(t.message)}</div>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              ${t.status === 'open' ? '<span class="badge badge-yellow">مفتوحة</span>' : '<span class="badge badge-green">محلولة</span>'}
               <span style="font-size:11px;color:var(--muted)">${fmtDate(t.createdAt)}</span>
-              <span style="font-size:11px;color:var(--muted)">· ${t.userEmail||t.userId||'—'}</span>
+              <span style="font-size:11px;color:var(--muted)">· ${esc(t.userEmail || t.userId || '—')}</span>
             </div>
           </div>
-          <button class="btn-primary btn-sm" onclick="openSupportModal('${t.id}')">💬 رد</button>
+          <button class="btn-primary btn-sm" style="flex-shrink:0" onclick="openSupportModal('${esc(t.id)}')">💬 رد</button>
         </div>
-        ${t.adminReply ? `<div style="margin-top:10px;padding:10px;background:#f0fdf4;border-radius:8px;font-size:12px"><strong>ردك:</strong> ${t.adminReply}</div>` : ''}
+        ${t.adminReply ? `<div style="margin-top:10px;padding:10px;background:#f0fdf4;border-radius:8px;font-size:12px"><strong>ردك:</strong> ${esc(t.adminReply)}</div>` : ''}
       </div>`).join('');
-  } catch(e) { toast(e.message, 'error'); }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 function openSupportModal(id) {
   currentSupportId = id;
   document.getElementById('supportReply').value = '';
-  document.getElementById('supportModal').classList.remove('section-hidden');
+  document.getElementById('supportModal').classList.remove('hidden');
 }
 
 async function sendSupportReply() {
-  const reply = document.getElementById('supportReply').value;
+  const reply = document.getElementById('supportReply').value.trim();
   if (!reply) { toast('يرجى كتابة رد', 'error'); return; }
-  try { await api('PUT', `/api/admin/support-tickets/${currentSupportId}`, { adminReply: reply }); closeModal('supportModal'); loadSupport(); toast('تم إرسال الرد', 'success'); } catch(e) { toast(e.message, 'error'); }
+  try { await api('PUT', `/api/admin/support-tickets/${currentSupportId}`, { adminReply: reply }); closeModal('supportModal'); loadSupport(); toast('تم إرسال الرد', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 
 async function resolveTicket() {
-  const reply = document.getElementById('supportReply').value;
-  try { await api('PUT', `/api/admin/support-tickets/${currentSupportId}`, { status: 'resolved', adminReply: reply || undefined }); closeModal('supportModal'); loadSupport(); toast('تم حل التذكرة', 'success'); } catch(e) { toast(e.message, 'error'); }
+  const reply = document.getElementById('supportReply').value.trim();
+  try { await api('PUT', `/api/admin/support-tickets/${currentSupportId}`, { status: 'resolved', adminReply: reply || undefined }); closeModal('supportModal'); loadSupport(); toast('تم حل التذكرة', 'success'); } catch (e) { toast(e.message, 'error'); }
 }
 
-// ===================== ACTIVITY =====================
+// ===== ACTIVITY =====
 async function loadActivity() {
   try {
-    const data = await api('GET', '/api/admin/activity-log');
+    const data = await api('GET', '/api/admin/activity-log') || [];
     const tb = document.getElementById('activityTable');
-    if (!data.length) { tb.innerHTML = '<tr><td colspan="4"><div class="empty"><p>لا يوجد سجل</p></div></td></tr>'; return; }
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="4"><div class="empty"><p>لا يوجد سجل نشاط</p></div></td></tr>'; return; }
     tb.innerHTML = data.map(a => `<tr>
-      <td>${a.type||'—'}</td>
-      <td>${a.username||a.userId||'—'}</td>
-      <td style="font-size:12px;color:var(--muted)">${a.details||a.metadata||'—'}</td>
+      <td>${esc(a.type || '—')}</td>
+      <td>${esc(a.username || a.userId || '—')}</td>
+      <td style="font-size:12px;color:var(--muted);max-width:300px;word-break:break-word">${esc(a.details || a.metadata || '—')}</td>
       <td style="white-space:nowrap">${fmtDate(a.createdAt)}</td>
     </tr>`).join('');
-  } catch(e) { toast(e.message, 'error'); }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
-// ===================== SETTINGS =====================
+// ===== SETTINGS =====
 async function saveSettings() {
-  const email = document.getElementById('settingsEmail').value;
+  const email = document.getElementById('settingsEmail').value.trim();
   const currentPassword = document.getElementById('settingsCurrentPwd').value;
   const newPassword = document.getElementById('settingsNewPwd').value;
   const confirmPwd = document.getElementById('settingsConfirmPwd').value;
@@ -1195,69 +1222,65 @@ async function saveSettings() {
   if (!Object.keys(body).length) { toast('لم تقم بأي تغيير', 'error'); return; }
   try {
     await api('PUT', '/api/admin/account-settings', body);
-    toast('تم حفظ التغييرات', 'success');
-    document.getElementById('settingsCurrentPwd').value = '';
-    document.getElementById('settingsNewPwd').value = '';
-    document.getElementById('settingsConfirmPwd').value = '';
-  } catch(e) { toast(e.message, 'error'); }
+    toast('تم حفظ التغييرات بنجاح', 'success');
+    ['settingsCurrentPwd','settingsNewPwd','settingsConfirmPwd'].forEach(id => document.getElementById(id).value = '');
+    if (body.email) { currentUser.email = body.email; document.getElementById('sidebarEmail').textContent = body.email; }
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 async function createAdmin() {
-  const email = document.getElementById('newAdminEmail').value;
-  const username = document.getElementById('newAdminUsername').value;
+  const email = document.getElementById('newAdminEmail').value.trim();
+  const username = document.getElementById('newAdminUsername').value.trim();
   const password = document.getElementById('newAdminPwd').value;
   if (!email || !username || !password) { toast('جميع الحقول مطلوبة', 'error'); return; }
   try {
     await api('POST', '/api/admin/create-admin', { email, username, password });
-    toast('تم إنشاء حساب الأدمن', 'success');
-    document.getElementById('newAdminEmail').value = '';
-    document.getElementById('newAdminUsername').value = '';
-    document.getElementById('newAdminPwd').value = '';
-  } catch(e) { toast(e.message, 'error'); }
+    toast('تم إنشاء حساب الأدمن بنجاح', 'success');
+    ['newAdminEmail','newAdminUsername','newAdminPwd'].forEach(id => document.getElementById(id).value = '');
+  } catch (e) { toast(e.message, 'error'); }
 }
 
-// ===================== LOGOUT =====================
+// ===== LOGOUT =====
 async function doLogout() {
   try { await api('POST', '/api/auth/logout'); } catch {}
   window.location.href = '/admin/login';
 }
 
-// ===================== HELPERS =====================
-function closeModal(id) { document.getElementById(id).classList.add('section-hidden'); }
+// ===== HELPERS =====
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
 function toast(msg, type = '') {
   const c = document.getElementById('toastContainer');
   const t = document.createElement('div');
-  t.className = `toast ${type}`;
+  t.className = 'toast ' + type;
   t.textContent = (type === 'success' ? '✅ ' : type === 'error' ? '❌ ' : 'ℹ️ ') + msg;
   c.appendChild(t);
   setTimeout(() => t.remove(), 3500);
 }
 
 function statusBadge(s) {
-  const map = { confirmed: ['badge-green','مؤكد'], pending_payment: ['badge-yellow','انتظار الدفع'], pending_review: ['badge-blue','قيد المراجعة'], rejected: ['badge-red','مرفوض'], shipped: ['badge-purple','تم الشحن'], delivered: ['badge-green','تم التسليم'] };
-  const [cls, label] = map[s] || ['badge-gray', s || '—'];
+  const map = { confirmed:['badge-green','مؤكد'], pending_payment:['badge-yellow','انتظار الدفع'], pending_review:['badge-blue','قيد المراجعة'], rejected:['badge-red','مرفوض'], shipped:['badge-purple','تم الشحن'], delivered:['badge-green','تم التسليم'] };
+  const [cls, label] = map[s] || ['badge-gray', esc(s) || '—'];
   return `<span class="badge ${cls}">${label}</span>`;
 }
 
 function fmtDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  try { return new Date(d).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' }); }
+  catch { return '—'; }
 }
 
 function isToday(d) {
   if (!d) return false;
-  const dt = new Date(d);
-  const now = new Date();
+  const dt = new Date(d), now = new Date();
   return dt.getDate() === now.getDate() && dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
 }
 
 // Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', e => { if (e.target === el) el.classList.add('section-hidden'); });
+  el.addEventListener('click', e => { if (e.target === el) el.classList.add('hidden'); });
 });
 
-// Init
 init();
 </script>
 </body>
