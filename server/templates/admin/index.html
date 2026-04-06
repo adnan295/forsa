@@ -288,6 +288,7 @@
           <div class="chart-header">
             <div class="chart-title">المبيعات</div>
             <div class="period-tabs">
+              <button class="period-tab" onclick="switchPeriod('daily', this)">يومي</button>
               <button class="period-tab active" onclick="switchPeriod('weekly', this)">أسبوعي</button>
               <button class="period-tab" onclick="switchPeriod('monthly', this)">شهري</button>
             </div>
@@ -723,15 +724,18 @@ async function loadDashboard() {
 function renderSalesChart(data) {
   const ctx = document.getElementById('salesChart').getContext('2d');
   if (salesChart) salesChart.destroy();
-  const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-  const labels = data.map(d => {
-    const dt = new Date(d.date + 'T00:00:00');
-    if (currentChartPeriod === 'monthly') {
-      return (dt.getMonth() + 1) + '/' + dt.getDate();
-    }
-    return days[dt.getDay()];
-  });
-  const values = data.map(d => parseFloat(d.total));
+  const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  let labels;
+  if (currentChartPeriod === 'daily') {
+    // data has `label` (e.g. "14:00") and `total`
+    labels = data.map(d => d.label || '—');
+  } else if (currentChartPeriod === 'monthly') {
+    labels = data.map(d => { const dt = new Date(d.date + 'T00:00:00'); return (dt.getMonth() + 1) + '/' + dt.getDate(); });
+  } else {
+    // weekly — show day names
+    labels = data.map(d => { const dt = new Date(d.date + 'T00:00:00'); return dayNames[dt.getDay()]; });
+  }
+  const values = data.map(d => parseFloat(d.total) || 0);
   salesChart = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets: [{ label: 'المبيعات (ريال)', data: values,
@@ -1079,8 +1083,8 @@ async function loadPayments() {
             <span class="badge badge-blue" style="margin-top:8px">${esc(p.type || 'bank_transfer')}</span>
           </div>
           <div class="action-btns">
-            <button class="btn-secondary btn-sm" onclick="openEditPayment(${p.id}, '${esc(p.bankName||p.name||'')}', '${esc(p.iban||p.accountNumber||'')}', '${esc(p.accountName||'')}', '${esc(p.type||'bank_transfer')}')">✏️ تعديل</button>
-            <button class="btn-danger btn-sm" onclick="deletePayment('${p.id}')">🗑</button>
+            <button class="btn-secondary btn-sm" onclick="openEditPayment('${esc(p.id)}', '${esc(p.bankName||p.name||'')}', '${esc(p.iban||p.accountNumber||'')}', '${esc(p.accountName||'')}', '${esc(p.type||'bank_transfer')}')">✏️ تعديل</button>
+            <button class="btn-danger btn-sm" onclick="deletePayment('${esc(p.id)}')">🗑</button>
           </div>
         </div>
       </div>`).join('');

@@ -1732,30 +1732,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/sales-chart", requireAdmin as any, async (req: Request, res: Response) => {
     try {
       const period = (req.query.period as string) || "weekly";
-      const numDays = period === "monthly" ? 30 : period === "daily" ? 7 : 7;
-      const days: { date: string; total: string; count: number }[] = [];
+
+      if (period === "daily") {
+        // Hourly breakdown for the last 24 hours
+        const hours: { label: string; total: string; count: number }[] = [];
+        for (let i = 23; i >= 0; i--) {
+          const hourEnd = new Date();
+          hourEnd.setMinutes(59, 59, 999);
+          hourEnd.setHours(hourEnd.getHours() - i);
+          const hourStart = new Date(hourEnd);
+          hourStart.setMinutes(0, 0, 0);
+          const hourStart2 = new Date(hourEnd);
+          hourStart2.setHours(hourEnd.getHours(), 0, 0, 0);
+          const hourEnd2 = new Date(hourEnd);
+          hourEnd2.setHours(hourEnd.getHours(), 59, 59, 999);
+          const [result] = await db
+            .select({ total: sum(orders.totalAmount), count: count() })
+            .from(orders)
+            .where(and(gte(orders.createdAt, hourStart2), sql`${orders.createdAt} <= ${hourEnd2}`));
+          hours.push({
+            label: `${hourStart2.getHours()}:00`,
+            total: result?.total || "0",
+            count: result?.count || 0,
+          });
+        }
+        return res.json(hours);
+      }
+
+      const numDays = period === "monthly" ? 30 : 7;
+      const days: { date: string; label: string; total: string; count: number }[] = [];
       for (let i = numDays - 1; i >= 0; i--) {
         const dayStart = new Date();
         dayStart.setDate(dayStart.getDate() - i);
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = new Date(dayStart);
         dayEnd.setHours(23, 59, 59, 999);
-
         const [result] = await db
-          .select({
-            total: sum(orders.totalAmount),
-            count: count(),
-          })
+          .select({ total: sum(orders.totalAmount), count: count() })
           .from(orders)
-          .where(
-            and(
-              gte(orders.createdAt, dayStart),
-              sql`${orders.createdAt} <= ${dayEnd}`
-            )
-          );
-
+          .where(and(gte(orders.createdAt, dayStart), sql`${orders.createdAt} <= ${dayEnd}`));
         days.push({
           date: dayStart.toISOString().split("T")[0],
+          label: dayStart.toISOString().split("T")[0],
           total: result?.total || "0",
           count: result?.count || 0,
         });
