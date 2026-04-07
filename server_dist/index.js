@@ -652,9 +652,11 @@ var init_storage = __esm({
       async drawWinner(campaignId) {
         const campaign = await this.getCampaign(campaignId);
         if (!campaign) throw new Error("Campaign not found");
-        await this.updateCampaign(campaignId, { status: "drawing" });
         const campaignTickets = await this.getTicketsByCampaign(campaignId);
-        if (campaignTickets.length === 0) return null;
+        if (campaignTickets.length === 0) {
+          throw new Error("\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0630\u0627\u0643\u0631 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u062D\u0645\u0644\u0629 \u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0633\u062D\u0628");
+        }
+        await this.updateCampaign(campaignId, { status: "drawing" });
         const randomIndex = Math.floor(
           parseInt(randomBytes(4).toString("hex"), 16) / 4294967295 * campaignTickets.length
         );
@@ -2662,7 +2664,7 @@ async function registerRoutes(app2) {
           campaignTitle: campaign.title,
           prizeName: campaign.prizeName,
           imageUrl: campaign.imageUrl,
-          drawnAt: campaign.createdAt,
+          drawnAt: campaign.drawAt || campaign.createdAt,
           winningTicketNumber: winningTicket?.ticketNumber || "\u2014",
           winnerOrderId: winnerOrder?.id || null,
           winnerOrderShipping: winnerOrder?.shippingStatus || "pending",

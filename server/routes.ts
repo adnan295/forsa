@@ -1250,6 +1250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             walletBalance: user.walletBalance,
             referralCode: user.referralCode,
             referredBy: user.referredBy,
+            isSuspended: user.isSuspended,
             createdAt: user.createdAt,
             ...stats,
           };
