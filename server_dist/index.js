@@ -2437,6 +2437,7 @@ async function registerRoutes(app2) {
             walletBalance: user.walletBalance,
             referralCode: user.referralCode,
             referredBy: user.referredBy,
+            isSuspended: user.isSuspended,
             createdAt: user.createdAt,
             ...stats
           };
@@ -2561,13 +2562,13 @@ async function registerRoutes(app2) {
       }
       const user = await storage.getUser(req.params.id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      const updates = {};
-      if (email !== void 0) updates.email = email;
-      if (role !== void 0) updates.role = role;
-      if (walletBalance !== void 0) updates.walletBalance = walletBalance.toFixed(2);
-      if (isSuspended !== void 0) updates.isSuspended = isSuspended;
-      if (Object.keys(updates).length > 0) {
-        await db.update(users).set(updates).where(eq2(users.id, req.params.id));
+      const userUpdates = {};
+      if (email !== void 0) userUpdates.email = email;
+      if (role !== void 0) userUpdates.role = role;
+      if (walletBalance !== void 0) userUpdates.walletBalance = walletBalance.toFixed(2);
+      if (isSuspended !== void 0) userUpdates.isSuspended = isSuspended;
+      if (Object.keys(userUpdates).length > 0) {
+        await db.update(users).set(userUpdates).where(eq2(users.id, req.params.id));
       }
       const updated = await storage.getUser(req.params.id);
       if (updated) {
@@ -2642,20 +2643,20 @@ async function registerRoutes(app2) {
   app2.get("/api/admin/winners", requireAdmin, async (req, res) => {
     try {
       const allCampaigns = await storage.getCampaigns();
-      const completed = allCampaigns.filter((c) => c.winnerId);
+      const completed = allCampaigns.filter((c) => c.status === "completed" && c.winnerId);
       const results = await Promise.all(completed.map(async (campaign) => {
-        let winnerData = {};
-        if (campaign.winnerId) {
-          const winner = await storage.getUser(campaign.winnerId);
-          if (winner) {
-            winnerData = {
-              winnerUsername: winner.username,
-              winnerFullName: winner.fullName || "\u2014",
-              winnerPhone: winner.phone || "",
-              winnerEmail: winner.email
-            };
-          }
-        }
+        const winnerUser = campaign.winnerId ? await storage.getUser(campaign.winnerId) : null;
+        const winnerInfo = winnerUser ? {
+          winnerUsername: winnerUser.username,
+          winnerFullName: winnerUser.fullName || "\u2014",
+          winnerPhone: winnerUser.phone || "",
+          winnerEmail: winnerUser.email
+        } : {
+          winnerUsername: "\u2014",
+          winnerFullName: "\u2014",
+          winnerPhone: "",
+          winnerEmail: ""
+        };
         const campaignTickets = await storage.getTicketsByCampaign(campaign.id);
         const winningTicket = campaignTickets.find((t) => t.isWinner);
         const winnerOrder = winningTicket?.orderId ? await storage.getOrder(winningTicket.orderId) : void 0;
@@ -2669,7 +2670,7 @@ async function registerRoutes(app2) {
           winnerOrderId: winnerOrder?.id || null,
           winnerOrderShipping: winnerOrder?.shippingStatus || "pending",
           winnerId: campaign.winnerId,
-          ...winnerData
+          ...winnerInfo
         };
       }));
       res.json(results);
@@ -2727,9 +2728,9 @@ async function registerRoutes(app2) {
       const effectivePrice = productPrice ?? price;
       if (effectivePrice !== void 0) updateData.productPrice = String(effectivePrice);
       if (totalQuantity !== void 0) updateData.totalQuantity = Number(totalQuantity);
-      if (imageUrl !== void 0) updateData.imageUrl = imageUrl;
+      if (imageUrl !== void 0) updateData.imageUrl = imageUrl ?? null;
       if (endsAt !== void 0) updateData.endsAt = endsAt ? new Date(endsAt) : null;
-      if (isFlashSale !== void 0) updateData.isFlashSale = isFlashSale;
+      if (isFlashSale !== void 0) updateData.isFlashSale = Boolean(isFlashSale);
       if (originalPrice !== void 0) updateData.originalPrice = originalPrice ? String(originalPrice) : null;
       if (flashSaleEndsAt !== void 0) updateData.flashSaleEndsAt = flashSaleEndsAt ? new Date(flashSaleEndsAt) : null;
       if (status !== void 0) updateData.status = status;

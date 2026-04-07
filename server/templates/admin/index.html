@@ -1103,7 +1103,14 @@ function filterOrders() {
   const to = document.getElementById('orderDateTo').value;
   let filtered = allOrders.filter(o => {
     if (q && !((o.id||'').toLowerCase().includes(q) || (o.username||'').toLowerCase().includes(q) || (o.campaignTitle||'').toLowerCase().includes(q))) return false;
-    if (st && o.paymentStatus !== st && o.status !== st) return false;
+    if (st) {
+      const shippingStatuses = ['shipped', 'delivered'];
+      if (shippingStatuses.includes(st)) {
+        if (o.shippingStatus !== st) return false;
+      } else {
+        if (o.paymentStatus !== st && o.status !== st) return false;
+      }
+    }
     if (pm && o.paymentMethod !== pm) return false;
     if (from && new Date(o.createdAt) < new Date(from)) return false;
     if (to && new Date(o.createdAt) > new Date(to+'T23:59:59')) return false;
