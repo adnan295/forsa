@@ -120,9 +120,16 @@ const apiLimiter = rateLimit({
 
 const PgSession = connectPgSimple(session);
 
-function requireAuth(req: Request, res: Response, next: Function) {
+async function requireAuth(req: Request, res: Response, next: Function) {
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Not authenticated" });
+  }
+  const user = await storage.getUser(req.session.userId);
+  if (!user) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  if ((user as any).isSuspended) {
+    return res.status(403).json({ message: "حسابك موقوف. يرجى التواصل مع الدعم." });
   }
   next();
 }
@@ -1369,22 +1376,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: z.string().email().optional(),
         role: z.enum(["user", "admin"]).optional(),
         walletBalance: z.union([z.string(), z.number()]).transform(v => parseFloat(String(v))).pipe(z.number().min(0).max(1000000)).optional(),
+        isSuspended: z.boolean().optional(),
       });
       const parsed = updateUserSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: "بيانات غير صالحة", errors: parsed.error.flatten() });
       }
-      const { email, role, walletBalance } = parsed.data;
+      const { email, role, walletBalance, isSuspended } = parsed.data;
       const adminId = (req.session as any).userId;
       if (role === "user" && req.params.id === adminId) {
         return res.status(403).json({ message: "لا يمكنك سحب صلاحية الأدمن من نفسك" });
       }
       const user = await storage.getUser(req.params.id as string);
       if (!user) return res.status(404).json({ message: "User not found" });
-      const updates: Record<string, string> = {};
+      const updates: Record<string, any> = {};
       if (email !== undefined) updates.email = email;
       if (role !== undefined) updates.role = role;
       if (walletBalance !== undefined) updates.walletBalance = walletBalance.toFixed(2);
+      if (isSuspended !== undefined) updates.isSuspended = isSuspended;
       if (Object.keys(updates).length > 0) {
         await db.update(users).set(updates).where(eq(users.id, req.params.id as string));
       }
@@ -1414,19 +1423,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/users/:id/wallet-transactions", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const txs = await storage.getWalletTransactions(req.params.id as string);
+      res.json(txs);
+    } catch (error) {
+      console.error("Get user wallet transactions error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/users/:id/orders", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const userOrders = await storage.getOrdersByUser(req.params.id as string);
+      const withCampaign = await Promise.all(userOrders.map(async (o) => {
+        const campaign = await storage.getCampaign(o.campaignId);
+        return { ...o, campaignTitle: campaign?.title || "—" };
+      }));
+      res.json(withCampaign);
+    } catch (error) {
+      console.error("Get user orders error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/campaigns/:id/orders", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { tickets } = await import("@shared/schema");
+      const campaignTickets = await storage.getTicketsByCampaign(req.params.id as string);
+      const enriched = await Promise.all(campaignTickets.map(async (t) => {
+        const u = await storage.getUser(t.userId);
+        const order = t.orderId ? await storage.getOrder(t.orderId) : undefined;
+        return {
+          ticketNumber: t.ticketNumber,
+          userId: t.userId,
+          username: u?.username || "—",
+          fullName: u?.fullName || "—",
+          phone: u?.phone || "—",
+          isWinner: t.isWinner,
+          paymentStatus: order?.paymentStatus || "—",
+          totalAmount: order?.totalAmount || "—",
+          createdAt: t.createdAt,
+        };
+      }));
+      res.json(enriched);
+    } catch (error) {
+      console.error("Get campaign orders error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/winners", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const allCampaigns = await storage.getCampaigns();
+      const completed = allCampaigns.filter(c => c.winnerId);
+      const results = await Promise.all(completed.map(async (campaign) => {
+        let winnerData: any = {};
+        if (campaign.winnerId) {
+          const winner = await storage.getUser(campaign.winnerId);
+          if (winner) {
+            winnerData = {
+              winnerUsername: winner.username,
+              winnerFullName: winner.fullName || "—",
+              winnerPhone: winner.phone || "",
+              winnerEmail: winner.email,
+            };
+          }
+        }
+        const campaignTickets = await storage.getTicketsByCampaign(campaign.id);
+        const winningTicket = campaignTickets.find(t => t.isWinner);
+        const winnerOrder = winningTicket?.orderId ? await storage.getOrder(winningTicket.orderId) : undefined;
+        return {
+          campaignId: campaign.id,
+          campaignTitle: campaign.title,
+          prizeName: campaign.prizeName,
+          imageUrl: campaign.imageUrl,
+          drawnAt: campaign.createdAt,
+          winningTicketNumber: winningTicket?.ticketNumber || "—",
+          winnerOrderShipping: winnerOrder?.shippingStatus || "pending",
+          winnerId: campaign.winnerId,
+          ...winnerData,
+        };
+      }));
+      res.json(results);
+    } catch (error) {
+      console.error("Get admin winners error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/reviews", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { reviews: reviewsTable } = await import("@shared/schema");
+      const allReviews = await db.select().from(reviewsTable).orderBy(desc(reviewsTable.createdAt));
+      const enriched = await Promise.all(allReviews.map(async (r) => {
+        const u = await storage.getUser(r.userId);
+        const c = await storage.getCampaign(r.campaignId);
+        return {
+          ...r,
+          username: u?.username || "—",
+          campaignTitle: c?.title || "—",
+        };
+      }));
+      res.json(enriched);
+    } catch (error) {
+      console.error("Get admin reviews error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/admin/reviews/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { reviews: reviewsTable } = await import("@shared/schema");
+      await db.delete(reviewsTable).where(eq(reviewsTable.id, req.params.id as string));
+      res.json({ message: "تم حذف التقييم" });
+    } catch (error) {
+      console.error("Delete review error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/pending-orders-count", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const allOrders = await storage.getAllOrders();
+      const pendingCount = allOrders.filter(o => o.paymentStatus === "pending_review").length;
+      res.json({ count: pendingCount });
+    } catch (error) {
+      console.error("Pending orders count error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.put("/api/admin/campaigns/:id", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const { title, description, price, totalQuantity, imageUrl, endsAt, isFlashSale, originalPrice, flashSaleEndsAt } = req.body;
+      const { title, description, price, productPrice, totalQuantity, imageUrl, endsAt, isFlashSale, originalPrice, flashSaleEndsAt, status, prizeName } = req.body;
       const updateData: Record<string, any> = {};
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
-      if (price !== undefined) updateData.productPrice = String(price);
+      if (prizeName !== undefined) updateData.prizeName = prizeName;
+      const effectivePrice = productPrice ?? price;
+      if (effectivePrice !== undefined) updateData.productPrice = String(effectivePrice);
       if (totalQuantity !== undefined) updateData.totalQuantity = Number(totalQuantity);
       if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
       if (endsAt !== undefined) updateData.endsAt = endsAt ? new Date(endsAt) : null;
       if (isFlashSale !== undefined) updateData.isFlashSale = isFlashSale;
       if (originalPrice !== undefined) updateData.originalPrice = originalPrice ? String(originalPrice) : null;
       if (flashSaleEndsAt !== undefined) updateData.flashSaleEndsAt = flashSaleEndsAt ? new Date(flashSaleEndsAt) : null;
+      if (status !== undefined) updateData.status = status;
       const updated = await storage.updateCampaign(req.params.id as string, updateData);
       if (!updated) return res.status(404).json({ message: "Campaign not found" });
       res.json(updated);

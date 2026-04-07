@@ -57,6 +57,7 @@ export const users = pgTable("users", {
   referredBy: varchar("referred_by"),
   pushToken: text("push_token"),
   walletBalance: decimal("wallet_balance", { precision: 10, scale: 2 }).notNull().default("0"),
+  isSuspended: boolean("is_suspended").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
