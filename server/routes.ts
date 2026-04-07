@@ -6,7 +6,7 @@ import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
 import { pool, db } from "./db";
 import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, reviews, orders, users } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, reviews, orders, users, type Campaign } from "@shared/schema";
 import { sum, count, and, gte, sql, eq, desc } from "drizzle-orm";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
@@ -1390,17 +1390,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const user = await storage.getUser(req.params.id as string);
       if (!user) return res.status(404).json({ message: "User not found" });
-      const updates: Record<string, any> = {};
-      if (email !== undefined) updates.email = email;
-      if (role !== undefined) updates.role = role;
-      if (walletBalance !== undefined) updates.walletBalance = walletBalance.toFixed(2);
-      if (isSuspended !== undefined) updates.isSuspended = isSuspended;
-      if (Object.keys(updates).length > 0) {
-        await db.update(users).set(updates).where(eq(users.id, req.params.id as string));
+      const userUpdates: Partial<{ email: string; role: string; walletBalance: string; isSuspended: boolean }> = {};
+      if (email !== undefined) userUpdates.email = email;
+      if (role !== undefined) userUpdates.role = role;
+      if (walletBalance !== undefined) userUpdates.walletBalance = walletBalance.toFixed(2);
+      if (isSuspended !== undefined) userUpdates.isSuspended = isSuspended;
+      if (Object.keys(userUpdates).length > 0) {
+        await db.update(users).set(userUpdates).where(eq(users.id, req.params.id as string));
       }
       const updated = await storage.getUser(req.params.id as string);
       if (updated) {
-        const { password: _pw, ...safeUser } = updated as any;
+        const { password: _pw, ...safeUser } = updated;
         return res.json(safeUser);
       }
       res.json(updated);
@@ -1476,20 +1476,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/winners", requireAdmin as any, async (req: Request, res: Response) => {
     try {
       const allCampaigns = await storage.getCampaigns();
-      const completed = allCampaigns.filter(c => c.winnerId);
+      const completed = allCampaigns.filter(c => c.status === "completed" && c.winnerId);
       const results = await Promise.all(completed.map(async (campaign) => {
-        let winnerData: any = {};
-        if (campaign.winnerId) {
-          const winner = await storage.getUser(campaign.winnerId);
-          if (winner) {
-            winnerData = {
-              winnerUsername: winner.username,
-              winnerFullName: winner.fullName || "—",
-              winnerPhone: winner.phone || "",
-              winnerEmail: winner.email,
-            };
-          }
-        }
+        const winnerUser = campaign.winnerId ? await storage.getUser(campaign.winnerId) : null;
+        const winnerInfo = winnerUser ? {
+          winnerUsername: winnerUser.username,
+          winnerFullName: winnerUser.fullName || "—",
+          winnerPhone: winnerUser.phone || "",
+          winnerEmail: winnerUser.email,
+        } : {
+          winnerUsername: "—",
+          winnerFullName: "—",
+          winnerPhone: "",
+          winnerEmail: "",
+        };
         const campaignTickets = await storage.getTicketsByCampaign(campaign.id);
         const winningTicket = campaignTickets.find(t => t.isWinner);
         const winnerOrder = winningTicket?.orderId ? await storage.getOrder(winningTicket.orderId) : undefined;
@@ -1503,7 +1503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           winnerOrderId: winnerOrder?.id || null,
           winnerOrderShipping: winnerOrder?.shippingStatus || "pending",
           winnerId: campaign.winnerId,
-          ...winnerData,
+          ...winnerInfo,
         };
       }));
       res.json(results);
@@ -1558,16 +1558,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/campaigns/:id", requireAdmin as any, async (req: Request, res: Response) => {
     try {
       const { title, description, price, productPrice, totalQuantity, imageUrl, endsAt, isFlashSale, originalPrice, flashSaleEndsAt, status, prizeName } = req.body;
-      const updateData: Record<string, any> = {};
+      const updateData: Partial<Campaign> = {};
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
       if (prizeName !== undefined) updateData.prizeName = prizeName;
       const effectivePrice = productPrice ?? price;
       if (effectivePrice !== undefined) updateData.productPrice = String(effectivePrice);
       if (totalQuantity !== undefined) updateData.totalQuantity = Number(totalQuantity);
-      if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+      if (imageUrl !== undefined) updateData.imageUrl = imageUrl ?? null;
       if (endsAt !== undefined) updateData.endsAt = endsAt ? new Date(endsAt) : null;
-      if (isFlashSale !== undefined) updateData.isFlashSale = isFlashSale;
+      if (isFlashSale !== undefined) updateData.isFlashSale = Boolean(isFlashSale);
       if (originalPrice !== undefined) updateData.originalPrice = originalPrice ? String(originalPrice) : null;
       if (flashSaleEndsAt !== undefined) updateData.flashSaleEndsAt = flashSaleEndsAt ? new Date(flashSaleEndsAt) : null;
       if (status !== undefined) updateData.status = status;

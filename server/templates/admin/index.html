@@ -999,10 +999,13 @@ async function loadDashboard() {
     document.getElementById('recentOrdersList').innerHTML = recentO.length ? recentO.map(o=>`
       <div class="info-row"><span class="info-key">#${esc((o.id||'').slice(0,8))} · ${esc(o.campaignTitle||o.campaignId)}</span>${statusBadge(o.paymentStatus)}</div>`).join('') : emptyState('📦','لا توجد طلبات');
 
-    // Recent users
-    const recentU = [...allUsers].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,6);
+    // Recent users (last 5)
+    const recentU = [...allUsers].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
     document.getElementById('recentUsersList').innerHTML = recentU.length ? recentU.map(u=>`
-      <div class="info-row"><span class="info-key">${esc(u.username||u.email)}</span><span class="info-val" style="font-size:11px;color:var(--muted)">${fmtDate(u.createdAt)}</span></div>`).join('') : emptyState('👥','لا يوجد مستخدمون');
+      <div class="info-row" style="cursor:pointer" onclick="goSection('users');setTimeout(()=>openUserModal('${esc(u.id)}'),400)" title="فتح ملف المستخدم">
+        <span class="info-key" style="display:flex;align-items:center;gap:6px"><div class="avatar-circle" style="width:24px;height:24px;font-size:10px">${(u.username||'?')[0].toUpperCase()}</div>${esc(u.username||u.email)}</span>
+        <span class="info-val" style="font-size:11px;color:var(--muted)">${fmtDate(u.createdAt)}</span>
+      </div>`).join('') : emptyState('👥','لا يوجد مستخدمون');
 
     // Top spenders
     try {
@@ -1140,7 +1143,7 @@ function openOrderModal(orderId) {
       <div>
         <div class="sub-section-title" style="margin-bottom:10px">📋 بيانات الطلب</div>
         <div class="info-row"><span class="info-key">رقم الطلب</span><span class="info-val" style="direction:ltr;font-family:monospace">#${esc(order.id)}</span></div>
-        <div class="info-row"><span class="info-key">المستخدم</span><span class="info-val">${esc(order.username||order.userId||'—')}</span></div>
+        <div class="info-row"><span class="info-key">المستخدم</span><span class="info-val">${esc(order.username||order.userId||'—')} <button class="btn-info btn-sm" style="margin-right:8px" onclick="closeModal('orderModal');goSection('users');setTimeout(()=>openUserModal('${esc(order.userId)}'),500)">👤 الملف</button></span></div>
         <div class="info-row"><span class="info-key">الحملة</span><span class="info-val">${esc(order.campaignTitle||order.campaignId||'—')}</span></div>
         <div class="info-row"><span class="info-key">الكمية</span><span class="info-val">${esc(order.quantity)}</span></div>
         <div class="info-row"><span class="info-key">المبلغ</span><span class="info-val" style="color:var(--success);font-size:16px;font-weight:800">$${parseFloat(order.totalAmount||0).toFixed(2)}</span></div>
@@ -1264,6 +1267,7 @@ async function openUserModal(userId) {
         <div class="info-row"><span class="info-key">الهاتف</span><span class="info-val">${esc(user.phone||'—')}</span></div>
         <div class="info-row"><span class="info-key">المدينة</span><span class="info-val">${esc(user.city||'—')}</span></div>
         <div class="info-row"><span class="info-key">الدولة</span><span class="info-val">${esc(user.country||'—')}</span></div>
+        <div class="info-row"><span class="info-key">العنوان التفصيلي</span><span class="info-val">${esc(user.address||'—')}</span></div>
         <div class="info-row"><span class="info-key">البريد مفعّل</span><span class="info-val">${user.emailVerified?'<span class="badge badge-green">✅ مفعّل</span>':'<span class="badge badge-red">❌ غير مفعّل</span>'}</span></div>
         <div class="info-row"><span class="info-key">الدور</span><span class="info-val">${user.role==='admin'?'<span class="badge badge-purple">أدمن</span>':'<span class="badge badge-gray">مستخدم</span>'}</span></div>
         <div class="info-row"><span class="info-key">الحالة</span><span class="info-val">${user.isSuspended?'<span class="badge badge-red">⛔ موقوف</span>':'<span class="badge badge-green">✅ نشط</span>'}</span></div>
@@ -1414,7 +1418,7 @@ function renderCampaignsTable(data) {
       <td><div class="action-btns">
         <button class="btn-secondary btn-sm" onclick="openEditCampaign('${esc(c.id)}')">✏️</button>
         <button class="btn-info btn-sm" onclick="openParticipants('${esc(c.id)}','${jsEsc(c.title||'')}')">👥</button>
-        <button class="btn-warning btn-sm" onclick="runDraw('${esc(c.id)}','${jsEsc(c.title||'')}',${pct})">🎰 سحب</button>
+        <button class="btn-warning btn-sm" onclick="runDraw('${esc(c.id)}','${jsEsc(c.title||'')}',${pct},'${jsEsc(c.prizeName||'')}')">🎰 سحب</button>
         <button class="btn-${c.status==='active'?'warning':'success'} btn-sm" onclick="toggleCampaign('${esc(c.id)}','${esc(c.status)}')">${c.status==='active'?'⏸':'▶️'}</button>
         <button class="btn-danger btn-sm" onclick="deleteCampaign('${esc(c.id)}')">🗑</button>
       </div></td>
@@ -1510,37 +1514,51 @@ async function toggleCampaign(id, currentStatus) {
   try{await api('PUT',`/api/admin/campaigns/${id}`,{status:newStatus});allCampaigns=[];loadCampaigns();toast(`تم ${label} الحملة ✅`,'success');}catch(e){toast(e.message,'error');}
 }
 
-async function runDraw(id, title, pct) {
+async function runDraw(id, title, pct, prizeName) {
   let confirmMsg = `هل تريد تشغيل السحب العشوائي لـ "${title}"؟`;
   if(pct<100) confirmMsg = `⚠️ تحذير: الحملة مكتملة ${pct}% فقط!\n\n${confirmMsg}`;
   if(!confirm(confirmMsg)) return;
   try {
     const r = await api('POST', `/api/admin/draw/${id}`);
     allCampaigns=[]; loadCampaigns();
-    showDrawCelebration(r, title);
+    showDrawCelebration(r, title, prizeName);
   }catch(e){toast(e.message,'error');}
 }
 
-function showDrawCelebration(result, campaignTitle) {
+function showDrawCelebration(result, campaignTitle, prizeName) {
   const winner = result?.winner;
   const ticket = result?.ticket;
-  const campaignInfo = allCampaigns.find(c => c.winnerId);
+  const winnerId = winner?.id;
   document.getElementById('drawCelebrationBody').innerHTML = `
     <div style="text-align:center">
       <span class="celebration-emoji">🎉</span>
       <div class="celebration-title">السحب تم بنجاح!</div>
       <div class="celebration-sub">${esc(campaignTitle)}</div>
+      ${prizeName?`<div style="font-size:12px;color:var(--muted);margin-top:4px">🎁 الجائزة: ${esc(prizeName)}</div>`:''}
     </div>
     <div class="winner-card">
       <div class="wc-label">🏆 الفائز</div>
       <div class="wc-value">${esc(winner?.username||'—')}</div>
+      ${winner?.fullName?`<div class="wc-label" style="margin-top:6px">${esc(winner.fullName)}</div>`:''}
       ${ticket ? `<div style="margin-top:10px"><div class="wc-label">🎫 رقم التذكرة</div><div class="wc-value" style="font-size:14px;font-family:monospace">${esc(ticket.ticketNumber||'—')}</div></div>` : ''}
     </div>
-    <div style="display:flex;gap:9px;justify-content:center;margin-top:16px">
+    <div style="display:flex;gap:9px;justify-content:center;margin-top:16px;flex-wrap:wrap">
+      ${winnerId?`<button class="btn-success" onclick="notifyWinner('${esc(winnerId)}','${jsEsc(winner?.username||'')}')">🔔 إشعار الفائز</button>`:''}
       <button class="btn-primary" onclick="closeModal('drawCelebrationModal');goSection('winners')">🏆 عرض الفائزين</button>
       <button class="btn-secondary" onclick="closeModal('drawCelebrationModal')">إغلاق</button>
     </div>`;
   document.getElementById('drawCelebrationModal').classList.remove('hidden');
+}
+
+async function notifyWinner(userId, username) {
+  try {
+    await api('POST', '/api/admin/send-notification', {
+      userId,
+      title: '🏆 مبروك! أنت الفائز',
+      message: `مبروك ${username}! لقد فزت في سحبنا. سيتواصل معك فريقنا قريباً لتسليم جائزتك.`
+    });
+    toast(`تم إرسال إشعار الفائز ${username} ✅`, 'success');
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 async function openParticipants(campaignId, title) {
