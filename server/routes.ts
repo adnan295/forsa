@@ -1449,7 +1449,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/campaigns/:id/orders", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const { tickets } = await import("@shared/schema");
       const campaignTickets = await storage.getTicketsByCampaign(req.params.id as string);
       const enriched = await Promise.all(campaignTickets.map(async (t) => {
         const u = await storage.getUser(t.userId);
@@ -1500,6 +1499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           imageUrl: campaign.imageUrl,
           drawnAt: campaign.createdAt,
           winningTicketNumber: winningTicket?.ticketNumber || "—",
+          winnerOrderId: winnerOrder?.id || null,
           winnerOrderShipping: winnerOrder?.shippingStatus || "pending",
           winnerId: campaign.winnerId,
           ...winnerData,
@@ -1838,6 +1838,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, sentTo: userIds.length });
     } catch (error) {
       console.error("Broadcast notification error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/admin/send-notification", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { title, message, userId } = req.body;
+      if (!title || !message) return res.status(400).json({ message: "العنوان والرسالة مطلوبان" });
+      if (!userId) return res.status(400).json({ message: "يرجى اختيار مستخدم" });
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+      await storage.createUserNotification(userId, "direct", title, message);
+      sendPushNotifications([userId], title, message);
+      await storage.logActivity("admin_action", "إشعار مباشر", `تم إرسال إشعار مباشر إلى ${user.username}: "${title}"`, req.session.userId!);
+      res.json({ success: true, sentTo: user.username });
+    } catch (error) {
+      console.error("Send notification error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

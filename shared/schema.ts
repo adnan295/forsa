@@ -15,6 +15,7 @@ import { z } from "zod";
 export const roleEnum = pgEnum("user_role", ["user", "admin"]);
 export const campaignStatusEnum = pgEnum("campaign_status", [
   "active",
+  "paused",
   "sold_out",
   "drawing",
   "completed",

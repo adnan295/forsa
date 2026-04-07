@@ -539,8 +539,7 @@ export class DatabaseStorage implements IStorage {
   ): Promise<{ winner: User; ticket: Ticket } | null> {
     const campaign = await this.getCampaign(campaignId);
     if (!campaign) throw new Error("Campaign not found");
-    if (campaign.status !== "sold_out" && campaign.status !== "drawing")
-      throw new Error("Campaign must be sold out before drawing");
+    // Admin can force-draw any campaign regardless of status
 
     await this.updateCampaign(campaignId, { status: "drawing" });
 

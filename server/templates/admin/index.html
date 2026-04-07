@@ -508,6 +508,7 @@
             <tbody id="winnersTable"></tbody>
           </table>
         </div>
+        <div style="padding:12px 16px;font-size:11px;color:var(--muted)">💡 "تأكيد التسليم" يحدّث حالة الشحن في طلب الفائز إلى "تم التسليم"</div>
       </div>
     </div>
 
@@ -538,10 +539,19 @@
     <div id="sec-notifications" class="hidden">
       <div class="section-row">
         <div class="section-card">
-          <div class="section-title">📨 إرسال إشعار جماعي</div>
-          <div class="form-group"><label class="form-label">عنوان الإشعار</label><input class="form-input" id="notifTitle" placeholder="عنوان الإشعار" /></div>
-          <div class="form-group"><label class="form-label">نص الإشعار</label><textarea class="form-input" id="notifBody" placeholder="اكتب رسالتك هنا..." rows="4"></textarea></div>
-          <button class="btn-primary" onclick="sendBroadcast()">📨 إرسال للجميع</button>
+          <div class="section-title">📨 إرسال إشعار</div>
+          <div class="form-group"><label class="form-label">عنوان الإشعار *</label><input class="form-input" id="notifTitle" placeholder="عنوان الإشعار" /></div>
+          <div class="form-group"><label class="form-label">نص الإشعار *</label><textarea class="form-input" id="notifBody" placeholder="اكتب رسالتك هنا..." rows="3"></textarea></div>
+          <div class="divider"></div>
+          <div class="sub-section-title" style="margin-bottom:8px">📡 إرسال جماعي</div>
+          <button class="btn-primary" onclick="sendBroadcast()" style="margin-bottom:14px">📨 إرسال للجميع</button>
+          <div class="divider"></div>
+          <div class="sub-section-title" style="margin-bottom:8px">👤 إرسال لمستخدم محدد</div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label class="form-label">اختر المستخدم</label>
+            <select class="form-input" id="notifUserId"><option value="">-- اختر مستخدماً --</option></select>
+          </div>
+          <button class="btn-info" onclick="sendDirectNotif()">📩 إرسال مباشر</button>
         </div>
         <div class="section-card">
           <div class="section-title">📋 آخر الإشعارات المُرسلة</div>
@@ -946,7 +956,7 @@ function goSection(name) {
   if (navItem) navItem.classList.add('active');
   document.getElementById('pageTitle').textContent = TITLES[name] || name;
   currentSection = name;
-  const loaders = { orders:loadOrders, users:loadUsers, campaigns:loadCampaigns, winners:loadWinners, coupons:loadCoupons, reviews:loadReviews, payments:loadPayments, notifications:loadNotifications, support:loadSupport, activity:loadActivity, permissions:loadPermissions };
+  const loaders = { orders:loadOrders, users:loadUsers, campaigns:loadCampaigns, winners:loadWinners, coupons:loadCoupons, reviews:loadReviews, payments:loadPayments, notifications:()=>{loadNotifications();populateNotifUsers();}, support:loadSupport, activity:loadActivity, permissions:loadPermissions };
   if (loaders[name]) loaders[name]();
 }
 function refreshCurrent() {
@@ -1579,11 +1589,21 @@ async function loadWinners() {
       <td style="font-size:11px;color:var(--muted)">${fmtDate(w.drawnAt)}</td>
       <td>${shippingBadge(w.winnerOrderShipping)}</td>
       <td><div class="action-btns">
-        ${w.winnerPhone?`<a class="btn-success btn-sm" href="https://wa.me/${esc(w.winnerPhone.replace(/\D/g,''))}" target="_blank" style="text-decoration:none">📱 واتساب</a>`:''}
+        ${w.winnerOrderId && w.winnerOrderShipping !== 'delivered' ? `<button class="btn-success btn-sm" onclick="confirmWinnerDelivery('${esc(w.winnerOrderId)}')">✅ تأكيد التسليم</button>` : ''}
+        ${w.winnerPhone?`<a class="btn-info btn-sm" href="https://wa.me/${esc(w.winnerPhone.replace(/\D/g,''))}" target="_blank" style="text-decoration:none">📱 واتساب</a>`:''}
         <button class="btn-secondary btn-sm" onclick="copyText('${jsEsc(w.winnerUsername||'')}')" title="نسخ الاسم">📋</button>
       </div></td>
     </tr>`).join('');
   }catch(e){toast(e.message,'error');}
+}
+
+async function confirmWinnerDelivery(orderId) {
+  if(!confirm('تأكيد تسليم الجائزة لهذا الفائز؟')) return;
+  try {
+    await api('PUT', `/api/admin/orders/${orderId}/shipping`, { shippingStatus: 'delivered' });
+    toast('تم تأكيد التسليم ✅', 'success');
+    loadWinners();
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 function copyText(text) {
@@ -1726,19 +1746,51 @@ async function loadNotifications() {
     el.innerHTML = data.slice(0,15).map(n=>`
       <div class="info-row">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:13px">${esc(n.title)}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-weight:600;font-size:13px">${esc(n.title)}</span>
+            ${n.type==='broadcast'?'<span class="badge badge-purple" style="font-size:9px">جماعي</span>':n.type==='direct'?'<span class="badge badge-blue" style="font-size:9px">مباشر</span>':''}
+          </div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;word-break:break-word">${esc(n.body||n.message||'')}</div>
+          ${n.sentTo||n.recipientCount?`<div style="font-size:10px;color:var(--muted);margin-top:2px">📤 أُرسل إلى: ${n.sentTo||n.recipientCount} مستخدم</div>`:''}
         </div>
         <div style="font-size:11px;color:var(--muted);white-space:nowrap;margin-right:10px">${fmtDate(n.createdAt)}</div>
       </div>`).join('');
   }catch(e){toast(e.message,'error');}
 }
 
+async function populateNotifUsers() {
+  try {
+    if (!allUsers.length) allUsers = await api('GET', '/api/admin/users') || [];
+    const sel = document.getElementById('notifUserId');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- اختر مستخدماً --</option>' + allUsers.filter(u=>u.role!=='admin').map(u=>`<option value="${esc(u.id)}">${esc(u.username)} (${esc(u.email||'')})</option>`).join('');
+  } catch {}
+}
+
 async function sendBroadcast() {
   const title=document.getElementById('notifTitle').value.trim();
   const body=document.getElementById('notifBody').value.trim();
   if(!title||!body){toast('يرجى ملء العنوان والنص','error');return;}
-  try{await api('POST','/api/admin/broadcast-notification',{title,message:body});document.getElementById('notifTitle').value='';document.getElementById('notifBody').value='';toast('تم إرسال الإشعار للجميع ✅','success');loadNotifications();}catch(e){toast(e.message,'error');}
+  try{
+    const r = await api('POST','/api/admin/broadcast-notification',{title,message:body});
+    document.getElementById('notifTitle').value='';document.getElementById('notifBody').value='';
+    toast(`تم إرسال الإشعار للجميع ✅ (${r?.sentTo||0} مستخدم)`,'success');
+    loadNotifications();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function sendDirectNotif() {
+  const title=document.getElementById('notifTitle').value.trim();
+  const body=document.getElementById('notifBody').value.trim();
+  const userId=document.getElementById('notifUserId').value;
+  if(!title||!body){toast('يرجى ملء العنوان والنص','error');return;}
+  if(!userId){toast('يرجى اختيار مستخدم','error');return;}
+  try{
+    const r = await api('POST','/api/admin/send-notification',{title,message:body,userId});
+    document.getElementById('notifTitle').value='';document.getElementById('notifBody').value='';document.getElementById('notifUserId').value='';
+    toast(`تم إرسال الإشعار إلى ${r?.sentTo||'المستخدم'} ✅`,'success');
+    loadNotifications();
+  }catch(e){toast(e.message,'error');}
 }
 
 // ===== SUPPORT =====
