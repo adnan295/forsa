@@ -401,6 +401,7 @@ export const insertCouponSchema = createInsertSchema(coupons).pick({
   discountPercent: true,
   maxUses: true,
   expiresAt: true,
+  enabled: true,
 });
 
 export const updateProfileSchema = z.object({
