@@ -51,10 +51,72 @@
         opacity: 0.6;
       }
 
+      /* ── URGENT TICKER ── */
+      .urgent-ticker {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 200;
+        background: #DC2626;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(220,38,38,0.6);
+      }
+      .urgent-ticker-label {
+        flex-shrink: 0;
+        background: #991B1B;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 900;
+        padding: 0 14px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        letter-spacing: 0.04em;
+        border-left: 2px solid rgba(255,255,255,0.2);
+      }
+      .urgent-ticker-track-wrap {
+        flex: 1;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        align-items: center;
+      }
+      .urgent-ticker-track {
+        display: flex;
+        gap: 0;
+        animation: urgentScroll 18s linear infinite;
+        width: max-content;
+      }
+      .urgent-ticker-track:hover { animation-play-state: paused; }
+      @keyframes urgentScroll {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+      }
+      .urgent-ticker-item {
+        white-space: nowrap;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 0 40px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .urgent-ticker-item::after {
+        content: '•';
+        color: rgba(255,255,255,0.5);
+        font-size: 18px;
+        margin-right: 30px;
+      }
+
       /* ── NAV ── */
       .nav {
         position: fixed;
-        top: 0; left: 0; right: 0;
+        top: 38px; left: 0; right: 0;
         z-index: 50;
         display: flex;
         align-items: center;
@@ -117,7 +179,7 @@
         align-items: center;
         justify-content: center;
         text-align: center;
-        padding: 120px 24px 80px;
+        padding: 158px 24px 80px;
         position: relative;
         overflow: hidden;
       }
@@ -883,6 +945,19 @@
     </style>
   </head>
   <body>
+
+    <!-- URGENT TICKER -->
+    <div class="urgent-ticker">
+      <div class="urgent-ticker-label">⚠️ تنبيه</div>
+      <div class="urgent-ticker-track-wrap">
+        <div class="urgent-ticker-track">
+          <div class="urgent-ticker-item">📲 اضغط على رابط التحميل لفتح التطبيق مباشرةً — إذا لم يفتح التطبيق، قم بتفعيل VPN ثم أعد المحاولة</div>
+          <div class="urgent-ticker-item">📲 اضغط على رابط التحميل لفتح التطبيق مباشرةً — إذا لم يفتح التطبيق، قم بتفعيل VPN ثم أعد المحاولة</div>
+          <div class="urgent-ticker-item">📲 اضغط على رابط التحميل لفتح التطبيق مباشرةً — إذا لم يفتح التطبيق، قم بتفعيل VPN ثم أعد المحاولة</div>
+          <div class="urgent-ticker-item">📲 اضغط على رابط التحميل لفتح التطبيق مباشرةً — إذا لم يفتح التطبيق، قم بتفعيل VPN ثم أعد المحاولة</div>
+        </div>
+      </div>
+    </div>
 
     <!-- NAV -->
     <nav class="nav">
