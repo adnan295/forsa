@@ -1424,6 +1424,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/users/:id/referrals", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const referred = await storage.getReferredUsers(req.params.id as string);
+      res.json(referred);
+    } catch (error) {
+      console.error("Get user referrals error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.get("/api/admin/users/:id/wallet-transactions", requireAdmin as any, async (req: Request, res: Response) => {
     try {
       const txs = await storage.getWalletTransactions(req.params.id as string);
