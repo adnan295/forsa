@@ -540,11 +540,12 @@ export class DatabaseStorage implements IStorage {
     const campaign = await this.getCampaign(campaignId);
     if (!campaign) throw new Error("Campaign not found");
     // Admin can force-draw any campaign regardless of status
+    const campaignTickets = await this.getTicketsByCampaign(campaignId);
+    if (campaignTickets.length === 0) {
+      throw new Error("لا توجد تذاكر في هذه الحملة لإجراء السحب");
+    }
 
     await this.updateCampaign(campaignId, { status: "drawing" });
-
-    const campaignTickets = await this.getTicketsByCampaign(campaignId);
-    if (campaignTickets.length === 0) return null;
 
     const randomIndex = Math.floor(
       (parseInt(randomBytes(4).toString("hex"), 16) / 0xffffffff) *

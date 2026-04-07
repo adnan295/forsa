@@ -128,7 +128,7 @@ async function requireAuth(req: Request, res: Response, next: Function) {
   if (!user) {
     return res.status(401).json({ message: "Not authenticated" });
   }
-  if ((user as any).isSuspended) {
+  if (user.isSuspended) {
     return res.status(403).json({ message: "حسابك موقوف. يرجى التواصل مع الدعم." });
   }
   next();
@@ -1497,7 +1497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           campaignTitle: campaign.title,
           prizeName: campaign.prizeName,
           imageUrl: campaign.imageUrl,
-          drawnAt: campaign.createdAt,
+          drawnAt: campaign.drawAt || campaign.createdAt,
           winningTicketNumber: winningTicket?.ticketNumber || "—",
           winnerOrderId: winnerOrder?.id || null,
           winnerOrderShipping: winnerOrder?.shippingStatus || "pending",
