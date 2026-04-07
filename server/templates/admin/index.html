@@ -400,7 +400,7 @@ input:checked+.slider:before{transform:translateX(-18px)}
       <div class="card" style="padding:0">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>الكود</th><th>الخصم</th><th>النوع</th><th>الحد الأقصى</th><th>الاستخدامات</th><th>الانتهاء</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+            <thead><tr><th>الكود</th><th>الخصم %</th><th>الحد الأقصى</th><th>الاستخدامات</th><th>الانتهاء</th><th>الحالة</th><th>إجراءات</th></tr></thead>
             <tbody id="couponsTable"></tbody>
           </table>
         </div>
@@ -633,18 +633,12 @@ input:checked+.slider:before{transform:translateX(-18px)}
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">كود الكوبون *</label><input class="form-input" id="couponCode" placeholder="SAVE20" style="direction:ltr"/></div>
-        <div class="form-group"><label class="form-label">نوع الخصم</label>
-          <select class="form-input" id="couponType">
-            <option value="percentage">نسبة مئوية %</option>
-            <option value="fixed">مبلغ ثابت $</option>
-          </select>
-        </div>
+        <div class="form-group"><label class="form-label">نسبة الخصم % *</label><input class="form-input" id="couponValue" type="number" min="1" max="100" placeholder="20"/></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">قيمة الخصم *</label><input class="form-input" id="couponValue" type="number" min="0" placeholder="20"/></div>
         <div class="form-group"><label class="form-label">الحد الأقصى للاستخدام</label><input class="form-input" id="couponMax" type="number" min="1" placeholder="100"/></div>
+        <div class="form-group"><label class="form-label">تاريخ الانتهاء</label><input class="form-input" id="couponExpiry" type="datetime-local"/></div>
       </div>
-      <div class="form-group"><label class="form-label">تاريخ الانتهاء</label><input class="form-input" id="couponExpiry" type="datetime-local"/></div>
       <div class="form-group"><label class="form-check"><input type="checkbox" id="couponActive" checked/> مفعّل</label></div>
     </div>
     <div class="modal-footer">
@@ -659,15 +653,9 @@ input:checked+.slider:before{transform:translateX(-18px)}
   <div class="modal">
     <div class="modal-header"><div class="modal-title" id="payModalTitle">💳 طريقة دفع جديدة</div><button class="modal-close" onclick="closeModal('payModal')">✕</button></div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">الاسم *</label><input class="form-input" id="pmName" placeholder="تحويل بنكي"/></div>
-      <div class="form-group"><label class="form-label">نوع الطريقة</label>
-        <select class="form-input" id="pmType">
-          <option value="Bank Transfer">تحويل بنكي</option>
-          <option value="card">بطاقة ائتمان</option>
-          <option value="mobile">دفع جوال</option>
-          <option value="cash">نقداً</option>
-          <option value="wallet">محفظة</option>
-        </select>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">الاسم (إنجليزي) *</label><input class="form-input" id="pmName" placeholder="Bank Transfer" style="direction:ltr"/></div>
+        <div class="form-group"><label class="form-label">الاسم (عربي) *</label><input class="form-input" id="pmNameAr" placeholder="تحويل بنكي"/></div>
       </div>
       <div class="form-group"><label class="form-label">البنك / الخدمة</label><input class="form-input" id="pmBank" placeholder="اسم البنك"/></div>
       <div class="form-group"><label class="form-label">رقم الحساب / IBAN</label><input class="form-input" id="pmIban" placeholder="SA000000000000" style="direction:ltr"/></div>
@@ -1234,15 +1222,14 @@ async function loadCoupons(){
   try{
     const data=await api('GET','/api/admin/coupons')||[];
     const tb=document.getElementById('couponsTable');
-    if(!data.length){tb.innerHTML=`<tr><td colspan="8">${emptyState('🏷️','لا كوبونات')}</td></tr>`;return;}
+    if(!data.length){tb.innerHTML=`<tr><td colspan="7">${emptyState('🏷️','لا كوبونات')}</td></tr>`;return;}
     tb.innerHTML=data.map(c=>`<tr>
       <td><code style="font-weight:700;font-size:14px;color:var(--primary)">${esc(c.code)}</code></td>
-      <td style="font-weight:700">${esc(c.discountValue)}${c.discountType==='percentage'?'%':'$'}</td>
-      <td>${c.discountType==='percentage'?'<span class="badge badge-purple">نسبة %</span>':'<span class="badge badge-blue">مبلغ ثابت $</span>'}</td>
+      <td style="font-weight:700;color:var(--primary)">${esc(c.discountPercent||0)}%</td>
       <td>${esc(c.maxUses||'∞')}</td>
       <td>${esc(c.usedCount||0)}</td>
       <td style="font-size:12px;color:var(--muted)">${c.expiresAt?fmtDateShort(c.expiresAt):'—'}</td>
-      <td>${c.isActive!==false?'<span class="badge badge-green">✅ مفعّل</span>':'<span class="badge badge-red">❌ معطّل</span>'}</td>
+      <td>${c.enabled!==false?'<span class="badge badge-green">✅ مفعّل</span>':'<span class="badge badge-red">❌ معطّل</span>'}</td>
       <td><div class="action-btns">
         <button class="btn btn-secondary btn-sm" onclick="openEditCoupon('${jsEsc(c.id)}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCoupon('${jsEsc(c.id)}')">🗑</button>
@@ -1254,7 +1241,6 @@ function openCouponModal(){
   editingCouponId=null;
   document.getElementById('couponModalTitle').textContent='🏷️ كوبون جديد';
   document.getElementById('couponCode').value='';
-  document.getElementById('couponType').value='percentage';
   document.getElementById('couponValue').value='';
   document.getElementById('couponMax').value='';
   document.getElementById('couponExpiry').value='';
@@ -1262,25 +1248,25 @@ function openCouponModal(){
   document.getElementById('couponModal').classList.remove('hidden');
 }
 function openEditCoupon(id){
-  // we'll fetch from the last loaded list
   api('GET','/api/admin/coupons').then(data=>{
     const c=(data||[]).find(x=>x.id===id);if(!c)return;
     editingCouponId=id;
     document.getElementById('couponModalTitle').textContent='✏️ تعديل الكوبون';
     document.getElementById('couponCode').value=c.code||'';
-    document.getElementById('couponType').value=c.discountType||'percentage';
-    document.getElementById('couponValue').value=c.discountValue||'';
+    document.getElementById('couponValue').value=c.discountPercent||'';
     document.getElementById('couponMax').value=c.maxUses||'';
     document.getElementById('couponExpiry').value=c.expiresAt?new Date(c.expiresAt).toISOString().slice(0,16):'';
-    document.getElementById('couponActive').checked=c.isActive!==false;
+    document.getElementById('couponActive').checked=c.enabled!==false;
     document.getElementById('couponModal').classList.remove('hidden');
   });
 }
 async function saveCoupon(){
-  const body={code:document.getElementById('couponCode').value.trim(),discountType:document.getElementById('couponType').value,discountValue:parseFloat(document.getElementById('couponValue').value),isActive:document.getElementById('couponActive').checked};
+  const discountPercent=parseInt(document.getElementById('couponValue').value);
+  const code=document.getElementById('couponCode').value.trim();
+  if(!code||!discountPercent||discountPercent<1||discountPercent>100){toast('يرجى ملء الكود ونسبة الخصم (1-100)','error');return;}
+  const body={code,discountPercent,enabled:document.getElementById('couponActive').checked};
   const mx=document.getElementById('couponMax').value;if(mx)body.maxUses=parseInt(mx);
   const ex=document.getElementById('couponExpiry').value;if(ex)body.expiresAt=ex;
-  if(!body.code||!body.discountValue){toast('يرجى ملء الكود والقيمة','error');return;}
   try{
     if(editingCouponId){await api('PUT',`/api/admin/coupons/${editingCouponId}`,body);toast('تم تحديث الكوبون ✅','success');}
     else{await api('POST','/api/admin/coupons',body);toast('تم إنشاء الكوبون ✅','success');}
@@ -1362,7 +1348,7 @@ async function loadPayMethods(){
     const data=await api('GET','/api/admin/payment-methods')||[];
     const el=document.getElementById('payList');
     if(!data.length){el.innerHTML=emptyState('💳','لا طرق دفع');return;}
-    el.innerHTML=`<div class="grid-2">${data.map(p=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-weight:700;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(p.type||p.method||'')}</div></div>${p.isEnabled!==false?'<span class="badge badge-green">✅ مفعّل</span>':'<span class="badge badge-red">❌ معطّل</span>'}</div><hr class="divider"/>${p.bankName?`<div class="info-row"><span class="info-key">البنك</span><span class="info-val">${esc(p.bankName)}</span></div>`:''}${p.accountNumber||p.iban?`<div class="info-row"><span class="info-key">رقم الحساب</span><span class="info-val" style="direction:ltr;font-family:monospace">${esc(p.accountNumber||p.iban)}</span></div>`:''}${p.accountHolderName?`<div class="info-row"><span class="info-key">صاحب الحساب</span><span class="info-val">${esc(p.accountHolderName)}</span></div>`:''}${p.instructions?`<div style="margin-top:8px;font-size:12px;color:var(--muted);background:#f9fafb;padding:8px;border-radius:6px">${esc(p.instructions)}</div>`:''}
+    el.innerHTML=`<div class="grid-2">${data.map(p=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-weight:700;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(p.nameAr||'')}</div></div>${p.enabled!==false?'<span class="badge badge-green">✅ مفعّل</span>':'<span class="badge badge-red">❌ معطّل</span>'}</div><hr class="divider"/>${p.bankName?`<div class="info-row"><span class="info-key">البنك</span><span class="info-val">${esc(p.bankName)}</span></div>`:''}${p.iban?`<div class="info-row"><span class="info-key">رقم الحساب / IBAN</span><span class="info-val" style="direction:ltr;font-family:monospace">${esc(p.iban)}</span></div>`:''}${p.accountName?`<div class="info-row"><span class="info-key">صاحب الحساب</span><span class="info-val">${esc(p.accountName)}</span></div>`:''}${p.description?`<div style="margin-top:8px;font-size:12px;color:var(--muted);background:#f9fafb;padding:8px;border-radius:6px">${esc(p.description)}</div>`:''}
           <div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-secondary btn-sm" onclick="openEditPay('${jsEsc(p.id)}')">✏️ تعديل</button><button class="btn btn-danger btn-sm" onclick="deletePayMethod('${jsEsc(p.id)}')">🗑 حذف</button></div>
         </div>`).join('')}</div>`;
     window._payData=data;
@@ -1371,8 +1357,7 @@ async function loadPayMethods(){
 function openPayModal(){
   editingPayId=null;
   document.getElementById('payModalTitle').textContent='💳 طريقة دفع جديدة';
-  ['pmName','pmBank','pmIban','pmHolder','pmInstructions'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('pmType').value='Bank Transfer';
+  ['pmName','pmNameAr','pmBank','pmIban','pmHolder','pmInstructions'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('pmEnabled').checked=true;
   document.getElementById('payModal').classList.remove('hidden');
 }
@@ -1381,17 +1366,19 @@ function openEditPay(id){
   editingPayId=id;
   document.getElementById('payModalTitle').textContent='✏️ تعديل طريقة الدفع';
   document.getElementById('pmName').value=p.name||'';
-  document.getElementById('pmType').value=p.type||p.method||'Bank Transfer';
+  document.getElementById('pmNameAr').value=p.nameAr||'';
   document.getElementById('pmBank').value=p.bankName||'';
-  document.getElementById('pmIban').value=p.accountNumber||p.iban||'';
-  document.getElementById('pmHolder').value=p.accountHolderName||'';
-  document.getElementById('pmInstructions').value=p.instructions||'';
-  document.getElementById('pmEnabled').checked=p.isEnabled!==false;
+  document.getElementById('pmIban').value=p.iban||'';
+  document.getElementById('pmHolder').value=p.accountName||'';
+  document.getElementById('pmInstructions').value=p.description||'';
+  document.getElementById('pmEnabled').checked=p.enabled!==false;
   document.getElementById('payModal').classList.remove('hidden');
 }
 async function savePayMethod(){
-  const body={name:document.getElementById('pmName').value.trim(),type:document.getElementById('pmType').value,bankName:document.getElementById('pmBank').value.trim(),accountNumber:document.getElementById('pmIban').value.trim(),accountHolderName:document.getElementById('pmHolder').value.trim(),instructions:document.getElementById('pmInstructions').value.trim(),isEnabled:document.getElementById('pmEnabled').checked};
-  if(!body.name){toast('يرجى إدخال الاسم','error');return;}
+  const name=document.getElementById('pmName').value.trim();
+  const nameAr=document.getElementById('pmNameAr').value.trim();
+  if(!name||!nameAr){toast('يرجى إدخال الاسم بالإنجليزية والعربية','error');return;}
+  const body={name,nameAr,icon:'card',bankName:document.getElementById('pmBank').value.trim()||null,iban:document.getElementById('pmIban').value.trim()||null,accountName:document.getElementById('pmHolder').value.trim()||null,description:document.getElementById('pmInstructions').value.trim()||null,enabled:document.getElementById('pmEnabled').checked};
   try{
     if(editingPayId){await api('PUT',`/api/admin/payment-methods/${editingPayId}`,body);toast('تم التحديث ✅','success');}
     else{await api('POST','/api/admin/payment-methods',body);toast('تم الإضافة ✅','success');}
