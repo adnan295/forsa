@@ -517,6 +517,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!campaignData.description) campaignData.description = ' ';
       const requestedStatus = campaignData.status;
       delete campaignData.status; // not part of insertCampaignSchema, applied after creation
+
+      // Validate minimum 2 products
+      if (!productsData || !Array.isArray(productsData) || productsData.length < 2) {
+        return res.status(400).json({ message: "يجب إضافة منتجين (موديلين) على الأقل لإنشاء الحملة" });
+      }
+
       const parsed = insertCampaignSchema.safeParse(campaignData);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
@@ -645,6 +651,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const product = await storage.getCampaignProduct(req.params.id as string);
       if (!product) return res.status(404).json({ message: "Product not found" });
+
+      // Enforce minimum 2 products per campaign
+      const existingProducts = await storage.getCampaignProducts(product.campaignId);
+      if (existingProducts.length <= 2) {
+        return res.status(400).json({ message: "لا يمكن حذف المنتج — يجب الإبقاء على منتجين (موديلين) على الأقل في الحملة" });
+      }
+
       const deleted = await storage.deleteCampaignProduct(req.params.id as string);
       if (deleted) {
         await storage.syncCampaignAggregates(product.campaignId);
@@ -1572,7 +1585,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/campaigns/:id", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const { title, description, price, productPrice, totalQuantity, imageUrl, endsAt, isFlashSale, originalPrice, flashSaleEndsAt, status, prizeName } = req.body;
+      const { title, description, price, productPrice, totalQuantity, imageUrl, endsAt, isFlashSale, originalPrice, flashSaleEndsAt, status, prizeName, products: productsData } = req.body;
+
+      // If products array provided, validate minimum 2
+      if (productsData !== undefined) {
+        if (!Array.isArray(productsData) || productsData.length < 2) {
+          return res.status(400).json({ message: "يجب الإبقاء على منتجين (موديلين) على الأقل في الحملة" });
+        }
+      }
+
       const updateData: Partial<Campaign> = {};
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;

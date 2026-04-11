@@ -986,6 +986,7 @@ function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClo
     }))
   );
   const [newProducts, setNewProducts] = useState<ProductVariant[]>([]);
+  const [productError, setProductError] = useState<string | null>(null);
 
   const addNewProduct = () => {
     setNewProducts((prev) => [
@@ -1011,11 +1012,15 @@ function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClo
       const res = await apiRequest("DELETE", `/api/admin/campaign-products/${productId}`);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data: any, productId: string) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setProducts((prev) => prev.filter((v) => v.key !== productId));
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
     },
-    onError: (err: any) => Alert.alert("خطأ", err.message),
+    onError: (err: any) => {
+      const msg = (err as any)?.message || "حدث خطأ أثناء حذف المنتج";
+      setProductError(msg);
+    },
   });
 
   const handleDeleteProduct = (p: ProductVariant) => {
@@ -1023,11 +1028,21 @@ function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClo
       { text: "إلغاء", style: "cancel" },
       {
         text: "حذف", style: "destructive", onPress: () => {
+          setProductError(null);
           deleteMutation.mutate(p.key);
-          setProducts((prev) => prev.filter((v) => v.key !== p.key));
         },
       },
     ]);
+  };
+
+  const handleSave = () => {
+    const totalCount = products.length + newProducts.filter(p => p.name && p.price && p.quantity).length;
+    if (totalCount < 2) {
+      setProductError("يجب الإبقاء على منتجين (موديلين) على الأقل في الحملة");
+      return;
+    }
+    setProductError(null);
+    saveMutation.mutate();
   };
 
   const saveMutation = useMutation({
@@ -1128,12 +1143,18 @@ function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClo
             </Pressable>
           </ScrollView>
 
+          {productError && (
+            <View style={{ marginHorizontal: 16, marginBottom: 8, backgroundColor: "#FEE2E2", borderRadius: 10, padding: 10 }}>
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#991B1B", textAlign: "right", writingDirection: "rtl" as const }}>{productError}</Text>
+            </View>
+          )}
+
           <View style={modalStyles.footer}>
             <Pressable onPress={onClose} style={modalStyles.cancelBtn}>
               <Text style={modalStyles.cancelText}>إلغاء</Text>
             </Pressable>
             <Pressable
-              onPress={() => saveMutation.mutate()}
+              onPress={handleSave}
               style={[modalStyles.submitBtn, saveMutation.isPending && { opacity: 0.6 }]}
               disabled={saveMutation.isPending}
             >
@@ -1583,6 +1604,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState("");
   const [prizeName, setPrizeName] = useState("");
   const [prizeDesc, setPrizeDesc] = useState("");
@@ -1683,7 +1705,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
       onClose();
       setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc(""); setCategory("other"); setEndsAtText(""); setImageUri(null); setImageFile(null); setHasVariants(false); setVariants([]); setIsFlashSale(false); setOriginalPriceText(""); setFlashSaleEndsAtText("");
     },
-    onError: (err: any) => Alert.alert("خطأ", err.message),
+    onError: (err: any) => setCreateError(err.message || "حدث خطأ أثناء إنشاء الحملة"),
   });
 
   const addVariant = () => {
@@ -1704,25 +1726,25 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
   };
 
   const handleCreate = async () => {
+    setCreateError(null);
+
     if (!title || !description || !prizeName) {
-      Alert.alert("خطأ", "يرجى ملء جميع الحقول المطلوبة");
+      setCreateError("يرجى ملء جميع الحقول المطلوبة (العنوان، الوصف، الجائزة)");
       return;
     }
 
-    if (hasVariants) {
-      if (variants.length === 0) {
-        Alert.alert("خطأ", "يرجى إضافة موديل واحد على الأقل");
-        return;
-      }
-      for (const v of variants) {
-        if (!v.name || !v.price || !v.quantity) {
-          Alert.alert("خطأ", "يرجى ملء جميع حقول الموديلات (الاسم، السعر، الكمية)");
-          return;
-        }
-      }
-    } else {
-      if (!price || !quantity) {
-        Alert.alert("خطأ", "يرجى ملء السعر والكمية");
+    if (!hasVariants) {
+      setCreateError("يجب تفعيل 'موديلات متعددة' وإضافة منتجين على الأقل لإنشاء الحملة");
+      return;
+    }
+
+    if (variants.length < 2) {
+      setCreateError("يجب إضافة منتجين (موديلين) على الأقل لإنشاء الحملة");
+      return;
+    }
+    for (const v of variants) {
+      if (!v.name || !v.price || !v.quantity) {
+        setCreateError("يرجى ملء جميع حقول الموديلات (الاسم، السعر، الكمية)");
         return;
       }
     }
@@ -1876,6 +1898,12 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
               <View style={{ backgroundColor: "#FFF5F5", borderRadius: 12, padding: 12, marginBottom: 12, gap: 8 }}>
                 <ModalInput label="السعر الأصلي قبل الخصم ($)" value={originalPriceText} onChangeText={setOriginalPriceText} placeholder="49.99" keyboardType="decimal-pad" />
                 <ModalInput label="ينتهي العرض في" value={flashSaleEndsAtText} onChangeText={setFlashSaleEndsAtText} placeholder="2025-06-30T23:59" />
+              </View>
+            )}
+
+            {createError && (
+              <View style={{ backgroundColor: "#FEE2E2", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#991B1B", textAlign: "right", writingDirection: "rtl" as const }}>{createError}</Text>
               </View>
             )}
 

@@ -556,16 +556,22 @@ input:checked+.slider:before{transform:translateX(-18px)}
         <div class="form-group"><label class="form-label">اسم الجائزة *</label><input class="form-input" id="campPrize" placeholder="iPhone 16 Pro"/></div>
       </div>
       <div class="form-group"><label class="form-label">وصف الحملة</label><textarea class="form-input" id="campDesc" rows="3" placeholder="وصف تفصيلي للحملة..."></textarea></div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">سعر التذكرة ($) *</label><input class="form-input" id="campPrice" type="number" step="0.01" min="0.01" placeholder="9.99"/></div>
-        <div class="form-group"><label class="form-label">الكمية الإجمالية *</label><input class="form-input" id="campQty" type="number" min="1" placeholder="100"/></div>
-      </div>
       <div class="form-group"><label class="form-label">صورة الحملة</label>
         <input type="file" class="form-input" id="campImgFile" accept="image/*" onchange="previewCampImg(this)"/>
         <img id="campImgPreview" src="" alt="" style="margin-top:8px;width:120px;height:80px;object-fit:cover;border-radius:8px;display:none;border:1px solid var(--border)"/>
         <input type="hidden" id="campImgUrl"/>
       </div>
       <div class="form-group"><label class="form-label">تاريخ الانتهاء (اختياري)</label><input class="form-input" id="campEndsAt" type="datetime-local"/></div>
+      <hr class="divider"/>
+      <!-- PRODUCTS SECTION -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <label class="form-label" style="margin-bottom:0">📦 المنتجات (الموديلات) * <span style="font-size:11px;color:var(--danger);font-weight:700">2 على الأقل</span></label>
+          <button type="button" class="btn btn-primary btn-sm" onclick="addCampProduct()">➕ منتج</button>
+        </div>
+        <div id="campProductsError" style="display:none;background:#FEE2E2;color:#991B1B;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:8px"></div>
+        <div id="campProductsList"></div>
+      </div>
       <hr class="divider"/>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
         <label class="form-check"><input type="checkbox" id="campFlash" onchange="toggleFlash(this)"/> ⚡ تفعيل Flash Sale</label>
@@ -583,6 +589,7 @@ input:checked+.slider:before{transform:translateX(-18px)}
           <option value="completed">مكتملة</option>
         </select>
       </div>
+      <div id="campNewOnlyFields" style="display:none"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-primary" onclick="saveCampaign()">💾 حفظ</button>
@@ -884,14 +891,71 @@ function filterCampaigns(){
   }).join('');
 }
 
+let campProductsData=[];
+let campProductCounter=0;
+let campOriginalProductIds=[];
+
+function renderCampProducts(){
+  const list=document.getElementById('campProductsList');
+  if(!campProductsData.length){
+    list.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;border:2px dashed var(--border);border-radius:8px">لا توجد منتجات — اضغط "➕ منتج" لإضافة منتج</div>';
+    return;
+  }
+  list.innerHTML=campProductsData.map((p,i)=>`
+    <div style="background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:700;color:var(--primary)">منتج ${i+1}</span>
+        <button type="button" class="btn btn-danger btn-sm" onclick="removeCampProduct(${p._key})">✕ حذف</button>
+      </div>
+      <div class="form-row" style="margin-bottom:8px">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">الاسم (عربي) *</label><input class="form-input" value="${esc(p.nameAr||'')}" placeholder="256 جيجا أسود" oninput="updateCampProduct(${p._key},'nameAr',this.value)"/></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">الاسم (إنجليزي) *</label><input class="form-input" value="${esc(p.name||'')}" placeholder="256GB Black" oninput="updateCampProduct(${p._key},'name',this.value)" style="direction:ltr"/></div>
+      </div>
+      <div class="form-row" style="margin-bottom:8px">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">السعر ($) *</label><input class="form-input" type="number" step="0.01" min="0.01" value="${esc(p.price||'')}" placeholder="9.99" oninput="updateCampProduct(${p._key},'price',this.value)"/></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">الكمية *</label><input class="form-input" type="number" min="1" value="${esc(p.quantity||'')}" placeholder="100" oninput="updateCampProduct(${p._key},'quantity',this.value)"/></div>
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">رابط الصورة (اختياري)</label><input class="form-input" value="${esc(p.imageUrl||'')}" placeholder="https://example.com/image.jpg" oninput="updateCampProduct(${p._key},'imageUrl',this.value)" style="direction:ltr"/></div>
+    </div>
+  `).join('');
+}
+
+function addCampProduct(){
+  campProductCounter++;
+  campProductsData.push({_key:campProductCounter,name:'',nameAr:'',price:'',quantity:'',imageUrl:''});
+  renderCampProducts();
+  hideCampProductsError();
+}
+
+function removeCampProduct(key){
+  campProductsData=campProductsData.filter(p=>p._key!==key);
+  renderCampProducts();
+}
+
+function updateCampProduct(key,field,value){
+  const p=campProductsData.find(x=>x._key===key);
+  if(p)p[field]=value;
+}
+
+function showCampProductsError(msg){
+  const el=document.getElementById('campProductsError');
+  el.textContent=msg;
+  el.style.display='block';
+}
+
+function hideCampProductsError(){
+  document.getElementById('campProductsError').style.display='none';
+}
+
 function openCampModal(){
   editingCampId=null;
+  campProductsData=[];
+  campProductCounter=0;
+  campOriginalProductIds=[];
   document.getElementById('campModalTitle').textContent='📣 حملة جديدة';
   document.getElementById('campTitle').value='';
   document.getElementById('campPrize').value='';
   document.getElementById('campDesc').value='';
-  document.getElementById('campPrice').value='';
-  document.getElementById('campQty').value='';
   document.getElementById('campImgUrl').value='';
   document.getElementById('campImgPreview').style.display='none';
   document.getElementById('campImgFile').value='';
@@ -901,18 +965,21 @@ function openCampModal(){
   document.getElementById('campFlashEnds').value='';
   document.getElementById('flashFields').classList.add('hidden');
   document.getElementById('campStatusInput').value='active';
+  hideCampProductsError();
+  renderCampProducts();
   document.getElementById('campModal').classList.remove('hidden');
 }
 function openEditCamp(id){
   const c=allCamps.find(x=>x.id===id);
   if(!c)return;
   editingCampId=id;
+  campProductsData=[];
+  campProductCounter=0;
+  campOriginalProductIds=[];
   document.getElementById('campModalTitle').textContent='✏️ تعديل الحملة';
   document.getElementById('campTitle').value=c.title||'';
   document.getElementById('campPrize').value=c.prizeName||'';
   document.getElementById('campDesc').value=c.description||'';
-  document.getElementById('campPrice').value=c.productPrice||'';
-  document.getElementById('campQty').value=c.totalQuantity||'';
   document.getElementById('campImgUrl').value=c.imageUrl||'';
   if(c.imageUrl){const p=document.getElementById('campImgPreview');p.src=c.imageUrl;p.style.display='block';}
   else{document.getElementById('campImgPreview').style.display='none';}
@@ -923,6 +990,17 @@ function openEditCamp(id){
   document.getElementById('campFlashEnds').value=c.flashSaleEndsAt?new Date(c.flashSaleEndsAt).toISOString().slice(0,16):'';
   document.getElementById('flashFields').classList.toggle('hidden',!c.isFlashSale);
   document.getElementById('campStatusInput').value=c.status||'active';
+  hideCampProductsError();
+  // Load existing products into the products list (store backend id for update/delete)
+  campOriginalProductIds=[];
+  if(c.products&&c.products.length){
+    c.products.forEach(p=>{
+      campProductCounter++;
+      campOriginalProductIds.push(p.id);
+      campProductsData.push({_key:campProductCounter,_id:p.id,name:p.name||'',nameAr:p.nameAr||'',price:String(p.price||''),quantity:String(p.quantity||''),imageUrl:p.imageUrl||''});
+    });
+  }
+  renderCampProducts();
   document.getElementById('campModal').classList.remove('hidden');
 }
 function toggleFlash(cb){document.getElementById('flashFields').classList.toggle('hidden',!cb.checked);}
@@ -942,33 +1020,130 @@ async function saveCampaign(){
   const title=document.getElementById('campTitle').value.trim();
   const prizeName=document.getElementById('campPrize').value.trim();
   const description=document.getElementById('campDesc').value.trim()||' ';
-  const productPrice=document.getElementById('campPrice').value;
-  const totalQuantityRaw=document.getElementById('campQty').value;
-  const totalQuantity=totalQuantityRaw?parseInt(totalQuantityRaw,10):null;
-  if(!title||!prizeName||!productPrice||!totalQuantity){toast('يرجى ملء جميع الحقول المطلوبة','error');return;}
-  const body={
-    title,
-    prizeName,
-    description,
-    productPrice:String(productPrice),
-    totalQuantity,
-    imageUrl:document.getElementById('campImgUrl').value||null,
-    isFlashSale:document.getElementById('campFlash').checked,
-    status:document.getElementById('campStatusInput').value
-  };
-  const endsAt=document.getElementById('campEndsAt').value;
-  if(endsAt)body.endsAt=new Date(endsAt).toISOString();
-  if(body.isFlashSale){
-    const op=document.getElementById('campOrigPrice').value;
-    if(op)body.originalPrice=String(op);
-    const fe=document.getElementById('campFlashEnds').value;
-    if(fe)body.flashSaleEndsAt=new Date(fe).toISOString();
+  if(!title||!prizeName){toast('يرجى ملء جميع الحقول المطلوبة','error');return;}
+
+  // Validate products (required for new campaigns only)
+  if(!editingCampId){
+    if(campProductsData.length<2){
+      showCampProductsError('يجب إضافة منتجين (موديلين) على الأقل قبل حفظ الحملة');
+      document.getElementById('campProductsList').scrollIntoView({behavior:'smooth'});
+      return;
+    }
+    for(let i=0;i<campProductsData.length;i++){
+      const p=campProductsData[i];
+      if(!p.name||!p.price||!p.quantity){
+        showCampProductsError(`يرجى ملء جميع الحقول المطلوبة للمنتج ${i+1} (الاسم، السعر، الكمية)`);
+        return;
+      }
+    }
+    hideCampProductsError();
   }
-  try{
-    if(editingCampId){await api('PUT',`/api/admin/campaigns/${editingCampId}`,body);toast('تم تحديث الحملة ✅','success');}
-    else{await api('POST','/api/campaigns',body);toast('تم إنشاء الحملة ✅','success');}
-    closeModal('campModal');allCamps=[];loadCampaigns();
-  }catch(e){toast(e.message,'error');}
+
+  const isFlashSale=document.getElementById('campFlash').checked;
+
+  if(editingCampId){
+    // Validate products in edit mode too (ensure at least 2 remain)
+    if(campProductsData.length<2){
+      showCampProductsError('يجب الإبقاء على منتجين (موديلين) على الأقل في الحملة');
+      return;
+    }
+    for(let i=0;i<campProductsData.length;i++){
+      const p=campProductsData[i];
+      if(!p.name||!p.price||!p.quantity){
+        showCampProductsError(`يرجى ملء جميع الحقول المطلوبة للمنتج ${i+1} (الاسم، السعر، الكمية)`);
+        return;
+      }
+    }
+    hideCampProductsError();
+
+    // Edit mode: update basic campaign fields + sync products
+    const body={
+      title,
+      prizeName,
+      description,
+      imageUrl:document.getElementById('campImgUrl').value||null,
+      isFlashSale,
+      status:document.getElementById('campStatusInput').value
+    };
+    const endsAt=document.getElementById('campEndsAt').value;
+    if(endsAt)body.endsAt=new Date(endsAt).toISOString();
+    if(isFlashSale){
+      const op=document.getElementById('campOrigPrice').value;
+      if(op)body.originalPrice=String(op);
+      const fe=document.getElementById('campFlashEnds').value;
+      if(fe)body.flashSaleEndsAt=new Date(fe).toISOString();
+    }
+    try{
+      // Update basic fields
+      await api('PUT',`/api/admin/campaigns/${editingCampId}`,body);
+
+      // First: create new products (before deleting, to safely handle replace-at-minimum)
+      for(const p of campProductsData){
+        if(!p._id&&p.name&&p.price&&p.quantity){
+          await api('POST',`/api/admin/campaigns/${editingCampId}/products`,{
+            name:p.name,nameAr:p.nameAr||p.name,price:p.price,
+            quantity:parseInt(p.quantity,10),imageUrl:p.imageUrl||undefined
+          });
+        }
+      }
+
+      // Then: delete removed products (fail fast on error)
+      const currentIds=campProductsData.filter(p=>p._id).map(p=>p._id);
+      for(const origId of campOriginalProductIds){
+        if(!currentIds.includes(origId)){
+          await api('DELETE',`/api/admin/campaign-products/${origId}`);
+        }
+      }
+
+      // Finally: update existing products that have a backend ID (fail fast on error)
+      for(const p of campProductsData){
+        if(p._id){
+          await api('PUT',`/api/admin/campaign-products/${p._id}`,{
+            name:p.name,nameAr:p.nameAr||p.name,price:p.price,
+            quantity:parseInt(p.quantity,10),imageUrl:p.imageUrl||undefined
+          });
+        }
+      }
+
+      toast('تم تحديث الحملة ✅','success');
+      closeModal('campModal');allCamps=[];loadCampaigns();
+    }catch(e){toast(e.message,'error');}
+  } else {
+    // New campaign: collect products and derive price/quantity
+    const products=campProductsData.map(p=>({
+      name:p.name,
+      nameAr:p.nameAr||p.name,
+      price:p.price,
+      quantity:parseInt(p.quantity,10),
+      imageUrl:p.imageUrl||undefined
+    }));
+    const productPrice=String(products[0].price);
+    const totalQuantity=products.reduce((s,p)=>s+p.quantity,0);
+    const body={
+      title,
+      prizeName,
+      description,
+      productPrice,
+      totalQuantity,
+      imageUrl:document.getElementById('campImgUrl').value||null,
+      isFlashSale,
+      status:document.getElementById('campStatusInput').value,
+      products
+    };
+    const endsAt=document.getElementById('campEndsAt').value;
+    if(endsAt)body.endsAt=new Date(endsAt).toISOString();
+    if(isFlashSale){
+      const op=document.getElementById('campOrigPrice').value;
+      if(op)body.originalPrice=String(op);
+      const fe=document.getElementById('campFlashEnds').value;
+      if(fe)body.flashSaleEndsAt=new Date(fe).toISOString();
+    }
+    try{
+      await api('POST','/api/campaigns',body);
+      toast('تم إنشاء الحملة ✅','success');
+      closeModal('campModal');allCamps=[];loadCampaigns();
+    }catch(e){toast(e.message,'error');}
+  }
 }
 async function deleteCamp(id){if(!confirm('حذف هذه الحملة نهائياً؟'))return;try{await api('DELETE',`/api/admin/campaigns/${id}`);toast('تم حذف الحملة','warning');allCamps=[];loadCampaigns();}catch(e){toast(e.message,'error');}}
 async function toggleCamp(id,status){
