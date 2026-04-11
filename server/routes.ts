@@ -506,12 +506,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/campaigns", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const { products: productsData, ...campaignData } = req.body;
+      const { products: productsData, ...rawData } = req.body;
+      // coerce types coming from HTML form / JSON
+      const campaignData: any = { ...rawData };
+      if (campaignData.totalQuantity !== undefined) campaignData.totalQuantity = Number(campaignData.totalQuantity);
+      if (campaignData.productPrice !== undefined) campaignData.productPrice = String(campaignData.productPrice);
+      if (campaignData.originalPrice !== undefined && campaignData.originalPrice !== null) campaignData.originalPrice = String(campaignData.originalPrice);
+      if (campaignData.endsAt) campaignData.endsAt = new Date(campaignData.endsAt);
+      if (campaignData.flashSaleEndsAt) campaignData.flashSaleEndsAt = new Date(campaignData.flashSaleEndsAt);
+      if (!campaignData.description) campaignData.description = ' ';
+      const requestedStatus = campaignData.status;
+      delete campaignData.status; // not part of insertCampaignSchema, applied after creation
       const parsed = insertCampaignSchema.safeParse(campaignData);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
       }
-      const campaign = await storage.createCampaign(parsed.data);
+      let campaign = await storage.createCampaign(parsed.data);
+      // apply status if different from default
+      const validStatuses = ["active","paused","sold_out","drawing","completed"];
+      if (requestedStatus && validStatuses.includes(requestedStatus) && requestedStatus !== "active") {
+        campaign = await storage.updateCampaign(campaign.id, { status: requestedStatus as any }) ?? campaign;
+      }
 
       if (productsData && Array.isArray(productsData) && productsData.length > 0) {
         for (let i = 0; i < productsData.length; i++) {

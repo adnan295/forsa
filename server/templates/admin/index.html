@@ -939,24 +939,31 @@ async function previewCampImg(input){
 }
 
 async function saveCampaign(){
+  const title=document.getElementById('campTitle').value.trim();
+  const prizeName=document.getElementById('campPrize').value.trim();
+  const description=document.getElementById('campDesc').value.trim()||' ';
+  const productPrice=document.getElementById('campPrice').value;
+  const totalQuantityRaw=document.getElementById('campQty').value;
+  const totalQuantity=totalQuantityRaw?parseInt(totalQuantityRaw,10):null;
+  if(!title||!prizeName||!productPrice||!totalQuantity){toast('يرجى ملء جميع الحقول المطلوبة','error');return;}
   const body={
-    title:document.getElementById('campTitle').value.trim(),
-    prizeName:document.getElementById('campPrize').value.trim(),
-    description:document.getElementById('campDesc').value.trim(),
-    productPrice:document.getElementById('campPrice').value,
-    totalQuantity:document.getElementById('campQty').value,
+    title,
+    prizeName,
+    description,
+    productPrice:String(productPrice),
+    totalQuantity,
     imageUrl:document.getElementById('campImgUrl').value||null,
     isFlashSale:document.getElementById('campFlash').checked,
     status:document.getElementById('campStatusInput').value
   };
   const endsAt=document.getElementById('campEndsAt').value;
-  if(endsAt)body.endsAt=endsAt;
+  if(endsAt)body.endsAt=new Date(endsAt).toISOString();
   if(body.isFlashSale){
-    body.originalPrice=document.getElementById('campOrigPrice').value||null;
+    const op=document.getElementById('campOrigPrice').value;
+    if(op)body.originalPrice=String(op);
     const fe=document.getElementById('campFlashEnds').value;
-    if(fe)body.flashSaleEndsAt=fe;
+    if(fe)body.flashSaleEndsAt=new Date(fe).toISOString();
   }
-  if(!body.title||!body.prizeName||!body.productPrice||!body.totalQuantity){toast('يرجى ملء جميع الحقول المطلوبة','error');return;}
   try{
     if(editingCampId){await api('PUT',`/api/admin/campaigns/${editingCampId}`,body);toast('تم تحديث الحملة ✅','success');}
     else{await api('POST','/api/campaigns',body);toast('تم إنشاء الحملة ✅','success');}
