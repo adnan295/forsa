@@ -661,13 +661,22 @@ input:checked+.slider:before{transform:translateX(-18px)}
     <div class="modal-header"><div class="modal-title" id="payModalTitle">💳 طريقة دفع جديدة</div><button class="modal-close" onclick="closeModal('payModal')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group"><label class="form-label">الاسم (إنجليزي) *</label><input class="form-input" id="pmName" placeholder="Bank Transfer" style="direction:ltr"/></div>
-        <div class="form-group"><label class="form-label">الاسم (عربي) *</label><input class="form-input" id="pmNameAr" placeholder="تحويل بنكي"/></div>
+        <div class="form-group"><label class="form-label">الاسم (إنجليزي) *</label><input class="form-input" id="pmName" placeholder="Sham Cash" style="direction:ltr"/></div>
+        <div class="form-group"><label class="form-label">الاسم (عربي) *</label><input class="form-input" id="pmNameAr" placeholder="شام كاش"/></div>
       </div>
-      <div class="form-group"><label class="form-label">البنك / الخدمة</label><input class="form-input" id="pmBank" placeholder="اسم البنك"/></div>
-      <div class="form-group"><label class="form-label">رقم الحساب / IBAN</label><input class="form-input" id="pmIban" placeholder="SA000000000000" style="direction:ltr"/></div>
+      <div class="form-group"><label class="form-label">البنك / الخدمة</label><input class="form-input" id="pmBank" placeholder="اسم البنك أو الخدمة"/></div>
+      <div class="form-group"><label class="form-label">رقم الحساب / IBAN</label><input class="form-input" id="pmIban" placeholder="SA000000000000 أو رقم المحفظة" style="direction:ltr"/></div>
       <div class="form-group"><label class="form-label">اسم صاحب الحساب</label><input class="form-input" id="pmHolder" placeholder="محمد العلي"/></div>
-      <div class="form-group"><label class="form-label">تعليمات الدفع</label><textarea class="form-input" id="pmInstructions" rows="2" placeholder="أرسل الإيصال بعد التحويل..."></textarea></div>
+      <div class="form-group"><label class="form-label">تعليمات الدفع</label><textarea class="form-input" id="pmInstructions" rows="2" placeholder="أرسل المبلغ ثم ارفع إيصال الدفع..."></textarea></div>
+      <div class="form-group">
+        <label class="form-label">📸 صورة الحساب / QR Code <span style="color:var(--muted);font-size:11px">(اختياري — تُعرض للمشتري)</span></label>
+        <input type="file" class="form-input" id="pmImgFile" accept="image/*" onchange="previewPayImg(this)"/>
+        <div id="pmImgWrap" style="margin-top:8px;display:none">
+          <img id="pmImgPreview" src="" alt="" style="width:180px;height:180px;object-fit:contain;border-radius:8px;border:1px solid var(--border);background:#111;padding:4px;display:block"/>
+          <button type="button" class="btn btn-danger btn-sm" style="margin-top:6px" onclick="clearPayImg()">🗑 إزالة الصورة</button>
+        </div>
+        <input type="hidden" id="pmImgUrl"/>
+      </div>
       <div class="form-group"><label class="form-check"><input type="checkbox" id="pmEnabled" checked/> مفعّلة</label></div>
     </div>
     <div class="modal-footer">
@@ -1530,23 +1539,46 @@ async function loadPayMethods(){
     const data=await api('GET','/api/admin/payment-methods')||[];
     const el=document.getElementById('payList');
     if(!data.length){el.innerHTML=emptyState('💳','لا طرق دفع');return;}
-    el.innerHTML=`<div class="grid-2">${data.map(p=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-weight:700;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(p.nameAr||'')}</div></div>${p.enabled!==false?'<span class="badge badge-green">✅ مفعّل</span>':'<span class="badge badge-red">❌ معطّل</span>'}</div><hr class="divider"/>${p.bankName?`<div class="info-row"><span class="info-key">البنك</span><span class="info-val">${esc(p.bankName)}</span></div>`:''}${p.iban?`<div class="info-row"><span class="info-key">رقم الحساب / IBAN</span><span class="info-val" style="direction:ltr;font-family:monospace">${esc(p.iban)}</span></div>`:''}${p.accountName?`<div class="info-row"><span class="info-key">صاحب الحساب</span><span class="info-val">${esc(p.accountName)}</span></div>`:''}${p.description?`<div style="margin-top:8px;font-size:12px;color:var(--muted);background:#f9fafb;padding:8px;border-radius:6px">${esc(p.description)}</div>`:''}
-          <div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-secondary btn-sm" onclick="openEditPay('${jsEsc(p.id)}')">✏️ تعديل</button><button class="btn btn-danger btn-sm" onclick="deletePayMethod('${jsEsc(p.id)}')">🗑 حذف</button></div>
-        </div>`).join('')}</div>`;
+    el.innerHTML=`<div class="grid-2">${data.map(p=>`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(p.nameAr||'')}</div>
+        </div>
+        ${p.enabled!==false?'<span class="badge badge-green">✅ مفعّل</span>':'<span class="badge badge-red">❌ معطّل</span>'}
+      </div>
+      ${p.imageUrl?`<div style="margin:10px 0;text-align:center"><img src="${esc(p.imageUrl)}" alt="صورة الحساب" style="max-width:160px;max-height:160px;object-fit:contain;border-radius:8px;border:1px solid var(--border);background:#111;padding:4px"/><div style="font-size:11px;color:var(--muted);margin-top:4px">📸 صورة الحساب / QR</div></div>`:''}
+      <hr class="divider"/>
+      ${p.bankName?`<div class="info-row"><span class="info-key">البنك / الخدمة</span><span class="info-val">${esc(p.bankName)}</span></div>`:''}
+      ${p.iban?`<div class="info-row"><span class="info-key">رقم الحساب</span><span class="info-val" style="direction:ltr;font-family:monospace">${esc(p.iban)}</span></div>`:''}
+      ${p.accountName?`<div class="info-row"><span class="info-key">صاحب الحساب</span><span class="info-val">${esc(p.accountName)}</span></div>`:''}
+      ${p.description?`<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg2);padding:8px;border-radius:6px">${esc(p.description)}</div>`:''}
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm" onclick="openEditPay('${jsEsc(p.id)}')">✏️ تعديل</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePayMethod('${jsEsc(p.id)}')">🗑 حذف</button>
+      </div>
+    </div>`).join('')}</div>`;
     window._payData=data;
   }catch(e){toast(e.message,'error');}
+}
+function _resetPayModal(){
+  ['pmName','pmNameAr','pmBank','pmIban','pmHolder','pmInstructions','pmImgUrl'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pmEnabled').checked=true;
+  document.getElementById('pmImgFile').value='';
+  document.getElementById('pmImgPreview').src='';
+  document.getElementById('pmImgWrap').style.display='none';
 }
 function openPayModal(){
   editingPayId=null;
   document.getElementById('payModalTitle').textContent='💳 طريقة دفع جديدة';
-  ['pmName','pmNameAr','pmBank','pmIban','pmHolder','pmInstructions'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('pmEnabled').checked=true;
+  _resetPayModal();
   document.getElementById('payModal').classList.remove('hidden');
 }
 function openEditPay(id){
   const p=(window._payData||[]).find(x=>x.id===id);if(!p)return;
   editingPayId=id;
   document.getElementById('payModalTitle').textContent='✏️ تعديل طريقة الدفع';
+  _resetPayModal();
   document.getElementById('pmName').value=p.name||'';
   document.getElementById('pmNameAr').value=p.nameAr||'';
   document.getElementById('pmBank').value=p.bankName||'';
@@ -1554,13 +1586,46 @@ function openEditPay(id){
   document.getElementById('pmHolder').value=p.accountName||'';
   document.getElementById('pmInstructions').value=p.description||'';
   document.getElementById('pmEnabled').checked=p.enabled!==false;
+  if(p.imageUrl){
+    document.getElementById('pmImgUrl').value=p.imageUrl;
+    document.getElementById('pmImgPreview').src=p.imageUrl;
+    document.getElementById('pmImgWrap').style.display='block';
+  }
   document.getElementById('payModal').classList.remove('hidden');
+}
+async function previewPayImg(input){
+  const file=input.files[0];if(!file)return;
+  const fd=new FormData();fd.append('image',file);
+  try{
+    const res=await fetch('/api/admin/payment-methods/upload-image',{method:'POST',credentials:'include',body:fd});
+    const data=await res.json();
+    if(data.imageUrl){
+      document.getElementById('pmImgUrl').value=data.imageUrl;
+      const p=document.getElementById('pmImgPreview');p.src=data.imageUrl;
+      document.getElementById('pmImgWrap').style.display='block';
+      toast('تم رفع الصورة ✅','success');
+    }
+  }catch(e){toast('فشل رفع الصورة','error');}
+}
+function clearPayImg(){
+  document.getElementById('pmImgUrl').value='';
+  document.getElementById('pmImgFile').value='';
+  document.getElementById('pmImgPreview').src='';
+  document.getElementById('pmImgWrap').style.display='none';
 }
 async function savePayMethod(){
   const name=document.getElementById('pmName').value.trim();
   const nameAr=document.getElementById('pmNameAr').value.trim();
   if(!name||!nameAr){toast('يرجى إدخال الاسم بالإنجليزية والعربية','error');return;}
-  const body={name,nameAr,icon:'card',bankName:document.getElementById('pmBank').value.trim()||null,iban:document.getElementById('pmIban').value.trim()||null,accountName:document.getElementById('pmHolder').value.trim()||null,description:document.getElementById('pmInstructions').value.trim()||null,enabled:document.getElementById('pmEnabled').checked};
+  const body={
+    name,nameAr,icon:'card',
+    bankName:document.getElementById('pmBank').value.trim()||null,
+    iban:document.getElementById('pmIban').value.trim()||null,
+    accountName:document.getElementById('pmHolder').value.trim()||null,
+    description:document.getElementById('pmInstructions').value.trim()||null,
+    imageUrl:document.getElementById('pmImgUrl').value||null,
+    enabled:document.getElementById('pmEnabled').checked
+  };
   try{
     if(editingPayId){await api('PUT',`/api/admin/payment-methods/${editingPayId}`,body);toast('تم التحديث ✅','success');}
     else{await api('POST','/api/admin/payment-methods',body);toast('تم الإضافة ✅','success');}

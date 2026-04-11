@@ -148,6 +148,7 @@ export const paymentMethods = pgTable("payment_methods", {
   bankName: text("bank_name"),
   accountName: text("account_name"),
   iban: text("iban"),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -394,6 +395,7 @@ export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick
   bankName: true,
   accountName: true,
   iban: true,
+  imageUrl: true,
 });
 
 export const insertCouponSchema = createInsertSchema(coupons).pick({

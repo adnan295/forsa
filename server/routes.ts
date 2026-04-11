@@ -1896,6 +1896,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/payment-methods/upload-image", requireAdmin as any, uploadCampaignImage.single("image"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Image file is required" });
+      }
+      const imageUrl = `/uploads/campaigns/${req.file.filename}`;
+      if (req.body.methodId) {
+        await storage.updatePaymentMethod(req.body.methodId as string, { imageUrl });
+      }
+      res.json({ imageUrl });
+    } catch (error: any) {
+      console.error("Upload payment method image error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+
   app.post("/api/admin/campaigns/upload-image", requireAdmin as any, uploadCampaignImage.single("image"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {

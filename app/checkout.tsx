@@ -11,6 +11,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Switch,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -26,7 +27,7 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useCart, CartItem } from "@/lib/cart-context";
-import { apiRequest, queryClient } from "@/lib/query-client";
+import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
 import type { Campaign, PaymentMethod } from "@shared/schema";
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -39,9 +40,11 @@ function getPaymentIcon(icon: string): keyof typeof Ionicons.glyphMap {
   return iconMap[icon] || "ellipse-outline";
 }
 
-function isBankTransfer(method: PaymentMethod): boolean {
-  const name = (method.name + " " + method.nameAr).toLowerCase();
-  return name.includes("bank") || name.includes("تحويل") || name.includes("حوالة");
+function requiresReceiptUpload(method: PaymentMethod): boolean {
+  if (method.imageUrl) return true;
+  if (method.iban) return true;
+  const name = (method.name + " " + (method.nameAr || "")).toLowerCase();
+  return name.includes("bank") || name.includes("تحويل") || name.includes("حوالة") || name.includes("sham") || name.includes("شام") || name.includes("cash");
 }
 
 export default function CheckoutScreen() {
@@ -188,7 +191,7 @@ export default function CheckoutScreen() {
 
       if (isCartMode) {
         clearCart();
-        if (selectedMethod && isBankTransfer(selectedMethod) && data.orders?.[0]) {
+        if (selectedMethod && requiresReceiptUpload(selectedMethod) && data.orders?.[0]) {
           router.replace({
             pathname: `/order/${data.orders[0].id}`,
             params: { showUpload: "true" },
@@ -202,7 +205,7 @@ export default function CheckoutScreen() {
           ]);
         }
       } else {
-        if (selectedMethod && isBankTransfer(selectedMethod)) {
+        if (selectedMethod && requiresReceiptUpload(selectedMethod)) {
           router.replace({
             pathname: `/order/${data.order?.id || data.id}`,
             params: { showUpload: "true" },
@@ -458,7 +461,7 @@ export default function CheckoutScreen() {
               );
             })}
 
-            {selectedMethod && isBankTransfer(selectedMethod) && (
+            {selectedMethod && requiresReceiptUpload(selectedMethod) && (
               <View style={styles.bankDetails}>
                 <View style={styles.bankHeader}>
                   <Ionicons
@@ -467,9 +470,21 @@ export default function CheckoutScreen() {
                     color={Colors.light.accent}
                   />
                   <Text style={styles.bankHeaderText}>
-                    تفاصيل التحويل البنكي
+                    {selectedMethod.imageUrl ? "تفاصيل الدفع" : "تفاصيل التحويل البنكي"}
                   </Text>
                 </View>
+                {selectedMethod.imageUrl && (
+                  <View style={styles.payImageContainer}>
+                    <Image
+                      source={{ uri: selectedMethod.imageUrl.startsWith("http") ? selectedMethod.imageUrl : `${getApiUrl().replace(/\/$/, "")}${selectedMethod.imageUrl}` }}
+                      style={styles.payImage}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.payImageCaption}>
+                      امسح الكود أو استخدم البيانات أدناه للدفع
+                    </Text>
+                  </View>
+                )}
                 {(selectedMethod.bankName || selectedMethod.accountName || selectedMethod.iban) ? (
                   <>
                     {selectedMethod.bankName && (
@@ -477,7 +492,7 @@ export default function CheckoutScreen() {
                         <Text style={styles.bankValue}>
                           {selectedMethod.bankName}
                         </Text>
-                        <Text style={styles.bankLabel}>البنك</Text>
+                        <Text style={styles.bankLabel}>البنك / الخدمة</Text>
                       </View>
                     )}
                     {selectedMethod.accountName && (
@@ -493,21 +508,29 @@ export default function CheckoutScreen() {
                         <Text style={[styles.bankValue, { fontSize: 13 }]}>
                           {selectedMethod.iban}
                         </Text>
-                        <Text style={styles.bankLabel}>IBAN</Text>
+                        <Text style={styles.bankLabel}>رقم الحساب / IBAN</Text>
                       </View>
                     )}
                   </>
-                ) : (
+                ) : !selectedMethod.imageUrl ? (
                   <View style={{ paddingVertical: 12, alignItems: "center" }}>
                     <Ionicons name="alert-circle" size={28} color={Colors.light.warning} />
                     <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.light.warning, textAlign: "center", writingDirection: "rtl", marginTop: 8 }}>
-                      بيانات الحساب البنكي غير متوفرة حالياً
+                      بيانات الحساب غير متوفرة حالياً
                     </Text>
                     <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", marginTop: 4 }}>
-                      يرجى التواصل مع الإدارة للحصول على بيانات التحويل
+                      يرجى التواصل مع الإدارة للحصول على بيانات الدفع
                     </Text>
                   </View>
-                )}
+                ) : null}
+                {selectedMethod.description ? (
+                  <View style={styles.bankNote}>
+                    <Ionicons name="document-text-outline" size={16} color={Colors.light.accent} />
+                    <Text style={[styles.bankNoteText, { color: Colors.light.text }]}>
+                      {selectedMethod.description}
+                    </Text>
+                  </View>
+                ) : null}
                 <View style={styles.bankNote}>
                   <Ionicons
                     name="alert-circle-outline"
@@ -515,7 +538,7 @@ export default function CheckoutScreen() {
                     color={Colors.light.warning}
                   />
                   <Text style={styles.bankNoteText}>
-                    يرجى التحويل ثم رفع إيصال الدفع بعد تأكيد الطلب
+                    يرجى إتمام الدفع ثم رفع إيصال الدفع بعد تأكيد الطلب
                   </Text>
                 </View>
               </View>
@@ -987,6 +1010,25 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
     flex: 1,
+  },
+  payImageContainer: {
+    alignItems: "center",
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  payImage: {
+    width: 220,
+    height: 220,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+  },
+  payImageCaption: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    textAlign: "center",
+    writingDirection: "rtl",
+    marginTop: 6,
   },
   couponRow: {
     flexDirection: "row-reverse",
