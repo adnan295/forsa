@@ -17,6 +17,7 @@ import { mkdirSync } from "fs";
 
 mkdirSync("uploads/receipts", { recursive: true });
 mkdirSync("uploads/campaigns", { recursive: true });
+mkdirSync("uploads/payment-methods", { recursive: true });
 
 async function sendPushNotifications(userIds: string[], title: string, body: string, data?: Record<string, string>) {
   try {
@@ -84,6 +85,31 @@ const campaignStorage = multer.diskStorage({
   filename: (_req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const paymentMethodStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, "uploads/payment-methods/");
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const uploadPaymentMethodImage = multer({
+  storage: paymentMethodStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
   },
 });
 
@@ -1896,12 +1922,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/payment-methods/upload-image", requireAdmin as any, uploadCampaignImage.single("image"), async (req: Request, res: Response) => {
+  app.post("/api/admin/payment-methods/upload-image", requireAdmin as any, uploadPaymentMethodImage.single("image"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "Image file is required" });
       }
-      const imageUrl = `/uploads/campaigns/${req.file.filename}`;
+      const imageUrl = `/uploads/payment-methods/${req.file.filename}`;
       if (req.body.methodId) {
         await storage.updatePaymentMethod(req.body.methodId as string, { imageUrl });
       }
