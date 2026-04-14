@@ -233,6 +233,17 @@ function configureExpoAndLanding(app: express.Application) {
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
+  const spaIndexPath = path.resolve(process.cwd(), "static-build", "index.html");
+  if (fs.existsSync(spaIndexPath)) {
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith("/api") || req.path.startsWith("/uploads") || req.path.startsWith("/assets")) {
+        return next();
+      }
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.sendFile(spaIndexPath);
+    });
+  }
+
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }
 
