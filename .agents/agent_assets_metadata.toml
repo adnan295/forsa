@@ -1,5 +1,46 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "ZcFJv5KaIzI_yXzVq2puy"
+uri = "file://attached_assets/store-screenshots/01-home.png"
+type = "image"
+title = "home screen store screenshot"
+
+[[generated]]
+id = "UhVmqJ0FQ0-PO4ooCa34V"
+uri = "file://attached_assets/store-screenshots/02-campaign-detail.png"
+type = "image"
+title = "campaign detail store screenshot"
+
+[[generated]]
+id = "ISuyH_Wq7oz2GZoBjc9Qy"
+uri = "file://attached_assets/store-screenshots/03-checkout.png"
+type = "image"
+title = "checkout payment store screenshot"
+
+[[generated]]
+id = "0IOEbdPtoTpyEqAxC3elC"
+uri = "file://attached_assets/store-screenshots/04-orders.png"
+type = "image"
+title = "orders tickets store screenshot"
+
+[[generated]]
+id = "G-kpj-8mm8N9izM-BCgok"
+uri = "file://attached_assets/store-screenshots/05-winners.png"
+type = "image"
+title = "winners page store screenshot"
+
+[[generated]]
+id = "sk6XvNEz9XJAXgmEj6hlz"
+uri = "file://attached_assets/store-screenshots/06-wallet-referral.png"
+type = "image"
+title = "wallet referral store screenshot"
+
+[[generated]]
+id = "iMTgeXRN68pEomEeD47Sy"
+uri = "file://attached_assets/store-screenshots/07-notifications.png"
+type = "image"
+title = "notifications store screenshot"
 
 [[outputs]]
 id = "8yzGhbxBMQ9cAHWBTH0wE"
@@ -12,3 +53,45 @@ id = "cwyFshstRDyse3twtujJa"
 uri = "file://attached_assets/generated_images/forsa-feature-graphic-v2-1024x500.png"
 type = "image"
 title = "Forsa — Feature Graphic v2 (1024x500)"
+
+[[outputs]]
+id = "tAtt9x0NQydlTmAyWIJeJ"
+uri = "file://attached_assets/store-screenshots/01-home.png"
+type = "image"
+title = "1 — الصفحة الرئيسية"
+
+[[outputs]]
+id = "2ZgUgSfninEfJpoTKFQRf"
+uri = "file://attached_assets/store-screenshots/02-campaign-detail.png"
+type = "image"
+title = "2 — تفاصيل الحملة"
+
+[[outputs]]
+id = "OOTFh3ZD_dW_oNXSXwfiA"
+uri = "file://attached_assets/store-screenshots/03-checkout.png"
+type = "image"
+title = "3 — شاشة الدفع"
+
+[[outputs]]
+id = "w-uvghhIBIn_uWEtuV8fK"
+uri = "file://attached_assets/store-screenshots/04-orders.png"
+type = "image"
+title = "4 — طلباتي وتذاكري"
+
+[[outputs]]
+id = "bwBdPj68Ax7vQRdKux4Jq"
+uri = "file://attached_assets/store-screenshots/05-winners.png"
+type = "image"
+title = "5 — صفحة الفائزين"
+
+[[outputs]]
+id = "NbmkCNUlMGPCdlfZShlcn"
+uri = "file://attached_assets/store-screenshots/06-wallet-referral.png"
+type = "image"
+title = "6 — المحفظة والإحالة"
+
+[[outputs]]
+id = "xe2zwbzsrj9rPKDwaUA9M"
+uri = "file://attached_assets/store-screenshots/07-notifications.png"
+type = "image"
+title = "7 — الإشعارات"
