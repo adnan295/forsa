@@ -18,7 +18,7 @@ import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { getApiUrl } from "@/lib/query-client";
+import { apiRequest, queryClient } from "@/lib/query-client";
 
 type ReferralData = {
   referralCode: string;

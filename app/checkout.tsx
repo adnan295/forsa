@@ -27,7 +27,7 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useCart, CartItem } from "@/lib/cart-context";
-import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
+import { apiRequest, queryClient, buildMediaUrl } from "@/lib/query-client";
 import type { Campaign, PaymentMethod } from "@shared/schema";
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -476,7 +476,7 @@ export default function CheckoutScreen() {
                 {selectedMethod.imageUrl && (
                   <View style={styles.payImageContainer}>
                     <Image
-                      source={{ uri: selectedMethod.imageUrl.startsWith("http") ? selectedMethod.imageUrl : `${getApiUrl().replace(/\/$/, "")}${selectedMethod.imageUrl}` }}
+                      source={{ uri: buildMediaUrl(selectedMethod.imageUrl)! }}
                       style={styles.payImage}
                       resizeMode="contain"
                     />

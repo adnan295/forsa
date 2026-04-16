@@ -32,7 +32,7 @@ import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
 import { useFavorites } from "@/lib/favorites-context";
-import { getApiUrl } from "@/lib/query-client";
+import { buildMediaUrl } from "@/lib/query-client";
 import type { Campaign, CampaignProduct } from "@shared/schema";
 
 type CampaignWithProducts = Campaign & { products?: CampaignProduct[] };
@@ -170,7 +170,7 @@ export default function CampaignDetailScreen() {
         <View style={styles.heroSection}>
           {campaign.imageUrl ? (
             <Image
-              source={{ uri: `${getApiUrl()}${campaign.imageUrl}`.replace(/\/+/g, '/').replace(':/', '://') }}
+              source={{ uri: buildMediaUrl(campaign.imageUrl)! }}
               style={styles.heroImage}
               contentFit="cover"
               cachePolicy="memory-disk"

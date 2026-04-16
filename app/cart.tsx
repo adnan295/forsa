@@ -22,10 +22,10 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useCart, CartItem } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
-import { getApiUrl } from "@/lib/query-client";
+import { buildMediaUrl } from "@/lib/query-client";
 
 function formatImageUrl(url: string) {
-  return `${getApiUrl()}${url}`.replace(/\/+/g, "/").replace(":/", "://");
+  return buildMediaUrl(url) ?? url;
 }
 
 function CartItemCard({ item }: { item: CartItem }) {

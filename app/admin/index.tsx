@@ -30,7 +30,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { apiRequest, queryClient, getApiUrl } from "@/lib/query-client";
+import { apiRequest, queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
 
 type AdminTab = "dashboard" | "orders" | "users" | "campaigns" | "payments" | "coupons" | "notifications" | "activity" | "support" | "settings";
 
@@ -447,7 +447,7 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
                   <View style={{ marginBottom: 12 }}>
                     <Text style={orderMgmtStyles.receiptLabel}>صورة الإيصال:</Text>
                     <Image
-                      source={{ uri: getApiUrl() + order.receiptUrl }}
+                      source={{ uri: buildMediaUrl(order.receiptUrl) ?? "" }}
                       style={orderMgmtStyles.receiptImage}
                       resizeMode="contain"
                     />

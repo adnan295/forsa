@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
-import { getApiUrl } from "@/lib/query-client";
+import { buildMediaUrl } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
 
 type WinnerCampaign = Campaign & { winnerUsername: string };
@@ -97,11 +97,7 @@ export default function WinnersScreen() {
 }
 
 function WinnerCard({ campaign }: { campaign: WinnerCampaign }) {
-  const imageUri = campaign.imageUrl
-    ? `${getApiUrl()}${campaign.imageUrl}`
-        .replace(/\/+/g, "/")
-        .replace(":/", "://")
-    : null;
+  const imageUri = buildMediaUrl(campaign.imageUrl);
 
   return (
     <View style={styles.card}>

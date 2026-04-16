@@ -20,7 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { queryClient, getApiUrl } from "@/lib/query-client";
+import { queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
 import type { Order, Campaign } from "@shared/schema";
 import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
@@ -80,7 +80,7 @@ function getPaymentStatusConfig(status: string) {
 }
 
 function formatImageUrl(url: string) {
-  return `${getApiUrl()}${url}`.replace(/\/+/g, "/").replace(":/", "://");
+  return buildMediaUrl(url) ?? url;
 }
 
 export default function OrderDetailScreen() {

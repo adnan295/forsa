@@ -14,7 +14,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useTheme } from "@/lib/theme-context";
-import { getApiUrl } from "@/lib/query-client";
+import { buildMediaUrl } from "@/lib/query-client";
 import { useFavorites } from "@/lib/favorites-context";
 import type { Campaign } from "@shared/schema";
 
@@ -116,7 +116,7 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
         <View style={styles.imageArea}>
           {campaign.imageUrl ? (
             <Image
-              source={{ uri: `${getApiUrl()}${campaign.imageUrl}`.replace(/\/+/g, '/').replace(':/', '://') }}
+              source={{ uri: buildMediaUrl(campaign.imageUrl)! }}
               style={styles.campaignImage}
               contentFit="cover"
               cachePolicy="memory-disk"
