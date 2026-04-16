@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useEffect, useMemo } from "react";
+import React, { useCallback, useRef, useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -41,135 +41,14 @@ const PRICE_RANGE_TABS: { key: PriceRangeKey; label: string }[] = [
   { key: "over100", label: "أكثر من 100$" },
 ];
 
-const CATEGORY_TABS: { key: CategoryKey; label: string }[] = [
-  { key: "all", label: "الكل" },
-  { key: "electronics", label: "إلكترونيات" },
-  { key: "fashion", label: "أزياء" },
-  { key: "beauty", label: "جمال" },
-  { key: "accessories", label: "إكسسوارات" },
-  { key: "other", label: "أخرى" },
+const CATEGORY_TABS: { key: CategoryKey; label: string; icon: string }[] = [
+  { key: "all", label: "الكل", icon: "apps" },
+  { key: "electronics", label: "إلكترونيات", icon: "phone-portrait" },
+  { key: "fashion", label: "أزياء", icon: "shirt" },
+  { key: "beauty", label: "جمال", icon: "sparkles" },
+  { key: "accessories", label: "إكسسوارات", icon: "watch" },
+  { key: "other", label: "أخرى", icon: "grid" },
 ];
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const BANNER_WIDTH = SCREEN_WIDTH - 32;
-
-const BANNERS = [
-  {
-    id: "1",
-    title: "هدايا حصرية",
-    subtitle: "اشترِ منتجاتنا واحصل على هدايا قيمة",
-    icon: "diamond" as const,
-    colors: ["#7C3AED", "#A855F7", "#C084FC"] as [string, string, string],
-  },
-  {
-    id: "2",
-    title: "فرصة الفوز الكبرى",
-    subtitle: "كل منتج يمنحك فرصة للفوز بالجائزة",
-    icon: "trophy" as const,
-    colors: ["#EC4899", "#F472B6", "#FBCFE8"] as [string, string, string],
-  },
-  {
-    id: "3",
-    title: "عروض محدودة",
-    subtitle: "لا تفوت الفرصة - الكمية محدودة",
-    icon: "flash" as const,
-    colors: ["#7C3AED", "#A855F7", "#EC4899"] as [string, string, string],
-  },
-];
-
-function BannerCarousel() {
-  const { colors } = useTheme();
-  const scrollRef = useRef<ScrollView>(null);
-  const reversedBanners = useMemo(() => [...BANNERS].reverse(), []);
-  const [activeIndex, setActiveIndex] = useState(reversedBanners.length - 1);
-  const initialScrollDone = useRef(false);
-
-  useEffect(() => {
-    if (!initialScrollDone.current) {
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ x: (reversedBanners.length - 1) * (BANNER_WIDTH + 12), animated: false });
-        initialScrollDone.current = true;
-      }, 50);
-    }
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const nextIndex = activeIndex <= 0 ? reversedBanners.length - 1 : activeIndex - 1;
-      scrollRef.current?.scrollTo({ x: nextIndex * (BANNER_WIDTH + 12), animated: true });
-      setActiveIndex(nextIndex);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [activeIndex]);
-
-  return (
-    <View style={bannerStyles.container}>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled={false}
-        snapToInterval={BANNER_WIDTH + 12}
-        decelerationRate="fast"
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={bannerStyles.scrollContent}
-        onMomentumScrollEnd={(e) => {
-          const index = Math.round(e.nativeEvent.contentOffset.x / (BANNER_WIDTH + 12));
-          setActiveIndex(Math.max(0, Math.min(index, reversedBanners.length - 1)));
-        }}
-      >
-        {reversedBanners.map((banner) => (
-          <View key={banner.id} style={bannerStyles.bannerWrap}>
-            <LinearGradient
-              colors={banner.colors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={bannerStyles.banner}
-            >
-              <View style={bannerStyles.bannerContent}>
-                <View style={bannerStyles.bannerTextArea}>
-                  <Text style={bannerStyles.bannerTitle}>{banner.title}</Text>
-                  <Text style={bannerStyles.bannerSubtitle}>{banner.subtitle}</Text>
-                </View>
-                <View style={bannerStyles.bannerIconWrap}>
-                  <Ionicons name={banner.icon} size={28} color="#fff" />
-                </View>
-              </View>
-              <View style={bannerStyles.decor1} />
-              <View style={bannerStyles.decor2} />
-            </LinearGradient>
-          </View>
-        ))}
-      </ScrollView>
-
-      <View style={bannerStyles.dots}>
-        {reversedBanners.map((_, i) => (
-          <View
-            key={i}
-            style={[
-              bannerStyles.dot,
-              { backgroundColor: colors.border },
-              i === activeIndex && [bannerStyles.dotActive, { backgroundColor: colors.accent }],
-            ]}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function StatChip({ icon, value, label }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  value: string | number;
-  label: string;
-}) {
-  return (
-    <View style={statStyles.chip}>
-      <Ionicons name={icon} size={18} color="rgba(255,255,255,0.8)" />
-      <Text style={statStyles.chipValue}>{value}</Text>
-      <Text style={statStyles.chipLabel}>{label}</Text>
-    </View>
-  );
-}
 
 function RecentPurchaseBanner() {
   const { isDark, colors } = useTheme();
@@ -183,43 +62,33 @@ function RecentPurchaseBanner() {
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    transform: [{ translateY: (1 - opacity.value) * 20 }],
+    transform: [{ translateY: (1 - opacity.value) * 16 }],
   }));
 
   useEffect(() => {
     if (!purchases || purchases.length === 0) return;
-
     const showBanner = () => {
       setCurrentIndex((prev) => (prev + 1) % purchases.length);
       setVisible(true);
       opacity.value = withTiming(1, { duration: 400 });
-
       setTimeout(() => {
         opacity.value = withTiming(0, { duration: 400 });
-        setTimeout(() => {
-          setVisible(false);
-        }, 500);
+        setTimeout(() => setVisible(false), 500);
       }, 5000);
     };
-
     const initialTimer = setTimeout(showBanner, 5000);
     const interval = setInterval(showBanner, 30000);
-
-    return () => {
-      clearTimeout(initialTimer);
-      clearInterval(interval);
-    };
+    return () => { clearTimeout(initialTimer); clearInterval(interval); };
   }, [purchases]);
 
   if (!purchases || purchases.length === 0 || !visible) return null;
-
   const item = purchases[currentIndex % purchases.length];
 
   return (
     <Animated.View style={[proofStyles.container, animatedStyle]}>
-      <View style={[proofStyles.banner, { backgroundColor: isDark ? "rgba(55, 65, 81, 0.95)" : "rgba(31, 41, 55, 0.92)" }]}>
+      <View style={[proofStyles.banner, { backgroundColor: isDark ? "rgba(55,65,81,0.97)" : "rgba(17,24,39,0.93)" }]}>
         <View style={proofStyles.iconWrap}>
-          <Ionicons name="bag-check" size={16} color={colors.success} />
+          <Ionicons name="bag-check" size={14} color={colors.success} />
         </View>
         <Text style={proofStyles.text} numberOfLines={1}>
           مستخدم اشترى {item.campaignTitle} منذ {item.minutesAgo > 60 ? `${Math.floor(item.minutesAgo / 60)} ساعة` : `${item.minutesAgo} دقائق`}
@@ -228,49 +97,6 @@ function RecentPurchaseBanner() {
     </Animated.View>
   );
 }
-
-const proofStyles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    bottom: Platform.OS === "web" ? 84 + 16 : 96,
-    start: 16,
-    end: 16,
-    alignItems: "center",
-    zIndex: 100,
-  },
-  banner: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(31, 41, 55, 0.92)",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 14,
-    maxWidth: 400,
-    width: "100%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  iconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  text: {
-    flex: 1,
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: "#FFFFFF",
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-});
 
 export default function HomeScreen() {
   const { isDark, colors } = useTheme();
@@ -303,7 +129,6 @@ export default function HomeScreen() {
   const unreadCount = unreadData?.count || 0;
 
   const activeCampaigns = campaigns?.filter((c) => c.status === "active") || [];
-  const otherCampaigns = campaigns?.filter((c) => c.status !== "active") || [];
 
   const filteredCampaigns = useMemo(() => {
     let list = campaigns || [];
@@ -335,198 +160,241 @@ export default function HomeScreen() {
     refetch();
   }, [refetch]);
 
+  const hasActiveFilters = activeCategory !== "all" || activePriceRange !== "all" || showCompleted || searchText.trim().length > 0;
+
   function renderHeader() {
     return (
       <View>
+        {/* ── Hero ── */}
         <LinearGradient
-          colors={["#7C3AED", "#A855F7", "#EC4899"]}
+          colors={["#6D28D9", "#8B5CF6", "#EC4899"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={styles.hero}
         >
-          <View style={[styles.heroContent, { paddingTop: Platform.OS === "web" ? 67 + 20 : insets.top + 20 }]}>
+          {/* Decorative circles */}
+          <View style={styles.deco1} />
+          <View style={styles.deco2} />
+          <View style={styles.deco3} />
+
+          <View style={[styles.heroContent, { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 }]}>
+            {/* Top row: greeting + buttons */}
             <View style={styles.heroTop}>
-              <View style={styles.heroTitleArea}>
-                <Text style={styles.greeting}>
-                  {user ? `أهلاً، ${user.username}` : "مرحباً بك"}
-                </Text>
-                <Text style={styles.heroTitle}>فرصة</Text>
-              </View>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              {/* Action buttons on the left (start = left in LTR / right in RTL) */}
+              <View style={styles.heroButtons}>
                 {user && (
                   <Pressable
                     onPress={() => router.push("/notifications" as any)}
-                    style={styles.cartBtn}
+                    style={styles.iconBtn}
                     testID="notifications-button"
                   >
-                    <Ionicons name="notifications-outline" size={22} color="#fff" />
+                    <Ionicons name="notifications-outline" size={20} color="#fff" />
                     {unreadCount > 0 && (
-                      <View style={[styles.cartBadge, { backgroundColor: "#EF4444" }]}>
-                        <Text style={styles.cartBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
                       </View>
                     )}
                   </Pressable>
                 )}
                 <Pressable
                   onPress={() => router.push("/cart" as any)}
-                  style={styles.cartBtn}
+                  style={styles.iconBtn}
                   testID="cart-button"
                 >
-                  <Ionicons name="cart-outline" size={22} color="#fff" />
+                  <Ionicons name="cart-outline" size={20} color="#fff" />
                   {totalItems > 0 && (
-                    <View style={styles.cartBadge}>
-                      <Text style={styles.cartBadgeText}>{totalItems > 99 ? "99+" : totalItems}</Text>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{totalItems > 9 ? "9+" : totalItems}</Text>
                     </View>
                   )}
                 </Pressable>
                 {!user && (
-                  <Pressable
-                    onPress={() => router.push("/auth")}
-                    style={styles.signInBtn}
-                  >
-                    <Text style={styles.signInText}>دخول</Text>
+                  <Pressable onPress={() => router.push("/auth")} style={styles.loginBtn}>
+                    <Text style={styles.loginText}>دخول</Text>
                   </Pressable>
                 )}
               </View>
+
+              {/* Greeting on the right */}
+              <View style={styles.greetingArea}>
+                <Text style={styles.greeting}>
+                  {user ? `أهلاً، ${user.username} 👋` : "أهلاً بك 👋"}
+                </Text>
+                <Text style={styles.heroTitle}>فرصة</Text>
+              </View>
             </View>
 
-            {activeCampaigns.length > 0 && (
-              <View style={styles.statsRow}>
-                <StatChip icon="flame" value={activeCampaigns.length} label="نشطة" />
-                <StatChip
-                  icon="cube"
-                  value={activeCampaigns.reduce((sum, c) => sum + (c.totalQuantity - c.soldQuantity), 0)}
-                  label="متبقي"
-                />
-                <StatChip
-                  icon="trophy"
-                  value={campaigns?.filter((c) => c.status === "completed").length || 0}
-                  label="فائزون"
-                />
+            {/* Tagline */}
+            <Text style={styles.tagline}>اشترِ واربح جوائز حقيقية</Text>
+
+            {/* Stats pills */}
+            {(campaigns?.length ?? 0) > 0 && (
+              <View style={styles.statsPills}>
+                <View style={styles.statPill}>
+                  <Text style={styles.statPillNum}>{campaigns?.filter(c => c.status === "completed").length || 0}</Text>
+                  <Text style={styles.statPillLabel}>فائز</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statPill}>
+                  <Text style={styles.statPillNum}>
+                    {activeCampaigns.reduce((s, c) => s + (c.totalQuantity - c.soldQuantity), 0)}
+                  </Text>
+                  <Text style={styles.statPillLabel}>تذكرة متبقية</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statPill}>
+                  <Text style={styles.statPillNum}>{activeCampaigns.length}</Text>
+                  <Text style={styles.statPillLabel}>حملة نشطة</Text>
+                </View>
               </View>
             )}
           </View>
-
-          <View style={styles.heroDecoCircle} />
-          <View style={styles.heroDecoCircle2} />
         </LinearGradient>
 
-        <View style={styles.bannerSection}>
-          <BannerCarousel />
-        </View>
-
-        <View style={styles.searchSection}>
+        {/* ── Search & Filters ── */}
+        <View style={[styles.filtersSection, { backgroundColor: colors.background }]}>
+          {/* Search bar */}
           <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Ionicons name="search" size={18} color={colors.textSecondary} />
+            <Pressable onPress={() => setSearchText("")} style={{ opacity: searchText.length > 0 ? 1 : 0 }}>
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+            </Pressable>
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
               placeholder="ابحث عن منتج أو جائزة..."
               placeholderTextColor={colors.textSecondary}
               value={searchText}
               onChangeText={setSearchText}
-              writingDirection="rtl"
               testID="search-input"
             />
-            {searchText.length > 0 && (
-              <Pressable onPress={() => setSearchText("")}>
-                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-              </Pressable>
-            )}
+            <Ionicons name="search-outline" size={20} color={colors.accent} />
           </View>
 
-          <View style={styles.categoryRowWrap}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryRow}
-            >
-              {CATEGORY_TABS.map((cat) => (
-                <Pressable
-                  key={cat.key}
-                  onPress={() => {
-                    setActiveCategory(cat.key);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  style={[
-                    styles.categoryChip,
-                    { backgroundColor: colors.card, borderColor: colors.border },
-                    activeCategory === cat.key && { backgroundColor: colors.accent, borderColor: colors.accent },
-                  ]}
-                >
-                  <Text style={[
-                    styles.categoryChipText,
-                    { color: colors.textSecondary },
-                    activeCategory === cat.key && { color: "#fff", fontFamily: "Inter_600SemiBold" },
-                  ]}>
-                    {cat.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+          {/* Categories */}
+          <View style={styles.categoryWrap}>
             <Pressable
               onPress={() => {
                 setShowPriceFilter(!showPriceFilter);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               style={[
-                styles.filterToggleBtn,
-                { backgroundColor: colors.card, borderColor: showPriceFilter || activePriceRange !== "all" ? colors.accentPink : colors.border },
-                (showPriceFilter || activePriceRange !== "all") && { backgroundColor: colors.accentPink },
+                styles.filterIconBtn,
+                { backgroundColor: colors.card, borderColor: (showPriceFilter || activePriceRange !== "all") ? colors.accent : colors.border },
+                (showPriceFilter || activePriceRange !== "all") && { backgroundColor: colors.accent },
               ]}
             >
               <Ionicons
-                name="options-outline"
-                size={16}
-                color={showPriceFilter || activePriceRange !== "all" ? "#fff" : colors.textSecondary}
+                name="options"
+                size={17}
+                color={(showPriceFilter || activePriceRange !== "all") ? "#fff" : colors.textSecondary}
               />
             </Pressable>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryScroll}
+            >
+              {CATEGORY_TABS.map((cat) => {
+                const active = activeCategory === cat.key;
+                return (
+                  <Pressable
+                    key={cat.key}
+                    onPress={() => {
+                      setActiveCategory(cat.key);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    style={[
+                      styles.catChip,
+                      { backgroundColor: active ? colors.accent : colors.card, borderColor: active ? colors.accent : colors.border },
+                    ]}
+                  >
+                    <Text style={[styles.catChipText, { color: active ? "#fff" : colors.textSecondary }]}>
+                      {cat.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
 
+          {/* Price filter */}
           {showPriceFilter && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.priceRow}
+              contentContainerStyle={styles.priceScroll}
             >
-              {PRICE_RANGE_TABS.map((pr) => (
-                <Pressable
-                  key={pr.key}
-                  onPress={() => {
-                    setActivePriceRange(pr.key);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  style={[
-                    styles.priceChip,
-                    { backgroundColor: colors.card, borderColor: colors.border },
-                    activePriceRange === pr.key && { backgroundColor: colors.accentPink, borderColor: colors.accentPink },
-                  ]}
-                >
-                  <Text style={[
-                    styles.priceChipText,
-                    { color: colors.textSecondary },
-                    activePriceRange === pr.key && { color: "#fff", fontFamily: "Inter_600SemiBold" },
-                  ]}>
-                    {pr.label}
-                  </Text>
-                </Pressable>
-              ))}
+              {PRICE_RANGE_TABS.map((pr) => {
+                const active = activePriceRange === pr.key;
+                return (
+                  <Pressable
+                    key={pr.key}
+                    onPress={() => {
+                      setActivePriceRange(pr.key);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    style={[
+                      styles.priceChip,
+                      { backgroundColor: active ? colors.accentPink : colors.card, borderColor: active ? colors.accentPink : colors.border },
+                    ]}
+                  >
+                    <Text style={[styles.priceChipText, { color: active ? "#fff" : colors.textSecondary }]}>
+                      {pr.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           )}
 
-          <Pressable
-            onPress={() => {
-              setShowCompleted(!showCompleted);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-            style={styles.showCompletedRow}
-          >
-            <Ionicons
-              name={showCompleted ? "checkbox" : "square-outline"}
-              size={16}
-              color={showCompleted ? colors.accent : colors.textSecondary}
-            />
-            <Text style={[styles.showCompletedText, { color: colors.textSecondary }]}>
-              عرض المنتهية
-            </Text>
-          </Pressable>
+          {/* Bottom row: show completed + result count */}
+          <View style={styles.bottomFilterRow}>
+            <View style={styles.resultPill}>
+              <Text style={[styles.resultCount, { color: colors.accent }]}>
+                {filteredCampaigns.length}
+              </Text>
+              <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>نتيجة</Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                setShowCompleted(!showCompleted);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              style={styles.completedToggle}
+            >
+              <Text style={[styles.completedText, { color: showCompleted ? colors.accent : colors.textSecondary }]}>
+                عرض المنتهية
+              </Text>
+              <Ionicons
+                name={showCompleted ? "checkbox" : "square-outline"}
+                size={17}
+                color={showCompleted ? colors.accent : colors.textSecondary}
+              />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* ── Section Header ── */}
+        <View style={[styles.sectionHeader, { borderBottomColor: colors.border }]}>
+          <View style={styles.sectionLeft}>
+            {hasActiveFilters && (
+              <Pressable
+                onPress={() => {
+                  setSearchText("");
+                  setActiveCategory("all");
+                  setActivePriceRange("all");
+                  setShowCompleted(false);
+                  setShowPriceFilter(false);
+                }}
+                style={[styles.clearBtn, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.clearBtnText, { color: colors.textSecondary }]}>مسح</Text>
+                <Ionicons name="close" size={13} color={colors.textSecondary} />
+              </Pressable>
+            )}
+          </View>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {searchText ? "نتائج البحث" : showCompleted ? "جميع الحملات" : "العروض المتاحة 🔥"}
+          </Text>
         </View>
       </View>
     );
@@ -562,25 +430,22 @@ export default function HomeScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <LinearGradient
-              colors={isDark ? ["rgba(167,139,250,0.15)", "rgba(236,72,153,0.15)"] : ["rgba(124,58,237,0.08)", "rgba(236,72,153,0.08)"]}
-              style={[styles.emptyIconWrap, { backgroundColor: colors.progressBg }]}
-            >
+            <View style={[styles.emptyIconWrap, { backgroundColor: isDark ? "rgba(167,139,250,0.12)" : "rgba(124,58,237,0.07)" }]}>
               <Ionicons
                 name={searchText ? "search-outline" : "sparkles-outline"}
-                size={36}
+                size={34}
                 color={colors.accent}
               />
-            </LinearGradient>
+            </View>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
               {searchText ? "لا توجد نتائج" : "لا توجد حملات حالياً"}
             </Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {searchText
-                ? "جرب كلمات بحث مختلفة أو تصفّح جميع الحملات"
-                : "ترقب! حملات وجوائز مذهلة في الطريق إليك"}
+                ? "جرّب كلمات بحث مختلفة أو تصفّح جميع الحملات"
+                : "ترقّب! حملات وجوائز مذهلة في الطريق إليك"}
             </Text>
-            {searchText && (
+            {hasActiveFilters && (
               <Pressable
                 onPress={() => {
                   setSearchText("");
@@ -589,16 +454,14 @@ export default function HomeScreen() {
                   setShowCompleted(false);
                   setShowPriceFilter(false);
                 }}
-                style={[styles.clearSearchBtn, { backgroundColor: isDark ? "rgba(167, 139, 250, 0.15)" : "rgba(124, 58, 237, 0.1)" }]}
+                style={[styles.clearAllBtn, { backgroundColor: isDark ? "rgba(167,139,250,0.12)" : "rgba(124,58,237,0.08)" }]}
               >
-                <Text style={[styles.clearSearchText, { color: colors.accent }]}>مسح البحث</Text>
+                <Text style={[styles.clearAllText, { color: colors.accent }]}>مسح الفلاتر</Text>
               </Pressable>
             )}
           </View>
         }
-        contentContainerStyle={{
-          paddingBottom: Platform.OS === "web" ? 84 + 20 : 100,
-        }}
+        contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 84 + 24 : 104 }}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -613,111 +476,46 @@ export default function HomeScreen() {
   );
 }
 
-const bannerStyles = StyleSheet.create({
+/* ─────────────────── Styles ─────────────────── */
+
+const proofStyles = StyleSheet.create({
   container: {
-    marginTop: -8,
-    marginBottom: 8,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  bannerWrap: {
-    width: BANNER_WIDTH,
+    position: "absolute",
+    bottom: Platform.OS === "web" ? 84 + 16 : 96,
+    start: 16,
+    end: 16,
+    alignItems: "center",
+    zIndex: 100,
   },
   banner: {
-    borderRadius: 20,
-    padding: 24,
-    minHeight: 120,
-    overflow: "hidden",
-    justifyContent: "center",
-  },
-  bannerContent: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    justifyContent: "space-between",
-    zIndex: 2,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    maxWidth: 400,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 7,
   },
-  bannerTextArea: {
+  iconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(16,185,129,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  text: {
     flex: 1,
-    paddingStart: 14,
-  },
-  bannerTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 19,
-    color: "#FFFFFF",
-    marginBottom: 6,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  bannerSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Inter_500Medium",
     fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 20,
-  },
-  bannerIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  decor1: {
-    position: "absolute",
-    top: -40,
-    right: -30,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  decor2: {
-    position: "absolute",
-    bottom: -50,
-    left: -20,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  dots: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 14,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#D1D5DB",
-  },
-  dotActive: {
-    width: 20,
-    backgroundColor: Colors.light.accent,
-    borderRadius: 3,
-  },
-});
-
-const statStyles = StyleSheet.create({
-  chip: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
-  chipValue: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
     color: "#FFFFFF",
-  },
-  chipLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.6)",
+    textAlign: "right",
     writingDirection: "rtl",
   },
 });
@@ -725,281 +523,342 @@ const statStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
   },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.light.background,
   },
+
+  /* ── Hero ── */
   hero: {
-    paddingBottom: 28,
     overflow: "hidden",
+    paddingBottom: 28,
   },
   heroContent: {
     paddingHorizontal: 20,
     zIndex: 2,
+    gap: 12,
   },
   heroTop: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 22,
   },
-  heroTitleArea: {},
+  greetingArea: {
+    alignItems: "flex-end",
+  },
   greeting: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-    marginBottom: 4,
-    textAlign: "right",
+    color: "rgba(255,255,255,0.75)",
     writingDirection: "rtl",
+    marginBottom: 2,
   },
   heroTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 28,
+    fontSize: 30,
     color: "#FFFFFF",
     textAlign: "right",
     writingDirection: "rtl",
+    letterSpacing: -0.5,
   },
-  cartBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.2)",
+  heroButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
-  cartBadge: {
+  badge: {
     position: "absolute",
     top: -4,
     end: -4,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#EC4899",
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#EF4444",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 4,
-    borderWidth: 2,
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
     borderColor: "#7C3AED",
   },
-  cartBadgeText: {
+  badgeText: {
     fontFamily: "Inter_700Bold",
-    fontSize: 10,
+    fontSize: 9,
     color: "#fff",
   },
-  signInBtn: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 14,
+  loginBtn: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 13,
   },
-  signInText: {
+  loginText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: "#FFFFFF",
     writingDirection: "rtl",
   },
-  statsRow: {
-    flexDirection: "row-reverse",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
+  tagline: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "rgba(255,255,255,0.75)",
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginTop: 4,
   },
-  heroDecoCircle: {
+  statsPills: {
+    flexDirection: "row-reverse",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 0,
+    marginTop: 4,
+  },
+  statPill: {
+    flex: 1,
+    alignItems: "center",
+    gap: 3,
+  },
+  statPillNum: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 20,
+    color: "#FFFFFF",
+  },
+  statPillLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: "rgba(255,255,255,0.65)",
+    writingDirection: "rtl",
+    textAlign: "center",
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignSelf: "center",
+  },
+  deco1: {
     position: "absolute",
-    top: -60,
-    right: -40,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    top: -50,
+    left: -30,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     backgroundColor: "rgba(255,255,255,0.04)",
   },
-  heroDecoCircle2: {
+  deco2: {
     position: "absolute",
-    bottom: -40,
-    left: -50,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: "rgba(236, 72, 153, 0.1)",
+    top: 20,
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
-  bannerSection: {
-    marginTop: 0,
+  deco3: {
+    position: "absolute",
+    bottom: -30,
+    left: "30%",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "rgba(236,72,153,0.12)",
   },
-  searchSection: {
+
+  /* ── Filters ── */
+  filtersSection: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    paddingBottom: 8,
     gap: 12,
   },
   searchBar: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "ios" ? 12 : 2,
+    paddingVertical: Platform.OS === "ios" ? 12 : 4,
     gap: 10,
+    borderWidth: 1.5,
     shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+    shadowRadius: 8,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
     fontFamily: "Inter_400Regular",
     fontSize: 15,
-    color: Colors.light.text,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  categoryRowWrap: {
+  categoryWrap: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
   },
-  categoryRow: {
+  categoryScroll: {
     flexDirection: "row-reverse",
-    gap: 6,
+    gap: 7,
+    paddingEnd: 4,
   },
-  categoryChip: {
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+  catChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
-  categoryChipText: {
+  catChipText: {
     fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl" as const,
+    fontSize: 13,
+    writingDirection: "rtl",
   },
-  filterToggleBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
+  filterIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    flexShrink: 0,
   },
-  priceRow: {
+  priceScroll: {
     flexDirection: "row-reverse",
-    gap: 6,
-    paddingTop: 4,
+    gap: 7,
   },
   priceChip: {
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: Colors.light.border,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
   priceChipText: {
     fontFamily: "Inter_500Medium",
-    fontSize: 11,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl" as const,
+    fontSize: 12,
+    writingDirection: "rtl",
   },
-  showCompletedRow: {
+  bottomFilterRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  completedToggle: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
-    paddingTop: 4,
   },
-  showCompletedText: {
+  completedText: {
     fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl" as const,
-  },
-  resultCount: {
-    backgroundColor: "rgba(124, 58, 237, 0.1)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  resultCountText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 12,
-    color: Colors.light.accent,
-  },
-  clearSearchBtn: {
-    marginTop: 16,
-    backgroundColor: "rgba(124, 58, 237, 0.1)",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  clearSearchText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: Colors.light.accent,
+    fontSize: 13,
     writingDirection: "rtl",
   },
+  resultPill: {
+    flexDirection: "row-reverse",
+    alignItems: "baseline",
+    gap: 4,
+  },
+  resultCount: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    color: Colors.light.accent,
+  },
+  resultLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    writingDirection: "rtl",
+  },
+
+  /* ── Section Header ── */
   sectionHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 14,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    marginBottom: 4,
   },
   sectionTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: Colors.light.text,
+    fontSize: 18,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  sectionHeaderLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.light.border,
-    marginStart: 12,
+  sectionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
   },
+  clearBtn: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  clearBtnText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    writingDirection: "rtl",
+  },
+
+  /* ── Cards ── */
   cardPadding: {
     paddingHorizontal: 16,
   },
+
+  /* ── Empty ── */
   emptyState: {
     alignItems: "center",
     paddingVertical: 60,
     paddingHorizontal: 40,
+    gap: 10,
   },
   emptyIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.light.progressBg,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 6,
   },
   emptyTitle: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 18,
-    color: Colors.light.text,
-    marginBottom: 8,
     writingDirection: "rtl",
+    textAlign: "center",
   },
   emptyText: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: Colors.light.textSecondary,
     textAlign: "center",
+    writingDirection: "rtl",
+    lineHeight: 22,
+  },
+  clearAllBtn: {
+    marginTop: 8,
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  clearAllText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
     writingDirection: "rtl",
   },
 });
