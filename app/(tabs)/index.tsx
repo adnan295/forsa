@@ -165,22 +165,18 @@ export default function HomeScreen() {
   function renderHeader() {
     return (
       <View>
-        {/* ── Hero ── */}
         <LinearGradient
           colors={["#6D28D9", "#8B5CF6", "#EC4899"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
         >
-          {/* Decorative circles */}
           <View style={styles.deco1} />
           <View style={styles.deco2} />
           <View style={styles.deco3} />
 
           <View style={[styles.heroContent, { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 }]}>
-            {/* Top row: greeting + buttons */}
             <View style={styles.heroTop}>
-              {/* Action buttons on the left (start = left in LTR / right in RTL) */}
               <View style={styles.heroButtons}>
                 {user && (
                   <Pressable
@@ -214,8 +210,6 @@ export default function HomeScreen() {
                   </Pressable>
                 )}
               </View>
-
-              {/* Greeting on the right */}
               <View style={styles.greetingArea}>
                 <Text style={styles.greeting}>
                   {user ? `أهلاً، ${user.username} 👋` : "أهلاً بك 👋"}
@@ -223,11 +217,7 @@ export default function HomeScreen() {
                 <Text style={styles.heroTitle}>فرصة</Text>
               </View>
             </View>
-
-            {/* Tagline */}
             <Text style={styles.tagline}>اشترِ واربح جوائز حقيقية</Text>
-
-            {/* Stats pills */}
             {(campaigns?.length ?? 0) > 0 && (
               <View style={styles.statsPills}>
                 <View style={styles.statPill}>
@@ -250,10 +240,7 @@ export default function HomeScreen() {
             )}
           </View>
         </LinearGradient>
-
-        {/* ── Search & Filters ── */}
         <View style={[styles.filtersSection, { backgroundColor: colors.background }]}>
-          {/* Search bar */}
           <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Pressable onPress={() => setSearchText("")} style={{ opacity: searchText.length > 0 ? 1 : 0 }}>
               <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
@@ -268,8 +255,6 @@ export default function HomeScreen() {
             />
             <Ionicons name="search-outline" size={20} color={colors.accent} />
           </View>
-
-          {/* Categories */}
           <View style={styles.categoryWrap}>
             <Pressable
               onPress={() => {
@@ -315,8 +300,6 @@ export default function HomeScreen() {
               })}
             </ScrollView>
           </View>
-
-          {/* Price filter */}
           {showPriceFilter && (
             <ScrollView
               horizontal
@@ -345,8 +328,6 @@ export default function HomeScreen() {
               })}
             </ScrollView>
           )}
-
-          {/* Bottom row: show completed + result count */}
           <View style={styles.bottomFilterRow}>
             <View style={styles.resultPill}>
               <Text style={[styles.resultCount, { color: colors.accent }]}>
@@ -372,8 +353,6 @@ export default function HomeScreen() {
             </Pressable>
           </View>
         </View>
-
-        {/* ── Section Header ── */}
         <View style={[styles.sectionHeader, { borderBottomColor: colors.border }]}>
           <View style={styles.sectionLeft}>
             {hasActiveFilters && (
@@ -475,9 +454,6 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-/* ─────────────────── Styles ─────────────────── */
-
 const proofStyles = StyleSheet.create({
   container: {
     position: "absolute",
@@ -529,8 +505,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  /* ── Hero ── */
   hero: {
     overflow: "hidden",
     paddingBottom: 28,
@@ -676,8 +650,6 @@ const styles = StyleSheet.create({
     borderRadius: 45,
     backgroundColor: "rgba(236,72,153,0.12)",
   },
-
-  /* ── Filters ── */
   filtersSection: {
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -780,8 +752,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     writingDirection: "rtl",
   },
-
-  /* ── Section Header ── */
   sectionHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -816,13 +786,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     writingDirection: "rtl",
   },
-
-  /* ── Cards ── */
   cardPadding: {
     paddingHorizontal: 16,
   },
-
-  /* ── Empty ── */
   emptyState: {
     alignItems: "center",
     paddingVertical: 60,

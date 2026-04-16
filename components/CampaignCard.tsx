@@ -120,7 +120,6 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
         }}
         style={[styles.card, { backgroundColor: colors.card }]}
       >
-        {/* Image Area */}
         <View style={styles.imageArea}>
           {campaign.imageUrl ? (
             <Image
@@ -149,14 +148,10 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             colors={["transparent", "rgba(0,0,0,0.5)"]}
             style={styles.imageOverlay}
           />
-
-          {/* Status Badge — top-right (end) for RTL */}
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
             <Text style={styles.statusText}>{getStatusText()}</Text>
             <Ionicons name={getStatusIcon()} size={11} color="#fff" />
           </View>
-
-          {/* Favorite — top-left (start) */}
           <Pressable
             onPress={(e) => {
               e.stopPropagation();
@@ -172,8 +167,6 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
               color={favorited ? "#EF4444" : "#fff"}
             />
           </Pressable>
-
-          {/* Price Tag — bottom-left (start) */}
           <View style={styles.priceTag}>
             {isActiveFlashSale && (campaign as any).originalPrice && (
               <Text style={styles.originalPrice}>${parseFloat((campaign as any).originalPrice).toFixed(0)}</Text>
@@ -181,15 +174,10 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             <Text style={styles.priceTagValue}>${parseFloat(campaign.productPrice).toFixed(0)}</Text>
           </View>
         </View>
-
-        {/* Content */}
         <View style={styles.content}>
-          {/* Title */}
           <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
             {campaign.title}
           </Text>
-
-          {/* Prize Row */}
           <View style={styles.prizeRow}>
             <Text style={[styles.prizeText, { color: colors.textSecondary }]} numberOfLines={1}>
               {campaign.prizeName}
@@ -198,8 +186,6 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
               <Ionicons name="trophy" size={14} color={colors.accent} />
             </View>
           </View>
-
-          {/* Progress */}
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
               <Text style={[styles.soldText, { color: colors.textSecondary }]}>
@@ -216,8 +202,6 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
               />
             </View>
           </View>
-
-          {/* Flash Sale Countdown */}
           {isActiveFlashSale && (
             <View style={[styles.countdownRow, { backgroundColor: "rgba(239,68,68,0.08)", borderWidth: 1, borderColor: "rgba(239,68,68,0.15)" }]}>
               <Text style={styles.countdownLabel2}>ساعة</Text>
@@ -229,8 +213,6 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
               <Text style={[styles.flashLabel, { color: "#EF4444" }]}>🔥 ينتهي خلال</Text>
             </View>
           )}
-
-          {/* Regular Countdown */}
           {campaign.endsAt && !isCompleted && !isSoldOut && !countdown.expired && !isActiveFlashSale && (
             <View style={styles.countdownRow}>
               <Text style={[styles.countdownLabel2, { color: colors.textSecondary }]}>ث</Text>
@@ -250,14 +232,7 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             </View>
           )}
 
-          {/* CTA Button */}
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onPress();
-            }}
-            style={styles.ctaButton}
-          >
+          <View style={styles.ctaButton}>
             <LinearGradient
               colors={
                 isCompleted
@@ -271,13 +246,13 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
               style={styles.ctaGradient}
             >
               <Ionicons
-                name={isCompleted ? "trophy" : isSoldOut ? "eye" : "cart"}
+                name={isCompleted ? "trophy" : isSoldOut ? "eye" : "chevron-back"}
                 size={16}
                 color="#fff"
               />
               <Text style={styles.ctaText}>{getCtaText()}</Text>
             </LinearGradient>
-          </Pressable>
+          </View>
         </View>
       </Pressable>
     </Animated.View>
