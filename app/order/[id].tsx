@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
@@ -129,18 +128,12 @@ export default function OrderDetailScreen() {
         return res.json();
       } else {
         if (!selectedImage) throw new Error("لم يتم اختيار صورة");
-        const base64 = await FileSystem.readAsStringAsync(selectedImage, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        const byteChars = atob(base64);
-        const byteNumbers = new Array(byteChars.length);
-        for (let i = 0; i < byteChars.length; i++) {
-          byteNumbers[i] = byteChars.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "image/jpeg" });
         const formData = new FormData();
-        formData.append("receipt", blob, "receipt.jpg");
+        formData.append("receipt", {
+          uri: selectedImage,
+          name: "receipt.jpg",
+          type: "image/jpeg",
+        } as any);
         const res = await fetch(url.toString(), {
           method: "POST",
           body: formData,
