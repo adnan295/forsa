@@ -375,6 +375,18 @@ export default function CampaignDetailScreen() {
                       {isSelected && (
                         <Ionicons name="checkmark-circle" size={20} color={Colors.light.accent} />
                       )}
+                      {product.imageUrl ? (
+                        <Image
+                          source={{ uri: buildMediaUrl(product.imageUrl)! }}
+                          style={{ width: 52, height: 52, borderRadius: 8 }}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                        />
+                      ) : (
+                        <View style={{ width: 52, height: 52, borderRadius: 8, backgroundColor: "rgba(124,58,237,0.08)", alignItems: "center", justifyContent: "center" }}>
+                          <Ionicons name="image-outline" size={22} color={Colors.light.accent} style={{ opacity: 0.4 }} />
+                        </View>
+                      )}
                       <View style={{ flex: 1 }}>
                         <Text style={[
                           styles.variantName,
