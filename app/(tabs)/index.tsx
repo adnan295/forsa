@@ -41,13 +41,13 @@ const PRICE_RANGE_TABS: { key: PriceRangeKey; label: string }[] = [
   { key: "over100", label: "أكثر من 100$" },
 ];
 
-const CATEGORY_TABS: { key: CategoryKey; label: string; icon: string }[] = [
-  { key: "all", label: "الكل", icon: "apps" },
-  { key: "electronics", label: "إلكترونيات", icon: "phone-portrait" },
-  { key: "fashion", label: "أزياء", icon: "shirt" },
-  { key: "beauty", label: "جمال", icon: "sparkles" },
-  { key: "accessories", label: "إكسسوارات", icon: "watch" },
-  { key: "other", label: "أخرى", icon: "grid" },
+const CATEGORY_TABS: { key: CategoryKey; label: string }[] = [
+  { key: "all", label: "الكل" },
+  { key: "electronics", label: "إلكترونيات" },
+  { key: "fashion", label: "أزياء" },
+  { key: "beauty", label: "جمال" },
+  { key: "accessories", label: "إكسسوارات" },
+  { key: "other", label: "أخرى" },
 ];
 
 function RecentPurchaseBanner() {
