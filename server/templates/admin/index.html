@@ -1629,6 +1629,7 @@ function openEditPay(id){
 async function previewPayImg(input){
   const file=input.files[0];if(!file)return;
   const fd=new FormData();fd.append('image',file);
+  if(editingPayId) fd.append('methodId', editingPayId);
   try{
     const res=await fetch('/api/admin/payment-methods/upload-image',{method:'POST',credentials:'include',body:fd});
     const data=await res.json();
