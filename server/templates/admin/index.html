@@ -559,6 +559,7 @@ input:checked+.slider:before{transform:translateX(-18px)}
       <div class="form-group"><label class="form-label">صورة الحملة</label>
         <input type="file" class="form-input" id="campImgFile" accept="image/*" onchange="previewCampImg(this)"/>
         <img id="campImgPreview" src="" alt="" style="margin-top:8px;width:120px;height:80px;object-fit:cover;border-radius:8px;display:none;border:1px solid var(--border)"/>
+        <div id="campImgLegacyWarn" style="display:none;margin-top:8px;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e;display:none;align-items:center;gap:8px">⚠️ الصورة القديمة لم تعد متاحة. يرجى رفع صورة جديدة.</div>
         <input type="hidden" id="campImgUrl"/>
       </div>
       <div class="form-group"><label class="form-label">تاريخ الانتهاء (اختياري)</label><input class="form-input" id="campEndsAt" type="datetime-local"/></div>
@@ -933,9 +934,12 @@ function renderCampProducts(){
           <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('prodImgFile_${p._key}').click()" style="font-size:12px;padding:6px 12px">
             📷 رفع صورة
           </button>
-          ${p.imageUrl ? `
+          ${p.imageUrl && !p.imageUrl.startsWith('/uploads/') ? `
             <img src="${esc(p.imageUrl)}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>
             <button type="button" onclick="clearProductImg(${p._key})" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✕ حذف</button>
+          ` : p.imageUrl && p.imageUrl.startsWith('/uploads/') ? `
+            <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:6px 10px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:6px">⚠️ الصورة القديمة غير متاحة — ارفع صورة جديدة</div>
+            <button type="button" onclick="clearProductImg(${p._key})" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">✕ مسح</button>
           ` : '<span style="font-size:12px;color:var(--muted)">لم تُختر صورة</span>'}
         </div>
       </div>
@@ -981,6 +985,7 @@ function openCampModal(){
   document.getElementById('campDesc').value='';
   document.getElementById('campImgUrl').value='';
   document.getElementById('campImgPreview').style.display='none';
+  document.getElementById('campImgLegacyWarn').style.display='none';
   document.getElementById('campImgFile').value='';
   document.getElementById('campEndsAt').value='';
   document.getElementById('campFlash').checked=false;
@@ -1003,9 +1008,16 @@ function openEditCamp(id){
   document.getElementById('campTitle').value=c.title||'';
   document.getElementById('campPrize').value=c.prizeName||'';
   document.getElementById('campDesc').value=c.description||'';
-  document.getElementById('campImgUrl').value=c.imageUrl||'';
-  if(c.imageUrl){const p=document.getElementById('campImgPreview');p.src=c.imageUrl;p.style.display='block';}
-  else{document.getElementById('campImgPreview').style.display='none';}
+  const isLegacyImg=c.imageUrl&&c.imageUrl.startsWith('/uploads/');
+  // Intentionally clear the hidden value for legacy paths: the file no longer
+  // exists on disk after deployment, so saving without a new upload should
+  // null out the broken reference rather than persist an unresolvable path.
+  document.getElementById('campImgUrl').value=isLegacyImg?'':(c.imageUrl||'');
+  const campPrev=document.getElementById('campImgPreview');
+  const campLegacyWarn=document.getElementById('campImgLegacyWarn');
+  if(isLegacyImg){campPrev.style.display='none';campLegacyWarn.style.display='flex';}
+  else if(c.imageUrl){campPrev.src=c.imageUrl;campPrev.style.display='block';campLegacyWarn.style.display='none';}
+  else{campPrev.style.display='none';campLegacyWarn.style.display='none';}
   document.getElementById('campImgFile').value='';
   document.getElementById('campEndsAt').value=c.endsAt?new Date(c.endsAt).toISOString().slice(0,16):'';
   document.getElementById('campFlash').checked=!!c.isFlashSale;
@@ -1035,7 +1047,7 @@ async function previewCampImg(input){
   try{
     const res=await fetch('/api/admin/campaigns/upload-image',{method:'POST',credentials:'include',body:fd});
     const data=await res.json();
-    if(data.imageUrl){document.getElementById('campImgUrl').value=data.imageUrl;const p=document.getElementById('campImgPreview');p.src=data.imageUrl;p.style.display='block';}
+    if(data.imageUrl){document.getElementById('campImgUrl').value=data.imageUrl;const p=document.getElementById('campImgPreview');p.src=data.imageUrl;p.style.display='block';document.getElementById('campImgLegacyWarn').style.display='none';}
   }catch(e){toast('فشل رفع الصورة','error');}
 }
 
