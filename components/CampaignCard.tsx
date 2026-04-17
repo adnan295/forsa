@@ -11,7 +11,6 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
 import { useTheme } from "@/lib/theme-context";
 import { buildMediaUrl } from "@/lib/query-client";
 import { useFavorites } from "@/lib/favorites-context";
@@ -74,10 +73,10 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
   const progressPercent = Math.round(progress * 100);
 
   function getStatusColor() {
-    if (isCompleted) return colors.success;
-    if (isSoldOut) return colors.warning;
+    if (isCompleted) return "#10B981";
+    if (isSoldOut) return "#F59E0B";
     if (isActiveFlashSale) return "#EF4444";
-    return colors.accent;
+    return "#D97706";
   }
 
   function getStatusText() {
@@ -103,10 +102,10 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
   }
 
   const progressColor: [string, string] = isCompleted
-    ? [colors.success, "#059669"]
+    ? ["#10B981", "#059669"]
     : isSoldOut
-    ? [colors.warning, "#D97706"]
-    : [colors.accent, colors.accentPink];
+    ? ["#F59E0B", "#D97706"]
+    : ["#F59E0B", "#D97706"];
 
   return (
     <Animated.View style={animStyle}>
@@ -128,13 +127,13 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             />
           ) : (
             <LinearGradient
-              colors={["#7C3AED", "#A855F7", "#C084FC"]}
+              colors={["#0F172A", "#1E3A5F", "#0F3460"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.imagePlaceholder}
             >
               <View style={styles.placeholderIcon}>
-                <Ionicons name="gift" size={36} color="#fff" />
+                <Ionicons name="gift" size={36} color="#F59E0B" />
               </View>
               <View style={[styles.patternCircle, { top: -20, right: -20, width: 80, height: 80 }]} />
               <View style={[styles.patternCircle, { bottom: -30, left: -10, width: 60, height: 60 }]} />
@@ -142,13 +141,15 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
           )}
 
           <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.5)"]}
+            colors={["transparent", "rgba(0,0,0,0.55)"]}
             style={styles.imageOverlay}
           />
+
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
             <Text style={styles.statusText}>{getStatusText()}</Text>
             <Ionicons name={getStatusIcon()} size={11} color="#fff" />
           </View>
+
           <Pressable
             onPress={(e) => {
               e.stopPropagation();
@@ -164,6 +165,7 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
               color={favorited ? "#EF4444" : "#fff"}
             />
           </Pressable>
+
           <View style={styles.priceTag}>
             {isActiveFlashSale && (campaign as any).originalPrice && (
               <Text style={styles.originalPrice}>${parseFloat((campaign as any).originalPrice).toFixed(0)}</Text>
@@ -171,18 +173,21 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             <Text style={styles.priceTagValue}>${parseFloat(campaign.productPrice).toFixed(0)}</Text>
           </View>
         </View>
+
         <View style={styles.content}>
           <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
             {campaign.title}
           </Text>
+
           <View style={styles.prizeRow}>
             <Text style={[styles.prizeText, { color: colors.textSecondary }]} numberOfLines={1}>
               {campaign.prizeName}
             </Text>
-            <View style={[styles.prizeIconWrap, { backgroundColor: isDark ? "rgba(167,139,250,0.15)" : "rgba(124,58,237,0.1)" }]}>
-              <Ionicons name="trophy" size={14} color={colors.accent} />
+            <View style={[styles.prizeIconWrap, { backgroundColor: isDark ? "rgba(252,211,77,0.12)" : "rgba(217,119,6,0.08)" }]}>
+              <Ionicons name="trophy" size={14} color="#D97706" />
             </View>
           </View>
+
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
               <Text style={[styles.soldText, { color: colors.textSecondary }]}>
@@ -199,8 +204,9 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
               />
             </View>
           </View>
+
           {isActiveFlashSale && (
-            <View style={[styles.countdownRow, { backgroundColor: "rgba(239,68,68,0.08)", borderWidth: 1, borderColor: "rgba(239,68,68,0.15)" }]}>
+            <View style={styles.countdownRow}>
               <Text style={styles.countdownLabel2}>ساعة</Text>
               <Text style={styles.countdownNum}>{String(flashCountdown.hours).padStart(2, "0")}</Text>
               <Text style={styles.countdownSep}>:</Text>
@@ -210,22 +216,23 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
               <Text style={[styles.flashLabel, { color: "#EF4444" }]}>🔥 ينتهي خلال</Text>
             </View>
           )}
+
           {campaign.endsAt && !isCompleted && !isSoldOut && !countdown.expired && !isActiveFlashSale && (
-            <View style={styles.countdownRow}>
+            <View style={[styles.countdownRow, { backgroundColor: isDark ? "rgba(252,211,77,0.06)" : "rgba(217,119,6,0.06)" }]}>
               <Text style={[styles.countdownLabel2, { color: colors.textSecondary }]}>ث</Text>
-              <Text style={styles.countdownNum}>{String(countdown.seconds).padStart(2, "0")}</Text>
-              <Text style={styles.countdownSep}>:</Text>
-              <Text style={styles.countdownNum}>{String(countdown.minutes).padStart(2, "0")}</Text>
-              <Text style={styles.countdownSep}>:</Text>
-              <Text style={styles.countdownNum}>{String(countdown.hours).padStart(2, "0")}</Text>
+              <Text style={[styles.countdownNum, { color: "#D97706" }]}>{String(countdown.seconds).padStart(2, "0")}</Text>
+              <Text style={[styles.countdownSep, { color: "#D97706" }]}>:</Text>
+              <Text style={[styles.countdownNum, { color: "#D97706" }]}>{String(countdown.minutes).padStart(2, "0")}</Text>
+              <Text style={[styles.countdownSep, { color: "#D97706" }]}>:</Text>
+              <Text style={[styles.countdownNum, { color: "#D97706" }]}>{String(countdown.hours).padStart(2, "0")}</Text>
               {countdown.days > 0 && (
                 <>
-                  <Text style={styles.countdownSep}>:</Text>
-                  <Text style={styles.countdownNum}>{countdown.days}</Text>
+                  <Text style={[styles.countdownSep, { color: "#D97706" }]}>:</Text>
+                  <Text style={[styles.countdownNum, { color: "#D97706" }]}>{countdown.days}</Text>
                   <Text style={[styles.countdownLabel2, { color: colors.textSecondary }]}>يوم</Text>
                 </>
               )}
-              <Ionicons name="timer-outline" size={14} color={colors.textSecondary} />
+              <Ionicons name="timer-outline" size={14} color="#D97706" />
             </View>
           )}
 
@@ -233,10 +240,10 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             <LinearGradient
               colors={
                 isCompleted
-                  ? [colors.success, "#059669"]
+                  ? ["#10B981", "#059669"]
                   : isSoldOut
-                  ? [colors.warning, "#D97706"]
-                  : [colors.accent, colors.accentPink]
+                  ? ["#64748B", "#475569"]
+                  : ["#D97706", "#B45309"]
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -258,15 +265,14 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 20,
     overflow: "hidden",
     marginBottom: 16,
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 5,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   imageArea: {
     height: 200,
@@ -286,14 +292,14 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(245,158,11,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
   patternCircle: {
     position: "absolute",
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   imageOverlay: {
     position: "absolute",
@@ -326,7 +332,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: "rgba(0,0,0,0.35)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -337,22 +343,24 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "flex-end",
     gap: 4,
-    backgroundColor: "rgba(124,58,237,0.92)",
+    backgroundColor: "rgba(15,23,42,0.88)",
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.3)",
   },
   originalPrice: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.5)",
     textDecorationLine: "line-through",
     marginBottom: 1,
   },
   priceTagValue: {
     fontFamily: "Inter_700Bold",
     fontSize: 18,
-    color: "#FFFFFF",
+    color: "#FCD34D",
   },
   content: {
     padding: 16,
@@ -362,7 +370,6 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: "Inter_700Bold",
     fontSize: 16,
-    color: Colors.light.text,
     textAlign: "right",
     writingDirection: "rtl",
     lineHeight: 24,
@@ -383,7 +390,6 @@ const styles = StyleSheet.create({
   prizeText: {
     fontFamily: "Inter_500Medium",
     fontSize: 13,
-    color: Colors.light.textSecondary,
     flex: 1,
     textAlign: "right",
     writingDirection: "rtl",
@@ -399,17 +405,14 @@ const styles = StyleSheet.create({
   progressPercent: {
     fontFamily: "Inter_700Bold",
     fontSize: 13,
-    color: Colors.light.accent,
   },
   soldText: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
-    color: Colors.light.textSecondary,
     writingDirection: "rtl",
   },
   progressBar: {
     height: 7,
-    backgroundColor: Colors.light.progressBg,
     borderRadius: 4,
     overflow: "hidden",
   },
@@ -436,20 +439,17 @@ const styles = StyleSheet.create({
   countdownNum: {
     fontFamily: "Inter_700Bold",
     fontSize: 14,
-    color: "#EF4444",
     minWidth: 22,
     textAlign: "center",
   },
   countdownLabel2: {
     fontFamily: "Inter_400Regular",
     fontSize: 10,
-    color: Colors.light.textSecondary,
     writingDirection: "rtl",
   },
   countdownSep: {
     fontFamily: "Inter_700Bold",
     fontSize: 13,
-    color: "#EF4444",
   },
   ctaButton: {
     borderRadius: 14,

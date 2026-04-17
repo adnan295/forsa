@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useMemo, useEffect } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,6 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
-  Dimensions,
-  ScrollView,
-  TextInput,
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -23,7 +20,6 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
 import { useTheme } from "@/lib/theme-context";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
@@ -31,27 +27,8 @@ import CampaignCard from "@/components/CampaignCard";
 import { queryClient } from "@/lib/query-client";
 import type { Campaign } from "@shared/schema";
 
-type CategoryKey = "all" | "electronics" | "fashion" | "beauty" | "accessories" | "other";
-type PriceRangeKey = "all" | "under50" | "50to100" | "over100";
-
-const PRICE_RANGE_TABS: { key: PriceRangeKey; label: string }[] = [
-  { key: "all", label: "الكل" },
-  { key: "under50", label: "أقل من 50$" },
-  { key: "50to100", label: "50-100$" },
-  { key: "over100", label: "أكثر من 100$" },
-];
-
-const CATEGORY_TABS: { key: CategoryKey; label: string }[] = [
-  { key: "all", label: "الكل" },
-  { key: "electronics", label: "إلكترونيات" },
-  { key: "fashion", label: "أزياء" },
-  { key: "beauty", label: "جمال" },
-  { key: "accessories", label: "إكسسوارات" },
-  { key: "other", label: "أخرى" },
-];
-
 function RecentPurchaseBanner() {
-  const { isDark, colors } = useTheme();
+  const { isDark } = useTheme();
   const { data: purchases } = useQuery<{ campaignTitle: string; minutesAgo: number }[]>({
     queryKey: ["/api/recent-purchases"],
     staleTime: 60000,
@@ -86,9 +63,9 @@ function RecentPurchaseBanner() {
 
   return (
     <Animated.View style={[proofStyles.container, animatedStyle]}>
-      <View style={[proofStyles.banner, { backgroundColor: isDark ? "rgba(55,65,81,0.97)" : "rgba(17,24,39,0.93)" }]}>
+      <View style={proofStyles.banner}>
         <View style={proofStyles.iconWrap}>
-          <Ionicons name="bag-check" size={14} color={colors.success} />
+          <Ionicons name="bag-check" size={14} color="#10B981" />
         </View>
         <Text style={proofStyles.text} numberOfLines={1}>
           مستخدم اشترى {item.campaignTitle} منذ {item.minutesAgo > 60 ? `${Math.floor(item.minutesAgo / 60)} ساعة` : `${item.minutesAgo} دقائق`}
@@ -103,11 +80,6 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { totalItems } = useCart();
-  const [searchText, setSearchText] = useState("");
-  const [activeCategory, setActiveCategory] = useState<CategoryKey>("all");
-  const [activePriceRange, setActivePriceRange] = useState<PriceRangeKey>("all");
-  const [showPriceFilter, setShowPriceFilter] = useState(false);
-  const [showCompleted, setShowCompleted] = useState(false);
 
   const {
     data: campaigns,
@@ -129,53 +101,28 @@ export default function HomeScreen() {
   const unreadCount = unreadData?.count || 0;
 
   const activeCampaigns = campaigns?.filter((c) => c.status === "active") || [];
-
-  const filteredCampaigns = useMemo(() => {
-    let list = campaigns || [];
-    if (!showCompleted) list = list.filter(c => c.status === "active");
-    if (activeCategory !== "all") list = list.filter(c => (c.category || "other") === activeCategory);
-    if (activePriceRange !== "all") {
-      list = list.filter(c => {
-        const price = parseFloat(c.productPrice) || 0;
-        if (isNaN(price)) return true;
-        if (activePriceRange === "under50") return price < 50;
-        if (activePriceRange === "50to100") return price >= 50 && price <= 100;
-        if (activePriceRange === "over100") return price > 100;
-        return true;
-      });
-    }
-    if (searchText.trim()) {
-      const q = searchText.trim().toLowerCase();
-      list = list.filter(c =>
-        c.title.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q) ||
-        c.prizeName.toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [campaigns, showCompleted, activeCategory, activePriceRange, searchText]);
+  const displayCampaigns = campaigns?.filter((c) => c.status === "active") || [];
 
   const onRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
     refetch();
   }, [refetch]);
 
-  const hasActiveFilters = activeCategory !== "all" || activePriceRange !== "all" || showCompleted || searchText.trim().length > 0;
-
   function renderHeader() {
     return (
       <View>
         <LinearGradient
-          colors={["#6D28D9", "#8B5CF6", "#EC4899"]}
+          colors={["#0F172A", "#1E293B", "#0F3460"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
         >
-          <View style={styles.deco1} />
-          <View style={styles.deco2} />
-          <View style={styles.deco3} />
+          <View style={styles.decoCircle1} />
+          <View style={styles.decoCircle2} />
+          <View style={styles.decoCircle3} />
+          <View style={[styles.goldAccentLine]} />
 
-          <View style={[styles.heroContent, { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 }]}>
+          <View style={[styles.heroContent, { paddingTop: Platform.OS === "web" ? 67 + 20 : insets.top + 20 }]}>
             <View style={styles.heroTop}>
               <View style={styles.heroButtons}>
                 {user && (
@@ -184,7 +131,7 @@ export default function HomeScreen() {
                     style={styles.iconBtn}
                     testID="notifications-button"
                   >
-                    <Ionicons name="notifications-outline" size={20} color="#fff" />
+                    <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.9)" />
                     {unreadCount > 0 && (
                       <View style={styles.badge}>
                         <Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
@@ -197,7 +144,7 @@ export default function HomeScreen() {
                   style={styles.iconBtn}
                   testID="cart-button"
                 >
-                  <Ionicons name="cart-outline" size={20} color="#fff" />
+                  <Ionicons name="cart-outline" size={20} color="rgba(255,255,255,0.9)" />
                   {totalItems > 0 && (
                     <View style={styles.badge}>
                       <Text style={styles.badgeText}>{totalItems > 9 ? "9+" : totalItems}</Text>
@@ -214,166 +161,43 @@ export default function HomeScreen() {
                 <Text style={styles.greeting}>
                   {user ? `أهلاً، ${user.username} 👋` : "أهلاً بك 👋"}
                 </Text>
-                <Text style={styles.heroTitle}>فرصة</Text>
+                <View style={styles.brandRow}>
+                  <View style={styles.goldDot} />
+                  <Text style={styles.heroTitle}>فرصة</Text>
+                </View>
               </View>
             </View>
-            <Text style={styles.tagline}>اشترِ واربح جوائز حقيقية</Text>
+
+            <Text style={styles.tagline}>اشترِ منتجاتك وفوز بجوائز حقيقية</Text>
+
             {(campaigns?.length ?? 0) > 0 && (
-              <View style={styles.statsPills}>
-                <View style={styles.statPill}>
-                  <Text style={styles.statPillNum}>{campaigns?.filter(c => c.status === "completed").length || 0}</Text>
-                  <Text style={styles.statPillLabel}>فائز</Text>
+              <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statNum}>{activeCampaigns.length}</Text>
+                  <Text style={styles.statLabel}>عرض نشط</Text>
                 </View>
                 <View style={styles.statDivider} />
-                <View style={styles.statPill}>
-                  <Text style={styles.statPillNum}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statNum}>
                     {activeCampaigns.reduce((s, c) => s + (c.totalQuantity - c.soldQuantity), 0)}
                   </Text>
-                  <Text style={styles.statPillLabel}>تذكرة متبقية</Text>
+                  <Text style={styles.statLabel}>تذكرة متبقية</Text>
                 </View>
                 <View style={styles.statDivider} />
-                <View style={styles.statPill}>
-                  <Text style={styles.statPillNum}>{activeCampaigns.length}</Text>
-                  <Text style={styles.statPillLabel}>حملة نشطة</Text>
+                <View style={styles.statBox}>
+                  <Text style={styles.statNum}>{campaigns?.filter(c => c.status === "completed").length || 0}</Text>
+                  <Text style={styles.statLabel}>فائز سابق</Text>
                 </View>
               </View>
             )}
           </View>
         </LinearGradient>
-        <View style={[styles.filtersSection, { backgroundColor: colors.background }]}>
-          <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Pressable onPress={() => setSearchText("")} style={{ opacity: searchText.length > 0 ? 1 : 0 }}>
-              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-            </Pressable>
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder="ابحث عن منتج أو جائزة..."
-              placeholderTextColor={colors.textSecondary}
-              value={searchText}
-              onChangeText={setSearchText}
-              testID="search-input"
-            />
-            <Ionicons name="search-outline" size={20} color={colors.accent} />
+
+        <View style={[styles.sectionRow, { backgroundColor: colors.background }]}>
+          <View style={styles.sectionBadge}>
+            <Text style={styles.sectionBadgeText}>{displayCampaigns.length}</Text>
           </View>
-          <View style={styles.categoryWrap}>
-            <Pressable
-              onPress={() => {
-                setShowPriceFilter(!showPriceFilter);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-              style={[
-                styles.filterIconBtn,
-                { backgroundColor: colors.card, borderColor: (showPriceFilter || activePriceRange !== "all") ? colors.accent : colors.border },
-                (showPriceFilter || activePriceRange !== "all") && { backgroundColor: colors.accent },
-              ]}
-            >
-              <Ionicons
-                name="options"
-                size={17}
-                color={(showPriceFilter || activePriceRange !== "all") ? "#fff" : colors.textSecondary}
-              />
-            </Pressable>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryScroll}
-            >
-              {CATEGORY_TABS.map((cat) => {
-                const active = activeCategory === cat.key;
-                return (
-                  <Pressable
-                    key={cat.key}
-                    onPress={() => {
-                      setActiveCategory(cat.key);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                    style={[
-                      styles.catChip,
-                      { backgroundColor: active ? colors.accent : colors.card, borderColor: active ? colors.accent : colors.border },
-                    ]}
-                  >
-                    <Text style={[styles.catChipText, { color: active ? "#fff" : colors.textSecondary }]}>
-                      {cat.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-          {showPriceFilter && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.priceScroll}
-            >
-              {PRICE_RANGE_TABS.map((pr) => {
-                const active = activePriceRange === pr.key;
-                return (
-                  <Pressable
-                    key={pr.key}
-                    onPress={() => {
-                      setActivePriceRange(pr.key);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                    style={[
-                      styles.priceChip,
-                      { backgroundColor: active ? colors.accentPink : colors.card, borderColor: active ? colors.accentPink : colors.border },
-                    ]}
-                  >
-                    <Text style={[styles.priceChipText, { color: active ? "#fff" : colors.textSecondary }]}>
-                      {pr.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
-          <View style={styles.bottomFilterRow}>
-            <View style={styles.resultPill}>
-              <Text style={[styles.resultCount, { color: colors.accent }]}>
-                {filteredCampaigns.length}
-              </Text>
-              <Text style={[styles.resultLabel, { color: colors.textSecondary }]}>نتيجة</Text>
-            </View>
-            <Pressable
-              onPress={() => {
-                setShowCompleted(!showCompleted);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-              style={styles.completedToggle}
-            >
-              <Text style={[styles.completedText, { color: showCompleted ? colors.accent : colors.textSecondary }]}>
-                عرض المنتهية
-              </Text>
-              <Ionicons
-                name={showCompleted ? "checkbox" : "square-outline"}
-                size={17}
-                color={showCompleted ? colors.accent : colors.textSecondary}
-              />
-            </Pressable>
-          </View>
-        </View>
-        <View style={[styles.sectionHeader, { borderBottomColor: colors.border }]}>
-          <View style={styles.sectionLeft}>
-            {hasActiveFilters && (
-              <Pressable
-                onPress={() => {
-                  setSearchText("");
-                  setActiveCategory("all");
-                  setActivePriceRange("all");
-                  setShowCompleted(false);
-                  setShowPriceFilter(false);
-                }}
-                style={[styles.clearBtn, { borderColor: colors.border }]}
-              >
-                <Text style={[styles.clearBtnText, { color: colors.textSecondary }]}>مسح</Text>
-                <Ionicons name="close" size={13} color={colors.textSecondary} />
-              </Pressable>
-            )}
-          </View>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {searchText ? "نتائج البحث" : showCompleted ? "جميع الحملات" : "العروض المتاحة 🔥"}
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>العروض المتاحة 🔥</Text>
         </View>
       </View>
     );
@@ -382,7 +206,7 @@ export default function HomeScreen() {
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <ActivityIndicator size="large" color="#D97706" />
       </View>
     );
   }
@@ -390,7 +214,7 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
-        data={filteredCampaigns}
+        data={displayCampaigns}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
           <View style={styles.cardPadding}>
@@ -409,35 +233,13 @@ export default function HomeScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <View style={[styles.emptyIconWrap, { backgroundColor: isDark ? "rgba(167,139,250,0.12)" : "rgba(124,58,237,0.07)" }]}>
-              <Ionicons
-                name={searchText ? "search-outline" : "sparkles-outline"}
-                size={34}
-                color={colors.accent}
-              />
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="sparkles-outline" size={40} color="#D97706" />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              {searchText ? "لا توجد نتائج" : "لا توجد حملات حالياً"}
-            </Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>لا توجد عروض حالياً</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              {searchText
-                ? "جرّب كلمات بحث مختلفة أو تصفّح جميع الحملات"
-                : "ترقّب! حملات وجوائز مذهلة في الطريق إليك"}
+              ترقّب! حملات وجوائز مذهلة في الطريق إليك
             </Text>
-            {hasActiveFilters && (
-              <Pressable
-                onPress={() => {
-                  setSearchText("");
-                  setActiveCategory("all");
-                  setActivePriceRange("all");
-                  setShowCompleted(false);
-                  setShowPriceFilter(false);
-                }}
-                style={[styles.clearAllBtn, { backgroundColor: isDark ? "rgba(167,139,250,0.12)" : "rgba(124,58,237,0.08)" }]}
-              >
-                <Text style={[styles.clearAllText, { color: colors.accent }]}>مسح الفلاتر</Text>
-              </Pressable>
-            )}
           </View>
         }
         contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 84 + 24 : 104 }}
@@ -445,7 +247,7 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={onRefresh}
-            tintColor={colors.accent}
+            tintColor="#D97706"
           />
         }
         showsVerticalScrollIndicator={false}
@@ -454,6 +256,7 @@ export default function HomeScreen() {
     </View>
   );
 }
+
 const proofStyles = StyleSheet.create({
   container: {
     position: "absolute",
@@ -472,11 +275,14 @@ const proofStyles = StyleSheet.create({
     borderRadius: 14,
     maxWidth: 400,
     width: "100%",
+    backgroundColor: "rgba(15,23,42,0.95)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.2,
     shadowRadius: 14,
     elevation: 7,
+    borderWidth: 1,
+    borderColor: "rgba(217,119,6,0.3)",
   },
   iconWrap: {
     width: 26,
@@ -507,12 +313,12 @@ const styles = StyleSheet.create({
   },
   hero: {
     overflow: "hidden",
-    paddingBottom: 28,
+    paddingBottom: 32,
   },
   heroContent: {
     paddingHorizontal: 20,
     zIndex: 2,
-    gap: 12,
+    gap: 14,
   },
   heroTop: {
     flexDirection: "row-reverse",
@@ -521,293 +327,209 @@ const styles = StyleSheet.create({
   },
   greetingArea: {
     alignItems: "flex-end",
+    gap: 4,
+  },
+  brandRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  goldDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#F59E0B",
+    marginTop: 2,
   },
   greeting: {
     fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.75)",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.6)",
     writingDirection: "rtl",
-    marginBottom: 2,
   },
   heroTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 30,
+    fontSize: 34,
     color: "#FFFFFF",
     textAlign: "right",
     writingDirection: "rtl",
-    letterSpacing: -0.5,
+    letterSpacing: -1,
   },
   heroButtons: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     marginTop: 4,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.1)",
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
   },
   badge: {
     position: "absolute",
-    top: -4,
-    end: -4,
+    top: -5,
+    end: -5,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#EF4444",
+    backgroundColor: "#F59E0B",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 3,
     borderWidth: 1.5,
-    borderColor: "#7C3AED",
+    borderColor: "#0F172A",
   },
   badgeText: {
     fontFamily: "Inter_700Bold",
     fontSize: 9,
-    color: "#fff",
+    color: "#0F172A",
   },
   loginBtn: {
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(245,158,11,0.2)",
     paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.4)",
   },
   loginText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
-    color: "#FFFFFF",
+    color: "#FCD34D",
     writingDirection: "rtl",
   },
   tagline: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 15,
-    color: "rgba(255,255,255,0.75)",
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.55)",
     textAlign: "right",
     writingDirection: "rtl",
-    marginTop: 4,
   },
-  statsPills: {
+  statsRow: {
     flexDirection: "row-reverse",
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 0,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.15)",
     marginTop: 4,
   },
-  statPill: {
+  statBox: {
     flex: 1,
     alignItems: "center",
-    gap: 3,
+    gap: 4,
   },
-  statPillNum: {
+  statNum: {
     fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    color: "#FFFFFF",
+    fontSize: 22,
+    color: "#FCD34D",
   },
-  statPillLabel: {
+  statLabel: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
-    color: "rgba(255,255,255,0.65)",
+    color: "rgba(255,255,255,0.5)",
     writingDirection: "rtl",
     textAlign: "center",
   },
   statDivider: {
     width: 1,
-    height: 32,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    height: 34,
+    backgroundColor: "rgba(255,255,255,0.1)",
     alignSelf: "center",
   },
-  deco1: {
+  decoCircle1: {
     position: "absolute",
-    top: -50,
-    left: -30,
+    top: -60,
+    left: -40,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(245,158,11,0.04)",
+  },
+  decoCircle2: {
+    position: "absolute",
+    top: 30,
+    right: -60,
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "rgba(255,255,255,0.025)",
   },
-  deco2: {
+  decoCircle3: {
     position: "absolute",
-    top: 20,
-    right: -40,
+    bottom: -40,
+    left: "40%",
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "rgba(245,158,11,0.05)",
   },
-  deco3: {
+  goldAccentLine: {
     position: "absolute",
-    bottom: -30,
-    left: "30%",
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "rgba(236,72,153,0.12)",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: "rgba(245,158,11,0.25)",
   },
-  filtersSection: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    gap: 12,
-  },
-  searchBar: {
+  sectionRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "ios" ? 12 : 4,
-    gap: 10,
-    borderWidth: 1.5,
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  searchInput: {
-    flex: 1,
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  categoryWrap: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
-  },
-  categoryScroll: {
-    flexDirection: "row-reverse",
-    gap: 7,
-    paddingEnd: 4,
-  },
-  catChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  catChipText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    writingDirection: "rtl",
-  },
-  filterIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    flexShrink: 0,
-  },
-  priceScroll: {
-    flexDirection: "row-reverse",
-    gap: 7,
-  },
-  priceChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  priceChipText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    writingDirection: "rtl",
-  },
-  bottomFilterRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  completedToggle: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-  },
-  completedText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    writingDirection: "rtl",
-  },
-  resultPill: {
-    flexDirection: "row-reverse",
-    alignItems: "baseline",
-    gap: 4,
-  },
-  resultCount: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: Colors.light.accent,
-  },
-  resultLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    writingDirection: "rtl",
-  },
-  sectionHeader: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    marginBottom: 4,
+    paddingTop: 20,
+    paddingBottom: 14,
+    gap: 10,
   },
   sectionTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 18,
+    fontSize: 19,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  sectionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  clearBtn: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  sectionBadge: {
+    backgroundColor: "#D97706",
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: 10,
-    borderWidth: 1,
+    minWidth: 28,
+    alignItems: "center",
   },
-  clearBtnText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    writingDirection: "rtl",
+  sectionBadgeText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+    color: "#FFFFFF",
   },
   cardPadding: {
     paddingHorizontal: 16,
   },
   emptyState: {
     alignItems: "center",
-    paddingVertical: 60,
+    paddingVertical: 70,
     paddingHorizontal: 40,
-    gap: 10,
+    gap: 12,
   },
   emptyIconWrap: {
     width: 80,
     height: 80,
     borderRadius: 40,
+    backgroundColor: "rgba(217,119,6,0.08)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Inter_700Bold",
     fontSize: 18,
-    writingDirection: "rtl",
     textAlign: "center",
+    writingDirection: "rtl",
   },
   emptyText: {
     fontFamily: "Inter_400Regular",
@@ -815,16 +537,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     writingDirection: "rtl",
     lineHeight: 22,
-  },
-  clearAllBtn: {
-    marginTop: 8,
-    paddingHorizontal: 22,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  clearAllText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    writingDirection: "rtl",
   },
 });
