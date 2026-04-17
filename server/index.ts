@@ -194,11 +194,13 @@ function configureExpoAndLanding(app: express.Application) {
 
   app.get("/admin/login", (_req: Request, res: Response) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.status(200).send(adminLoginHtml);
   });
 
   app.get("/admin", (_req: Request, res: Response) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.status(200).send(adminIndexHtml);
   });
 
