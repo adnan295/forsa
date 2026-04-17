@@ -53,18 +53,8 @@ async function sendPushNotifications(userIds: string[], title: string, body: str
   }
 }
 
-const receiptStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, "uploads/receipts/");
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
 const uploadReceipt = multer({
-  storage: receiptStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp|pdf/;
@@ -78,28 +68,10 @@ const uploadReceipt = multer({
   },
 });
 
-const campaignStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, "uploads/campaigns/");
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-const paymentMethodStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, "uploads/payment-methods/");
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
+const imageMemoryStorage = multer.memoryStorage();
 
 const uploadPaymentMethodImage = multer({
-  storage: paymentMethodStorage,
+  storage: imageMemoryStorage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -114,7 +86,7 @@ const uploadPaymentMethodImage = multer({
 });
 
 const uploadCampaignImage = multer({
-  storage: campaignStorage,
+  storage: imageMemoryStorage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -1036,7 +1008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Receipt file is required" });
       }
 
-      const receiptUrl = `/uploads/receipts/${req.file.filename}`;
+      const receiptUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
       const updated = await storage.updateOrderPayment(order.id, {
         paymentStatus: "pending_review",
         receiptUrl,
@@ -1927,7 +1899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "Image file is required" });
       }
-      const imageUrl = `/uploads/payment-methods/${req.file.filename}`;
+      const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
       if (req.body.methodId) {
         await storage.updatePaymentMethod(req.body.methodId as string, { imageUrl });
       }
@@ -1943,7 +1915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "Image file is required" });
       }
-      const imageUrl = `/uploads/campaigns/${req.file.filename}`;
+      const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
       res.json({ imageUrl });
     } catch (error: any) {
       console.error("Upload campaign image error:", error);
