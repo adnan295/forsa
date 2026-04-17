@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
@@ -158,31 +159,76 @@ export default function OrderDetailScreen() {
     },
   });
 
+  const compressImageWeb = (file: File, maxWidth: number): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new (window as any).Image() as HTMLImageElement;
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (w > maxWidth) {
+          h = Math.round(h * maxWidth / w);
+          w = maxWidth;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], "receipt.jpg", { type: "image/jpeg" }));
+          } else {
+            resolve(file);
+          }
+        }, "image/jpeg", 0.82);
+      };
+      img.src = url;
+    });
+  };
+
   const pickImage = async () => {
     if (Platform.OS === "web") {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "image/*";
-      input.onchange = (e: any) => {
+      input.onchange = async (e: any) => {
         const file = e.target.files?.[0];
         if (file) {
-          setSelectedFile(file);
+          const compressed = await compressImageWeb(file, 1200);
+          setSelectedFile(compressed);
           const reader = new FileReader();
           reader.onload = (ev) => {
             setSelectedImage(ev.target?.result as string);
           };
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(compressed);
         }
       };
       input.click();
     } else {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
+        quality: 1,
       });
 
       if (!result.canceled && result.assets[0]) {
-        setSelectedImage(result.assets[0].uri);
+        const asset = result.assets[0];
+        const maxWidth = 1200;
+        if (asset.width && asset.width > maxWidth) {
+          const manipulated = await ImageManipulator.manipulateAsync(
+            asset.uri,
+            [{ resize: { width: maxWidth } }],
+            { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          setSelectedImage(manipulated.uri);
+        } else {
+          const manipulated = await ImageManipulator.manipulateAsync(
+            asset.uri,
+            [],
+            { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          setSelectedImage(manipulated.uri);
+        }
       }
     }
   };
