@@ -1033,7 +1033,7 @@ async function previewCampImg(input){
   try{
     const res=await fetch('/api/admin/campaigns/upload-image',{method:'POST',credentials:'include',body:fd});
     const data=await res.json();
-    if(data.url){document.getElementById('campImgUrl').value=data.url;const p=document.getElementById('campImgPreview');p.src=data.url;p.style.display='block';}
+    if(data.imageUrl){document.getElementById('campImgUrl').value=data.imageUrl;const p=document.getElementById('campImgPreview');p.src=data.imageUrl;p.style.display='block';}
   }catch(e){toast('فشل رفع الصورة','error');}
 }
 
@@ -1045,8 +1045,8 @@ async function uploadProductImg(key,input){
     toast('جاري رفع الصورة...','info');
     const res=await fetch('/api/admin/campaigns/upload-image',{method:'POST',credentials:'include',body:fd});
     const data=await res.json();
-    if(data.url){
-      updateCampProduct(key,'imageUrl',data.url);
+    if(data.imageUrl){
+      updateCampProduct(key,'imageUrl',data.imageUrl);
       renderCampProducts();
       toast('تم رفع الصورة بنجاح','success');
     }else{toast('فشل رفع الصورة','error');}
