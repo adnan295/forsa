@@ -6,7 +6,7 @@ import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
 import { pool, db } from "./db";
 import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, reviews, orders, users, type Campaign } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, campaignClientRequests, reviews, orders, users, type Campaign } from "@shared/schema";
 import { sum, count, and, gte, sql, eq, desc } from "drizzle-orm";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
@@ -2563,6 +2563,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Reset password error:", err);
       return res.status(500).json({ message: "حدث خطأ أثناء إعادة تعيين كلمة السر" });
+    }
+  });
+
+  // Campaign Client Requests
+  app.post("/api/campaign-requests", async (req: Request, res: Response) => {
+    try {
+      const parsed = insertCampaignClientRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0].message });
+      }
+      const [request] = await db.insert(campaignClientRequests).values({
+        businessName: parsed.data.businessName,
+        contactName: parsed.data.contactName,
+        phone: parsed.data.phone,
+        email: parsed.data.email || null,
+        productName: parsed.data.productName,
+        productValue: parsed.data.productValue || null,
+        description: parsed.data.description || null,
+      }).returning();
+      res.json({ message: "تم إرسال طلبك بنجاح! سنتواصل معك قريباً.", id: request.id });
+    } catch (error) {
+      console.error("Campaign request error:", error);
+      res.status(500).json({ message: "حدث خطأ، حاول مجدداً" });
+    }
+  });
+
+  app.get("/api/campaign-requests", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const requests = await db.select().from(campaignClientRequests).orderBy(desc(campaignClientRequests.createdAt));
+      res.json(requests);
+    } catch (error) {
+      console.error("Get campaign requests error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.patch("/api/campaign-requests/:id/status", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { status, adminNotes } = req.body;
+      await db.update(campaignClientRequests)
+        .set({ status, adminNotes: adminNotes || null })
+        .where(eq(campaignClientRequests.id, req.params.id));
+      res.json({ message: "تم التحديث" });
+    } catch (error) {
+      console.error("Update campaign request error:", error);
+      res.status(500).json({ message: "Server error" });
     }
   });
 

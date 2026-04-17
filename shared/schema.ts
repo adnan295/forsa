@@ -438,3 +438,32 @@ export type SupportTicket = typeof supportTickets.$inferSelect;
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 export type CampaignProduct = typeof campaignProducts.$inferSelect;
 export type WalletTransaction = typeof walletTransactions.$inferSelect;
+
+export const campaignClientRequests = pgTable("campaign_client_requests", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  businessName: text("business_name").notNull(),
+  contactName: text("contact_name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  productName: text("product_name").notNull(),
+  productValue: decimal("product_value", { precision: 10, scale: 2 }),
+  description: text("description"),
+  status: text("status").notNull().default("pending"),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCampaignClientRequestSchema = z.object({
+  businessName: z.string().min(2, "اسم النشاط التجاري مطلوب"),
+  contactName: z.string().min(2, "الاسم الكامل مطلوب"),
+  phone: z.string().min(7, "رقم الهاتف غير صحيح"),
+  email: z.string().email("البريد الإلكتروني غير صحيح").optional().or(z.literal("")),
+  productName: z.string().min(2, "اسم المنتج مطلوب"),
+  productValue: z.string().optional(),
+  description: z.string().optional(),
+});
+
+export type CampaignClientRequest = typeof campaignClientRequests.$inferSelect;
+export type InsertCampaignClientRequest = z.infer<typeof insertCampaignClientRequestSchema>;

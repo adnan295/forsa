@@ -24,6 +24,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "flame", selected: "flame.fill" }} />
         <Label>الحملات</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="client">
+        <Icon sf={{ default: "briefcase", selected: "briefcase.fill" }} />
+        <Label>عميل</Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -91,6 +95,15 @@ function ClassicTabLayout() {
           title: "الحملات",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="flame" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="client"
+        options={{
+          title: "عميل",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="briefcase" size={size} color={color} />
           ),
         }}
       />
