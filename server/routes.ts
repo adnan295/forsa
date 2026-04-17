@@ -13,11 +13,6 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import multer from "multer";
 import path from "path";
-import { mkdirSync } from "fs";
-
-mkdirSync("uploads/receipts", { recursive: true });
-mkdirSync("uploads/campaigns", { recursive: true });
-mkdirSync("uploads/payment-methods", { recursive: true });
 
 async function sendPushNotifications(userIds: string[], title: string, body: string, data?: Record<string, string>) {
   try {

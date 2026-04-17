@@ -275,9 +275,6 @@ function setupErrorHandler(app: express.Application) {
   setupBodyParsing(app);
   setupRequestLogging(app);
 
-  const { mkdirSync } = await import("fs");
-  mkdirSync("uploads/receipts", { recursive: true });
-  app.use("/uploads", express.static("uploads"));
 
   configureExpoAndLanding(app);
 
