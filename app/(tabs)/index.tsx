@@ -214,26 +214,26 @@ export default function HomeScreen() {
 
         {/* ── Promo Banner ── */}
         <LinearGradient
-          colors={isDark ? ["#042f35", "#065f5a", "#042f35"] : ["#0D9488", "#0891B2", "#06B6D4"]}
+          colors={isDark ? ["#1A1A1A", "#2A2A2A", "#1A1A1A"] : ["#FFD000", "#FFE033", "#FFD000"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={hdr.promoBanner}
         >
           <View style={hdr.promoLeft}>
-            <Text style={hdr.promoSmall}>عروض حصرية</Text>
-            <Text style={hdr.promoBig}>اشترِ وفوز</Text>
-            <Text style={hdr.promoSub}>بجوائز حقيقية كل يوم</Text>
+            <Text style={[hdr.promoSmall, { color: isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.55)" }]}>عروض حصرية</Text>
+            <Text style={[hdr.promoBig, { color: isDark ? "#FFFFFF" : "#1A1A1A" }]}>اشترِ وفوز</Text>
+            <Text style={[hdr.promoSub, { color: isDark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.65)" }]}>بجوائز حقيقية كل يوم</Text>
           </View>
           <View style={hdr.promoRight}>
-            <View style={hdr.statCard}>
-              <Text style={hdr.statNum}>{activeCampaigns.length}</Text>
-              <Text style={hdr.statLbl}>عرض</Text>
+            <View style={[hdr.statCard, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)" }]}>
+              <Text style={[hdr.statNum, { color: isDark ? "#FFFFFF" : "#1A1A1A" }]}>{activeCampaigns.length}</Text>
+              <Text style={[hdr.statLbl, { color: isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.55)" }]}>عرض</Text>
             </View>
-            <View style={[hdr.statCard, { backgroundColor: "rgba(255,255,255,0.12)" }]}>
-              <Text style={hdr.statNum}>
+            <View style={[hdr.statCard, { backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]}>
+              <Text style={[hdr.statNum, { color: isDark ? "#FFFFFF" : "#1A1A1A" }]}>
                 {activeCampaigns.reduce((s, c) => s + (c.totalQuantity - c.soldQuantity), 0)}
               </Text>
-              <Text style={hdr.statLbl}>تذكرة</Text>
+              <Text style={[hdr.statLbl, { color: isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.55)" }]}>تذكرة</Text>
             </View>
           </View>
           <View style={hdr.promoDeco1} />
@@ -268,7 +268,7 @@ export default function HomeScreen() {
 
         {/* ── All Campaigns Header ── */}
         <View style={[hdr.allRow, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-          <View style={[hdr.countPill, { backgroundColor: isDark ? "rgba(45,212,191,0.15)" : "rgba(13,148,136,0.1)" }]}>
+          <View style={[hdr.countPill, { backgroundColor: isDark ? "rgba(255,208,0,0.2)" : "rgba(255,208,0,0.25)" }]}>
             <Text style={hdr.countText}>{allActive.length}</Text>
           </View>
           <Text style={[hdr.allTitle, { color: colors.text }]}>جميع العروض</Text>
@@ -302,8 +302,8 @@ export default function HomeScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <View style={[styles.emptyIcon, { backgroundColor: isDark ? "rgba(124,58,237,0.12)" : "rgba(109,40,217,0.07)" }]}>
-              <Ionicons name="sparkles-outline" size={38} color="#7C3AED" />
+            <View style={[styles.emptyIcon, { backgroundColor: isDark ? "rgba(255,208,0,0.12)" : "rgba(255,208,0,0.15)" }]}>
+              <Ionicons name="sparkles-outline" size={38} color="#FFD000" />
             </View>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>لا توجد عروض حالياً</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>ترقّب! حملات وجوائز مذهلة في الطريق</Text>
@@ -382,7 +382,7 @@ const feat = StyleSheet.create({
     position: "absolute",
     bottom: 8,
     start: 8,
-    backgroundColor: "rgba(13,148,136,0.92)",
+    backgroundColor: "rgba(26,26,26,0.88)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
@@ -425,7 +425,7 @@ const feat = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#0D9488",
+    backgroundColor: "#FFD000",
     borderRadius: 2,
   },
   remaining: {
@@ -460,14 +460,14 @@ const hdr = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: "#0D9488",
+    backgroundColor: "#FFD000",
     alignItems: "center",
     justifyContent: "center",
   },
   logoText: {
     fontFamily: "Inter_700Bold",
     fontSize: 20,
-    color: "#fff",
+    color: "#1A1A1A",
   },
   userRow: {
     flexDirection: "row-reverse",
@@ -483,7 +483,7 @@ const hdr = StyleSheet.create({
     fontSize: 15,
   },
   loginBtn: {
-    backgroundColor: "#0D9488",
+    backgroundColor: "#FFD000",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
@@ -491,7 +491,7 @@ const hdr = StyleSheet.create({
   loginText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
-    color: "#fff",
+    color: "#1A1A1A",
   },
   iconBtn: {
     width: 40,
@@ -636,7 +636,7 @@ const hdr = StyleSheet.create({
   countText: {
     fontFamily: "Inter_700Bold",
     fontSize: 13,
-    color: "#0D9488",
+    color: "#1A1A1A",
   },
 });
 

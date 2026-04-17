@@ -127,7 +127,7 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             />
           ) : (
             <LinearGradient
-              colors={["#0D9488", "#0891B2", "#06B6D4"]}
+              colors={["#1A1A1A", "#2D2D2D", "#FFD000"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.imagePlaceholder}
@@ -234,10 +234,10 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             <LinearGradient
               colors={
                 isCompleted
-                  ? [colors.success, "#059669"]
+                  ? ["#10B981", "#059669"]
                   : isSoldOut
-                  ? [colors.warning, "#D97706"]
-                  : [colors.accent, colors.accentPink]
+                  ? ["#888888", "#666666"]
+                  : ["#FFD000", "#FFBA00"]
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -246,9 +246,11 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
               <Ionicons
                 name={isCompleted ? "trophy" : isSoldOut ? "eye" : "chevron-back"}
                 size={16}
-                color="#fff"
+                color={isCompleted || isSoldOut ? "#fff" : "#1A1A1A"}
               />
-              <Text style={styles.ctaText}>{getCtaText()}</Text>
+              <Text style={[styles.ctaText, { color: isCompleted || isSoldOut ? "#fff" : "#1A1A1A" }]}>
+                {getCtaText()}
+              </Text>
             </LinearGradient>
           </View>
         </View>
@@ -262,11 +264,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
     marginBottom: 16,
-    shadowColor: "#0D9488",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 5,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   imageArea: {
     height: 200,
@@ -337,7 +339,7 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "flex-end",
     gap: 4,
-    backgroundColor: "rgba(13,148,136,0.92)",
+    backgroundColor: "#FFD000",
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 12,
@@ -345,14 +347,14 @@ const styles = StyleSheet.create({
   originalPrice: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(0,0,0,0.45)",
     textDecorationLine: "line-through",
     marginBottom: 1,
   },
   priceTagValue: {
     fontFamily: "Inter_700Bold",
     fontSize: 18,
-    color: "#FFFFFF",
+    color: "#1A1A1A",
   },
   content: {
     padding: 16,
