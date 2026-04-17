@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Image } from "expo-image";
+import { View, Text, Pressable, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -125,9 +124,7 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             <Image
               source={{ uri: buildMediaUrl(campaign.imageUrl)! }}
               style={styles.campaignImage}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={200}
+              resizeMode="cover"
             />
           ) : (
             <LinearGradient

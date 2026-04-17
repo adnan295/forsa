@@ -10,6 +10,7 @@ import {
   Share,
   TextInput,
   Alert,
+  Image,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -27,7 +28,6 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { Image } from "expo-image";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
@@ -172,9 +172,7 @@ export default function CampaignDetailScreen() {
             <Image
               source={{ uri: buildMediaUrl(campaign.imageUrl)! }}
               style={styles.heroImage}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={300}
+              resizeMode="cover"
             />
           ) : null}
           <LinearGradient
@@ -379,8 +377,7 @@ export default function CampaignDetailScreen() {
                         <Image
                           source={{ uri: buildMediaUrl(product.imageUrl)! }}
                           style={{ width: 52, height: 52, borderRadius: 8 }}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
+                          resizeMode="cover"
                         />
                       ) : (
                         <View style={{ width: 52, height: 52, borderRadius: 8, backgroundColor: "rgba(124,58,237,0.08)", alignItems: "center", justifyContent: "center" }}>
