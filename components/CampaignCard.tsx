@@ -127,7 +127,7 @@ export default function CampaignCard({ campaign, onPress, index = 0 }: Props) {
             />
           ) : (
             <LinearGradient
-              colors={["#7C3AED", "#A855F7", "#C084FC"]}
+              colors={["#0D9488", "#0891B2", "#06B6D4"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.imagePlaceholder}
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
     marginBottom: 16,
-    shadowColor: "#7C3AED",
+    shadowColor: "#0D9488",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 20,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "flex-end",
     gap: 4,
-    backgroundColor: "rgba(124,58,237,0.92)",
+    backgroundColor: "rgba(13,148,136,0.92)",
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 12,

@@ -214,7 +214,7 @@ export default function HomeScreen() {
 
         {/* ── Promo Banner ── */}
         <LinearGradient
-          colors={isDark ? ["#1a0b3b", "#2d1065", "#1a0b3b"] : ["#6D28D9", "#7C3AED", "#9333EA"]}
+          colors={isDark ? ["#042f35", "#065f5a", "#042f35"] : ["#0D9488", "#0891B2", "#06B6D4"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={hdr.promoBanner}
@@ -268,7 +268,7 @@ export default function HomeScreen() {
 
         {/* ── All Campaigns Header ── */}
         <View style={[hdr.allRow, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-          <View style={[hdr.countPill, { backgroundColor: isDark ? "rgba(124,58,237,0.2)" : "rgba(109,40,217,0.1)" }]}>
+          <View style={[hdr.countPill, { backgroundColor: isDark ? "rgba(45,212,191,0.15)" : "rgba(13,148,136,0.1)" }]}>
             <Text style={hdr.countText}>{allActive.length}</Text>
           </View>
           <Text style={[hdr.allTitle, { color: colors.text }]}>جميع العروض</Text>
@@ -382,7 +382,7 @@ const feat = StyleSheet.create({
     position: "absolute",
     bottom: 8,
     start: 8,
-    backgroundColor: "rgba(109,40,217,0.9)",
+    backgroundColor: "rgba(13,148,136,0.92)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
@@ -425,7 +425,7 @@ const feat = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#7C3AED",
+    backgroundColor: "#0D9488",
     borderRadius: 2,
   },
   remaining: {
@@ -460,7 +460,7 @@ const hdr = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: "#7C3AED",
+    backgroundColor: "#0D9488",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -483,7 +483,7 @@ const hdr = StyleSheet.create({
     fontSize: 15,
   },
   loginBtn: {
-    backgroundColor: "#7C3AED",
+    backgroundColor: "#0D9488",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
@@ -636,7 +636,7 @@ const hdr = StyleSheet.create({
   countText: {
     fontFamily: "Inter_700Bold",
     fontSize: 13,
-    color: "#7C3AED",
+    color: "#0D9488",
   },
 });
 
