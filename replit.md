@@ -153,3 +153,9 @@ Comprehensive admin dashboard with 7 sections:
 ## Ports
 - Frontend (Expo): 8081
 - Backend (Express): 5000
+
+## Workflow Configuration (Important)
+- Frontend workflow uses `EXPO_PACKAGER_PROXY_URL=https://$REPLIT_DEV_DOMAIN:8081` (includes port 8081) — without the port, the packager proxies to port 80 → local 8082 (nothing), causing "Failed to download remote update" in the canvas simulator
+- Frontend workflow does NOT use `--localhost` — allows `REACT_NATIVE_PACKAGER_HOSTNAME` to set the Replit dev domain in the exp:// URL, making the canvas simulator able to connect
+- Frontend workflow does NOT use `--clear` — preserves Metro bundle cache between restarts so subsequent starts are fast (~5s vs ~90s rebuild)
+- metro.config.js has `resolver.blockList` excluding `.local/**` to prevent FallbackWatcher ENOENT crash on Replit workflow-log temp dirs
