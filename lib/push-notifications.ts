@@ -18,6 +18,22 @@ export async function getNotificationPermissionStatus(): Promise<"granted" | "de
   return status as "granted" | "denied" | "undetermined";
 }
 
+async function getDevicePushTokenWithRetry(retries = 3, delayMs = 1500): Promise<Notifications.DevicePushToken | null> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const token = await Notifications.getDevicePushTokenAsync();
+      return token;
+    } catch (error) {
+      console.warn(`[PushNotifications] getDevicePushTokenAsync attempt ${attempt}/${retries} failed:`, error);
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  console.error("[PushNotifications] Failed to obtain device push token after all retries.");
+  return null;
+}
+
 export async function registerForPushNotifications(): Promise<string | null> {
   if (Platform.OS === "web") return null;
 
@@ -30,6 +46,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   if (finalStatus !== "granted") {
+    console.log("[PushNotifications] Permission not granted, skipping token registration.");
     return null;
   }
 
@@ -41,16 +58,16 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     await apiRequest("PUT", "/api/auth/push-token", { pushToken: expoToken });
 
-    const deviceTokenData = await Notifications.getDevicePushTokenAsync().catch(() => null);
+    const deviceTokenData = await getDevicePushTokenWithRetry();
     if (deviceTokenData) {
       if (Platform.OS === "android") {
         await apiRequest("PUT", "/api/auth/device-tokens", {
           fcmToken: deviceTokenData.data,
-        }).catch(() => {});
+        }).catch((err) => console.error("[PushNotifications] Failed to save FCM token:", err));
       } else if (Platform.OS === "ios") {
         await apiRequest("PUT", "/api/auth/device-tokens", {
           apnToken: deviceTokenData.data,
-        }).catch(() => {});
+        }).catch((err) => console.error("[PushNotifications] Failed to save APN token:", err));
       }
     }
 
@@ -65,7 +82,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     return expoToken;
   } catch (error) {
-    console.error("Error registering for push notifications:", error);
+    console.error("[PushNotifications] Error registering for push notifications:", error);
     return null;
   }
 }

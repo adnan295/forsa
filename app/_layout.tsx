@@ -13,7 +13,8 @@ import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import { FavoritesProvider } from "@/lib/favorites-context";
 import { ThemeProvider } from "@/lib/theme-context";
-import { setupNotificationHandlers } from "@/lib/push-notifications";
+import { setupNotificationHandlers, registerForPushNotifications } from "@/lib/push-notifications";
+import { useAuth } from "@/lib/auth-context";
 import {
   useFonts,
   Inter_400Regular,
@@ -99,10 +100,24 @@ const offlineStyles = StyleSheet.create({
 });
 
 function PushNotificationManager() {
+  const { user } = useAuth();
+  const prevUserRef = React.useRef<string | null>(null);
+
   useEffect(() => {
     const cleanup = setupNotificationHandlers();
     return cleanup;
   }, []);
+
+  useEffect(() => {
+    if (user && prevUserRef.current !== user.id) {
+      prevUserRef.current = user.id;
+      registerForPushNotifications().catch((err) =>
+        console.error("[PushNotificationManager] Registration failed:", err)
+      );
+    } else if (!user) {
+      prevUserRef.current = null;
+    }
+  }, [user]);
 
   return null;
 }

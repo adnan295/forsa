@@ -24,6 +24,9 @@
       "buildNumber": "3",
       "bundleIdentifier": "app.replit.forsa",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "entitlements": {
+        "aps-environment": "production"
+      },
       "infoPlist": {
         "NSCameraUsageDescription": "نحتاج الوصول للكاميرا لتصوير إيصال الدفع",
         "NSPhotoLibraryUsageDescription": "نحتاج الوصول لمعرض الصور لاختيار إيصال الدفع أو صورة المنتج",
