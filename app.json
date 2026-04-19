@@ -67,7 +67,8 @@
         {
           "icon": "./assets/images/notification-icon.png",
           "color": "#FFD000",
-          "defaultChannel": "default"
+          "defaultChannel": "default",
+          "mode": "production"
         }
       ],
       [

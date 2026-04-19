@@ -18,7 +18,7 @@ import path from "path";
 async function sendPushNotifications(userIds: string[], title: string, body: string, data?: Record<string, string>) {
   try {
     const rawTokens = await storage.getUserPushTokensByIds(userIds);
-    const tokens = [...new Set(rawTokens)];
+    const tokens = [...new Set(rawTokens)].filter(t => typeof t === "string" && t.length > 10);
     if (tokens.length === 0) return;
 
     const messages = tokens.map(token => ({
@@ -27,6 +27,9 @@ async function sendPushNotifications(userIds: string[], title: string, body: str
       title,
       body,
       data: data || {},
+      priority: "high" as const,
+      channelId: "default",
+      _contentAvailable: true,
     }));
 
     const chunks: typeof messages[] = [];
@@ -35,17 +38,30 @@ async function sendPushNotifications(userIds: string[], title: string, body: str
     }
 
     for (const chunk of chunks) {
-      await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(chunk),
-      }).catch(() => {});
+      try {
+        const res = await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Accept-Encoding": "gzip, deflate",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(chunk),
+        });
+        const json = await res.json() as { data?: Array<{ status: string; id?: string; message?: string; details?: any }> };
+        if (json.data) {
+          json.data.forEach((item, idx) => {
+            if (item.status === "error") {
+              console.error(`[Push] Error for token[${idx}]:`, item.message, item.details);
+            }
+          });
+        }
+      } catch (chunkErr) {
+        console.error("[Push] Failed to send chunk:", chunkErr);
+      }
     }
   } catch (e) {
-    console.error("Push notification error:", e);
+    console.error("[Push] sendPushNotifications error:", e);
   }
 }
 
