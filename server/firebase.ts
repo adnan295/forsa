@@ -53,10 +53,16 @@ export async function sendFcmNotification(
         data: data || {},
         android: {
           priority: "high",
-          notification: { channelId: "default", sound: "default" },
+          notification: {
+            channelId: "default",
+            sound: "default",
+            icon: "notification_icon",
+            color: "#FFD000",
+          },
         },
         apns: {
           payload: { aps: { sound: "default", badge: 1 } },
+          headers: { "apns-priority": "10" },
         },
       });
       result.success += response.successCount;
