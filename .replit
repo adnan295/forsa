@@ -85,3 +85,7 @@ waitForPort = 8081
 [userenv.shared]
 FIREBASE_PROJECT_ID = "forsa-a1b1a"
 FIREBASE_CLIENT_EMAIL = "firebase-adminsdk-fbsvc@forsa-a1b1a.iam.gserviceaccount.com"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000
