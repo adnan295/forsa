@@ -78,11 +78,10 @@ export async function sendFcmNotification(
 export async function sendFcmToUser(
   userId: string,
   fcmToken: string | null,
-  apnToken: string | null,
   title: string,
   body: string,
   data?: Record<string, string>
 ): Promise<FcmResult> {
-  const tokens = [fcmToken, apnToken].filter((t): t is string => !!t && t.length > 10);
+  const tokens = [fcmToken].filter((t): t is string => !!t && t.length > 10);
   return sendFcmNotification(tokens, title, body, data);
 }

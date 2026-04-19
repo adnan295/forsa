@@ -1287,6 +1287,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             referredBy: user.referredBy,
             isSuspended: user.isSuspended,
             createdAt: user.createdAt,
+            fcmToken: user.fcmToken ?? null,
+            apnToken: user.apnToken ?? null,
             ...stats,
           };
         })
@@ -1911,14 +1913,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (targetUserId) {
         const user = await storage.getUser(targetUserId);
         if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
-        const tokens = [user.fcmToken, user.apnToken].filter((t): t is string => !!t && t.length > 10);
-        if (tokens.length === 0) return res.status(400).json({ message: "المستخدم لا يملك توكن FCM/APN مسجّل" });
+        const tokens = [user.fcmToken].filter((t): t is string => !!t && t.length > 10);
+        if (tokens.length === 0) return res.status(400).json({ message: "المستخدم لا يملك توكن FCM مسجّل" });
         const result = await sendFcmNotification(tokens, title, body);
         return res.json({ success: true, result, target: user.username });
       }
 
       const allUserTokens = await storage.getAllUsersWithFcmTokens();
-      const tokens = allUserTokens.flatMap(u => [u.fcmToken, u.apnToken]).filter((t): t is string => !!t && t.length > 10);
+      const tokens = allUserTokens.map(u => u.fcmToken).filter((t): t is string => !!t && t.length > 10);
       if (tokens.length === 0) return res.status(400).json({ message: "لا يوجد مستخدمون بتوكنات FCM مسجّلة" });
       const result = await sendFcmNotification([...new Set(tokens)], title, body);
       await storage.logActivity("broadcast_notification", "إشعار FCM جماعي", `${title} — ${result.success} ناجح / ${result.failure} فشل`, req.session.userId!);
@@ -1935,8 +1937,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!title || !body) return res.status(400).json({ message: "العنوان والرسالة مطلوبان" });
       const user = await storage.getUser(req.params.userId);
       if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
-      const tokens = [user.fcmToken, user.apnToken].filter((t): t is string => !!t && t.length > 10);
-      if (tokens.length === 0) return res.status(400).json({ message: "المستخدم لا يملك توكن FCM/APN مسجّل" });
+      const tokens = [user.fcmToken].filter((t): t is string => !!t && t.length > 10);
+      if (tokens.length === 0) return res.status(400).json({ message: "المستخدم لا يملك توكن FCM مسجّل" });
       const result = await sendFcmNotification(tokens, title, body);
       res.json({ success: true, result, username: user.username });
     } catch (error: any) {
