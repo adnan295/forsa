@@ -1,0 +1,33 @@
+FAILURE:
+[RUN_GRADLEW] Build failed with an exception.
+[RUN_GRADLEW] * What went wrong:
+[RUN_GRADLEW] A problem occurred configuring root project 'Forsa'.
+[RUN_GRADLEW] > Could not resolve all dependencies for configuration 'classpath'.
+[RUN_GRADLEW]    > Could not find com.google.gms:google-services:4.4.1.
+[RUN_GRADLEW]      Searched in the following locations:
+[RUN_GRADLEW]        - https://dl.google.com/dl/android/maven2/com/google/gms/google-services/4.4.1/google-services-4.4.1.pom
+[RUN_GRADLEW]        - https://repo.maven.apache.org/maven2/com/google/gms/google-services/4.4.1/google-services-4.4.1.pom
+[RUN_GRADLEW]      Required by:
+[RUN_GRADLEW]          root project :
+[RUN_GRADLEW] * Try:
+[RUN_GRADLEW] > Run with --stacktrace option to get the stack trace.
+[RUN_GRADLEW] > Run with --info or --debug option to get more log output.
+[RUN_GRADLEW] > Run with --scan to get full insights.
+[RUN_GRADLEW] > Get more help at https://help.gradle.org.
+[RUN_GRADLEW] BUILD FAILED in 8s
+[RUN_GRADLEW] 12 actionable tasks: 12 executed
+[RUN_GRADLEW] Error: Gradle build failed with unknown error. See logs for the "Run gradlew" phase for more information.
+
+Build failed
+Gradle build failed with unknown error. See logs for the "Run gradlew" phase for more information.
+Error: Gradle build failed with unknown error. See logs for the "Run gradlew" phase for more information.
+    at resolveBuildPhaseErrorAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/buildErrors/detectError.js:64:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async BuildContext.handleBuildPhaseErrorAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/context.js:190:28)
+    at async BuildContext.runBuildPhase (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/context.js:135:35)
+    at async buildAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/builders/android.js:122:5)
+    at async runBuilderWithHooksAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/builders/common.js:12:13)
+    at async Object.androidBuilder (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/@expo/build-tools/dist/builders/android.js:28:16)
+    at async buildAndroidAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/eas-cli-local-build-plugin/dist/android.js:43:12)
+    at async buildAsync (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/eas-cli-local-build-plugin/dist/build.js:54:29)
+    at async main (/Users/snjallr/.npm/_npx/b4c16b6647933048/node_modules/eas-cli-local-build-plugin/dist/main.js:16:9)
