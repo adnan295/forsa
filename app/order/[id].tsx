@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import * as ImageManipulator from "expo-image-manipulator";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
@@ -208,27 +207,11 @@ export default function OrderDetailScreen() {
     } else {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
+        quality: 0.82,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        const maxWidth = 1200;
-        if (asset.width && asset.width > maxWidth) {
-          const manipulated = await ImageManipulator.manipulateAsync(
-            asset.uri,
-            [{ resize: { width: maxWidth } }],
-            { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG }
-          );
-          setSelectedImage(manipulated.uri);
-        } else {
-          const manipulated = await ImageManipulator.manipulateAsync(
-            asset.uri,
-            [],
-            { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG }
-          );
-          setSelectedImage(manipulated.uri);
-        }
+        setSelectedImage(result.assets[0].uri);
       }
     }
   };
