@@ -2,7 +2,7 @@
   "expo": {
     "name": "Forsa",
     "slug": "forsa",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "forsa",
@@ -26,19 +26,15 @@
       "infoPlist": {
         "NSCameraUsageDescription": "نحتاج الوصول للكاميرا لتصوير إيصال الدفع",
         "NSPhotoLibraryUsageDescription": "نحتاج الوصول لمعرض الصور لاختيار إيصال الدفع أو صورة المنتج",
-        "UIRequiredDeviceCapabilities": [
-          "arm64"
-        ],
+        "UIRequiredDeviceCapabilities": ["arm64"],
         "WKCompanionAppBundleIdentifier": "",
-        "UIDeviceFamily": [
-          1
-        ]
+        "UIDeviceFamily": [1]
       }
     },
     "android": {
       "package": "com.forsa",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 2,
+      "versionCode": 4,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
