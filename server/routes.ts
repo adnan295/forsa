@@ -7,7 +7,7 @@ import rateLimit from "express-rate-limit";
 import { pool, db } from "./db";
 import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, campaignClientRequests, reviews, orders, users, type Campaign } from "@shared/schema";
-import { sendFcmNotification } from "./firebase";
+import { sendFcmNotification, sendFcmToUser } from "./firebase";
 import { sum, count, and, gte, sql, eq, desc } from "drizzle-orm";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
@@ -1077,6 +1077,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             req.params.campaignId as string
           );
           sendPushNotifications([result.winner.id], "مبروك أنت الفائز! 🏆🎉", `لقد فزت بجائزة ${drawnCampaign.prizeName} في حملة ${drawnCampaign.title}!`, { campaignId: req.params.campaignId as string });
+          sendFcmToUser(
+            result.winner.id,
+            result.winner.fcmToken ?? null,
+            "مبروك أنت الفائز! 🏆🎉",
+            `لقد فزت بجائزة ${drawnCampaign.prizeName} في حملة ${drawnCampaign.title}!`,
+            { campaignId: req.params.campaignId as string }
+          ).then(fcmResult => {
+            console.log(`[FCM] Winner notification — success: ${fcmResult.success}, failure: ${fcmResult.failure}`, fcmResult.errors.length ? fcmResult.errors : "");
+          }).catch(e => console.error("[FCM] Winner notification error:", e));
 
           const campaignTickets = await storage.getTicketsByCampaign(req.params.campaignId as string);
           const participantIds = [...new Set(campaignTickets.map(t => t.userId))].filter(id => id !== result.winner.id);
