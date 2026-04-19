@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Linking,
   Alert,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +19,10 @@ import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest } from "@/lib/query-client";
 import { useTheme } from "@/lib/theme-context";
+import {
+  getNotificationPermissionStatus,
+  registerForPushNotifications,
+} from "@/lib/push-notifications";
 
 type UserStats = {
   totalOrders: number;
@@ -26,6 +30,14 @@ type UserStats = {
   totalTickets: number;
   winningTickets: number;
   totalSpent: string;
+};
+
+type SettingsItem = {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  color: string;
+  badge?: boolean;
+  onPress: () => void;
 };
 
 function formatJoinDate(dateStr: string | undefined) {
@@ -39,6 +51,37 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { isDark, colors } = useTheme();
   const isAdmin = user?.role === "admin";
+  const [notifStatus, setNotifStatus] = useState<"granted" | "denied" | "undetermined" | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== "web") {
+        getNotificationPermissionStatus().then(setNotifStatus);
+      }
+    }, [])
+  );
+
+  async function handleEnableNotifications() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (notifStatus === "denied") {
+      Alert.alert(
+        "الإشعارات معطّلة",
+        "يرجى تفعيل الإشعارات من إعدادات جهازك للحصول على تنبيهات الفوز والعروض.",
+        [
+          { text: "إلغاء", style: "cancel" },
+          { text: "فتح الإعدادات", onPress: () => Linking.openSettings() },
+        ]
+      );
+    } else {
+      const token = await registerForPushNotifications();
+      const updated = await getNotificationPermissionStatus();
+      setNotifStatus(updated);
+      if (token) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert("تم التفعيل", "ستصلك إشعارات الفوز والعروض الحصرية!");
+      }
+    }
+  }
 
   const { data: stats } = useQuery<UserStats>({
     queryKey: ["/api/user/stats"],
@@ -176,7 +219,21 @@ export default function ProfileScreen() {
     },
   ];
 
-  const settingsItems = [
+  const showNotifItem = Platform.OS !== "web" && notifStatus !== "granted" && notifStatus !== null;
+  const notifItem: SettingsItem[] = showNotifItem
+    ? [
+        {
+          icon: "notifications-outline" as const,
+          label: notifStatus === "denied" ? "فتح إعدادات الإشعارات" : "تفعيل الإشعارات",
+          color: "#F59E0B",
+          badge: true,
+          onPress: handleEnableNotifications,
+        },
+      ]
+    : [];
+
+  const settingsItems: SettingsItem[] = [
+    ...notifItem,
     {
       icon: "help-circle-outline" as const,
       label: "الأسئلة الشائعة",
@@ -406,6 +463,9 @@ export default function ProfileScreen() {
               >
                 <View style={[styles.menuIconWrap, { backgroundColor: item.color + "12" }]}>
                   <Ionicons name={item.icon} size={20} color={item.color} />
+                  {item.badge && (
+                    <View style={styles.badgeDot} />
+                  )}
                 </View>
                 <View style={styles.menuTextArea}>
                   <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
@@ -776,6 +836,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  badgeDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EF4444",
+    borderWidth: 1.5,
+    borderColor: "#fff",
   },
   menuTextArea: {
     flex: 1,

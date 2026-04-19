@@ -1,7 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { I18nManager, View, Text, StyleSheet, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -9,11 +9,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient, getApiUrl } from "@/lib/query-client";
-import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import { FavoritesProvider } from "@/lib/favorites-context";
 import { ThemeProvider } from "@/lib/theme-context";
-import { registerForPushNotifications, setupNotificationHandlers } from "@/lib/push-notifications";
+import { setupNotificationHandlers } from "@/lib/push-notifications";
 import {
   useFonts,
   Inter_400Regular,
@@ -99,23 +99,10 @@ const offlineStyles = StyleSheet.create({
 });
 
 function PushNotificationManager() {
-  const { user } = useAuth();
-  const registeredRef = useRef(false);
-
   useEffect(() => {
     const cleanup = setupNotificationHandlers();
     return cleanup;
   }, []);
-
-  useEffect(() => {
-    if (user && !registeredRef.current) {
-      registeredRef.current = true;
-      registerForPushNotifications().catch(() => {});
-    }
-    if (!user) {
-      registeredRef.current = false;
-    }
-  }, [user]);
 
   return null;
 }

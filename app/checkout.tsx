@@ -29,6 +29,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useCart, CartItem } from "@/lib/cart-context";
 import { apiRequest, queryClient, buildMediaUrl } from "@/lib/query-client";
 import type { Campaign, PaymentMethod } from "@shared/schema";
+import { registerForPushNotifications } from "@/lib/push-notifications";
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   card: "card-outline",
@@ -188,6 +189,10 @@ export default function CheckoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/wallet"] });
+
+      if (Platform.OS !== "web") {
+        registerForPushNotifications().catch(() => {});
+      }
 
       if (isCartMode) {
         clearCart();
