@@ -1444,7 +1444,7 @@ async function openUserModal(id){
             <button class="btn ${u.isSuspended?'btn-success':'btn-warning'} btn-sm" onclick="toggleSuspend('${jsEsc(u.id)}',${!!u.isSuspended});closeModal('userModal')">${u.isSuspended?'🔓 رفع التعليق':'🔒 تعليق الحساب'}</button>
             <button class="btn btn-secondary btn-sm" onclick="closeModal('userModal');openWalletModal('${jsEsc(u.id)}','${jsEsc(String(u.walletBalance||0))}')">💰 تعديل الرصيد</button>
             <button class="btn btn-info btn-sm" onclick="sendNotifToUser('${jsEsc(u.id)}','${jsEsc(u.username||'')}')">🔔 إشعار Expo</button>
-            ${(u.fcmToken||u.apnToken)?`<button class="btn btn-warning btn-sm" style="color:#1a1a1a" onclick="quickFcmToUser('${jsEsc(u.id)}','${jsEsc(u.username||'')}')">🔥 إشعار FCM</button>`:''}
+            ${u.fcmToken?`<button class="btn btn-warning btn-sm" style="color:#1a1a1a" onclick="quickFcmToUser('${jsEsc(u.id)}','${jsEsc(u.username||'')}')">🔥 إشعار FCM</button>`:''}
           </div>
         </div>
         <div>

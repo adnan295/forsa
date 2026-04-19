@@ -7,7 +7,7 @@ import rateLimit from "express-rate-limit";
 import { pool, db } from "./db";
 import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, campaignClientRequests, reviews, orders, users, type Campaign } from "@shared/schema";
-import { sendFcmNotification, sendFcmToUser } from "./firebase";
+import { sendFcmNotification } from "./firebase";
 import { sum, count, and, gte, sql, eq, desc } from "drizzle-orm";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
