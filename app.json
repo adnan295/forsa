@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.forsa",
+      "bundleIdentifier": "app.replit.forsa",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSCameraUsageDescription": "نحتاج الوصول للكاميرا لتصوير إيصال الدفع",
         "NSPhotoLibraryUsageDescription": "نحتاج الوصول لمعرض الصور لاختيار إيصال الدفع أو صورة المنتج",
@@ -29,7 +30,8 @@
       }
     },
     "android": {
-      "package": "today.forsa",
+      "package": "com.forsa",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 2,
       "permissions": [
         "android.permission.CAMERA",
@@ -54,6 +56,14 @@
       ],
       "expo-font",
       "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FFD000",
+          "defaultChannel": "default"
+        }
+      ],
       [
         "expo-image-picker",
         {

@@ -450,9 +450,9 @@ input:checked+.slider:before{transform:translateX(-18px)}
 
     <!-- NOTIFICATIONS -->
     <div id="sec-notifications">
-      <div class="grid-2">
+      <div class="grid-2" style="margin-bottom:16px">
         <div class="card">
-          <div class="card-title">📨 إرسال إشعار</div>
+          <div class="card-title">📨 إرسال إشعار (Expo)</div>
           <div class="form-group"><label class="form-label">العنوان *</label><input class="form-input" id="notifTitle" placeholder="عنوان الإشعار"/></div>
           <div class="form-group"><label class="form-label">الرسالة *</label><textarea class="form-input" id="notifBody" rows="3" placeholder="نص الإشعار..."></textarea></div>
           <hr class="divider"/>
@@ -466,6 +466,28 @@ input:checked+.slider:before{transform:translateX(-18px)}
         <div class="card">
           <div class="card-title">📋 آخر الإشعارات</div>
           <div id="notifList"><div class="empty"><div class="empty-icon">🔔</div><p>لا توجد إشعارات</p></div></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card" style="border-top:3px solid #F59E0B">
+          <div class="card-title">🔥 إرسال إشعار FCM مباشر</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px">يُرسل مباشرةً عبر Firebase Cloud Messaging — يعمل حتى لو التطبيق مغلق تماماً</p>
+          <div class="form-group"><label class="form-label">العنوان *</label><input class="form-input" id="fcmTitle" placeholder="عنوان الإشعار"/></div>
+          <div class="form-group"><label class="form-label">الرسالة *</label><textarea class="form-input" id="fcmBody" rows="3" placeholder="نص الإشعار..."></textarea></div>
+          <hr class="divider"/>
+          <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">📡 إرسال FCM جماعي للجميع</div>
+          <button class="btn btn-warning" onclick="sendFcmBroadcast()" style="width:100%;margin-bottom:12px;color:#1a1a1a">🔥 FCM للجميع</button>
+          <hr class="divider"/>
+          <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">👤 FCM لمستخدم محدد</div>
+          <div class="form-group"><select class="form-input" id="fcmUserId"><option value="">-- اختر مستخدم --</option></select></div>
+          <button class="btn btn-warning" onclick="sendFcmDirect()" style="width:100%;color:#1a1a1a">⚡ FCM مباشر</button>
+          <div id="fcmResult" style="margin-top:12px;font-size:12px;display:none"></div>
+        </div>
+        <div class="card" style="border-top:3px solid #F59E0B">
+          <div class="card-title">📊 إحصائيات FCM</div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px">عدد المستخدمين الذين سجّلوا توكن FCM أو APNs</p>
+          <button class="btn btn-secondary" onclick="loadFcmStats()" style="width:100%;margin-bottom:16px">🔄 تحديث الإحصائيات</button>
+          <div id="fcmStats"><div class="empty"><div class="empty-icon">📊</div><p>اضغط تحديث لعرض الإحصائيات</p></div></div>
         </div>
       </div>
     </div>
@@ -1413,10 +1435,16 @@ async function openUserModal(id){
           <div class="info-row"><span class="info-key">الحالة</span><span class="info-val">${u.isSuspended?'<span class="badge badge-red">⛔ موقوف</span>':'<span class="badge badge-green">✅ نشط</span>'}</span></div>
           <div class="info-row"><span class="info-key">تاريخ التسجيل</span><span class="info-val">${fmtDate(u.createdAt)}</span></div>
           <div class="info-row"><span class="info-key">رصيد المحفظة</span><span class="info-val"><span class="wallet-balance">${money(u.walletBalance||0)}</span></span></div>
+          <div style="margin-top:10px;padding:10px;background:#FFFBEB;border-radius:8px;border:1px solid #FDE68A">
+            <div style="font-size:11px;font-weight:700;color:#92400E;margin-bottom:6px">🔥 توكنات Firebase</div>
+            <div class="info-row" style="padding:4px 0"><span class="info-key" style="font-size:11px">FCM Token</span><span class="info-val" style="font-size:11px;font-family:monospace;word-break:break-all">${u.fcmToken?`<span title="${esc(u.fcmToken)}">${esc(u.fcmToken.slice(0,22)+'...')}</span> <button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:10px" onclick="navigator.clipboard.writeText('${jsEsc(u.fcmToken||'')}');toast('تم النسخ','success')">نسخ</button>`:'<span style="color:var(--muted)">—</span>'}</span></div>
+            <div class="info-row" style="padding:4px 0"><span class="info-key" style="font-size:11px">APN Token</span><span class="info-val" style="font-size:11px;font-family:monospace;word-break:break-all">${u.apnToken?`<span title="${esc(u.apnToken)}">${esc(u.apnToken.slice(0,22)+'...')}</span> <button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:10px" onclick="navigator.clipboard.writeText('${jsEsc(u.apnToken||'')}');toast('تم النسخ','success')">نسخ</button>`:'<span style="color:var(--muted)">—</span>'}</span></div>
+          </div>
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn ${u.isSuspended?'btn-success':'btn-warning'} btn-sm" onclick="toggleSuspend('${jsEsc(u.id)}',${!!u.isSuspended});closeModal('userModal')">${u.isSuspended?'🔓 رفع التعليق':'🔒 تعليق الحساب'}</button>
             <button class="btn btn-secondary btn-sm" onclick="closeModal('userModal');openWalletModal('${jsEsc(u.id)}','${jsEsc(String(u.walletBalance||0))}')">💰 تعديل الرصيد</button>
-            <button class="btn btn-info btn-sm" onclick="sendNotifToUser('${jsEsc(u.id)}','${jsEsc(u.username||'')}')">🔔 إرسال إشعار</button>
+            <button class="btn btn-info btn-sm" onclick="sendNotifToUser('${jsEsc(u.id)}','${jsEsc(u.username||'')}')">🔔 إشعار Expo</button>
+            ${(u.fcmToken||u.apnToken)?`<button class="btn btn-warning btn-sm" style="color:#1a1a1a" onclick="quickFcmToUser('${jsEsc(u.id)}','${jsEsc(u.username||'')}')">🔥 إشعار FCM</button>`:''}
           </div>
         </div>
         <div>
@@ -1710,10 +1738,10 @@ async function loadNotifs(){
   try{
     const data=await api('GET','/api/admin/notifications')||[];
     const el=document.getElementById('notifList');
-    // populate user select
     if(allUsers.length===0)allUsers=await api('GET','/api/admin/users')||[];
     const sel=document.getElementById('notifUserId');
     sel.innerHTML='<option value="">-- اختر مستخدم --</option>'+allUsers.map(u=>`<option value="${esc(u.id)}">${esc(u.username)} (${esc(u.email)})</option>`).join('');
+    loadNotifsFcmSelects();
     if(!data.length){el.innerHTML=emptyState('🔔','لا إشعارات');return;}
     el.innerHTML=data.slice(0,20).map(n=>`<div class="info-row"><span class="info-key" style="max-width:200px">${esc(n.title||'—')}</span><span style="font-size:11px;color:var(--muted)">${fmtDateShort(n.createdAt)}</span></div><div style="font-size:12px;color:var(--muted);padding:0 0 8px">${esc(n.message||'')}</div>`).join('<hr class="divider"/>');
   }catch(e){}
@@ -1732,6 +1760,60 @@ async function sendDirectNotif(){
   if(!userId){toast('يرجى اختيار مستخدم','error');return;}
   if(!title||!msg){toast('يرجى ملء العنوان والرسالة','error');return;}
   try{await api('POST','/api/admin/send-notification',{userId,title,message:msg});toast('تم إرسال الإشعار ✅','success');}catch(e){toast(e.message,'error');}
+}
+
+// ===== FCM =====
+async function loadNotifsFcmSelects(){
+  if(allUsers.length===0)allUsers=await api('GET','/api/admin/users')||[];
+  const sel=document.getElementById('fcmUserId');
+  if(sel) sel.innerHTML='<option value="">-- اختر مستخدم --</option>'+allUsers.map(u=>`<option value="${esc(u.id)}">${esc(u.username)} (${esc(u.email)})</option>`).join('');
+}
+function showFcmResult(res,err){
+  const el=document.getElementById('fcmResult');
+  if(!el)return;
+  el.style.display='block';
+  if(err){el.innerHTML=`<div style="color:#DC2626;background:#FEF2F2;padding:8px;border-radius:6px">❌ ${esc(err)}</div>`;return;}
+  el.innerHTML=`<div style="color:#065F46;background:#D1FAE5;padding:8px;border-radius:6px">✅ نجاح: ${res.result?.success||0} | فشل: ${res.result?.failure||0}</div>`;
+}
+async function sendFcmBroadcast(){
+  const title=document.getElementById('fcmTitle').value.trim();
+  const body=document.getElementById('fcmBody').value.trim();
+  if(!title||!body){toast('يرجى ملء العنوان والرسالة','error');return;}
+  if(!confirm(`إرسال إشعار FCM لجميع المستخدمين؟`))return;
+  try{const r=await api('POST','/api/admin/send-fcm',{title,body});showFcmResult(r,null);toast('تم الإرسال ✅','success');}catch(e){showFcmResult(null,e.message);toast(e.message,'error');}
+}
+async function sendFcmDirect(){
+  const userId=document.getElementById('fcmUserId').value;
+  const title=document.getElementById('fcmTitle').value.trim();
+  const body=document.getElementById('fcmBody').value.trim();
+  if(!userId){toast('يرجى اختيار مستخدم','error');return;}
+  if(!title||!body){toast('يرجى ملء العنوان والرسالة','error');return;}
+  try{const r=await api('POST',`/api/admin/send-fcm/${userId}`,{title,body});showFcmResult(r,null);toast(`تم الإرسال إلى ${r.username} ✅`,'success');}catch(e){showFcmResult(null,e.message);toast(e.message,'error');}
+}
+async function quickFcmToUser(userId,username){
+  const title=prompt(`عنوان إشعار FCM إلى ${username}`,'مرحباً من فرصة!');
+  if(!title)return;
+  const body=prompt('نص الإشعار','لديك رسالة جديدة من فرصة');
+  if(!body)return;
+  try{const r=await api('POST',`/api/admin/send-fcm/${userId}`,{title,body});toast(`تم الإرسال ✅ نجاح:${r.result?.success||0}`,'success');}catch(e){toast(e.message,'error');}
+}
+async function loadFcmStats(){
+  try{
+    const users=await api('GET','/api/admin/users')||[];
+    const withFcm=users.filter(u=>u.fcmToken&&u.fcmToken.length>10).length;
+    const withApn=users.filter(u=>u.apnToken&&u.apnToken.length>10).length;
+    const withAny=users.filter(u=>(u.fcmToken&&u.fcmToken.length>10)||(u.apnToken&&u.apnToken.length>10)).length;
+    const el=document.getElementById('fcmStats');
+    el.innerHTML=`
+      <div class="info-row"><span class="info-key">إجمالي المستخدمين</span><span class="info-val"><b>${users.length}</b></span></div>
+      <div class="info-row"><span class="info-key">لديهم FCM Token</span><span class="info-val"><b style="color:#D97706">${withFcm}</b></span></div>
+      <div class="info-row"><span class="info-key">لديهم APN Token</span><span class="info-val"><b style="color:#7C3AED">${withApn}</b></span></div>
+      <div class="info-row"><span class="info-key">لديهم أي توكن</span><span class="info-val"><b style="color:#059669">${withAny}</b></span></div>
+      <div style="margin-top:12px;background:#F3F4F6;border-radius:8px;padding:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">آخر مستخدمين مع FCM Token:</div>
+        ${users.filter(u=>u.fcmToken&&u.fcmToken.length>10).slice(0,5).map(u=>`<div style="font-size:12px;padding:3px 0;display:flex;justify-content:space-between"><span>${esc(u.username)}</span><span style="font-family:monospace;color:var(--muted);font-size:10px">${esc(u.fcmToken.slice(0,16)+'...')}</span></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">لا يوجد</div>'}
+      </div>`;
+  }catch(e){toast(e.message,'error');}
 }
 
 // ===== ACTIVITY =====

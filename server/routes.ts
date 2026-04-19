@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import { pool, db } from "./db";
 import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, campaignClientRequests, reviews, orders, users, type Campaign } from "@shared/schema";
+import { sendFcmNotification, sendFcmToUser } from "./firebase";
 import { sum, count, and, gte, sql, eq, desc } from "drizzle-orm";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
@@ -440,6 +441,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "pushToken is required" });
       }
       await storage.updateUserPushToken(req.session.userId!, pushToken);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/auth/device-tokens", requireAuth as any, async (req: Request, res: Response) => {
+    try {
+      const { fcmToken, apnToken } = req.body;
+      await storage.updateUserDeviceTokens(req.session.userId!, {
+        ...(fcmToken !== undefined && { fcmToken: fcmToken || null }),
+        ...(apnToken !== undefined && { apnToken: apnToken || null }),
+      });
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1886,6 +1900,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Send notification error:", error);
       res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/admin/send-fcm", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { title, body, targetUserId } = req.body;
+      if (!title || !body) return res.status(400).json({ message: "العنوان والرسالة مطلوبان" });
+
+      if (targetUserId) {
+        const user = await storage.getUser(targetUserId);
+        if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+        const tokens = [user.fcmToken, user.apnToken].filter((t): t is string => !!t && t.length > 10);
+        if (tokens.length === 0) return res.status(400).json({ message: "المستخدم لا يملك توكن FCM/APN مسجّل" });
+        const result = await sendFcmNotification(tokens, title, body);
+        return res.json({ success: true, result, target: user.username });
+      }
+
+      const allUserTokens = await storage.getAllUsersWithFcmTokens();
+      const tokens = allUserTokens.flatMap(u => [u.fcmToken, u.apnToken]).filter((t): t is string => !!t && t.length > 10);
+      if (tokens.length === 0) return res.status(400).json({ message: "لا يوجد مستخدمون بتوكنات FCM مسجّلة" });
+      const result = await sendFcmNotification([...new Set(tokens)], title, body);
+      await storage.logActivity("broadcast_notification", "إشعار FCM جماعي", `${title} — ${result.success} ناجح / ${result.failure} فشل`, req.session.userId!);
+      res.json({ success: true, result, target: "all" });
+    } catch (error: any) {
+      console.error("FCM send error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+
+  app.post("/api/admin/send-fcm/:userId", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { title, body } = req.body;
+      if (!title || !body) return res.status(400).json({ message: "العنوان والرسالة مطلوبان" });
+      const user = await storage.getUser(req.params.userId);
+      if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+      const tokens = [user.fcmToken, user.apnToken].filter((t): t is string => !!t && t.length > 10);
+      if (tokens.length === 0) return res.status(400).json({ message: "المستخدم لا يملك توكن FCM/APN مسجّل" });
+      const result = await sendFcmNotification(tokens, title, body);
+      res.json({ success: true, result, username: user.username });
+    } catch (error: any) {
+      console.error("FCM send to user error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
     }
   });
 

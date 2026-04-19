@@ -29,23 +29,35 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
   try {
     const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
-    const token = tokenData.data;
 
-    await apiRequest("PUT", "/api/auth/push-token", { pushToken: token });
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    const expoToken = tokenData.data;
+
+    await apiRequest("PUT", "/api/auth/push-token", { pushToken: expoToken });
+
+    const deviceTokenData = await Notifications.getDevicePushTokenAsync().catch(() => null);
+    if (deviceTokenData) {
+      if (Platform.OS === "android") {
+        await apiRequest("PUT", "/api/auth/device-tokens", {
+          fcmToken: deviceTokenData.data,
+        }).catch(() => {});
+      } else if (Platform.OS === "ios") {
+        await apiRequest("PUT", "/api/auth/device-tokens", {
+          apnToken: deviceTokenData.data,
+        }).catch(() => {});
+      }
+    }
 
     if (Platform.OS === "android") {
-      Notifications.setNotificationChannelAsync("default", {
+      await Notifications.setNotificationChannelAsync("default", {
         name: "default",
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: "#10B981",
+        lightColor: "#FFD000",
       });
     }
 
-    return token;
+    return expoToken;
   } catch (error) {
     console.error("Error registering for push notifications:", error);
     return null;

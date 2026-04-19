@@ -143,7 +143,9 @@ export interface IStorage {
   getUnreadUserNotificationCount(userId: string): Promise<number>;
 
   updateUserPushToken(userId: string, pushToken: string | null): Promise<void>;
+  updateUserDeviceTokens(userId: string, tokens: { fcmToken?: string | null; apnToken?: string | null }): Promise<void>;
   getUserPushTokensByIds(userIds: string[]): Promise<string[]>;
+  getAllUsersWithFcmTokens(): Promise<{ id: string; fcmToken: string | null; apnToken: string | null }[]>;
 
   getWalletBalance(userId: string): Promise<number>;
   addWalletCredit(userId: string, amount: number, type: string, description: string, referenceId?: string): Promise<void>;
@@ -1081,6 +1083,21 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(inArray(users.id, userIds));
     return result.map(r => r.pushToken).filter((t): t is string => !!t);
+  }
+
+  async updateUserDeviceTokens(userId: string, tokens: { fcmToken?: string | null; apnToken?: string | null }): Promise<void> {
+    const update: Record<string, any> = {};
+    if (tokens.fcmToken !== undefined) update.fcmToken = tokens.fcmToken;
+    if (tokens.apnToken !== undefined) update.apnToken = tokens.apnToken;
+    if (Object.keys(update).length === 0) return;
+    await db.update(users).set(update).where(eq(users.id, userId));
+  }
+
+  async getAllUsersWithFcmTokens(): Promise<{ id: string; fcmToken: string | null; apnToken: string | null }[]> {
+    const result = await db.select({ id: users.id, fcmToken: users.fcmToken, apnToken: users.apnToken })
+      .from(users)
+      .where(eq(users.isSuspended, false));
+    return result;
   }
 
   async getWalletBalance(userId: string): Promise<number> {
