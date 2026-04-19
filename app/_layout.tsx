@@ -1,8 +1,8 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useState } from "react";
-import { I18nManager, View, Text, StyleSheet, Platform } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { AppState, AppStateStatus, I18nManager, View, Text, StyleSheet, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -101,7 +101,17 @@ const offlineStyles = StyleSheet.create({
 
 function PushNotificationManager() {
   const { user } = useAuth();
-  const prevUserRef = React.useRef<string | null>(null);
+  const prevUserRef = useRef<string | null>(null);
+  const lastRegistrationRef = useRef<number>(0);
+
+  function tryRegister() {
+    const now = Date.now();
+    if (now - lastRegistrationRef.current < 30_000) return;
+    lastRegistrationRef.current = now;
+    registerForPushNotifications().catch((err) =>
+      console.error("[PushNotificationManager] Registration failed:", err)
+    );
+  }
 
   useEffect(() => {
     const cleanup = setupNotificationHandlers();
@@ -111,12 +121,20 @@ function PushNotificationManager() {
   useEffect(() => {
     if (user && prevUserRef.current !== user.id) {
       prevUserRef.current = user.id;
-      registerForPushNotifications().catch((err) =>
-        console.error("[PushNotificationManager] Registration failed:", err)
-      );
+      tryRegister();
     } else if (!user) {
       prevUserRef.current = null;
     }
+  }, [user]);
+
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === "active" && user) {
+        tryRegister();
+      }
+    };
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    return () => subscription.remove();
   }, [user]);
 
   return null;
