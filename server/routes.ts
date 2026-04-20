@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, campaignClientRequests, reviews, orders, users, type Campaign } from "@shared/schema";
 import { sendFcmNotification, sendFcmToUser } from "./firebase";
 import { sendApnsNotifications, isApnsConfigured } from "./apns";
-import { sum, count, and, gte, sql, eq, desc } from "drizzle-orm";
+import { sum, count, and, gte, sql, eq, desc, inArray } from "drizzle-orm";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -73,8 +73,15 @@ async function sendPushNotifications(userIds: string[], title: string, body: str
 
     if (uniqueApnTokens.length > 0) {
       promises.push(
-        sendApnsNotifications(uniqueApnTokens, title, body, data).then(result => {
-          console.log(`[Push/APNs] Sent: ${result.success} success, ${result.failure} failure`);
+        sendApnsNotifications(uniqueApnTokens, title, body, data).then(async (apnsResult) => {
+          console.log(`[Push/APNs] Sent: ${apnsResult.success} success, ${apnsResult.failure} failure`);
+          if (apnsResult.invalidTokens.length > 0) {
+            console.warn(`[Push/APNs] Clearing ${apnsResult.invalidTokens.length} invalid APN token(s)`);
+            await db.update(users)
+              .set({ apnToken: null })
+              .where(inArray(users.apnToken, apnsResult.invalidTokens))
+              .catch(err => console.error("[Push/APNs] Failed to clear invalid tokens:", err));
+          }
         })
       );
     }
