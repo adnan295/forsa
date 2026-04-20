@@ -8,6 +8,7 @@ import { pool, db } from "./db";
 import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, campaignClientRequests, reviews, orders, users, type Campaign } from "@shared/schema";
 import { sendFcmNotification, sendFcmToUser } from "./firebase";
+import { sendApnsNotifications, isApnsConfigured } from "./apns";
 import { sum, count, and, gte, sql, eq, desc } from "drizzle-orm";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
@@ -17,49 +18,68 @@ import path from "path";
 
 async function sendPushNotifications(userIds: string[], title: string, body: string, data?: Record<string, string>) {
   try {
-    const rawTokens = await storage.getUserPushTokensByIds(userIds);
-    const tokens = [...new Set(rawTokens)].filter(t => typeof t === "string" && t.length > 10);
-    if (tokens.length === 0) return;
+    const [expoTokens, apnTokens] = await Promise.all([
+      storage.getUserPushTokensByIds(userIds),
+      isApnsConfigured() ? storage.getUserApnTokensByIds(userIds) : Promise.resolve([] as string[]),
+    ]);
 
-    const messages = tokens.map(token => ({
-      to: token,
-      sound: "default" as const,
-      title,
-      body,
-      data: data || {},
-      priority: "high" as const,
-      channelId: "default",
-      _contentAvailable: true,
-    }));
+    const uniqueExpoTokens = [...new Set(expoTokens)].filter(t => typeof t === "string" && t.length > 10);
+    const uniqueApnTokens = [...new Set(apnTokens)].filter(t => typeof t === "string" && t.length > 20);
 
-    const chunks: typeof messages[] = [];
-    for (let i = 0; i < messages.length; i += 100) {
-      chunks.push(messages.slice(i, i + 100));
-    }
+    const promises: Promise<any>[] = [];
 
-    for (const chunk of chunks) {
-      try {
-        const res = await fetch("https://exp.host/--/api/v2/push/send", {
-          method: "POST",
-          headers: {
-            "Accept": "application/json",
-            "Accept-Encoding": "gzip, deflate",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(chunk),
-        });
-        const json = await res.json() as { data?: Array<{ status: string; id?: string; message?: string; details?: any }> };
-        if (json.data) {
-          json.data.forEach((item, idx) => {
-            if (item.status === "error") {
-              console.error(`[Push] Error for token[${idx}]:`, item.message, item.details);
-            }
-          });
-        }
-      } catch (chunkErr) {
-        console.error("[Push] Failed to send chunk:", chunkErr);
+    if (uniqueExpoTokens.length > 0) {
+      const messages = uniqueExpoTokens.map(token => ({
+        to: token,
+        sound: "default" as const,
+        title,
+        body,
+        data: data || {},
+        priority: "high" as const,
+        channelId: "default",
+        _contentAvailable: true,
+      }));
+
+      const chunks: typeof messages[] = [];
+      for (let i = 0; i < messages.length; i += 100) {
+        chunks.push(messages.slice(i, i + 100));
+      }
+
+      for (const chunk of chunks) {
+        promises.push(
+          fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: {
+              "Accept": "application/json",
+              "Accept-Encoding": "gzip, deflate",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(chunk),
+          })
+            .then(res => res.json())
+            .then((json: any) => {
+              if (json.data) {
+                json.data.forEach((item: any, idx: number) => {
+                  if (item.status === "error") {
+                    console.error(`[Push/Expo] Error for token[${idx}]:`, item.message, item.details);
+                  }
+                });
+              }
+            })
+            .catch(err => console.error("[Push/Expo] Chunk failed:", err))
+        );
       }
     }
+
+    if (uniqueApnTokens.length > 0) {
+      promises.push(
+        sendApnsNotifications(uniqueApnTokens, title, body, data).then(result => {
+          console.log(`[Push/APNs] Sent: ${result.success} success, ${result.failure} failure`);
+        })
+      );
+    }
+
+    await Promise.all(promises);
   } catch (e) {
     console.error("[Push] sendPushNotifications error:", e);
   }

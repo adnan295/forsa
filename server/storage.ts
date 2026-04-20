@@ -145,6 +145,7 @@ export interface IStorage {
   updateUserPushToken(userId: string, pushToken: string | null): Promise<void>;
   updateUserDeviceTokens(userId: string, tokens: { fcmToken?: string | null; apnToken?: string | null }): Promise<void>;
   getUserPushTokensByIds(userIds: string[]): Promise<string[]>;
+  getUserApnTokensByIds(userIds: string[]): Promise<string[]>;
   getAllUsersWithFcmTokens(): Promise<{ id: string; fcmToken: string | null; apnToken: string | null }[]>;
 
   getWalletBalance(userId: string): Promise<number>;
@@ -1083,6 +1084,14 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(inArray(users.id, userIds));
     return result.map(r => r.pushToken).filter((t): t is string => !!t);
+  }
+
+  async getUserApnTokensByIds(userIds: string[]): Promise<string[]> {
+    if (userIds.length === 0) return [];
+    const result = await db.select({ apnToken: users.apnToken })
+      .from(users)
+      .where(inArray(users.id, userIds));
+    return result.map(r => r.apnToken).filter((t): t is string => !!t && t.length > 20);
   }
 
   async updateUserDeviceTokens(userId: string, tokens: { fcmToken?: string | null; apnToken?: string | null }): Promise<void> {
