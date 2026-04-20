@@ -50,41 +50,42 @@ export async function registerForPushNotifications(): Promise<string | null> {
     return null;
   }
 
+  let expoToken: string | null = null;
+
+  const deviceTokenData = await getDevicePushTokenWithRetry();
+  if (deviceTokenData) {
+    console.log(`[PushNotifications] Got native device token (${Platform.OS}):`, deviceTokenData.data?.slice(0, 12) + "...");
+    if (Platform.OS === "android") {
+      await apiRequest("PUT", "/api/auth/device-tokens", {
+        fcmToken: deviceTokenData.data,
+      }).catch((err) => console.error("[PushNotifications] Failed to save FCM token:", err));
+    } else if (Platform.OS === "ios") {
+      await apiRequest("PUT", "/api/auth/device-tokens", {
+        apnToken: deviceTokenData.data,
+      }).catch((err) => console.error("[PushNotifications] Failed to save APN token:", err));
+    }
+  }
+
   try {
     const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-    const expoToken = tokenData.data;
-
-    await apiRequest("PUT", "/api/auth/push-token", { pushToken: expoToken });
-
-    const deviceTokenData = await getDevicePushTokenWithRetry();
-    if (deviceTokenData) {
-      if (Platform.OS === "android") {
-        await apiRequest("PUT", "/api/auth/device-tokens", {
-          fcmToken: deviceTokenData.data,
-        }).catch((err) => console.error("[PushNotifications] Failed to save FCM token:", err));
-      } else if (Platform.OS === "ios") {
-        await apiRequest("PUT", "/api/auth/device-tokens", {
-          apnToken: deviceTokenData.data,
-        }).catch((err) => console.error("[PushNotifications] Failed to save APN token:", err));
-      }
-    }
-
-    if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("default", {
-        name: "default",
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: "#FFD000",
-      });
-    }
-
-    return expoToken;
+    expoToken = tokenData.data;
+    await apiRequest("PUT", "/api/auth/push-token", { pushToken: expoToken })
+      .catch((err) => console.error("[PushNotifications] Failed to save Expo push token:", err));
   } catch (error) {
-    console.error("[PushNotifications] Error registering for push notifications:", error);
-    return null;
+    console.warn("[PushNotifications] Expo push token registration failed (continuing with native token):", error);
   }
+
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#FFD000",
+    }).catch((err) => console.error("[PushNotifications] Failed to set notification channel:", err));
+  }
+
+  return expoToken;
 }
 
 function handleNotificationData(data: Record<string, any> | undefined) {

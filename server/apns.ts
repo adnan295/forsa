@@ -10,10 +10,19 @@ let cachedToken: string | null = null;
 let tokenGeneratedAt = 0;
 
 function parseKey(raw: string): string {
-  return raw
-    .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "")
-    .trim();
+  let key = raw.replace(/\\n/g, "\n").replace(/\\r/g, "").trim();
+
+  const beginMatch = key.match(/-----BEGIN [A-Z ]+-----/);
+  const endMatch = key.match(/-----END [A-Z ]+-----/);
+
+  if (!beginMatch || !endMatch) return key;
+
+  const beginIdx = key.indexOf(beginMatch[0]) + beginMatch[0].length;
+  const endIdx = key.indexOf(endMatch[0]);
+  const body = key.slice(beginIdx, endIdx).replace(/[\s\n\r]+/g, "");
+  const wrapped = body.match(/.{1,64}/g)?.join("\n") || body;
+
+  return `${beginMatch[0]}\n${wrapped}\n${endMatch[0]}\n`;
 }
 
 function getJWT(): string {
