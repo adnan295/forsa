@@ -95,3 +95,9 @@ id = "xe2zwbzsrj9rPKDwaUA9M"
 uri = "file://attached_assets/store-screenshots/07-notifications.png"
 type = "image"
 title = "7 — الإشعارات"
+
+[[outputs]]
+id = "VHcsY3ikW6h9iyUgMVOWe"
+uri = "file://PUSH_NOTIFICATIONS_GUIDE.md"
+type = "text"
+title = "Push Notifications — Complete Implementation Guide"
