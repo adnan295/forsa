@@ -10,6 +10,8 @@ import {
   Pressable,
   Image,
   Dimensions,
+  Linking,
+  AppState,
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +31,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
 import { queryClient, buildMediaUrl } from "@/lib/query-client";
 import { useFavorites } from "@/lib/favorites-context";
+import { getNotificationPermissionStatus } from "@/lib/push-notifications";
 import type { Campaign } from "@shared/schema";
 
 const { width: W } = Dimensions.get("window");
@@ -245,6 +248,80 @@ function PurchaseToast() {
   );
 }
 
+// ─── Notification Permission Banner ──────────────────────────
+function NotificationBanner() {
+  const { user } = useAuth();
+  const [dismissed, setDismissed] = useState(false);
+  const [permStatus, setPermStatus] = useState<"granted" | "denied" | "undetermined" | null>(null);
+  const translateY = useSharedValue(-60);
+  const opacity = useSharedValue(0);
+
+  function checkAndUpdate() {
+    if (Platform.OS === "web" || !user) return;
+    getNotificationPermissionStatus().then((status) => {
+      setPermStatus(status);
+      if (status === "denied") {
+        translateY.value = withTiming(0, { duration: 350, easing: Easing.out(Easing.quad) });
+        opacity.value = withTiming(1, { duration: 350 });
+      } else if (status === "granted") {
+        translateY.value = withTiming(-60, { duration: 250 });
+        opacity.value = withTiming(0, { duration: 250 });
+      }
+    });
+  }
+
+  useEffect(() => {
+    checkAndUpdate();
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        checkAndUpdate();
+      }
+    });
+    return () => sub.remove();
+  }, [user]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
+
+  function handleDismiss() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    translateY.value = withTiming(-60, { duration: 250 });
+    opacity.value = withTiming(0, { duration: 250 });
+    setTimeout(() => setDismissed(true), 260);
+  }
+
+  function handleOpenSettings() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Linking.openSettings();
+  }
+
+  if (dismissed || permStatus !== "denied" || Platform.OS === "web" || !user) return null;
+
+  return (
+    <Animated.View style={[nb.wrap, animStyle]}>
+      <View style={nb.inner}>
+        <View style={nb.iconWrap}>
+          <Ionicons name="notifications-off" size={20} color="#F59E0B" />
+        </View>
+        <View style={nb.textWrap}>
+          <Text style={nb.title}>الإشعارات معطّلة</Text>
+          <Text style={nb.sub}>فعّل الإشعارات لتصلك تنبيهات الفوز والعروض الحصرية</Text>
+        </View>
+        <View style={nb.actions}>
+          <Pressable style={nb.settingsBtn} onPress={handleOpenSettings} testID="notif-banner-settings">
+            <Text style={nb.settingsBtnText}>تفعيل</Text>
+          </Pressable>
+          <Pressable style={nb.closeBtn} onPress={handleDismiss} testID="notif-banner-dismiss" hitSlop={8}>
+            <Ionicons name="close" size={18} color="#94A3B8" />
+          </Pressable>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
 // ─── Main Screen ─────────────────────────────────────────────
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -356,6 +433,7 @@ export default function HomeScreen() {
         ListHeaderComponent={
           <View>
             <Header />
+            <NotificationBanner />
             {featured && (
               <View style={s.featuredWrap}>
                 <HeroCard
@@ -471,6 +549,81 @@ const toast = StyleSheet.create({
     shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6,
   },
   text: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#fff", flex: 1, textAlign: "right", writingDirection: "rtl" },
+});
+
+const nb = StyleSheet.create({
+  wrap: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    overflow: "hidden",
+  },
+  inner: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  textWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  title: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+    color: "#92400E",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  sub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: "#B45309",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
+  settingsBtn: {
+    backgroundColor: "#F59E0B",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  settingsBtnText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 12,
+    color: "#fff",
+  },
+  closeBtn: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
 
 const s = StyleSheet.create({
