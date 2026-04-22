@@ -1199,7 +1199,7 @@ const styles = StyleSheet.create({
   variantCard: {
     borderRadius: 14,
     backgroundColor: "#F9FAFB",
-    borderWidth: 2.5,
+    borderWidth: 3,
     borderColor: "transparent",
     overflow: "hidden",
     shadowColor: "#000",
