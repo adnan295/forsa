@@ -11,7 +11,6 @@ import {
   TextInput,
   Alert,
   Image,
-  Dimensions,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -36,10 +35,7 @@ import { useFavorites } from "@/lib/favorites-context";
 import { buildMediaUrl } from "@/lib/query-client";
 import type { Campaign, CampaignProduct } from "@shared/schema";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
 const CARD_GAP = 10;
-const CARD_PADDING = 16;
-const OUTER_PADDING = 16;
 
 type CampaignWithProducts = Campaign & { products?: CampaignProduct[] };
 
@@ -74,6 +70,7 @@ export default function CampaignDetailScreen() {
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [gridWidth, setGridWidth] = useState(0);
 
   const pulseScale = useSharedValue(1);
   const buyBtnScale = useSharedValue(1);
@@ -354,15 +351,19 @@ export default function CampaignDetailScreen() {
                 <Ionicons name="color-palette-outline" size={18} color={Colors.light.accent} />
                 <Text style={styles.quantityTitle}>اختر الموديل</Text>
               </View>
-              <View style={styles.variantGrid}>
+              <View
+                style={styles.variantGrid}
+                onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}
+              >
                 {campaign.products!.map((product) => {
                   const pRemaining = product.quantity - product.soldQuantity;
                   const pSoldOut = pRemaining <= 0;
                   const isSelected = selectedProductId === product.id;
                   const isSingle = campaign.products!.length === 1;
+                  const availableWidth = gridWidth > 0 ? gridWidth : 260;
                   const cardWidth = isSingle
-                    ? SCREEN_WIDTH - OUTER_PADDING * 2 - CARD_PADDING * 2
-                    : (SCREEN_WIDTH - OUTER_PADDING * 2 - CARD_PADDING * 2 - CARD_GAP) / 2;
+                    ? availableWidth
+                    : (availableWidth - CARD_GAP) / 2;
 
                   return (
                     <Pressable
