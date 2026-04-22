@@ -11,6 +11,7 @@ import {
   TextInput,
   Alert,
   Image,
+  Dimensions,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -34,6 +35,11 @@ import { useCart } from "@/lib/cart-context";
 import { useFavorites } from "@/lib/favorites-context";
 import { buildMediaUrl } from "@/lib/query-client";
 import type { Campaign, CampaignProduct } from "@shared/schema";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const CARD_GAP = 10;
+const CARD_PADDING = 16;
+const OUTER_PADDING = 16;
 
 type CampaignWithProducts = Campaign & { products?: CampaignProduct[] };
 
@@ -348,65 +354,82 @@ export default function CampaignDetailScreen() {
                 <Ionicons name="color-palette-outline" size={18} color={Colors.light.accent} />
                 <Text style={styles.quantityTitle}>اختر الموديل</Text>
               </View>
-              {campaign.products!.map((product) => {
-                const pRemaining = product.quantity - product.soldQuantity;
-                const pSoldOut = pRemaining <= 0;
-                const isSelected = selectedProductId === product.id;
-                return (
-                  <Pressable
-                    key={product.id}
-                    onPress={() => {
-                      if (!pSoldOut) {
-                        setSelectedProductId(product.id);
-                        setQuantity(1);
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                    }}
-                    disabled={pSoldOut}
-                    style={[
-                      styles.variantOption,
-                      isSelected && styles.variantOptionSelected,
-                      pSoldOut && styles.variantOptionDisabled,
-                    ]}
-                  >
-                    <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, flex: 1 }}>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={20} color={Colors.light.accent} />
-                      )}
-                      {product.imageUrl ? (
-                        <Image
-                          source={{ uri: buildMediaUrl(product.imageUrl)! }}
-                          style={{ width: 52, height: 52, borderRadius: 8 }}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View style={{ width: 52, height: 52, borderRadius: 8, backgroundColor: "rgba(124,58,237,0.08)", alignItems: "center", justifyContent: "center" }}>
-                          <Ionicons name="image-outline" size={22} color={Colors.light.accent} style={{ opacity: 0.4 }} />
-                        </View>
-                      )}
-                      <View style={{ flex: 1 }}>
-                        <Text style={[
-                          styles.variantName,
-                          isSelected && { color: Colors.light.accent },
-                          pSoldOut && { color: Colors.light.textSecondary },
-                        ]}>
+              <View style={styles.variantGrid}>
+                {campaign.products!.map((product) => {
+                  const pRemaining = product.quantity - product.soldQuantity;
+                  const pSoldOut = pRemaining <= 0;
+                  const isSelected = selectedProductId === product.id;
+                  const isSingle = campaign.products!.length === 1;
+                  const cardWidth = isSingle
+                    ? SCREEN_WIDTH - OUTER_PADDING * 2 - CARD_PADDING * 2
+                    : (SCREEN_WIDTH - OUTER_PADDING * 2 - CARD_PADDING * 2 - CARD_GAP) / 2;
+
+                  return (
+                    <Pressable
+                      key={product.id}
+                      onPress={() => {
+                        if (!pSoldOut) {
+                          setSelectedProductId(product.id);
+                          setQuantity(1);
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }
+                      }}
+                      disabled={pSoldOut}
+                      style={[
+                        styles.variantCard,
+                        { width: cardWidth },
+                        isSelected && styles.variantCardSelected,
+                        pSoldOut && styles.variantCardDisabled,
+                      ]}
+                    >
+                      <View style={styles.variantImageWrap}>
+                        {product.imageUrl ? (
+                          <Image
+                            source={{ uri: buildMediaUrl(product.imageUrl)! }}
+                            style={styles.variantCardImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={[styles.variantCardImage, styles.variantCardImagePlaceholder]}>
+                            <Ionicons name="image-outline" size={32} color={Colors.light.accent} style={{ opacity: 0.35 }} />
+                          </View>
+                        )}
+
+                        {pRemaining > 0 && (
+                          <View style={styles.variantStockBadge}>
+                            <Text style={styles.variantStockBadgeText}>متبقي {pRemaining}</Text>
+                          </View>
+                        )}
+
+                        {pSoldOut && (
+                          <View style={styles.variantSoldOutOverlay}>
+                            <Ionicons name="close-circle" size={22} color="#fff" />
+                            <Text style={styles.variantSoldOutText}>نفذت الكمية</Text>
+                          </View>
+                        )}
+
+                        {isSelected && (
+                          <View style={styles.variantCheckBadge}>
+                            <Ionicons name="checkmark-circle" size={22} color="#7C3AED" />
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.variantCardBody}>
+                        <Text
+                          style={[styles.variantCardName, isSelected && { color: Colors.light.accent }]}
+                          numberOfLines={2}
+                        >
                           {product.nameAr || product.name}
                         </Text>
-                        <Text style={styles.variantSub}>
-                          {pSoldOut ? "نفذت الكمية" : `متبقي ${pRemaining} قطعة`}
+                        <Text style={[styles.variantCardPrice, isSelected && { color: Colors.light.accent }]}>
+                          {parseFloat(product.price).toFixed(2)} $
                         </Text>
                       </View>
-                    </View>
-                    <Text style={[
-                      styles.variantPrice,
-                      isSelected && { color: Colors.light.accent },
-                      pSoldOut && { color: Colors.light.textSecondary },
-                    ]}>
-                      {parseFloat(product.price).toFixed(2)} $
-                    </Text>
-                  </Pressable>
-                );
-              })}
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           )}
 
@@ -1166,42 +1189,108 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: "#EF4444",
   },
-  variantOption: {
+  variantGrid: {
     flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#F9FAFB",
+    flexWrap: "wrap",
+    gap: CARD_GAP,
+    marginTop: 12,
+  },
+  variantCard: {
     borderRadius: 14,
-    padding: 14,
-    marginTop: 10,
-    borderWidth: 2,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 2.5,
     borderColor: "transparent",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  variantOptionSelected: {
+  variantCardSelected: {
     borderColor: Colors.light.accent,
-    backgroundColor: "rgba(124,58,237,0.04)",
+    backgroundColor: "#fff",
+    shadowColor: Colors.light.accent,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  variantOptionDisabled: {
-    opacity: 0.5,
+  variantCardDisabled: {
+    opacity: 0.55,
   },
-  variantName: {
+  variantImageWrap: {
+    position: "relative",
+  },
+  variantCardImage: {
+    width: "100%",
+    height: 130,
+  },
+  variantCardImagePlaceholder: {
+    backgroundColor: "rgba(124,58,237,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  variantStockBadge: {
+    position: "absolute",
+    bottom: 7,
+    left: 7,
+    backgroundColor: "rgba(0,0,0,0.52)",
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  variantStockBadgeText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 10,
+    color: "#fff",
+    writingDirection: "rtl" as const,
+  },
+  variantSoldOutOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  variantSoldOutText: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl" as const,
-  },
-  variantSub: {
-    fontFamily: "Inter_400Regular",
     fontSize: 12,
-    color: Colors.light.textSecondary,
-    textAlign: "right",
+    color: "#fff",
     writingDirection: "rtl" as const,
-    marginTop: 2,
   },
-  variantPrice: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
+  variantCheckBadge: {
+    position: "absolute",
+    top: 7,
+    right: 7,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.light.accent,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  variantCardBody: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+    gap: 4,
+  },
+  variantCardName: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
     color: Colors.light.text,
+    textAlign: "center",
+    writingDirection: "rtl" as const,
+    lineHeight: 18,
+  },
+  variantCardPrice: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    color: Colors.light.textSecondary,
   },
 });
