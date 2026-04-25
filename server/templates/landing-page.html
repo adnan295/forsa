@@ -291,6 +291,23 @@
         transition: all 0.2s;
       }
       .btn-secondary:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+      .btn-web-preview {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 13px 26px;
+        background: rgba(124,58,237,0.12);
+        border: 1.5px solid rgba(124,58,237,0.45);
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #C4B5FD;
+        text-decoration: none;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.2s, border-color 0.2s, transform 0.2s;
+      }
+      .btn-web-preview:hover { background: rgba(124,58,237,0.22); border-color: rgba(124,58,237,0.7); color: #EDE9FE; transform: translateY(-2px); }
 
       .hero-trust {
         display: flex;
@@ -997,6 +1014,10 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/></svg>
             حمّل من Google Play
           </a>
+          <button class="btn-web-preview" onclick="window.open(window.location.protocol+'//'+window.location.hostname+':8081','_blank')">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            جرّب في المتصفح
+          </button>
           <a href="#how-it-works" class="btn-secondary">
             كيف يعمل التطبيق؟
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
