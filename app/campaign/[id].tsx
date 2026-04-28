@@ -101,12 +101,12 @@ function ImageLightbox({
           <>
             {index > 0 && (
               <TouchableOpacity style={[lb.navBtn, lb.navBtnLeft]} onPress={() => setIndex(index - 1)} activeOpacity={0.7}>
-                <Ionicons name="chevron-forward" size={26} color="#fff" />
+                <Ionicons name="chevron-back" size={26} color="#fff" />
               </TouchableOpacity>
             )}
             {index < images.length - 1 && (
               <TouchableOpacity style={[lb.navBtn, lb.navBtnRight]} onPress={() => setIndex(index + 1)} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={26} color="#fff" />
+                <Ionicons name="chevron-forward" size={26} color="#fff" />
               </TouchableOpacity>
             )}
             <View style={lb.dotsRow}>
