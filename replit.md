@@ -145,6 +145,8 @@ Comprehensive admin dashboard with 7 sections:
 - Full RTL conversion: All hardcoded LTR positioning (marginLeft/Right, paddingLeft/Right, left/right) converted to logical properties (marginStart/End, paddingStart/End, start/end) across all screens. Decorative elements and full-width overlays (left:0/right:0) kept as-is. I18nManager.forceRTL(true) set globally.
 - Admin advanced stats: Conversion rate and average order value added to admin dashboard (GET /api/admin/dashboard)
 - Multi-variant campaigns: campaign_products table for product variants (e.g., different storage/color options). Each variant has name, nameAr, price, quantity, soldQuantity. Admin can toggle "موديلات متعددة" when creating campaigns. Campaign detail shows variant selector. Cart and checkout pass productId. Campaign-level price/quantity/soldQuantity are auto-aggregated via syncCampaignAggregates(). Admin CRUD: POST/PUT/DELETE /api/admin/campaigns/:id/products, /api/admin/campaign-products/:id
+- Multi-image product variants: campaign_products.images_json (text) stores JSON array of base64 image URLs. Admin panel shows thumbnails strip with +/✕ buttons (up to 5 images per variant). Upload endpoint: POST /api/admin/campaigns/upload-product-image. Frontend parses imagesJson via parseProductImages() helper. Variant card image area taps to open ImageLightbox (full-screen modal with PanResponder swipe, dots nav, prev/next arrows). Selection remains on name/price tap.
+- Campaign hero banner redesign: minHeight 360, rounded bottom corners (borderRadius 28), decorative translucent circles (no image), "حملة حصرية" badge, price callout ("ابتداءً من X $"), richer gradient overlay.
 
 ## Admin Credentials
 - Username: admin

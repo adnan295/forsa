@@ -260,6 +260,7 @@ export class DatabaseStorage implements IStorage {
     name: string;
     nameAr?: string;
     imageUrl?: string;
+    imagesJson?: string;
     price: string;
     quantity: number;
     sortOrder?: number;
@@ -271,6 +272,7 @@ export class DatabaseStorage implements IStorage {
         name: data.name,
         nameAr: data.nameAr,
         imageUrl: data.imageUrl,
+        imagesJson: data.imagesJson,
         price: data.price,
         quantity: data.quantity,
         sortOrder: data.sortOrder || 0,

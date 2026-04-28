@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,10 @@ import {
   TextInput,
   Alert,
   Image,
+  Modal,
+  PanResponder,
+  Dimensions,
+  TouchableOpacity,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -36,8 +40,134 @@ import { buildMediaUrl } from "@/lib/query-client";
 import type { Campaign, CampaignProduct } from "@shared/schema";
 
 const CARD_GAP = 10;
+const SCREEN_W = Dimensions.get("window").width;
 
 type CampaignWithProducts = Campaign & { products?: CampaignProduct[] };
+
+function parseProductImages(product: CampaignProduct): string[] {
+  try {
+    const arr = JSON.parse((product as any).imagesJson || "[]");
+    if (Array.isArray(arr) && arr.length > 0) return arr;
+  } catch {}
+  if (product.imageUrl) return [product.imageUrl];
+  return [];
+}
+
+function ImageLightbox({
+  visible,
+  images,
+  initialIndex,
+  onClose,
+}: {
+  visible: boolean;
+  images: string[];
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  const [index, setIndex] = useState(initialIndex);
+  useEffect(() => { if (visible) setIndex(initialIndex); }, [visible, initialIndex]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dx) > 10,
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx < -50) setIndex((i) => Math.min(i + 1, images.length - 1));
+        else if (gs.dx > 50) setIndex((i) => Math.max(i - 1, 0));
+      },
+    })
+  ).current;
+
+  if (!visible || images.length === 0) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <View style={lb.container} {...panResponder.panHandlers}>
+        <TouchableOpacity style={lb.closeBtn} onPress={onClose} activeOpacity={0.7}>
+          <Ionicons name="close" size={28} color="#fff" />
+        </TouchableOpacity>
+        <Image
+          source={{ uri: buildMediaUrl(images[index])! }}
+          style={lb.image}
+          resizeMode="contain"
+        />
+        {images.length > 1 && (
+          <>
+            {index > 0 && (
+              <TouchableOpacity style={[lb.navBtn, lb.navBtnLeft]} onPress={() => setIndex(index - 1)} activeOpacity={0.7}>
+                <Ionicons name="chevron-forward" size={26} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {index < images.length - 1 && (
+              <TouchableOpacity style={[lb.navBtn, lb.navBtnRight]} onPress={() => setIndex(index + 1)} activeOpacity={0.7}>
+                <Ionicons name="chevron-back" size={26} color="#fff" />
+              </TouchableOpacity>
+            )}
+            <View style={lb.dotsRow}>
+              {images.map((_, i) => (
+                <TouchableOpacity key={i} onPress={() => setIndex(i)} style={[lb.dot, i === index && lb.dotActive]} />
+              ))}
+            </View>
+          </>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
+const lb = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.95)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeBtn: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  image: {
+    width: SCREEN_W,
+    height: SCREEN_W,
+  },
+  navBtn: {
+    position: "absolute",
+    top: "50%",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -22,
+  },
+  navBtnLeft: { left: 16 },
+  navBtnRight: { right: 16 },
+  dotsRow: {
+    position: "absolute",
+    bottom: 60,
+    flexDirection: "row",
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.4)",
+  },
+  dotActive: {
+    backgroundColor: "#fff",
+    width: 20,
+    borderRadius: 4,
+  },
+});
 
 function useCountdown(endsAt: string | Date | null | undefined) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
@@ -71,6 +201,9 @@ export default function CampaignDetailScreen() {
   const [addedToCart, setAddedToCart] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [gridWidth, setGridWidth] = useState(0);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const pulseScale = useSharedValue(1);
   const buyBtnScale = useSharedValue(1);
@@ -178,8 +311,19 @@ export default function CampaignDetailScreen() {
               resizeMode="cover"
             />
           ) : null}
+          {/* Decorative shimmer layer for banner feel */}
+          {!campaign.imageUrl && (
+            <View style={styles.heroBannerDecor}>
+              <View style={styles.heroBannerCircle1} />
+              <View style={styles.heroBannerCircle2} />
+            </View>
+          )}
           <LinearGradient
-            colors={campaign.imageUrl ? ["transparent", "rgba(124,58,237,0.7)", "rgba(236,72,153,0.95)"] : ["#7C3AED", "#A855F7", "#EC4899"]}
+            colors={
+              campaign.imageUrl
+                ? ["rgba(10,10,30,0.18)", "rgba(124,58,237,0.72)", "rgba(88,28,180,0.97)"]
+                : ["#4C1D95", "#7C3AED", "#A855F7"]
+            }
             style={styles.heroOverlay}
           >
             <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
@@ -224,20 +368,42 @@ export default function CampaignDetailScreen() {
               </View>
 
               <View style={styles.heroCenter}>
+                {/* Campaign type badge */}
+                <View style={styles.heroCampaignBadge}>
+                  <Ionicons name="flash" size={13} color="#FCD34D" />
+                  <Text style={styles.heroCampaignBadgeText}>حملة حصرية</Text>
+                </View>
+
                 {!campaign.imageUrl && (
                   <Animated.View style={[styles.prizeIcon, pulseStyle]}>
                     <Ionicons name="gift" size={52} color="#fff" />
                   </Animated.View>
                 )}
                 <Text style={styles.heroTitle}>{campaign.title}</Text>
-                <View style={styles.prizeBadge}>
-                  <Ionicons name="trophy" size={16} color="#A78BFA" />
-                  <Text style={styles.prizeTitle}>{campaign.prizeName}</Text>
+
+                <View style={styles.heroPrizeRow}>
+                  <View style={styles.prizeBadge}>
+                    <Ionicons name="trophy" size={15} color="#FCD34D" />
+                    <Text style={styles.prizeTitle}>{campaign.prizeName}</Text>
+                  </View>
+                </View>
+
+                {/* Price callout on banner */}
+                <View style={styles.heroPriceCallout}>
+                  <Text style={styles.heroPriceLabel}>ابتداءً من</Text>
+                  <Text style={styles.heroPriceValue}>{unitPrice.toFixed(2)} $</Text>
                 </View>
               </View>
             </View>
           </LinearGradient>
         </View>
+
+        <ImageLightbox
+          visible={lightboxVisible}
+          images={lightboxImages}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxVisible(false)}
+        />
 
         <View style={styles.content}>
           {!!(campaign as any).isFlashSale && !flashCountdown.expired && (
@@ -365,17 +531,12 @@ export default function CampaignDetailScreen() {
                     ? availableWidth
                     : (availableWidth - CARD_GAP) / 2;
 
+                  const productImgs = parseProductImages(product);
+                  const hasMultipleImgs = productImgs.length > 1;
+
                   return (
-                    <Pressable
+                    <View
                       key={product.id}
-                      onPress={() => {
-                        if (!pSoldOut) {
-                          setSelectedProductId(product.id);
-                          setQuantity(1);
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        }
-                      }}
-                      disabled={pSoldOut}
                       style={[
                         styles.variantCard,
                         { width: cardWidth },
@@ -383,16 +544,42 @@ export default function CampaignDetailScreen() {
                         pSoldOut && styles.variantCardDisabled,
                       ]}
                     >
-                      <View style={styles.variantImageWrap}>
-                        {product.imageUrl ? (
+                      {/* Image area — tap to open lightbox */}
+                      <Pressable
+                        onPress={() => {
+                          if (productImgs.length > 0) {
+                            setLightboxImages(productImgs);
+                            setLightboxIndex(0);
+                            setLightboxVisible(true);
+                          }
+                        }}
+                        style={styles.variantImageWrap}
+                      >
+                        {productImgs.length > 0 ? (
                           <Image
-                            source={{ uri: buildMediaUrl(product.imageUrl)! }}
+                            source={{ uri: buildMediaUrl(productImgs[0])! }}
                             style={styles.variantCardImage}
                             resizeMode="cover"
                           />
                         ) : (
                           <View style={[styles.variantCardImage, styles.variantCardImagePlaceholder]}>
                             <Ionicons name="image-outline" size={32} color={Colors.light.accent} style={{ opacity: 0.35 }} />
+                          </View>
+                        )}
+
+                        {/* Multi-image dots */}
+                        {hasMultipleImgs && (
+                          <View style={styles.variantImgDots}>
+                            {productImgs.slice(0, 5).map((_, di) => (
+                              <View key={di} style={styles.variantImgDot} />
+                            ))}
+                          </View>
+                        )}
+
+                        {/* Expand icon hint if has images */}
+                        {productImgs.length > 0 && (
+                          <View style={styles.variantExpandHint}>
+                            <Ionicons name="expand-outline" size={13} color="#fff" />
                           </View>
                         )}
 
@@ -414,9 +601,20 @@ export default function CampaignDetailScreen() {
                             <Ionicons name="checkmark-circle" size={22} color="#7C3AED" />
                           </View>
                         )}
-                      </View>
+                      </Pressable>
 
-                      <View style={styles.variantCardBody}>
+                      {/* Name/Price area — tap to select variant */}
+                      <Pressable
+                        onPress={() => {
+                          if (!pSoldOut) {
+                            setSelectedProductId(product.id);
+                            setQuantity(1);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }
+                        }}
+                        disabled={pSoldOut}
+                        style={styles.variantCardBody}
+                      >
                         <Text
                           style={[styles.variantCardName, isSelected && { color: Colors.light.accent }]}
                           numberOfLines={2}
@@ -426,8 +624,8 @@ export default function CampaignDetailScreen() {
                         <Text style={[styles.variantCardPrice, isSelected && { color: Colors.light.accent }]}>
                           {parseFloat(product.price).toFixed(2)} $
                         </Text>
-                      </View>
-                    </Pressable>
+                      </Pressable>
+                    </View>
                   );
                 })}
               </View>
@@ -714,7 +912,10 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     position: "relative",
-    minHeight: 300,
+    minHeight: 360,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: "hidden",
   },
   heroImage: {
     position: "absolute",
@@ -725,9 +926,80 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+  heroBannerDecor: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  heroBannerCircle1: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: "rgba(168,85,247,0.22)",
+    top: -60,
+    right: -50,
+  },
+  heroBannerCircle2: {
+    position: "absolute",
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "rgba(236,72,153,0.18)",
+    bottom: 10,
+    left: -40,
+  },
   heroOverlay: {
     flex: 1,
-    paddingBottom: 36,
+    paddingBottom: 40,
+  },
+  heroCampaignBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(252,211,77,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(252,211,77,0.35)",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginBottom: 14,
+    alignSelf: "center",
+  },
+  heroCampaignBadgeText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+    color: "#FCD34D",
+    writingDirection: "rtl" as const,
+  },
+  heroPrizeRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  heroPriceCallout: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  heroPriceLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
+    writingDirection: "rtl" as const,
+  },
+  heroPriceValue: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 22,
+    color: "#fff",
   },
   backButton: {
     padding: 16,
@@ -1274,6 +1546,33 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
+  },
+  variantImgDots: {
+    position: "absolute",
+    bottom: 6,
+    alignSelf: "center",
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 4,
+  },
+  variantImgDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.7)",
+  },
+  variantExpandHint: {
+    position: "absolute",
+    top: 7,
+    left: 7,
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    backgroundColor: "rgba(0,0,0,0.38)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   variantCardBody: {
     paddingHorizontal: 10,

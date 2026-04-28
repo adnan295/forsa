@@ -597,6 +597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: p.name,
             nameAr: p.nameAr || p.name,
             imageUrl: p.imageUrl,
+            imagesJson: p.imagesJson,
             price: prc.toFixed(2),
             quantity: qty,
             sortOrder: i,
@@ -651,7 +652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const campaign = await storage.getCampaign(campaignId);
       if (!campaign) return res.status(404).json({ message: "Campaign not found" });
 
-      const { name, nameAr, imageUrl, price, quantity, sortOrder } = req.body;
+      const { name, nameAr, imageUrl, imagesJson, price, quantity, sortOrder } = req.body;
       if (!name || !price || !quantity) {
         return res.status(400).json({ message: "Name, price and quantity are required" });
       }
@@ -661,6 +662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name,
         nameAr,
         imageUrl,
+        imagesJson,
         price: String(price),
         quantity: parseInt(quantity),
         sortOrder: sortOrder || 0,
@@ -2024,6 +2026,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ imageUrl });
     } catch (error: any) {
       console.error("Upload campaign image error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+
+  app.post("/api/admin/campaigns/upload-product-image", requireAdmin as any, uploadCampaignImage.single("image"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Image file is required" });
+      }
+      const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      res.json({ imageUrl });
+    } catch (error: any) {
+      console.error("Upload product image error:", error);
       res.status(500).json({ message: error.message || "Server error" });
     }
   });

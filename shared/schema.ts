@@ -298,6 +298,7 @@ export const campaignProducts = pgTable("campaign_products", {
   name: text("name").notNull(),
   nameAr: text("name_ar"),
   imageUrl: text("image_url"),
+  imagesJson: text("images_json"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   quantity: integer("quantity").notNull(),
   soldQuantity: integer("sold_quantity").notNull().default(0),
