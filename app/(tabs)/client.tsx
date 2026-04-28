@@ -254,7 +254,7 @@ function Field({
 const st = StyleSheet.create({
   hero: { paddingHorizontal: 20, paddingBottom: 28 },
   heroBadge: {
-    alignSelf: "flex-end", backgroundColor: "rgba(255,208,0,0.15)",
+    alignSelf: "flex-start", backgroundColor: "rgba(255,208,0,0.15)",
     borderWidth: 1, borderColor: "#FFD000",
     paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, marginBottom: 16,
   },
@@ -275,7 +275,7 @@ const st = StyleSheet.create({
     width: (W - 32 - 12) / 2,
     backgroundColor: "#fff", borderRadius: 16, padding: 16,
     shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
-    alignItems: "flex-end", gap: 8,
+    alignItems: "flex-start", gap: 8,
   },
   benefitIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: "#FFF9E0", alignItems: "center", justifyContent: "center" },
   benefitTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#1A1A1A", textAlign: "right", writingDirection: "rtl" },
@@ -284,7 +284,7 @@ const st = StyleSheet.create({
   stepRow: { flexDirection: "row-reverse", gap: 14, alignItems: "flex-start" },
   stepNumBox: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   stepNum: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#1A1A1A" },
-  stepBody: { flex: 1, alignItems: "flex-end" },
+  stepBody: { flex: 1, alignItems: "flex-start" },
   stepTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#1A1A1A", textAlign: "right", writingDirection: "rtl" },
   stepSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#888", textAlign: "right", lineHeight: 17, marginTop: 2, writingDirection: "rtl" },
   stepLine: { height: 20, width: 1, backgroundColor: "#E5E7EB", marginStart: 16, marginVertical: 4 },

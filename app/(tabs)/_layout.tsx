@@ -12,21 +12,21 @@ import { useTheme } from "@/lib/theme-context";
 function NativeTabLayout() {
   return (
     <NativeTabs>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>حسابي</Label>
+      <NativeTabs.Trigger name="index">
+        <Icon sf={{ default: "flame", selected: "flame.fill" }} />
+        <Label>الحملات</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="tickets">
         <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
         <Label>تذاكري</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "flame", selected: "flame.fill" }} />
-        <Label>الحملات</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="client">
         <Icon sf={{ default: "briefcase", selected: "briefcase.fill" }} />
         <Label>عميل</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile">
+        <Icon sf={{ default: "person", selected: "person.fill" }} />
+        <Label>حسابي</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -72,11 +72,11 @@ function ClassicTabLayout() {
       }}
     >
       <Tabs.Screen
-        name="profile"
+        name="index"
         options={{
-          title: "حسابي",
+          title: "الحملات",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <Ionicons name="flame" size={size} color={color} />
           ),
         }}
       />
@@ -90,20 +90,20 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="index"
-        options={{
-          title: "الحملات",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flame" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="client"
         options={{
           title: "عميل",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="briefcase" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "حسابي",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />
