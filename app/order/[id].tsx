@@ -259,7 +259,7 @@ export default function OrderDetailScreen() {
           { paddingTop: Platform.OS === "web" ? 67 : insets.top },
         ]}
       >
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/tickets')} style={styles.backButton}>
           <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
         </Pressable>
         <View style={styles.headerCenter}>
