@@ -46,7 +46,7 @@ type CampaignWithProducts = Campaign & { products?: CampaignProduct[] };
 
 function parseProductImages(product: CampaignProduct): string[] {
   try {
-    const arr = JSON.parse((product as any).imagesJson || "[]");
+    const arr = JSON.parse(product.imagesJson || "[]");
     if (Array.isArray(arr) && arr.length > 0) return arr;
   } catch {}
   if (product.imageUrl) return [product.imageUrl];
@@ -326,7 +326,7 @@ export default function CampaignDetailScreen() {
             }
             style={styles.heroOverlay}
           >
-            <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top }}>
+            <View style={{ flex: 1, paddingTop: Platform.OS === "web" ? 67 : insets.top, justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", paddingHorizontal: 4 }}>
                 <Pressable onPress={() => router.back()} style={styles.backButton}>
                   <View style={styles.backBtnCircle}>
@@ -370,28 +370,21 @@ export default function CampaignDetailScreen() {
               <View style={styles.heroCenter}>
                 {/* Campaign type badge */}
                 <View style={styles.heroCampaignBadge}>
-                  <Ionicons name="flash" size={13} color="#FCD34D" />
+                  <Ionicons name="flash" size={12} color="#FCD34D" />
                   <Text style={styles.heroCampaignBadgeText}>حملة حصرية</Text>
                 </View>
 
-                {!campaign.imageUrl && (
-                  <Animated.View style={[styles.prizeIcon, pulseStyle]}>
-                    <Ionicons name="gift" size={52} color="#fff" />
-                  </Animated.View>
-                )}
-                <Text style={styles.heroTitle}>{campaign.title}</Text>
+                <Text style={styles.heroTitle} numberOfLines={2}>{campaign.title}</Text>
 
                 <View style={styles.heroPrizeRow}>
                   <View style={styles.prizeBadge}>
-                    <Ionicons name="trophy" size={15} color="#FCD34D" />
+                    <Ionicons name="trophy" size={13} color="#FCD34D" />
                     <Text style={styles.prizeTitle}>{campaign.prizeName}</Text>
                   </View>
-                </View>
-
-                {/* Price callout on banner */}
-                <View style={styles.heroPriceCallout}>
-                  <Text style={styles.heroPriceLabel}>ابتداءً من</Text>
-                  <Text style={styles.heroPriceValue}>{unitPrice.toFixed(2)} $</Text>
+                  <View style={[styles.prizeBadge, { marginStart: 8, backgroundColor: "rgba(255,255,255,0.12)", borderColor: "rgba(255,255,255,0.2)" }]}>
+                    <Ionicons name="pricetag" size={12} color="#fff" />
+                    <Text style={[styles.prizeTitle, { color: "#fff" }]}>{unitPrice.toFixed(2)} $</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -911,11 +904,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   heroSection: {
-    position: "relative",
-    minHeight: 360,
+    width: "100%",
+    aspectRatio: 16 / 9,
+    overflow: "hidden",
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
-    overflow: "hidden",
   },
   heroImage: {
     position: "absolute",
@@ -952,54 +945,33 @@ const styles = StyleSheet.create({
     left: -40,
   },
   heroOverlay: {
-    flex: 1,
-    paddingBottom: 40,
+    ...StyleSheet.absoluteFillObject,
+    paddingBottom: 12,
   },
   heroCampaignBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
     backgroundColor: "rgba(252,211,77,0.18)",
     borderWidth: 1,
     borderColor: "rgba(252,211,77,0.35)",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 20,
-    marginBottom: 14,
+    marginBottom: 8,
     alignSelf: "center",
   },
   heroCampaignBadgeText: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
+    fontSize: 11,
     color: "#FCD34D",
     writingDirection: "rtl" as const,
   },
   heroPrizeRow: {
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 14,
-  },
-  heroPriceCallout: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  heroPriceLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
-    writingDirection: "rtl" as const,
-  },
-  heroPriceValue: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: "#fff",
+    flexWrap: "wrap",
+    gap: 6,
   },
   backButton: {
     padding: 16,
@@ -1030,10 +1002,10 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 26,
+    fontSize: 20,
     color: "#FFFFFF",
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 8,
     writingDirection: "rtl",
   },
   prizeBadge: {
