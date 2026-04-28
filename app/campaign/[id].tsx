@@ -65,14 +65,21 @@ function ImageLightbox({
   onClose: () => void;
 }) {
   const [index, setIndex] = useState(initialIndex);
+  // Keep refs up-to-date so PanResponder callbacks (created once) never close over stale values
+  const imagesRef = useRef(images);
+  const indexRef = useRef(index);
+  useEffect(() => { imagesRef.current = images; }, [images]);
+  useEffect(() => { indexRef.current = index; }, [index]);
   useEffect(() => { if (visible) setIndex(initialIndex); }, [visible, initialIndex]);
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dx) > 10,
       onPanResponderRelease: (_, gs) => {
-        if (gs.dx < -50) setIndex((i) => Math.min(i + 1, images.length - 1));
-        else if (gs.dx > 50) setIndex((i) => Math.max(i - 1, 0));
+        const imgs = imagesRef.current;
+        const cur = indexRef.current;
+        if (gs.dx < -50) setIndex(Math.min(cur + 1, imgs.length - 1));
+        else if (gs.dx > 50) setIndex(Math.max(cur - 1, 0));
       },
     })
   ).current;

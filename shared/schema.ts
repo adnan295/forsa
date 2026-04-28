@@ -389,6 +389,16 @@ export const insertCampaignSchema = createInsertSchema(campaigns).pick({
   originalPrice: true,
 });
 
+export const insertCampaignProductSchema = createInsertSchema(campaignProducts).pick({
+  name: true,
+  nameAr: true,
+  imageUrl: true,
+  imagesJson: true,
+  price: true,
+  quantity: true,
+  sortOrder: true,
+});
+
 export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick({
   name: true,
   nameAr: true,
