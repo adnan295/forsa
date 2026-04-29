@@ -269,7 +269,7 @@ const st = StyleSheet.create({
   statLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.6)" },
   statsDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.1)" },
 
-  section: { paddingHorizontal: 16, paddingTop: 28, paddingBottom: 8, direction: I18nManager.isRTL ? "rtl" : "ltr" } as any,
+  section: { paddingHorizontal: 16, paddingTop: 28, paddingBottom: 8, direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr" },
   sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 19, color: "#1A1A1A", textAlign: "right", marginBottom: 16, writingDirection: "rtl" },
 
   benefitsGrid: { flexDirection: I18nManager.isRTL ? "row-reverse" : "row", flexWrap: "wrap", gap: 12 },
