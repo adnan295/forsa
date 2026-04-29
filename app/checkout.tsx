@@ -1023,6 +1023,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
+    textAlign: "right",
     writingDirection: "rtl",
   },
   summaryValue: {
@@ -1339,7 +1340,7 @@ const styles = StyleSheet.create({
   },
   previewActions: {
     flexDirection: "row-reverse",
-    justifyContent: "flex-end",
+    justifyContent: "flex-start",
     gap: 8,
     padding: 10,
     backgroundColor: Colors.light.inputBg,

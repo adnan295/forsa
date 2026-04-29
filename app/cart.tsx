@@ -374,6 +374,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.light.accent,
     textAlign: "right",
+    writingDirection: "rtl",
   },
   removeBtn: {
     width: 36,
