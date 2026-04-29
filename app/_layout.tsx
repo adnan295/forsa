@@ -24,10 +24,10 @@ import {
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
 
-if (I18nManager.isRTL) {
+if (I18nManager.isRTL && Platform.OS !== "web") {
   I18nManager.allowRTL(false);
   I18nManager.forceRTL(false);
-  reloadAppAsync("RTL reset");
+  void reloadAppAsync("RTL reset");
 }
 
 SplashScreen.preventAutoHideAsync();
