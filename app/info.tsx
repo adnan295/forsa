@@ -252,6 +252,7 @@ function TicketForm({ onCancel, onSuccess }: { onCancel: () => void; onSuccess: 
       <ContentCard title="تذكرة جديدة">
         <Text style={ticketStyles.fieldLabel}>الموضوع</Text>
         <TextInput
+                textContentType="none"
           style={ticketStyles.input}
           value={subject}
           onChangeText={setSubject}
@@ -261,6 +262,7 @@ function TicketForm({ onCancel, onSuccess }: { onCancel: () => void; onSuccess: 
         />
         <Text style={ticketStyles.fieldLabel}>الرسالة</Text>
         <TextInput
+                textContentType="none"
           style={[ticketStyles.input, ticketStyles.textArea]}
           value={message}
           onChangeText={setMessage}

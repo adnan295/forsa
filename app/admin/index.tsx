@@ -470,6 +470,7 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
                     </Pressable>
                     <View style={{ marginTop: 8 }}>
                       <TextInput
+                textContentType="none"
                         style={orderMgmtStyles.rejectionInput}
                         value={rejectionReason}
                         onChangeText={setRejectionReason}
@@ -2102,6 +2103,7 @@ function ModalInput({ label, value, onChangeText, placeholder, multiline, keyboa
     <View style={modalStyles.inputGroup}>
       <Text style={modalStyles.inputLabel}>{label}</Text>
       <TextInput
+                textContentType="none"
         style={[modalStyles.input, multiline && { height: 80, textAlignVertical: "top" }]}
         value={value}
         onChangeText={onChangeText}

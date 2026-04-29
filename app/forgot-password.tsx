@@ -134,6 +134,7 @@ export default function ForgotPasswordScreen() {
                 <View style={styles.inputGroup}>
                   <Ionicons name="mail-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
                   <TextInput
+                textContentType="none"
                     style={styles.input}
                     placeholder="البريد الإلكتروني"
                     placeholderTextColor="rgba(255,255,255,0.4)"
@@ -178,6 +179,7 @@ export default function ForgotPasswordScreen() {
                 <View style={styles.inputGroup}>
                   <Ionicons name="keypad-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
                   <TextInput
+                textContentType="none"
                     style={[styles.input, { textAlign: "center", letterSpacing: 8, fontSize: 24 }]}
                     placeholder="------"
                     placeholderTextColor="rgba(255,255,255,0.4)"
@@ -211,6 +213,7 @@ export default function ForgotPasswordScreen() {
                 <View style={styles.inputGroup}>
                   <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
                   <TextInput
+                textContentType="none"
                     style={[styles.input, { flex: 1 }]}
                     placeholder="كلمة المرور الجديدة"
                     placeholderTextColor="rgba(255,255,255,0.4)"
@@ -230,6 +233,7 @@ export default function ForgotPasswordScreen() {
                 <View style={styles.inputGroup}>
                   <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
                   <TextInput
+                textContentType="none"
                     style={styles.input}
                     placeholder="تأكيد كلمة المرور"
                     placeholderTextColor="rgba(255,255,255,0.4)"

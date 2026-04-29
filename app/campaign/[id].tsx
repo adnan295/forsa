@@ -768,6 +768,7 @@ export default function CampaignDetailScreen() {
                   ))}
                 </View>
                 <TextInput
+                textContentType="none"
                   style={{ backgroundColor: "#fff", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.border, padding: 12, fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", minHeight: 60, textAlignVertical: "top" }}
                   placeholder="اكتب رأيك (اختياري)"
                   placeholderTextColor={Colors.light.textSecondary}

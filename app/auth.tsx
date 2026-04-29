@@ -73,6 +73,7 @@ function OTPInput({ value, onChange }: { value: string[]; onChange: (val: string
     <View style={otpStyles.row}>
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <TextInput
+                textContentType="none"
           key={i}
           ref={(ref) => { inputs.current[i] = ref; }}
           style={[otpStyles.box, value[i] ? otpStyles.boxFilled : null]}
@@ -333,6 +334,7 @@ export default function AuthScreen() {
               <View style={styles.inputGroup}>
                 <Ionicons name="person-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
                 <TextInput
+                textContentType="none"
                   style={styles.input}
                   placeholder="اسم المستخدم"
                   placeholderTextColor="rgba(255,255,255,0.4)"
@@ -348,6 +350,7 @@ export default function AuthScreen() {
             <View style={styles.inputGroup}>
               <Ionicons name="mail-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
               <TextInput
+                textContentType="none"
                 style={styles.input}
                 placeholder="البريد الإلكتروني"
                 placeholderTextColor="rgba(255,255,255,0.4)"
@@ -363,6 +366,7 @@ export default function AuthScreen() {
             <View style={styles.inputGroup}>
               <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
               <TextInput
+                textContentType="none"
                 style={[styles.input, { flex: 1 }]}
                 placeholder="كلمة المرور"
                 placeholderTextColor="rgba(255,255,255,0.4)"

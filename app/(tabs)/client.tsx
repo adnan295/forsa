@@ -235,6 +235,7 @@ function Field({
     <View style={st.field}>
       <Text style={st.fieldLabel}>{label}</Text>
       <TextInput
+                textContentType="none"
         style={[st.input, focused && st.inputFocused, multiline && { height: lines * 44, textAlignVertical: "top", paddingTop: 12 }]}
         placeholder={placeholder}
         placeholderTextColor="#C0C0C0"

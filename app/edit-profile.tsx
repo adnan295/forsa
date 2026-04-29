@@ -210,6 +210,7 @@ export default function EditProfileScreen() {
 
             <Text style={styles.inputLabel}>الاسم الكامل</Text>
             <TextInput
+                textContentType="none"
               style={[styles.input, errors.fullName ? styles.inputError : null]}
               placeholder="الاسم الكامل"
               placeholderTextColor={Colors.light.textSecondary}
@@ -225,6 +226,7 @@ export default function EditProfileScreen() {
 
             <Text style={styles.inputLabel}>رقم الهاتف</Text>
             <TextInput
+                textContentType="none"
               style={[styles.input, errors.phone ? styles.inputError : null]}
               placeholder="رقم الهاتف"
               placeholderTextColor={Colors.light.textSecondary}
@@ -241,6 +243,7 @@ export default function EditProfileScreen() {
 
             <Text style={styles.inputLabel}>المدينة</Text>
             <TextInput
+                textContentType="none"
               style={[styles.input, errors.city ? styles.inputError : null]}
               placeholder="المدينة"
               placeholderTextColor={Colors.light.textSecondary}
@@ -256,6 +259,7 @@ export default function EditProfileScreen() {
 
             <Text style={styles.inputLabel}>العنوان التفصيلي</Text>
             <TextInput
+                textContentType="none"
               style={[
                 styles.input,
                 { minHeight: 80, textAlignVertical: "top" },
@@ -369,6 +373,7 @@ export default function EditProfileScreen() {
                 style={styles.searchIcon}
               />
               <TextInput
+                textContentType="none"
                 style={styles.searchInput}
                 placeholder="ابحث عن دولة..."
                 placeholderTextColor={Colors.light.textSecondary}

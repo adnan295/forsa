@@ -686,6 +686,7 @@ export default function CheckoutScreen() {
                 )}
               </Pressable>
               <TextInput
+                textContentType="none"
                 style={styles.couponInput}
                 placeholder="أدخل كود الخصم"
                 placeholderTextColor={Colors.light.textSecondary}
@@ -768,6 +769,7 @@ export default function CheckoutScreen() {
 
             <Text style={styles.inputLabel}>الاسم الكامل</Text>
             <TextInput
+                textContentType="none"
               style={styles.input}
               placeholder="الاسم الكامل"
               placeholderTextColor={Colors.light.textSecondary}
@@ -777,6 +779,7 @@ export default function CheckoutScreen() {
 
             <Text style={styles.inputLabel}>رقم الهاتف</Text>
             <TextInput
+                textContentType="none"
               style={styles.input}
               placeholder="رقم الهاتف"
               placeholderTextColor={Colors.light.textSecondary}
@@ -787,6 +790,7 @@ export default function CheckoutScreen() {
 
             <Text style={styles.inputLabel}>المدينة</Text>
             <TextInput
+                textContentType="none"
               style={styles.input}
               placeholder="المدينة"
               placeholderTextColor={Colors.light.textSecondary}
@@ -796,6 +800,7 @@ export default function CheckoutScreen() {
 
             <Text style={styles.inputLabel}>العنوان التفصيلي</Text>
             <TextInput
+                textContentType="none"
               style={[styles.input, { minHeight: 80, textAlignVertical: "top" }]}
               placeholder="العنوان التفصيلي"
               placeholderTextColor={Colors.light.textSecondary}
@@ -807,6 +812,7 @@ export default function CheckoutScreen() {
 
             <Text style={styles.inputLabel}>الدولة</Text>
             <TextInput
+                textContentType="none"
               style={styles.input}
               placeholder="الدولة"
               placeholderTextColor={Colors.light.textSecondary}
