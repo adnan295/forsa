@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 14,
     color: Colors.light.text,
-    textAlign: "left",
+    textAlign: "right",
     writingDirection: "rtl",
     maxWidth: "60%",
   },

@@ -254,7 +254,7 @@ function Field({
 const st = StyleSheet.create({
   hero: { paddingHorizontal: 20, paddingBottom: 28 },
   heroBadge: {
-    alignSelf: "flex-start", backgroundColor: "rgba(255,208,0,0.15)",
+    alignSelf: "flex-end", backgroundColor: "rgba(255,208,0,0.15)",
     borderWidth: 1, borderColor: "#FFD000",
     paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, marginBottom: 16,
   },

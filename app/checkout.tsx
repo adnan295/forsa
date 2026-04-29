@@ -1133,7 +1133,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.light.text,
     writingDirection: "rtl",
-    textAlign: "left",
+    textAlign: "right",
     flex: 1,
     marginEnd: 12,
   },
