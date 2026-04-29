@@ -357,7 +357,7 @@ export default function ProfileScreen() {
               colors={["#059669", "#10B981", "#34D399"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={{ padding: 18, flexDirection: "row", alignItems: "center", gap: 14 }}
+              style={{ padding: 18, flexDirection: "row", alignItems: "center", gap: 14, direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr" }}
             >
               <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="wallet" size={26} color="#fff" />
@@ -591,6 +591,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: "#FFFFFF",
     writingDirection: "rtl",
+    textAlign: "center",
   },
   headerGradient: {
     paddingTop: 20,
@@ -623,6 +624,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   avatar: {
     width: 72,
@@ -646,12 +648,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   userName: {
     fontFamily: "Inter_700Bold",
     fontSize: 22,
     color: "#FFFFFF",
     writingDirection: "rtl",
+    textAlign: "right",
   },
   adminBadge: {
     flexDirection: "row",
@@ -674,18 +678,21 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.6)",
     writingDirection: "rtl",
     marginTop: 4,
+    textAlign: "right",
   },
   joinDateRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     marginTop: 6,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   joinDate: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.5)",
     writingDirection: "rtl",
+    textAlign: "right",
   },
   statsCardWrapper: {
     paddingHorizontal: 16,
@@ -703,6 +710,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 16,
     elevation: 6,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   statDivider: {
     width: 1,
@@ -731,6 +739,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
+    textAlign: "center",
   },
   section: {
     paddingHorizontal: 16,
@@ -760,6 +769,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 18,
     gap: 14,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   adminCardIcon: {
     width: 48,
@@ -791,6 +801,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 12,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   miniStatItem: {
     flex: 1,
@@ -814,6 +825,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
+    textAlign: "center",
   },
   menuCard: {
     backgroundColor: "#FFFFFF",
@@ -824,6 +836,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 14,
     elevation: 4,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   menuItem: {
     flexDirection: "row",
@@ -831,6 +844,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     gap: 14,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   menuIconWrap: {
     width: 40,
@@ -888,12 +902,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   logoutText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
     color: Colors.light.danger,
     writingDirection: "rtl",
+    textAlign: "center",
   },
   deleteButton: {
     flexDirection: "row" as const,
@@ -902,12 +918,14 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 14,
     borderRadius: 16,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   deleteText: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
     color: "#9CA3AF",
     writingDirection: "rtl" as const,
+    textAlign: "center",
   },
   versionArea: {
     alignItems: "center",
