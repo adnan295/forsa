@@ -24,10 +24,11 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useCart, CartItem } from "@/lib/cart-context";
-import { apiRequest, queryClient, buildMediaUrl } from "@/lib/query-client";
+import { apiRequest, queryClient, buildMediaUrl, getApiUrl } from "@/lib/query-client";
 import type { Campaign, PaymentMethod } from "@shared/schema";
 import { registerForPushNotifications } from "@/lib/push-notifications";
 
@@ -83,8 +84,65 @@ export default function CheckoutScreen() {
   const [shippingCity, setShippingCity] = useState(user?.city || "");
   const [shippingAddress, setShippingAddress] = useState(user?.address || "");
   const [shippingCountry, setShippingCountry] = useState(user?.country || "السعودية");
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<any>(null);
 
   const isProfileComplete = !!(user?.fullName && user?.phone && user?.address && user?.city && user?.country);
+
+  const compressImageWeb = (file: File, maxWidth: number): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new (window as any).Image() as HTMLImageElement;
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          resolve(blob ? new File([blob], "receipt.jpg", { type: "image/jpeg" }) : file);
+        }, "image/jpeg", 0.82);
+      };
+      img.src = url;
+    });
+  };
+
+  const pickReceiptImage = async () => {
+    if (Platform.OS === "web") {
+      const input = document.createElement("input");
+      input.type = "file"; input.accept = "image/*";
+      input.onchange = async (e: any) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const compressed = await compressImageWeb(file, 1200);
+          setReceiptFile(compressed);
+          const reader = new FileReader();
+          reader.onload = (ev) => setReceiptImage(ev.target?.result as string);
+          reader.readAsDataURL(compressed);
+        }
+      };
+      input.click();
+    } else {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.82 });
+      if (!result.canceled && result.assets[0]) setReceiptImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadReceiptToOrder = async (orderId: string, imgUri: string, file: any) => {
+    try {
+      const baseUrl = getApiUrl();
+      const url = new URL(`/api/orders/${orderId}/receipt`, baseUrl);
+      const formData = new FormData();
+      if (Platform.OS === "web") {
+        if (file) formData.append("receipt", file);
+      } else {
+        formData.append("receipt", { uri: imgUri, name: "receipt.jpg", type: "image/jpeg" } as any);
+      }
+      await fetch(url.toString(), { method: "POST", body: formData, credentials: "include" });
+    } catch (_) {}
+  };
 
   const { data: campaign, isLoading: campaignLoading } = useQuery<Campaign & { products?: any[] }>({
     queryKey: ["/api/campaigns", campaignId],
@@ -183,7 +241,7 @@ export default function CheckoutScreen() {
         return res.json();
       }
     },
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
@@ -196,33 +254,19 @@ export default function CheckoutScreen() {
 
       if (isCartMode) {
         clearCart();
-        if (selectedMethod && requiresReceiptUpload(selectedMethod) && data.orders?.[0]) {
-          router.replace({
-            pathname: `/order/${data.orders[0].id}`,
-            params: { showUpload: "true" },
-          } as any);
-        } else {
-          Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
-            {
-              text: "حسناً",
-              onPress: () => router.replace("/(tabs)/tickets" as any),
-            },
-          ]);
+        const firstOrderId = data.orders?.[0]?.id;
+        if (receiptImage && firstOrderId) {
+          await uploadReceiptToOrder(firstOrderId, receiptImage, receiptFile);
         }
+        Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
+          { text: "حسناً", onPress: () => router.replace("/(tabs)/tickets" as any) },
+        ]);
       } else {
-        if (selectedMethod && requiresReceiptUpload(selectedMethod)) {
-          router.replace({
-            pathname: `/order/${data.order?.id || data.id}`,
-            params: { showUpload: "true" },
-          } as any);
-        } else {
-          Alert.alert("تم بنجاح", "تم تأكيد طلبك بنجاح!", [
-            {
-              text: "حسناً",
-              onPress: () => router.replace("/(tabs)/tickets" as any),
-            },
-          ]);
+        const orderId = data.order?.id || data.id;
+        if (receiptImage && orderId) {
+          await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
         }
+        router.replace(`/order/${orderId}` as any);
       }
     },
     onError: (err: any) => {
@@ -245,6 +289,10 @@ export default function CheckoutScreen() {
       !shippingCountry.trim()
     ) {
       Alert.alert("تنبيه", "يرجى تعبئة جميع حقول الشحن");
+      return;
+    }
+    if (selectedMethod && requiresReceiptUpload(selectedMethod) && !receiptImage) {
+      Alert.alert("تنبيه", "يرجى رفع وصل الدفع قبل تأكيد الطلب");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -417,6 +465,10 @@ export default function CheckoutScreen() {
                 <Pressable
                   key={method.id}
                   onPress={() => {
+                    if (selectedMethodId !== method.id) {
+                      setReceiptImage(null);
+                      setReceiptFile(null);
+                    }
                     setSelectedMethodId(method.id);
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
@@ -474,9 +526,7 @@ export default function CheckoutScreen() {
                     size={20}
                     color={Colors.light.accent}
                   />
-                  <Text style={styles.bankHeaderText}>
-                    {selectedMethod.imageUrl ? "تفاصيل الدفع" : "تفاصيل التحويل البنكي"}
-                  </Text>
+                  <Text style={styles.bankHeaderText}>تفاصيل الدفع</Text>
                 </View>
                 {selectedMethod.imageUrl && (
                   <View style={styles.payImageContainer}>
@@ -536,15 +586,39 @@ export default function CheckoutScreen() {
                     </Text>
                   </View>
                 ) : null}
-                <View style={styles.bankNote}>
-                  <Ionicons
-                    name="alert-circle-outline"
-                    size={16}
-                    color={Colors.light.warning}
-                  />
-                  <Text style={styles.bankNoteText}>
-                    يرجى إتمام الدفع ثم رفع إيصال الدفع بعد تأكيد الطلب
-                  </Text>
+                <View style={{ marginTop: 16 }}>
+                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                    <Ionicons name="cloud-upload-outline" size={18} color={Colors.light.accent} />
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>
+                      رفع وصل الدفع <Text style={{ color: Colors.light.danger }}>*</Text>
+                    </Text>
+                  </View>
+                  {!receiptImage ? (
+                    <Pressable onPress={pickReceiptImage} style={styles.uploadArea}>
+                      <Ionicons name="camera-outline" size={36} color={Colors.light.accent} />
+                      <Text style={styles.uploadTitle}>اختر صورة الوصل</Text>
+                      <Text style={styles.uploadSubtitle}>التقط صورة أو اختر من المعرض</Text>
+                    </Pressable>
+                  ) : (
+                    <View style={styles.previewContainer}>
+                      <Image source={{ uri: receiptImage }} style={styles.previewImage} resizeMode="cover" />
+                      <View style={styles.previewActions}>
+                        <Pressable onPress={pickReceiptImage} style={styles.previewChangeBtn}>
+                          <Ionicons name="refresh" size={16} color={Colors.light.textSecondary} />
+                          <Text style={styles.previewChangeText}>تغيير</Text>
+                        </Pressable>
+                        <Pressable onPress={() => { setReceiptImage(null); setReceiptFile(null); }} style={styles.previewChangeBtn}>
+                          <Ionicons name="trash" size={16} color={Colors.light.danger} />
+                        </Pressable>
+                      </View>
+                    </View>
+                  )}
+                  {!receiptImage && (
+                    <View style={[styles.bankNote, { marginTop: 8 }]}>
+                      <Ionicons name="alert-circle-outline" size={15} color={Colors.light.warning} />
+                      <Text style={styles.bankNoteText}>يجب رفع وصل الدفع لإتمام الطلب</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             )}
@@ -745,10 +819,10 @@ export default function CheckoutScreen() {
               onPressIn={() => { submitScale.value = withSpring(0.95, { damping: 15, stiffness: 300 }); }}
               onPressOut={() => { submitScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
               onPress={handlePlaceOrder}
-              disabled={purchaseMutation.isPending}
+              disabled={purchaseMutation.isPending || !!(selectedMethod && requiresReceiptUpload(selectedMethod) && !receiptImage)}
               style={[
                 styles.placeOrderBtn,
-                purchaseMutation.isPending && { opacity: 0.6 },
+                (purchaseMutation.isPending || !!(selectedMethod && requiresReceiptUpload(selectedMethod) && !receiptImage)) && { opacity: 0.5 },
               ]}
             >
               <LinearGradient
@@ -1148,6 +1222,64 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 26,
     color: Colors.light.accent,
+  },
+  uploadArea: {
+    borderWidth: 2,
+    borderColor: Colors.light.accent + "55",
+    borderStyle: "dashed",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(124,58,237,0.04)",
+    gap: 8,
+  },
+  uploadTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: Colors.light.accent,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  uploadSubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  previewContainer: {
+    borderRadius: 14,
+    overflow: "hidden",
+    backgroundColor: Colors.light.inputBg,
+  },
+  previewImage: {
+    width: "100%",
+    height: 160,
+  },
+  previewActions: {
+    flexDirection: "row-reverse",
+    justifyContent: "flex-end",
+    gap: 8,
+    padding: 10,
+    backgroundColor: Colors.light.inputBg,
+  },
+  previewChangeBtn: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.light.background,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  previewChangeText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
   },
   placeOrderBtn: {
     borderRadius: 18,

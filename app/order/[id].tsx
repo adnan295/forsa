@@ -83,9 +83,8 @@ function formatImageUrl(url: string) {
 }
 
 export default function OrderDetailScreen() {
-  const { id, showUpload } = useLocalSearchParams<{
+  const { id } = useLocalSearchParams<{
     id: string;
-    showUpload?: string;
   }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -231,10 +230,7 @@ export default function OrderDetailScreen() {
   }
 
   const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
-  const showReceiptUpload =
-    order.paymentStatus === "pending_payment" ||
-    order.paymentStatus === "rejected" ||
-    showUpload === "true";
+  const showReceiptUpload = order.paymentStatus === "rejected";
   const isCancelled = order.shippingStatus === "cancelled";
   const shippingIndex = SHIPPING_ORDER.indexOf(order.shippingStatus);
   const orderDate = new Date(order.createdAt).toLocaleDateString("ar-EG", {
