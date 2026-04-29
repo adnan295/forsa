@@ -2,7 +2,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useRef, useState } from "react";
-import { AppState, AppStateStatus, View, Text, StyleSheet, Platform } from "react-native";
+import { AppState, AppStateStatus, I18nManager, View, Text, StyleSheet, Platform } from "react-native";
+import { reloadAppAsync } from "expo";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,6 +23,12 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
+
+if (I18nManager.isRTL) {
+  I18nManager.allowRTL(false);
+  I18nManager.forceRTL(false);
+  reloadAppAsync("RTL reset");
+}
 
 SplashScreen.preventAutoHideAsync();
 
