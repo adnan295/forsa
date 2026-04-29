@@ -284,7 +284,7 @@ const st = StyleSheet.create({
   stepRow: { flexDirection: "row-reverse", gap: 14, alignItems: "flex-start" },
   stepNumBox: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   stepNum: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#1A1A1A" },
-  stepBody: { flex: 1, alignItems: "flex-start" },
+  stepBody: { flex: 1 },
   stepTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#1A1A1A", textAlign: "right", writingDirection: "rtl" },
   stepSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#888", textAlign: "right", lineHeight: 17, marginTop: 2, writingDirection: "rtl" },
   stepLine: { height: 20, width: 1, backgroundColor: "#E5E7EB", marginStart: 16, marginVertical: 4 },
