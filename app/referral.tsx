@@ -247,6 +247,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.light.text,
     writingDirection: "rtl",
+    textAlign: "right",
   },
   heroGradient: {
     marginHorizontal: 16,

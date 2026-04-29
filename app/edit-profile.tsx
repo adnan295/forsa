@@ -288,11 +288,6 @@ export default function EditProfileScreen() {
                 errors.country ? styles.inputError : null,
               ]}
             >
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={Colors.light.textSecondary}
-              />
               <Text
                 style={[
                   styles.countryPickerText,
@@ -301,6 +296,11 @@ export default function EditProfileScreen() {
               >
                 {country || "اختر الدولة"}
               </Text>
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                color={Colors.light.textSecondary}
+              />
             </Pressable>
             {errors.country ? (
               <Text style={styles.errorText}>{errors.country}</Text>

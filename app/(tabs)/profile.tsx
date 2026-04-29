@@ -8,6 +8,7 @@ import {
   Platform,
   Linking,
   Alert,
+  I18nManager,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -362,10 +363,10 @@ export default function ProfileScreen() {
                 <Ionicons name="wallet" size={26} color="#fff" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#fff", writingDirection: "rtl" as const }}>
+                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#fff", writingDirection: "rtl" as const, textAlign: "right" }}>
                   {parseFloat(String(walletData.balance || 0)).toFixed(2)} $
                 </Text>
-                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.85)", writingDirection: "rtl" as const }}>
+                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.85)", writingDirection: "rtl" as const, textAlign: "right" }}>
                   رصيد المحفظة · اضغط لعرض تفاصيل الإحالة
                 </Text>
               </View>
@@ -734,6 +735,7 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 16,
     marginTop: 20,
+    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   sectionTitle: {
     fontFamily: "Inter_700Bold",

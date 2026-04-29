@@ -224,6 +224,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: "#FFFFFF",
     writingDirection: "rtl",
+    textAlign: "center",
   },
   headerDecor1: {
     position: "absolute",
