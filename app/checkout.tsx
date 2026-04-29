@@ -86,6 +86,8 @@ export default function CheckoutScreen() {
   const [shippingCountry, setShippingCountry] = useState(user?.country || "السعودية");
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [receiptFile, setReceiptFile] = useState<any>(null);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [uploadRetryPending, setUploadRetryPending] = useState(false);
 
   const isProfileComplete = !!(user?.fullName && user?.phone && user?.address && user?.city && user?.country);
 
@@ -127,6 +129,21 @@ export default function CheckoutScreen() {
     } else {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.82 });
       if (!result.canceled && result.assets[0]) setReceiptImage(result.assets[0].uri);
+    }
+  };
+
+  const handleRetryUpload = async (orderId: string) => {
+    if (!receiptImage) return;
+    setUploadRetryPending(true);
+    try {
+      await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
+      setPendingOrderId(null);
+      router.replace(`/order/${orderId}` as any);
+    } catch (e: any) {
+      const msg = e.message || "فشل رفع الوصل";
+      Alert.alert("خطأ في رفع الوصل", msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
+    } finally {
+      setUploadRetryPending(false);
     }
   };
 
@@ -258,20 +275,17 @@ export default function CheckoutScreen() {
       if (isCartMode) {
         clearCart();
         const firstOrderId = data.orders?.[0]?.id;
-        let uploadFailed = false;
         if (receiptImage && firstOrderId) {
           try {
-            await uploadReceiptToOrder(firstOrderId, receiptImage, receiptFile);
+            for (const ord of (data.orders || [])) {
+              await uploadReceiptToOrder(ord.id, receiptImage, receiptFile);
+            }
+            Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
+              { text: "حسناً", onPress: () => router.replace("/(tabs)/tickets" as any) },
+            ]);
           } catch (_) {
-            uploadFailed = true;
+            setPendingOrderId(firstOrderId);
           }
-        }
-        if (uploadFailed && firstOrderId) {
-          Alert.alert(
-            "تنبيه",
-            "تم إنشاء الطلب لكن فشل رفع الوصل. يمكنك رفعه من صفحة الطلب.",
-            [{ text: "حسناً", onPress: () => router.replace(`/order/${firstOrderId}` as any) }]
-          );
         } else {
           Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
             { text: "حسناً", onPress: () => router.replace("/(tabs)/tickets" as any) },
@@ -279,20 +293,13 @@ export default function CheckoutScreen() {
         }
       } else {
         const orderId = data.order?.id || data.id;
-        let uploadFailed = false;
         if (receiptImage && orderId) {
           try {
             await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
+            router.replace(`/order/${orderId}` as any);
           } catch (_) {
-            uploadFailed = true;
+            setPendingOrderId(orderId);
           }
-        }
-        if (uploadFailed) {
-          Alert.alert(
-            "تنبيه",
-            "تم إنشاء الطلب لكن فشل رفع الوصل. يمكنك رفعه من صفحة الطلب.",
-            [{ text: "حسناً", onPress: () => router.replace(`/order/${orderId}` as any) }]
-          );
         } else {
           router.replace(`/order/${orderId}` as any);
         }
@@ -843,15 +850,43 @@ export default function CheckoutScreen() {
             </View>
           </View>
 
-          <Animated.View style={submitAnimStyle}>
+          {pendingOrderId && (
+            <View style={styles.retryUploadCard}>
+              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <Ionicons name="warning-outline" size={20} color={Colors.light.warning} />
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.warning, writingDirection: "rtl", flex: 1 }}>
+                  تم إنشاء طلبك لكن فشل رفع الوصل
+                </Text>
+              </View>
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 12 }}>
+                يرجى تغيير الصورة إن لزم ثم اضغط "إعادة رفع الوصل"
+              </Text>
+              <Pressable
+                onPress={() => handleRetryUpload(pendingOrderId)}
+                disabled={uploadRetryPending || !receiptImage}
+                style={[styles.retryUploadBtn, (uploadRetryPending || !receiptImage) && { opacity: 0.5 }]}
+              >
+                {uploadRetryPending ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="cloud-upload" size={18} color="#fff" />
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff", writingDirection: "rtl" }}>إعادة رفع الوصل</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          )}
+
+          <Animated.View style={[submitAnimStyle, pendingOrderId ? { opacity: 0.4 } : {}]}>
             <Pressable
               onPressIn={() => { submitScale.value = withSpring(0.95, { damping: 15, stiffness: 300 }); }}
               onPressOut={() => { submitScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
               onPress={handlePlaceOrder}
-              disabled={purchaseMutation.isPending || !!(selectedMethod && requiresReceiptUpload(selectedMethod) && !receiptImage)}
+              disabled={purchaseMutation.isPending || !!(selectedMethod && requiresReceiptUpload(selectedMethod) && !receiptImage) || !!pendingOrderId}
               style={[
                 styles.placeOrderBtn,
-                (purchaseMutation.isPending || !!(selectedMethod && requiresReceiptUpload(selectedMethod) && !receiptImage)) && { opacity: 0.5 },
+                (purchaseMutation.isPending || !!(selectedMethod && requiresReceiptUpload(selectedMethod) && !receiptImage) || !!pendingOrderId) && { opacity: 0.5 },
               ]}
             >
               <LinearGradient
@@ -1251,6 +1286,22 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontSize: 26,
     color: Colors.light.accent,
+  },
+  retryUploadCard: {
+    backgroundColor: "rgba(243,156,18,0.08)",
+    borderWidth: 1.5,
+    borderColor: "rgba(243,156,18,0.3)",
+    borderRadius: 18,
+    padding: 16,
+  },
+  retryUploadBtn: {
+    backgroundColor: Colors.light.accent,
+    borderRadius: 14,
+    paddingVertical: 14,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
   uploadArea: {
     borderWidth: 2,
