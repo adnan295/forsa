@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   headerContent: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     zIndex: 2,
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   infoRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },

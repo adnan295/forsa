@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
   },
   header: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   actionRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 12,
     marginTop: 16,
   },
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   actionGradient: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 14,
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   statsSection: {
     paddingHorizontal: 16,
     marginTop: 24,
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 10,
   },
   statsCard: {
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   listItem: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 16,

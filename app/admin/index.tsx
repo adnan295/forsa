@@ -299,7 +299,7 @@ function OrdersSection() {
         contentContainerStyle={styles.sectionPadding}
         ListHeaderComponent={
           <View>
-            <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={styles.sectionTitle}>جميع الطلبات ({orders?.length || 0})</Text>
               <Pressable
                 onPress={async () => {
@@ -312,7 +312,7 @@ function OrdersSection() {
                     }
                   } catch (e) {}
                 }}
-                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: "#2ECC7115", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#2ECC7115", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
               >
                 <Ionicons name="download-outline" size={16} color="#2ECC71" />
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#2ECC71" }}>CSV</Text>
@@ -552,7 +552,7 @@ function UsersSection() {
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.sectionPadding}
       ListHeaderComponent={
-        <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Text style={styles.sectionTitle}>المستخدمين ({users?.length || 0})</Text>
           <Pressable
             onPress={() => {
@@ -565,7 +565,7 @@ function UsersSection() {
                 }
               } catch (e) {}
             }}
-            style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: "#2ECC7115", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#2ECC7115", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
           >
             <Ionicons name="download-outline" size={16} color="#2ECC71" />
             <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#2ECC71" }}>CSV</Text>
@@ -667,10 +667,10 @@ function SupportTicketsSection() {
         contentContainerStyle={styles.sectionPadding}
         ListHeaderComponent={
           <View>
-            <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <Text style={styles.sectionTitle}>تذاكر الدعم ({tickets?.length || 0})</Text>
               {(openCount > 0 || inProgressCount > 0) && (
-                <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+                <View style={{ flexDirection: "row", gap: 8 }}>
                   {openCount > 0 && (
                     <View style={[styles.statusPill, { backgroundColor: "#F39C1220" }]}>
                       <Text style={[styles.statusPillText, { color: "#F39C12" }]}>{openCount} جديدة</Text>
@@ -705,7 +705,7 @@ function SupportTicketsSection() {
           >
             <View style={styles.orderHeader}>
               <Text style={styles.orderIdText} numberOfLines={1}>#{item.id.slice(0, 8)}</Text>
-              <View style={{ flexDirection: "row-reverse", gap: 6 }}>
+              <View style={{ flexDirection: "row", gap: 6 }}>
                 <View style={[styles.statusPill, { backgroundColor: getStatusColor(item.status) + "20" }]}>
                   <Text style={[styles.statusPillText, { color: getStatusColor(item.status) }]}>{getStatusAr(item.status)}</Text>
                 </View>
@@ -790,7 +790,7 @@ function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; tic
           </View>
           <ScrollView contentContainerStyle={modalStyles.scrollContent}>
             <View style={orderMgmtStyles.infoSection}>
-              <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <Text style={orderMgmtStyles.infoSectionTitle}>{ticket.subject}</Text>
                 <View style={[styles.statusPill, { backgroundColor: getPriorityColor(ticket.priority) + "20" }]}>
                   <Text style={[styles.statusPillText, { color: getPriorityColor(ticket.priority) }]}>{getPriorityAr(ticket.priority)}</Text>
@@ -1092,7 +1092,7 @@ function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClo
             )}
             {products.map((v, idx) => (
               <View key={v.key} style={{ backgroundColor: "#F9FAFB", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: Colors.light.border }}>
-                <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.accent }}>موديل {idx + 1}</Text>
                   <Pressable onPress={() => handleDeleteProduct(v)}>
                     <Ionicons name="trash-outline" size={20} color={Colors.light.danger} />
@@ -1100,7 +1100,7 @@ function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClo
                 </View>
                 <ModalInput label="الاسم (إنجليزي)" value={v.name} onChangeText={(t) => updateProduct(v.key, "name", t)} placeholder="256GB Black" />
                 <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateProduct(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
-                <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+                <View style={{ flexDirection: "row", gap: 8 }}>
                   <View style={{ flex: 1 }}>
                     <ModalInput label="السعر ($)" value={v.price} onChangeText={(t) => updateProduct(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
                   </View>
@@ -1117,7 +1117,7 @@ function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClo
             )}
             {newProducts.map((v, idx) => (
               <View key={v.key} style={{ backgroundColor: "#F0FFF4", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#2ECC7140" }}>
-                <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#2ECC71" }}>جديد {idx + 1}</Text>
                   <Pressable onPress={() => removeNewProduct(v.key)}>
                     <Ionicons name="close-circle" size={22} color={Colors.light.danger} />
@@ -1125,7 +1125,7 @@ function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClo
                 </View>
                 <ModalInput label="الاسم (إنجليزي) *" value={v.name} onChangeText={(t) => updateNewProduct(v.key, "name", t)} placeholder="256GB Black" />
                 <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateNewProduct(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
-                <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+                <View style={{ flexDirection: "row", gap: 8 }}>
                   <View style={{ flex: 1 }}>
                     <ModalInput label="السعر ($) *" value={v.price} onChangeText={(t) => updateNewProduct(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
                   </View>
@@ -1137,7 +1137,7 @@ function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClo
               </View>
             ))}
 
-            <Pressable onPress={addNewProduct} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed", marginBottom: 16 }}>
+            <Pressable onPress={addNewProduct} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed", marginBottom: 16 }}>
               <Ionicons name="add-circle" size={20} color={Colors.light.accent} />
               <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.accent }}>إضافة موديل جديد</Text>
             </Pressable>
@@ -1233,35 +1233,35 @@ function PaymentsSection() {
             {isBankType(item) && (
               <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: Colors.light.border }}>
                 {item.bankName ? (
-                  <View style={{ flexDirection: "row-reverse", gap: 6, marginBottom: 4 }}>
+                  <View style={{ flexDirection: "row", gap: 6, marginBottom: 4 }}>
                     <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>البنك:</Text>
                     <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.text }}>{item.bankName}</Text>
                   </View>
                 ) : null}
                 {item.accountName ? (
-                  <View style={{ flexDirection: "row-reverse", gap: 6, marginBottom: 4 }}>
+                  <View style={{ flexDirection: "row", gap: 6, marginBottom: 4 }}>
                     <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>الحساب:</Text>
                     <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.text }}>{item.accountName}</Text>
                   </View>
                 ) : null}
                 {item.iban ? (
-                  <View style={{ flexDirection: "row-reverse", gap: 6, marginBottom: 4 }}>
+                  <View style={{ flexDirection: "row", gap: 6, marginBottom: 4 }}>
                     <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>IBAN:</Text>
                     <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.light.text }}>{item.iban}</Text>
                   </View>
                 ) : null}
                 {!item.bankName && !item.accountName && !item.iban && (
-                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingVertical: 4 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 }}>
                     <Ionicons name="warning" size={14} color={Colors.light.warning} />
                     <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.warning, writingDirection: "rtl" }}>بيانات البنك غير مكتملة - اضغط تعديل لإضافتها</Text>
                   </View>
                 )}
               </View>
             )}
-            <View style={{ flexDirection: "row-reverse", gap: 8, marginTop: 8 }}>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
               <Pressable
                 onPress={() => setEditingMethod(item)}
-                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "12", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "12", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
               >
                 <Ionicons name="create-outline" size={14} color={Colors.light.accent} />
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.accent }}>تعديل</Text>
@@ -1271,7 +1271,7 @@ function PaymentsSection() {
                   { text: "إلغاء", style: "cancel" },
                   { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
                 ])}
-                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: Colors.light.danger + "12", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.danger + "12", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
               >
                 <Ionicons name="trash-outline" size={14} color={Colors.light.danger} />
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.danger }}>حذف</Text>
@@ -1469,12 +1469,12 @@ function NotificationsSection() {
         contentContainerStyle={styles.sectionPadding}
         ListHeaderComponent={
           <View>
-            <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <Text style={styles.sectionTitle}>الإشعارات ({notifications?.length || 0})</Text>
-              <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+              <View style={{ flexDirection: "row", gap: 8 }}>
                 <Pressable
                   onPress={() => { setShowBroadcastModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                  style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: "#E67E2215", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#E67E2215", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                 >
                   <Ionicons name="megaphone-outline" size={16} color="#E67E22" />
                   <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#E67E22" }}>إرسال إشعار</Text>
@@ -1482,7 +1482,7 @@ function NotificationsSection() {
                 {unreadCount > 0 && (
                   <Pressable
                     onPress={() => markAllReadMutation.mutate()}
-                    style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "15", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "15", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                   >
                     <Ionicons name="checkmark-done" size={16} color={Colors.light.accent} />
                     <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.accent }}>قراءة الكل ({unreadCount})</Text>
@@ -1498,7 +1498,7 @@ function NotificationsSection() {
             onPress={() => { if (!item.isRead) markReadMutation.mutate(item.id); }}
             style={[styles.orderCard, { borderEndWidth: 3, borderEndColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#FAFBFF" }]}
           >
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: getNotifColor(item.type) + "15", alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name={getNotifIcon(item.type) as any} size={18} color={getNotifColor(item.type)} />
               </View>
@@ -1562,7 +1562,7 @@ function BroadcastNotificationModal({ visible, onClose }: { visible: boolean; on
               style={[modalStyles.createBtn, broadcastMutation.isPending && { opacity: 0.6 }]}
             >
               {broadcastMutation.isPending ? <ActivityIndicator color="#fff" /> : (
-                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Ionicons name="send" size={18} color="#fff" />
                   <Text style={modalStyles.createBtnText}>إرسال للجميع</Text>
                 </View>
@@ -1813,8 +1813,8 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
             </View>
             <ModalInput label="العنوان *" value={title} onChangeText={setTitle} placeholder="اسم الحملة" />
             <ModalInput label="الوصف *" value={description} onChangeText={setDescription} placeholder="وصف المنتج" multiline />
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", marginBottom: 12, backgroundColor: "#F3F4F6", borderRadius: 12, padding: 14 }}>
-              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, backgroundColor: "#F3F4F6", borderRadius: 12, padding: 14 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Ionicons name="color-palette-outline" size={20} color={Colors.light.accent} />
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>موديلات متعددة</Text>
               </View>
@@ -1838,7 +1838,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 8 }}>الموديلات ({variants.length})</Text>
                 {variants.map((v, idx) => (
                   <View key={v.key} style={{ backgroundColor: "#F9FAFB", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: Colors.light.border }}>
-                    <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                       <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.accent }}>موديل {idx + 1}</Text>
                       <Pressable onPress={() => removeVariant(v.key)}>
                         <Ionicons name="close-circle" size={22} color={Colors.light.danger} />
@@ -1846,7 +1846,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
                     </View>
                     <ModalInput label="الاسم (إنجليزي) *" value={v.name} onChangeText={(t) => updateVariant(v.key, "name", t)} placeholder="256GB Black" />
                     <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateVariant(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
-                    <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+                    <View style={{ flexDirection: "row", gap: 8 }}>
                       <View style={{ flex: 1 }}>
                         <ModalInput label="السعر ($) *" value={v.price} onChangeText={(t) => updateVariant(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
                       </View>
@@ -1857,7 +1857,7 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
                     <ModalInput label="رابط الصورة (اختياري)" value={v.imageUrl} onChangeText={(t) => updateVariant(v.key, "imageUrl", t)} placeholder="https://example.com/image.jpg" />
                   </View>
                 ))}
-                <Pressable onPress={addVariant} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed" }}>
+                <Pressable onPress={addVariant} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed" }}>
                   <Ionicons name="add-circle" size={20} color={Colors.light.accent} />
                   <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.accent }}>إضافة موديل</Text>
                 </Pressable>
@@ -1882,8 +1882,8 @@ function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: 
             </View>
             <ModalInput label="تاريخ الانتهاء (اختياري)" value={endsAtText} onChangeText={setEndsAtText} placeholder="2025-12-31T23:59" />
 
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", marginBottom: 12, backgroundColor: "#FFF1F1", borderRadius: 12, padding: 14 }}>
-              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, backgroundColor: "#FFF1F1", borderRadius: 12, padding: 14 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Text style={{ fontSize: 18 }}>🔥</Text>
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>عرض محدود (Flash Sale)</Text>
               </View>
@@ -2019,7 +2019,7 @@ function EditPaymentModal({ visible, method, onClose }: { visible: boolean; meth
             <ModalInput label="أيقونة" value={icon} onChangeText={setIcon} placeholder="card" />
             <ModalInput label="وصف" value={desc} onChangeText={setDesc} placeholder="وصف اختياري" />
             <View style={{ backgroundColor: "rgba(124,58,237,0.04)", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: Colors.light.accent + "20" }}>
-              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, marginBottom: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
                 <Ionicons name="business" size={16} color={Colors.light.accent} />
                 <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" }}>بيانات الحساب البنكي</Text>
               </View>
@@ -2239,19 +2239,19 @@ const styles = StyleSheet.create({
   backBtn: { backgroundColor: Colors.light.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 },
   backBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
   header: { paddingBottom: 0 },
-  headerRow: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12 },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12 },
   headerBackBtn: { padding: 8 },
   headerTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#fff", writingDirection: "rtl" },
-  tabsRow: { flexDirection: "row-reverse", paddingHorizontal: 12, paddingBottom: 12, gap: 4 },
-  tab: { flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+  tabsRow: { flexDirection: "row", paddingHorizontal: 12, paddingBottom: 12, gap: 4 },
+  tab: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   tabActive: { backgroundColor: "rgba(212, 168, 83, 0.15)" },
   tabText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.5)", writingDirection: "rtl" },
   tabTextActive: { color: Colors.light.accent, fontFamily: "Inter_600SemiBold" },
   content: { flex: 1 },
   sectionPadding: { padding: 16, paddingBottom: 40 },
   sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.light.text, marginBottom: 14, textAlign: "right", writingDirection: "rtl" },
-  sectionHeaderRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
-  addBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  sectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  addBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
   addBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff", writingDirection: "rtl" },
 
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
@@ -2260,18 +2260,18 @@ const styles = StyleSheet.create({
   statValue: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.light.text, marginBottom: 2, textAlign: "right", writingDirection: "rtl" },
   statLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
 
-  topCampaignItem: { flexDirection: "row-reverse", alignItems: "center", gap: 12, backgroundColor: "#fff", padding: 14, borderRadius: 12, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  topCampaignItem: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#fff", padding: 14, borderRadius: 12, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   topCampaignRank: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.light.accent + "18", alignItems: "center", justifyContent: "center" },
   topCampaignRankText: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.accent },
   topCampaignTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
   topCampaignSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
 
   orderCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  orderHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  orderHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   orderIdText: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" },
-  orderRow: { flexDirection: "row-reverse", alignItems: "center", gap: 8, marginBottom: 4 },
+  orderRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
   orderDetailText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
-  orderFooter: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.light.border },
+  orderFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.light.border },
   orderAmount: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.light.text },
   orderDate: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary },
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
@@ -2283,55 +2283,55 @@ const styles = StyleSheet.create({
   statusOptionText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
   statusOptionTextActive: { color: "#fff" },
 
-  userCard: { flexDirection: "row-reverse", backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, gap: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  userCard: { flexDirection: "row", backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, gap: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   userAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.light.accent + "18", alignItems: "center", justifyContent: "center" },
   userAvatarText: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.light.accent },
-  userNameRow: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
+  userNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   userName: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
   userEmail: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
   adminPill: { backgroundColor: "#FFD70020", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   adminPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#FFD700", writingDirection: "rtl" as const },
-  verifiedPill: { flexDirection: "row-reverse" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#10B98118", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  verifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#10B98118", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   verifiedPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#10B981", writingDirection: "rtl" as const },
-  unverifiedPill: { flexDirection: "row-reverse" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#EF444418", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  unverifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#EF444418", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   unverifiedPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#EF4444", writingDirection: "rtl" as const },
-  userStatsRow: { flexDirection: "row-reverse", gap: 12, marginTop: 8 },
-  userStat: { flexDirection: "row-reverse", alignItems: "center", gap: 4 },
+  userStatsRow: { flexDirection: "row", gap: 12, marginTop: 8 },
+  userStat: { flexDirection: "row", alignItems: "center", gap: 4 },
   userStatText: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
 
   campaignCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  campaignHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  campaignHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   campaignTitle: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.light.text, flex: 1, textAlign: "right", writingDirection: "rtl" },
   campaignInfo: { marginBottom: 10 },
   campaignInfoText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 2 },
   campaignProgressWrap: { marginBottom: 10 },
   campaignProgressBg: { height: 6, backgroundColor: Colors.light.progressBg, borderRadius: 3, overflow: "hidden" },
   campaignProgressFill: { height: "100%", borderRadius: 3 },
-  campaignActions: { flexDirection: "row-reverse", gap: 8 },
-  actionBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
+  campaignActions: { flexDirection: "row", gap: 8 },
+  actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
   actionBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff", writingDirection: "rtl" },
-  winnerBanner: { flexDirection: "row-reverse", alignItems: "center", gap: 8, backgroundColor: "#FFD70012", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 10 },
+  winnerBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFD70012", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 10 },
   winnerText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#B8912D", writingDirection: "rtl" },
 
   paymentCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  paymentRow: { flexDirection: "row-reverse", alignItems: "center", gap: 14 },
+  paymentRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   paymentName: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
   paymentNameEn: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right" },
   paymentDesc: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
   deletePaymentBtn: { alignSelf: "flex-start", padding: 8, marginTop: 8 },
 
   couponCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  couponHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  couponHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   couponCodeBadge: { backgroundColor: Colors.light.accent + "18", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   couponCode: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.light.accent, letterSpacing: 1 },
-  couponDetails: { flexDirection: "row-reverse", justifyContent: "space-around", marginBottom: 12 },
+  couponDetails: { flexDirection: "row", justifyContent: "space-around", marginBottom: 12 },
   couponStat: { alignItems: "center" },
   couponStatLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, marginBottom: 2, writingDirection: "rtl" },
   couponStatValue: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.light.text },
-  deleteCouponBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 6, alignSelf: "flex-start", padding: 4 },
+  deleteCouponBtn: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", padding: 4 },
   deleteCouponText: { fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.danger, writingDirection: "rtl" },
 
-  activityItem: { flexDirection: "row-reverse", gap: 12, backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  activityItem: { flexDirection: "row", gap: 12, backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   activityIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   activityTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
   activityDesc: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
@@ -2343,7 +2343,7 @@ const styles = StyleSheet.create({
 const modalStyles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
   container: { backgroundColor: Colors.light.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "90%" },
-  header: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.light.border },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.light.border },
   title: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
   scrollContent: { padding: 20, paddingBottom: 40 },
   inputGroup: { marginBottom: 16 },
@@ -2356,14 +2356,14 @@ const modalStyles = StyleSheet.create({
 const orderMgmtStyles = StyleSheet.create({
   infoSection: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: Colors.light.border },
   infoSectionTitle: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 10 },
-  infoRow: { flexDirection: "row-reverse", alignItems: "center", gap: 8, marginBottom: 6 },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
   infoText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
   receiptLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
   receiptImage: { width: "100%", height: 200, borderRadius: 10, backgroundColor: Colors.light.inputBg },
   paymentActions: { marginTop: 8 },
-  confirmBtn: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#2ECC71", borderRadius: 10, paddingVertical: 12 },
+  confirmBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#2ECC71", borderRadius: 10, paddingVertical: 12 },
   confirmBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
-  rejectBtn: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#E74C3C", borderRadius: 10, paddingVertical: 12, marginTop: 8 },
+  rejectBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#E74C3C", borderRadius: 10, paddingVertical: 12, marginTop: 8 },
   rejectBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
   rejectionInput: { backgroundColor: Colors.light.inputBg, borderRadius: 10, padding: 12, fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
 });
@@ -2371,7 +2371,7 @@ const orderMgmtStyles = StyleSheet.create({
 const chartStyles = StyleSheet.create({
   container: { marginTop: 24, backgroundColor: "#fff", borderRadius: 16, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
   headerRow: { marginBottom: 16 },
-  summaryRow: { flexDirection: "row-reverse", gap: 4, marginTop: -4 },
+  summaryRow: { flexDirection: "row", gap: 4, marginTop: -4 },
   summaryItem: { alignItems: "center" },
   summaryValue: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.light.text },
   summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },

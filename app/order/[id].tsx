@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   header: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   rejectionBox: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginTop: 14,
@@ -812,13 +812,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   previewActions: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "center",
     gap: 16,
     paddingVertical: 10,
   },
   previewChangeBtn: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
@@ -831,7 +831,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   uploadButton: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   summaryRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 10,
@@ -895,7 +895,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.border,
   },
   cancelledBox: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 10,
     backgroundColor: "rgba(231, 76, 60, 0.06)",
@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
     paddingEnd: 4,
   },
   timelineStep: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "flex-start",
     minHeight: 52,
   },
@@ -953,7 +953,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   trackingRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: Colors.light.inputBg,
@@ -982,7 +982,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   addressRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 10,
     paddingVertical: 8,

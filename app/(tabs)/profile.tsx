@@ -356,7 +356,7 @@ export default function ProfileScreen() {
               colors={["#059669", "#10B981", "#34D399"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={{ padding: 18, flexDirection: "row-reverse", alignItems: "center", gap: 14 }}
+              style={{ padding: 18, flexDirection: "row", alignItems: "center", gap: 14 }}
             >
               <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="wallet" size={26} color="#fff" />
@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(236,72,153,0.12)",
   },
   avatarRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 16,
   },
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   nameRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   adminBadge: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 4,
     backgroundColor: "rgba(255, 215, 0, 0.2)",
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   joinDateRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 4,
     marginTop: 6,
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
   statsCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 22,
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     paddingVertical: 20,
     paddingHorizontal: 8,
     shadowColor: "#7C3AED",
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   adminCardGradient: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     padding: 18,
     gap: 14,
@@ -786,7 +786,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   adminStatsRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 10,
     marginTop: 12,
   },
@@ -824,7 +824,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   menuItem: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   logoutButton: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
@@ -894,7 +894,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   deleteButton: {
-    flexDirection: "row-reverse" as const,
+    flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     gap: 8,

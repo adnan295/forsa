@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 12,
     end: 12,
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 10,
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 12,
     start: 12,
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "flex-end",
     gap: 4,
     backgroundColor: "#FFD000",
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   prizeRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   progressHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   countdownRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   ctaGradient: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,

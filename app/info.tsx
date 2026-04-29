@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   headerRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 16,
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   bulletRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
     marginBottom: 10,
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   featureRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 12,
     marginBottom: 12,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   contactItem: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
@@ -718,7 +718,7 @@ const ticketStyles = StyleSheet.create({
     fontSize: 11,
   },
   backRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 6,
     marginBottom: 14,
@@ -730,7 +730,7 @@ const ticketStyles = StyleSheet.create({
     writingDirection: "rtl",
   },
   detailMeta: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 8,
     marginBottom: 4,
   },
@@ -743,7 +743,7 @@ const ticketStyles = StyleSheet.create({
     marginTop: 14,
   },
   adminReplyBox: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 10,
     backgroundColor: Colors.light.accent + "08",
     borderRadius: 12,
@@ -776,7 +776,7 @@ const ticketStyles = StyleSheet.create({
     minHeight: 120,
   },
   priorityRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 10,
     marginTop: 4,
   },
@@ -795,7 +795,7 @@ const ticketStyles = StyleSheet.create({
     color: Colors.light.textSecondary,
   },
   submitBtn: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
@@ -815,7 +815,7 @@ const ticketStyles = StyleSheet.create({
     overflow: "hidden",
   },
   newTicketGradient: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
@@ -843,7 +843,7 @@ const ticketStyles = StyleSheet.create({
     color: Colors.light.textSecondary,
   },
   ticketMetaRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginTop: 6,

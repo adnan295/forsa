@@ -261,7 +261,7 @@ const st = StyleSheet.create({
   heroBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#FFD000" },
   heroTitle: { fontFamily: "Inter_700Bold", fontSize: 28, color: "#fff", textAlign: "right", lineHeight: 38, marginBottom: 10 },
   heroSub: { fontFamily: "Inter_400Regular", fontSize: 15, color: "rgba(255,255,255,0.65)", textAlign: "right", lineHeight: 22, marginBottom: 24, writingDirection: "rtl" },
-  statsRow: { flexDirection: "row-reverse", justifyContent: "space-around", backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 16, padding: 16 },
+  statsRow: { flexDirection: "row", justifyContent: "space-around", backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 16, padding: 16 },
   statBox: { alignItems: "center", gap: 4 },
   statNum: { fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFD000" },
   statLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.6)" },
@@ -270,7 +270,7 @@ const st = StyleSheet.create({
   section: { paddingHorizontal: 16, paddingTop: 28, paddingBottom: 8 },
   sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 19, color: "#1A1A1A", textAlign: "right", marginBottom: 16, writingDirection: "rtl" },
 
-  benefitsGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 12 },
+  benefitsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   benefitCard: {
     width: (W - 32 - 12) / 2,
     backgroundColor: "#fff", borderRadius: 16, padding: 16,
@@ -281,7 +281,7 @@ const st = StyleSheet.create({
   benefitTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#1A1A1A", textAlign: "right", writingDirection: "rtl" },
   benefitSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#888", textAlign: "right", lineHeight: 17, writingDirection: "rtl" },
 
-  stepRow: { flexDirection: "row-reverse", gap: 14, alignItems: "flex-start" },
+  stepRow: { flexDirection: "row", gap: 14, alignItems: "flex-start" },
   stepNumBox: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   stepNum: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#1A1A1A" },
   stepBody: { flex: 1 },
@@ -310,7 +310,7 @@ const st = StyleSheet.create({
 
   submitBtn: {
     backgroundColor: "#FFD000", borderRadius: 14,
-    flexDirection: "row-reverse", alignItems: "center", justifyContent: "center",
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, paddingVertical: 15, marginTop: 8,
   },
   submitText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1A1A1A" },

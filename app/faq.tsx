@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   headerRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 16,
@@ -231,14 +231,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   questionRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
   },
   questionContent: {
     flex: 1,
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },

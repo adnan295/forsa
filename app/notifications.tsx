@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   headerContent: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   notificationCard: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 14,
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   titleRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },

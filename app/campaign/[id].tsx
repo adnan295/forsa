@@ -334,7 +334,7 @@ export default function CampaignDetailScreen() {
             style={styles.heroOverlay}
           >
             <View style={{ flex: 1, paddingTop: Platform.OS === "web" ? 67 : insets.top, justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", paddingHorizontal: 4 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 4 }}>
                 <Pressable onPress={() => router.back()} style={styles.backButton}>
                   <View style={styles.backBtnCircle}>
                     <Ionicons name="arrow-forward" size={22} color="#fff" />
@@ -407,7 +407,7 @@ export default function CampaignDetailScreen() {
 
         <View style={styles.content}>
           {!!(campaign as any).isFlashSale && !flashCountdown.expired && (
-            <View style={{ backgroundColor: "#FEF2F2", borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: "#FECACA", flexDirection: "row-reverse", alignItems: "center", gap: 12 }}>
+            <View style={{ backgroundColor: "#FEF2F2", borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: "#FECACA", flexDirection: "row", alignItems: "center", gap: 12 }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#EF4444", writingDirection: "rtl" as const }}>🔥 عرض محدود - ينتهي قريباً!</Text>
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 18, color: "#DC2626", marginTop: 4 }}>
@@ -750,7 +750,7 @@ export default function CampaignDetailScreen() {
             {user && !showReviewForm && (
               <Pressable
                 onPress={() => setShowReviewForm(true)}
-                style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, marginBottom: 12 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, marginBottom: 12 }}
               >
                 <Ionicons name="create-outline" size={18} color={Colors.light.accent} />
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" }}>أضف تقييمك</Text>
@@ -760,7 +760,7 @@ export default function CampaignDetailScreen() {
             {showReviewForm && (
               <View style={{ backgroundColor: "#F9FAFB", borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: Colors.light.border }}>
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 10 }}>تقييمك</Text>
-                <View style={{ flexDirection: "row-reverse", justifyContent: "center", gap: 8, marginBottom: 12 }}>
+                <View style={{ flexDirection: "row", justifyContent: "center", gap: 8, marginBottom: 12 }}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Pressable key={star} onPress={() => { setReviewRating(star); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}>
                       <Ionicons name={star <= reviewRating ? "star" : "star-outline"} size={32} color="#F59E0B" />
@@ -775,7 +775,7 @@ export default function CampaignDetailScreen() {
                   onChangeText={setReviewComment}
                   multiline
                 />
-                <View style={{ flexDirection: "row-reverse", gap: 10, marginTop: 12 }}>
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
                   <Pressable
                     onPress={() => { if (reviewRating > 0) reviewMutation.mutate(); }}
                     disabled={reviewRating === 0 || reviewMutation.isPending}
@@ -800,7 +800,7 @@ export default function CampaignDetailScreen() {
             {reviewsData && reviewsData.length > 0 ? (
               reviewsData.slice(0, 5).map((review, idx) => (
                 <View key={idx} style={{ paddingVertical: 12, borderBottomWidth: idx < Math.min(reviewsData.length, 5) - 1 ? 1 : 0, borderBottomColor: Colors.light.border }}>
-                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(124,58,237,0.1)", alignItems: "center", justifyContent: "center" }}>
                       <Text style={{ fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.light.accent }}>{review.username.charAt(0).toUpperCase()}</Text>
                     </View>
@@ -835,7 +835,7 @@ export default function CampaignDetailScreen() {
               <Text style={styles.bottomPrice}>{totalPrice} $</Text>
               <Text style={styles.bottomQty}>{quantity} منتج</Text>
             </View>
-            <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
               <Animated.View style={buyBtnAnimStyle}>
                 <Pressable
                   onPressIn={() => { buyBtnScale.value = withSpring(0.93, { damping: 15, stiffness: 300 }); }}
@@ -1048,13 +1048,13 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   progressHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
   progressTitleRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
@@ -1084,7 +1084,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   progressStats: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-around",
   },
   progressStat: {
@@ -1120,7 +1120,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   quantityHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginBottom: 16,
@@ -1165,7 +1165,7 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   quantityPriceRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingTop: 14,
@@ -1196,7 +1196,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   detailHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginBottom: 10,
@@ -1217,7 +1217,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   priceCard: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
@@ -1287,7 +1287,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   soldOutBanner: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 12,
     backgroundColor: "rgba(243, 156, 18, 0.08)",
@@ -1333,7 +1333,7 @@ const styles = StyleSheet.create({
     height: 30,
   },
   bottomContent: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
@@ -1373,7 +1373,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   buyButtonGradient: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 24,
@@ -1400,7 +1400,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   countdownHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginBottom: 14,
@@ -1412,7 +1412,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   countdownBoxes: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
@@ -1443,7 +1443,7 @@ const styles = StyleSheet.create({
     color: "#EF4444",
   },
   variantGrid: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     flexWrap: "wrap",
     gap: CARD_GAP,
     marginTop: 12,

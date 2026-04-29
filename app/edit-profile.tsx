@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   header: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   sectionHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   countryPicker: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   modalHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   searchContainer: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.light.inputBg,
     borderRadius: 14,
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   countryItem: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 12,

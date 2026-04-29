@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   header: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   browseBtnGradient: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   itemRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 12,
   },
   itemImageWrap: {
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   itemPrizeRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   qtyRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 12,
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     height: 30,
   },
   bottomSummary: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 20,
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   checkoutBtnGradient: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,

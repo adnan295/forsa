@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   inputGroup: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(255, 255, 255, 0.12)",
     borderRadius: 16,
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   resendRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
@@ -577,7 +577,7 @@ const fallbackStyles = StyleSheet.create({
     gap: 8,
   },
   iconRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },

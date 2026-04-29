@@ -623,7 +623,7 @@ export default function CheckoutScreen() {
                   </View>
                 ) : null}
                 <View style={{ marginTop: 16 }}>
-                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
                     <Ionicons name="cloud-upload-outline" size={18} color={Colors.light.accent} />
                     <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>
                       رفع وصل الدفع <Text style={{ color: Colors.light.danger }}>*</Text>
@@ -728,8 +728,8 @@ export default function CheckoutScreen() {
                 <Text style={styles.sectionTitle}>المحفظة</Text>
               </View>
               <View style={styles.divider} />
-              <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" }}>
-                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
                   <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(16,185,129,0.1)", alignItems: "center", justifyContent: "center" }}>
                     <Ionicons name="wallet" size={20} color="#10B981" />
                   </View>
@@ -852,7 +852,7 @@ export default function CheckoutScreen() {
 
           {pendingOrderId && (
             <View style={styles.retryUploadCard}>
-              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <Ionicons name="warning-outline" size={20} color={Colors.light.warning} />
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.warning, writingDirection: "rtl", flex: 1 }}>
                   تم إنشاء طلبك لكن فشل رفع الوصل
@@ -932,7 +932,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   header: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   sectionHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
@@ -991,7 +991,7 @@ const styles = StyleSheet.create({
     marginVertical: 14,
   },
   cartItemRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     paddingVertical: 8,
@@ -1014,7 +1014,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   summaryRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 6,
@@ -1059,7 +1059,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   paymentCardInner: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     padding: 14,
     gap: 12,
@@ -1103,7 +1103,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   bankHeader: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginBottom: 12,
@@ -1116,7 +1116,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   bankRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 8,
@@ -1139,7 +1139,7 @@ const styles = StyleSheet.create({
     marginEnd: 12,
   },
   bankNote: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 6,
     marginTop: 12,
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   couponRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 10,
   },
   couponInput: {
@@ -1203,7 +1203,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   couponSuccess: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 6,
     marginTop: 10,
@@ -1219,7 +1219,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   couponErrorWrap: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 6,
     marginTop: 10,
@@ -1256,7 +1256,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
   },
   totalRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 6,
@@ -1299,7 +1299,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.accent,
     borderRadius: 14,
     paddingVertical: 14,
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
@@ -1339,14 +1339,14 @@ const styles = StyleSheet.create({
     height: 160,
   },
   previewActions: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "flex-start",
     gap: 8,
     padding: 10,
     backgroundColor: Colors.light.inputBg,
   },
   previewChangeBtn: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 4,
     backgroundColor: Colors.light.background,
@@ -1373,7 +1373,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   placeOrderGradient: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,

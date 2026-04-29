@@ -341,12 +341,12 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   tabRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     gap: 10,
     marginBottom: 16,
   },
   tabBtn: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 7,
     paddingHorizontal: 18,
@@ -388,12 +388,12 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   orderTop: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
   orderIdArea: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
@@ -440,12 +440,12 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   orderPills: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
   pill: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 5,
     paddingHorizontal: 10,
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   },
 
   ticketCard: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     marginBottom: 12,
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   winnerBadge: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 4,
     marginTop: 8,
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   emptyActionGradient: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 24,

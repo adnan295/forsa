@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   headerRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 14,
     zIndex: 2,

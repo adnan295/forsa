@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   inputGroup: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(255, 255, 255, 0.12)",
     borderRadius: 16,
