@@ -186,6 +186,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: "#FFFFFF",
     writingDirection: "rtl",
+    textAlign: "center",
   },
   headerIconArea: {
     alignItems: "center",

@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.light.text,
     writingDirection: "rtl",
-    textAlign: "right",
+    textAlign: "center",
   },
   heroGradient: {
     marginHorizontal: 16,
@@ -294,6 +294,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     writingDirection: "rtl",
     marginBottom: 8,
+    textAlign: "center",
   },
   heroSubtitle: {
     fontFamily: "Inter_400Regular",
@@ -366,6 +367,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#fff",
     writingDirection: "rtl",
+    textAlign: "center",
   },
   statsSection: {
     paddingHorizontal: 16,
@@ -405,6 +407,7 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
     marginTop: 4,
+    textAlign: "center",
   },
   listSection: {
     paddingHorizontal: 16,
@@ -483,6 +486,7 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     writingDirection: "rtl",
     marginTop: 16,
+    textAlign: "center",
   },
   emptySubtitle: {
     fontFamily: "Inter_400Regular",

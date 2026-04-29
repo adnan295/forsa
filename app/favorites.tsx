@@ -217,5 +217,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#FFFFFF",
     writingDirection: "rtl",
+    textAlign: "center",
   },
 });
