@@ -2,7 +2,7 @@
   "expo": {
     "name": "Forsa",
     "slug": "forsa",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "forsa",
@@ -21,7 +21,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "3",
+      "buildNumber": "4",
       "bundleIdentifier": "app.replit.forsa",
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -38,7 +38,7 @@
     "android": {
       "package": "com.forsa",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
