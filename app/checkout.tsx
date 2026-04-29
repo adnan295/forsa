@@ -130,18 +130,21 @@ export default function CheckoutScreen() {
     }
   };
 
-  const uploadReceiptToOrder = async (orderId: string, imgUri: string, file: any) => {
-    try {
-      const baseUrl = getApiUrl();
-      const url = new URL(`/api/orders/${orderId}/receipt`, baseUrl);
-      const formData = new FormData();
-      if (Platform.OS === "web") {
-        if (file) formData.append("receipt", file);
-      } else {
-        formData.append("receipt", { uri: imgUri, name: "receipt.jpg", type: "image/jpeg" } as any);
-      }
-      await fetch(url.toString(), { method: "POST", body: formData, credentials: "include" });
-    } catch (_) {}
+  const uploadReceiptToOrder = async (orderId: string, imgUri: string, file: any): Promise<boolean> => {
+    const baseUrl = getApiUrl();
+    const url = new URL(`/api/orders/${orderId}/receipt`, baseUrl);
+    const formData = new FormData();
+    if (Platform.OS === "web") {
+      if (file) formData.append("receipt", file);
+    } else {
+      formData.append("receipt", { uri: imgUri, name: "receipt.jpg", type: "image/jpeg" } as any);
+    }
+    const res = await fetch(url.toString(), { method: "POST", body: formData, credentials: "include" });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(text || "فشل رفع الوصل");
+    }
+    return true;
   };
 
   const { data: campaign, isLoading: campaignLoading } = useQuery<Campaign & { products?: any[] }>({
@@ -255,18 +258,44 @@ export default function CheckoutScreen() {
       if (isCartMode) {
         clearCart();
         const firstOrderId = data.orders?.[0]?.id;
+        let uploadFailed = false;
         if (receiptImage && firstOrderId) {
-          await uploadReceiptToOrder(firstOrderId, receiptImage, receiptFile);
+          try {
+            await uploadReceiptToOrder(firstOrderId, receiptImage, receiptFile);
+          } catch (_) {
+            uploadFailed = true;
+          }
         }
-        Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
-          { text: "حسناً", onPress: () => router.replace("/(tabs)/tickets" as any) },
-        ]);
+        if (uploadFailed && firstOrderId) {
+          Alert.alert(
+            "تنبيه",
+            "تم إنشاء الطلب لكن فشل رفع الوصل. يمكنك رفعه من صفحة الطلب.",
+            [{ text: "حسناً", onPress: () => router.replace(`/order/${firstOrderId}` as any) }]
+          );
+        } else {
+          Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
+            { text: "حسناً", onPress: () => router.replace("/(tabs)/tickets" as any) },
+          ]);
+        }
       } else {
         const orderId = data.order?.id || data.id;
+        let uploadFailed = false;
         if (receiptImage && orderId) {
-          await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
+          try {
+            await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
+          } catch (_) {
+            uploadFailed = true;
+          }
         }
-        router.replace(`/order/${orderId}` as any);
+        if (uploadFailed) {
+          Alert.alert(
+            "تنبيه",
+            "تم إنشاء الطلب لكن فشل رفع الوصل. يمكنك رفعه من صفحة الطلب.",
+            [{ text: "حسناً", onPress: () => router.replace(`/order/${orderId}` as any) }]
+          );
+        } else {
+          router.replace(`/order/${orderId}` as any);
+        }
       }
     },
     onError: (err: any) => {

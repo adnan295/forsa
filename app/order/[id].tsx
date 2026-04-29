@@ -230,7 +230,9 @@ export default function OrderDetailScreen() {
   }
 
   const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
-  const showReceiptUpload = order.paymentStatus === "rejected";
+  const showReceiptUpload =
+    order.paymentStatus === "rejected" ||
+    (order.paymentStatus === "pending_payment" && !order.receiptUrl);
   const isCancelled = order.shippingStatus === "cancelled";
   const shippingIndex = SHIPPING_ORDER.indexOf(order.shippingStatus);
   const orderDate = new Date(order.createdAt).toLocaleDateString("ar-EG", {
