@@ -1376,14 +1376,36 @@ async function openOrderModal(id){
         <div class="info-row"><span class="info-key">حالة الشحن</span><span class="info-val">${shipBadge(o.shippingStatus)}</span></div>
         <div class="info-row"><span class="info-key">التاريخ</span><span class="info-val">${fmtDate(o.createdAt)}</span></div>
         ${o.rejectionReason?`<div class="info-row"><span class="info-key">سبب الرفض</span><span class="info-val" style="color:var(--danger)">${esc(o.rejectionReason)}</span></div>`:''}
-        ${o.receiptUrl?`<div class="info-row"><span class="info-key">الإيصال</span><span class="info-val"><a href="${esc(o.receiptUrl)}" target="_blank" class="btn btn-info btn-sm">👁 عرض</a></span></div>`:''}
       </div>
     </div>
+    ${o.receiptUrl?`
+    <hr class="divider"/>
+    <div style="margin-top:12px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:10px;color:var(--text)">🧾 وصل الدفع</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+        <a href="${esc(o.receiptUrl)}" target="_blank" style="display:block;max-width:100%">
+          <img src="${esc(o.receiptUrl)}" alt="وصل الدفع"
+            style="max-width:100%;max-height:380px;border-radius:10px;border:2px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,0.18);object-fit:contain;cursor:zoom-in;background:#111"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+          />
+          <div style="display:none;align-items:center;justify-content:center;padding:24px;background:var(--surface2);border-radius:10px;color:var(--muted);flex-direction:column;gap:8px">
+            <span style="font-size:32px">📎</span>
+            <span>الوصل مرفق (انقر للفتح)</span>
+          </div>
+        </a>
+        <a href="${esc(o.receiptUrl)}" target="_blank" class="btn btn-info btn-sm">🔍 فتح في نافذة جديدة</a>
+      </div>
+      ${o.paymentStatus==='pending_review'?`
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-success" style="min-width:140px;font-size:15px;padding:10px 20px" onclick="confirmOrder('${jsEsc(o.id)}')">✅ قبول الوصل</button>
+        <button class="btn btn-danger" style="min-width:140px;font-size:15px;padding:10px 20px" onclick="rejectOrder('${jsEsc(o.id)}')">❌ رفض الوصل</button>
+      </div>`:''}
+    </div>`:''}
     ${o.shippingAddress?`<hr class="divider"/><div class="info-row"><span class="info-key">عنوان الشحن</span><span class="info-val">${esc(o.shippingAddress)}</span></div>`:''}`;
 
   document.getElementById('orderModalFooter').innerHTML=`
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${o.paymentStatus==='pending_review'?`<button class="btn btn-success" onclick="confirmOrder('${jsEsc(o.id)}')">✅ تأكيد الدفع</button><button class="btn btn-danger" onclick="rejectOrder('${jsEsc(o.id)}')">❌ رفض</button>`:''}
+      ${!o.receiptUrl&&o.paymentStatus==='pending_review'?`<button class="btn btn-success" onclick="confirmOrder('${jsEsc(o.id)}')">✅ تأكيد الدفع</button><button class="btn btn-danger" onclick="rejectOrder('${jsEsc(o.id)}')">❌ رفض</button>`:''}
       <select id="shipStatusSel" class="filter-select"><option value="">تحديث الشحن...</option><option value="processing">⚙️ معالجة</option><option value="shipped">📦 مشحون</option><option value="delivered">✅ تم التسليم</option><option value="returned">↩️ مرتجع</option></select>
       <button class="btn btn-primary" onclick="updateShipping('${jsEsc(o.id)}')">تحديث الشحن</button>
       <button class="btn btn-secondary" onclick="closeModal('orderModal')">إغلاق</button>
