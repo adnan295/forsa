@@ -7,7 +7,7 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:661772777194:android:ac54c4f5bb8bd2c6ccc993",
+        "mobilesdk_app_id": "1:661772777194:android:27a9b9467131bdefccc993",
         "android_client_info": {
           "package_name": "today.forsa"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB93OCVAfOj1eIHRf_JkFKNjnuTgvFvXPQ"
+          "current_key": ""
         }
       ],
       "services": {
