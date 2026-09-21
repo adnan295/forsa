@@ -16,25 +16,31 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useFavorites } from "@/lib/favorites-context";
-import CampaignCard from "@/components/CampaignCard";
-import type { Campaign } from "@shared/schema";
+import { useCart } from "@/lib/cart-context";
+import ProductCard from "@/components/ProductCard";
+import type { Product } from "@shared/schema";
+import type { CurrentDraw } from "@/components/DrawBanner";
 
 export default function FavoritesScreen() {
   const insets = useSafeAreaInsets();
   const { favorites, favoritesCount } = useFavorites();
+  const { addItem, getQuantity } = useCart();
 
-  const { data: allCampaigns, isLoading } = useQuery<Campaign[]>({
-    queryKey: ["/api/campaigns"],
+  const { data: allProducts, isLoading } = useQuery<Product[]>({
+    queryKey: ["/api/products"],
+  });
+  const { data: draw } = useQuery<CurrentDraw | null>({
+    queryKey: ["/api/draws/current"],
+    staleTime: 15000,
   });
 
-  const favoriteCampaigns = (allCampaigns || []).filter((c) =>
-    favorites.includes(c.id)
-  );
+  const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
+  const favoriteProducts = (allProducts || []).filter((p) => favorites.includes(p.id));
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        colors={["#1A1A1A", "#2D2D2D"]}
         style={[
           styles.header,
           { paddingTop: Platform.OS === "web" ? 67 : insets.top },
@@ -65,42 +71,46 @@ export default function FavoritesScreen() {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.light.accent} />
         </View>
-      ) : favoriteCampaigns.length === 0 ? (
+      ) : favoriteProducts.length === 0 ? (
         <View style={styles.centered}>
           <View style={styles.emptyIconWrap}>
             <Ionicons name="heart-outline" size={48} color={Colors.light.accentLight} />
           </View>
           <Text style={styles.emptyTitle}>لا توجد مفضلات</Text>
           <Text style={styles.emptyText}>
-            أضف حملات إلى المفضلة بالضغط على أيقونة القلب
+            أضف منتجات إلى المفضلة بالضغط على أيقونة القلب
           </Text>
           <Pressable
             onPress={() => router.push("/(tabs)")}
             style={styles.browseButton}
           >
             <LinearGradient
-              colors={[Colors.light.accent, Colors.light.accentPink]}
+              colors={[Colors.light.accent, Colors.light.accentDark]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.browseGradient}
             >
-              <Text style={styles.browseText}>تصفح الحملات</Text>
+              <Text style={styles.browseText}>تصفّح المتجر</Text>
             </LinearGradient>
           </Pressable>
         </View>
       ) : (
         <FlatList
-          data={favoriteCampaigns}
+          data={favoriteProducts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{
             padding: 16,
             paddingBottom: Platform.OS === "web" ? 34 : Math.max(insets.bottom, 16),
           }}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <CampaignCard
-              campaign={item}
-              onPress={() => router.push(`/campaign/${item.id}`)}
+          renderItem={({ item, index }) => (
+            <ProductCard
+              product={item}
+              index={index}
+              ticketPrice={ticketPrice}
+              inCartQuantity={getQuantity(item.id)}
+              onAddToCart={() => addItem(item, 1)}
+              onPress={() => router.push(`/product/${item.id}`)}
             />
           )}
         />
@@ -215,7 +225,7 @@ const styles = StyleSheet.create({
   browseText: {
     fontFamily: "Inter_700Bold",
     fontSize: 16,
-    color: "#FFFFFF",
+    color: "#1A1A1A",
     writingDirection: "rtl",
     textAlign: "center",
   },

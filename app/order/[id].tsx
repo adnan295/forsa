@@ -20,7 +20,9 @@ import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
-import type { Order, Campaign } from "@shared/schema";
+import type { Order, OrderItem, Ticket } from "@shared/schema";
+
+type OrderDetail = Order & { items: OrderItem[]; tickets: Ticket[] };
 import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -96,14 +98,9 @@ export default function OrderDetailScreen() {
   const {
     data: order,
     isLoading,
-  } = useQuery<Order>({
+  } = useQuery<OrderDetail>({
     queryKey: ["/api/orders", id],
     refetchInterval: 10000,
-  });
-
-  const { data: campaign } = useQuery<Campaign>({
-    queryKey: ["/api/campaigns", order?.campaignId],
-    enabled: !!order?.campaignId,
   });
 
   const uploadMutation = useMutation({
@@ -240,14 +237,13 @@ export default function OrderDetailScreen() {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const unitPrice = order.quantity > 0
-    ? (parseFloat(order.totalAmount) + parseFloat(order.discountAmount || "0")) / order.quantity
-    : 0;
+  const items = order.items ?? [];
+  const totalPieces = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        colors={["#1A1A1A", "#2D2D2D"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[
@@ -405,25 +401,23 @@ export default function OrderDetailScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>ملخص الطلب</Text>
 
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryValue}>
-              {campaign?.title || order.campaignId.slice(0, 8)}
-            </Text>
-            <Text style={styles.summaryLabel}>الحملة</Text>
-          </View>
+          {items.map((item, idx) => (
+            <View key={item.id}>
+              {idx > 0 && <View style={styles.divider} />}
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryValue}>${parseFloat(item.lineTotal).toFixed(2)}</Text>
+                <Text style={styles.summaryLabel} numberOfLines={2}>
+                  {item.productName} × {item.quantity}
+                </Text>
+              </View>
+            </View>
+          ))}
 
           <View style={styles.divider} />
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryValue}>{order.quantity}</Text>
-            <Text style={styles.summaryLabel}>الكمية</Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryValue}>${unitPrice.toFixed(2)}</Text>
-            <Text style={styles.summaryLabel}>سعر الوحدة</Text>
+            <Text style={styles.summaryValue}>${parseFloat(order.subtotal).toFixed(2)}</Text>
+            <Text style={styles.summaryLabel}>المجموع الفرعي ({totalPieces} قطعة)</Text>
           </View>
 
           {order.discountAmount && parseFloat(order.discountAmount) > 0 && (
@@ -440,6 +434,18 @@ export default function OrderDetailScreen() {
             </>
           )}
 
+          {parseFloat(order.walletAmount) > 0 && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryValue, { color: "#10B981" }]}>
+                  -${parseFloat(order.walletAmount).toFixed(2)}
+                </Text>
+                <Text style={styles.summaryLabel}>خصم المحفظة</Text>
+              </View>
+            </>
+          )}
+
           <View style={styles.divider} />
 
           <View style={styles.summaryRow}>
@@ -447,7 +453,7 @@ export default function OrderDetailScreen() {
               ${parseFloat(order.totalAmount).toFixed(2)}
             </Text>
             <Text style={[styles.summaryLabel, { fontFamily: "Inter_600SemiBold" }]}>
-              الإجمالي
+              الإجمالي المستحق
             </Text>
           </View>
 
@@ -466,6 +472,57 @@ export default function OrderDetailScreen() {
             <Text style={styles.summaryValue}>{orderDate}</Text>
             <Text style={styles.summaryLabel}>تاريخ الطلب</Text>
           </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>تذاكر السحب</Text>
+          {order.paymentStatus !== "confirmed" ? (
+            <View style={styles.ticketsPending}>
+              <Ionicons name="time-outline" size={18} color={Colors.light.warning} />
+              <Text style={styles.ticketsPendingText}>
+                تذاكرك بتنمنح تلقائياً بمجرد ما ينتأكّد دفعك
+              </Text>
+            </View>
+          ) : order.ticketsAwarded === 0 ? (
+            <View style={styles.ticketsPending}>
+              <Ionicons name="information-circle-outline" size={18} color={Colors.light.textSecondary} />
+              <Text style={[styles.ticketsPendingText, { color: Colors.light.textSecondary }]}>
+                قيمة هذا الطلب ما وصلت لسعر تذكرة كاملة
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryTotal, { color: Colors.light.accentDark }]}>
+                  {order.ticketsAwarded}
+                </Text>
+                <Text style={[styles.summaryLabel, { fontFamily: "Inter_600SemiBold" }]}>
+                  عدد التذاكر
+                </Text>
+              </View>
+              {(order.tickets ?? []).length > 0 && (
+                <View style={styles.ticketChips}>
+                  {(order.tickets ?? []).slice(0, 15).map((t) => (
+                    <View key={t.id} style={[styles.ticketChip, t.isWinner && styles.ticketChipWinner]}>
+                      <Ionicons
+                        name={t.isWinner ? "trophy" : "ticket-outline"}
+                        size={11}
+                        color={t.isWinner ? "#fff" : "#8A7500"}
+                      />
+                      <Text style={[styles.ticketChipText, t.isWinner && { color: "#fff" }]}>
+                        {t.ticketNumber}
+                      </Text>
+                    </View>
+                  ))}
+                  {(order.tickets ?? []).length > 15 && (
+                    <Text style={styles.ticketMore}>
+                      +{(order.tickets ?? []).length - 15} أخرى
+                    </Text>
+                  )}
+                </View>
+              )}
+            </>
+          )}
         </View>
 
         <View style={styles.card}>
@@ -659,6 +716,54 @@ export default function OrderDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  ticketsPending: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+  },
+  ticketsPendingText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: Colors.light.warning,
+    flex: 1,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 20,
+  },
+  ticketChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 10,
+    alignItems: "center",
+  },
+  ticketChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FFFBE6",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FFE566",
+  },
+  ticketChipWinner: {
+    backgroundColor: "#F59E0B",
+    borderColor: "#F59E0B",
+  },
+  ticketChipText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 10,
+    color: "#8A7500",
+  },
+  ticketMore: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,

@@ -1,34 +1,41 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { Campaign, CampaignProduct } from "@shared/schema";
+import type { Product } from "@shared/schema";
 
 export interface CartItem {
-  campaignId: string;
-  productId?: string;
-  productName?: string;
-  title: string;
+  productId: string;
+  name: string;
   price: number;
   quantity: number;
   imageUrl?: string | null;
-  prizeName: string;
-  maxQuantity: number;
+  /** null = مخزون غير محدود */
+  maxQuantity: number | null;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (campaign: Campaign, quantity: number, product?: CampaignProduct) => void;
-  removeItem: (campaignId: string, productId?: string) => void;
-  updateQuantity: (campaignId: string, quantity: number, productId?: string) => void;
+  addItem: (product: Product, quantity?: number) => void;
+  removeItem: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  getQuantity: (productId: string) => number;
   totalItems: number;
   totalPrice: number;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
-const CART_STORAGE_KEY = "forsa_cart";
+const CART_STORAGE_KEY = "forsa_cart_v2";
+/** أقصى كمية للقطعة الواحدة بالطلب */
+const PER_ITEM_LIMIT = 50;
 
-function itemKey(item: { campaignId: string; productId?: string }) {
-  return item.productId ? `${item.campaignId}:${item.productId}` : item.campaignId;
+function capFor(product: Product): number | null {
+  if (product.stock === null) return null;
+  return Math.max(0, Math.min(product.stock, PER_ITEM_LIMIT));
+}
+
+function clamp(quantity: number, max: number | null): number {
+  const upper = max === null ? PER_ITEM_LIMIT : max;
+  return Math.max(0, Math.min(quantity, upper));
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -52,79 +59,82 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, loaded]);
 
-  const addItem = useCallback((campaign: Campaign, quantity: number, product?: CampaignProduct) => {
+  const addItem = useCallback((product: Product, quantity: number = 1) => {
     setItems((prev) => {
-      const matchKey = product ? `${campaign.id}:${product.id}` : campaign.id;
-      const existing = prev.find((i) => itemKey(i) === matchKey);
-
-      let remaining: number;
-      let unitPrice: number;
-
-      if (product) {
-        remaining = product.quantity - product.soldQuantity;
-        unitPrice = parseFloat(product.price);
-      } else {
-        remaining = campaign.totalQuantity - campaign.soldQuantity;
-        unitPrice = parseFloat(campaign.productPrice);
-      }
-
-      const maxQty = Math.min(remaining, 10);
+      const max = capFor(product);
+      const unitPrice = parseFloat(product.price);
+      const existing = prev.find((i) => i.productId === product.id);
 
       if (existing) {
-        const newQty = Math.min(existing.quantity + quantity, maxQty);
         return prev.map((i) =>
-          itemKey(i) === matchKey ? { ...i, quantity: newQty, maxQuantity: maxQty, price: unitPrice } : i
+          i.productId === product.id
+            ? {
+                ...i,
+                quantity: clamp(i.quantity + quantity, max),
+                maxQuantity: max,
+                price: unitPrice,
+                name: product.name,
+                imageUrl: product.imageUrl,
+              }
+            : i
         );
       }
+
       return [
         ...prev,
         {
-          campaignId: campaign.id,
-          productId: product?.id,
-          productName: product?.nameAr || product?.name,
-          title: campaign.title,
+          productId: product.id,
+          name: product.name,
           price: unitPrice,
-          quantity: Math.min(quantity, maxQty),
-          imageUrl: product?.imageUrl || campaign.imageUrl,
-          prizeName: campaign.prizeName,
-          maxQuantity: maxQty,
+          quantity: clamp(quantity, max),
+          imageUrl: product.imageUrl,
+          maxQuantity: max,
         },
       ];
     });
   }, []);
 
-  const removeItem = useCallback((campaignId: string, productId?: string) => {
-    const matchKey = productId ? `${campaignId}:${productId}` : campaignId;
-    setItems((prev) => prev.filter((i) => itemKey(i) !== matchKey));
+  const removeItem = useCallback((productId: string) => {
+    setItems((prev) => prev.filter((i) => i.productId !== productId));
   }, []);
 
-  const updateQuantity = useCallback((campaignId: string, quantity: number, productId?: string) => {
-    const matchKey = productId ? `${campaignId}:${productId}` : campaignId;
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
-      setItems((prev) => prev.filter((i) => itemKey(i) !== matchKey));
+      setItems((prev) => prev.filter((i) => i.productId !== productId));
       return;
     }
     setItems((prev) =>
       prev.map((i) =>
-        itemKey(i) === matchKey
-          ? { ...i, quantity: Math.min(quantity, i.maxQuantity) }
-          : i
+        i.productId === productId ? { ...i, quantity: clamp(quantity, i.maxQuantity) } : i
       )
     );
   }, []);
 
-  const clearCart = useCallback(() => {
-    setItems([]);
-  }, []);
+  const clearCart = useCallback(() => setItems([]), []);
+
+  const getQuantity = useCallback(
+    (productId: string) => items.find((i) => i.productId === productId)?.quantity ?? 0,
+    [items]
+  );
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
-  return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice }}>
-      {children}
-    </CartContext.Provider>
+  const value = useMemo(
+    () => ({
+      items,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clearCart,
+      getQuantity,
+      totalItems,
+      totalPrice,
+    }),
+    [items, addItem, removeItem, updateQuantity, clearCart, getQuantity, totalItems, totalPrice]
   );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {

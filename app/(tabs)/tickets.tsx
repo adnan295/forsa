@@ -48,7 +48,11 @@ const getShippingIcon = (s: string): keyof typeof Ionicons.glyphMap => {
   return map[s] || "help-circle";
 };
 
-function OrderItem({ order, colors }: { order: Order; colors: ReturnType<typeof useTheme>["colors"] }) {
+type OrderWithItems = Order & { items?: { productName: string; quantity: number }[] };
+
+function OrderItem({ order, colors }: { order: OrderWithItems; colors: ReturnType<typeof useTheme>["colors"] }) {
+  const itemCount = (order.items ?? []).reduce((sum, i) => sum + i.quantity, 0);
+  const summary = (order.items ?? []).map((i) => i.productName).join("، ");
   const paymentColor = getPaymentColor(order.paymentStatus);
   const shippingColor = getShippingColor(order.shippingStatus);
 
@@ -74,11 +78,26 @@ function OrderItem({ order, colors }: { order: Order; colors: ReturnType<typeof 
         </View>
         <View style={styles.orderAmountArea}>
           <Text style={[styles.orderAmount, { color: colors.text }]}>{parseFloat(order.totalAmount).toFixed(2)} $</Text>
-          <Text style={[styles.orderQty, { color: colors.textSecondary }]}>{order.quantity} منتج</Text>
+          <Text style={[styles.orderQty, { color: colors.textSecondary }]}>{itemCount} قطعة</Text>
         </View>
       </View>
 
       <View style={[styles.orderDivider, { backgroundColor: colors.border }]} />
+
+      {summary ? (
+        <Text style={[styles.orderSummary, { color: colors.textSecondary }]} numberOfLines={2}>
+          {summary}
+        </Text>
+      ) : null}
+
+      {order.ticketsAwarded > 0 && (
+        <View style={[styles.orderTicketsRow, { backgroundColor: colors.accent + "18" }]}>
+          <Ionicons name="ticket" size={13} color={colors.accentDark} />
+          <Text style={[styles.orderTicketsText, { color: colors.accentDark }]}>
+            حصلت على {order.ticketsAwarded} تذكرة من هذا الطلب
+          </Text>
+        </View>
+      )}
 
       <View style={styles.orderPills}>
         <View style={[styles.pill, { backgroundColor: paymentColor + "12", borderColor: paymentColor + "30" }]}>
@@ -162,7 +181,7 @@ export default function TicketsScreen() {
     isLoading: ordersLoading,
     refetch: refetchOrders,
     isRefetching: ordersRefetching,
-  } = useQuery<Order[]>({
+  } = useQuery<OrderWithItems[]>({
     queryKey: ["/api/orders"],
     enabled: !!user,
     staleTime: 5000,
@@ -317,6 +336,28 @@ export default function TicketsScreen() {
 }
 
 const styles = StyleSheet.create({
+  orderSummary: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginBottom: 8,
+    lineHeight: 19,
+  },
+  orderTicketsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  orderTicketsText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+    writingDirection: "rtl",
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,

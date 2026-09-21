@@ -3,8 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface FavoritesContextType {
   favorites: string[];
-  toggleFavorite: (campaignId: string) => void;
-  isFavorite: (campaignId: string) => boolean;
+  toggleFavorite: (productId: string) => void;
+  isFavorite: (productId: string) => boolean;
   favoritesCount: number;
 }
 
@@ -32,16 +32,16 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     }
   }, [favorites, loaded]);
 
-  const toggleFavorite = useCallback((campaignId: string) => {
+  const toggleFavorite = useCallback((productId: string) => {
     setFavorites((prev) =>
-      prev.includes(campaignId)
-        ? prev.filter((id) => id !== campaignId)
-        : [...prev, campaignId]
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId]
     );
   }, []);
 
   const isFavorite = useCallback(
-    (campaignId: string) => favorites.includes(campaignId),
+    (productId: string) => favorites.includes(productId),
     [favorites]
   );
 

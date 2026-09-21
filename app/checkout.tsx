@@ -29,7 +29,8 @@ import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useCart, CartItem } from "@/lib/cart-context";
 import { apiRequest, queryClient, buildMediaUrl, getApiUrl } from "@/lib/query-client";
-import type { Campaign, PaymentMethod } from "@shared/schema";
+import type { PaymentMethod } from "@shared/schema";
+import type { CurrentDraw } from "@/components/DrawBanner";
 import { registerForPushNotifications } from "@/lib/push-notifications";
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -50,12 +51,6 @@ function requiresReceiptUpload(method: PaymentMethod): boolean {
 }
 
 export default function CheckoutScreen() {
-  const params = useLocalSearchParams<{
-    campaignId: string;
-    quantity: string;
-    fromCart: string;
-    productId: string;
-  }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { items: cartItems, clearCart } = useCart();
@@ -64,11 +59,6 @@ export default function CheckoutScreen() {
   const submitAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: submitScale.value }],
   }));
-
-  const isCartMode = params.fromCart === "true";
-  const campaignId = params.campaignId;
-  const qty = parseInt(params.quantity || "1", 10) || 1;
-  const productId = params.productId || undefined;
 
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
@@ -164,9 +154,9 @@ export default function CheckoutScreen() {
     return true;
   };
 
-  const { data: campaign, isLoading: campaignLoading } = useQuery<Campaign & { products?: any[] }>({
-    queryKey: ["/api/campaigns", campaignId],
-    enabled: !isCartMode && !!campaignId,
+  const { data: draw } = useQuery<CurrentDraw | null>({
+    queryKey: ["/api/draws/current"],
+    staleTime: 15000,
   });
 
   const { data: paymentMethods, isLoading: methodsLoading } = useQuery<
@@ -183,15 +173,8 @@ export default function CheckoutScreen() {
   const selectedMethod =
     paymentMethods?.find((m) => m.id === selectedMethodId) || null;
 
-  const selectedVariant = campaign?.products?.find((p: any) => String(p.id) === String(productId));
-  const unitPrice = selectedVariant ? parseFloat(selectedVariant.price) : (campaign ? parseFloat(campaign.productPrice) : 0);
-  const variantName = selectedVariant?.nameAr || selectedVariant?.name || undefined;
-  const subtotal = isCartMode
-    ? cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    : unitPrice * qty;
-  const totalItemCount = isCartMode
-    ? cartItems.reduce((sum, item) => sum + item.quantity, 0)
-    : qty;
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const discountAmount = appliedCoupon
     ? (subtotal * appliedCoupon.discountPercent) / 100
     : 0;
@@ -199,6 +182,10 @@ export default function CheckoutScreen() {
   const afterCoupon = subtotal - discountAmount;
   const walletDeduction = useWallet ? Math.min(walletBalance, afterCoupon) : 0;
   const total = afterCoupon - walletDeduction;
+
+  // التذاكر بتنحسب على قيمة البضاعة بعد الخصم، قبل خصم المحفظة
+  const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
+  const expectedTickets = ticketPrice > 0 ? Math.floor(afterCoupon / ticketPrice) : 0;
 
   const couponMutation = useMutation({
     mutationFn: async () => {
@@ -225,45 +212,26 @@ export default function CheckoutScreen() {
 
   const purchaseMutation = useMutation({
     mutationFn: async () => {
-      if (isCartMode) {
-        const res = await apiRequest("POST", "/api/cart-purchase", {
-          items: cartItems.map((item) => ({
-            campaignId: item.campaignId,
-            quantity: item.quantity,
-            productId: item.productId,
-          })),
-          paymentMethod: selectedMethod?.name,
-          shippingFullName,
-          shippingPhone,
-          shippingCity,
-          shippingAddress,
-          shippingCountry,
-          couponCode: appliedCoupon?.code || undefined,
-          useWallet,
-          walletAmount: walletDeduction,
-        });
-        return res.json();
-      } else {
-        const res = await apiRequest("POST", "/api/purchase", {
-          campaignId,
-          quantity: qty,
-          productId,
-          paymentMethod: selectedMethod?.name,
-          shippingFullName,
-          shippingPhone,
-          shippingCity,
-          shippingAddress,
-          shippingCountry,
-          couponCode: appliedCoupon?.code || undefined,
-          useWallet,
-          walletAmount: walletDeduction,
-        });
-        return res.json();
-      }
+      const res = await apiRequest("POST", "/api/checkout", {
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+        paymentMethod: selectedMethod?.name,
+        shippingFullName,
+        shippingPhone,
+        shippingCity,
+        shippingAddress,
+        shippingCountry,
+        couponCode: appliedCoupon?.code || undefined,
+        useWallet,
+      });
+      return res.json();
     },
     onSuccess: async (data: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/wallet"] });
@@ -272,38 +240,26 @@ export default function CheckoutScreen() {
         registerForPushNotifications().catch(() => {});
       }
 
-      if (isCartMode) {
-        clearCart();
-        const firstOrderId = data.orders?.[0]?.id;
-        if (receiptImage && firstOrderId) {
-          try {
-            for (const ord of (data.orders || [])) {
-              await uploadReceiptToOrder(ord.id, receiptImage, receiptFile);
-            }
-            Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
-              { text: "حسناً", onPress: () => router.replace("/(tabs)/tickets" as any) },
-            ]);
-          } catch (_) {
-            setPendingOrderId(firstOrderId);
-          }
-        } else {
-          Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
-            { text: "حسناً", onPress: () => router.replace("/(tabs)/tickets" as any) },
-          ]);
-        }
-      } else {
-        const orderId = data.order?.id || data.id;
-        if (receiptImage && orderId) {
-          try {
-            await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
-            router.replace(`/order/${orderId}` as any);
-          } catch (_) {
-            setPendingOrderId(orderId);
-          }
-        } else {
-          router.replace(`/order/${orderId}` as any);
+      const orderId = data.order?.id;
+      clearCart();
+
+      if (receiptImage && orderId) {
+        try {
+          await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
+        } catch (_) {
+          setPendingOrderId(orderId);
+          return;
         }
       }
+
+      const ticketCount = data.expectedTickets ?? 0;
+      Alert.alert(
+        "تم استلام طلبك",
+        ticketCount > 0
+          ? `رح تحصل على ${ticketCount} ${ticketCount === 1 ? "تذكرة" : "تذكرة"} للسحب بمجرد تأكيد دفعتك.`
+          : "طلبك قيد المراجعة وسيتم تأكيده قريباً.",
+        [{ text: "تتبّع الطلب", onPress: () => router.replace(`/order/${orderId}` as any) }]
+      );
     },
     onError: (err: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -335,7 +291,7 @@ export default function CheckoutScreen() {
     purchaseMutation.mutate();
   }
 
-  if ((!isCartMode && campaignLoading) || methodsLoading) {
+  if (methodsLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={Colors.light.accent} />
@@ -343,16 +299,7 @@ export default function CheckoutScreen() {
     );
   }
 
-  if (!isCartMode && !campaign) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Ionicons name="alert-circle" size={48} color={Colors.light.danger} />
-        <Text style={styles.errorText}>لم يتم العثور على الحملة</Text>
-      </View>
-    );
-  }
-
-  if (isCartMode && cartItems.length === 0) {
+  if (cartItems.length === 0) {
     return (
       <View style={[styles.container, styles.centered]}>
         <Ionicons name="cart-outline" size={48} color={Colors.light.textSecondary} />
@@ -365,7 +312,7 @@ export default function CheckoutScreen() {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={["#7C3AED", "#A855F7", "#EC4899"]}
+          colors={["#1A1A1A", "#2D2D2D"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
@@ -394,7 +341,7 @@ export default function CheckoutScreen() {
             style={{ borderRadius: 16, overflow: "hidden", width: "100%" }}
           >
             <LinearGradient
-              colors={[Colors.light.accent, Colors.light.accentPink]}
+              colors={[Colors.light.accent, Colors.light.accentDark]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={{ paddingVertical: 16, alignItems: "center", borderRadius: 16 }}
@@ -412,7 +359,7 @@ export default function CheckoutScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        colors={["#1A1A1A", "#2D2D2D"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[
@@ -449,45 +396,41 @@ export default function CheckoutScreen() {
               <Text style={styles.sectionTitle}>ملخص الطلب</Text>
             </View>
             <View style={styles.divider} />
-            {isCartMode ? (
-              <>
-                {cartItems.map((item, idx) => (
-                  <View key={`${item.campaignId}-${item.productId || idx}`} style={styles.cartItemRow}>
-                    <Text style={styles.cartItemPrice}>{(item.price * item.quantity).toFixed(2)} $</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.campaignTitle}>{item.title}</Text>
-                      {item.productName && (
-                        <Text style={[styles.summaryLabel, { color: Colors.light.accent, marginBottom: 2 }]}>{item.productName}</Text>
-                      )}
-                      <Text style={styles.summaryLabel}>{item.quantity} × {item.price.toFixed(2)} $</Text>
-                    </View>
-                  </View>
-                ))}
-              </>
-            ) : (
-              <>
-                <Text style={styles.campaignTitle}>{campaign!.title}</Text>
-                {variantName && (
-                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.accent, textAlign: "right", writingDirection: "rtl" as const, marginBottom: 4 }}>{variantName}</Text>
-                )}
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryValue}>{unitPrice.toFixed(2)} $</Text>
-                  <Text style={styles.summaryLabel}>سعر المنتج</Text>
+            {cartItems.map((item) => (
+              <View key={item.productId} style={styles.cartItemRow}>
+                <Text style={styles.cartItemPrice}>{(item.price * item.quantity).toFixed(2)} $</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemTitle}>{item.name}</Text>
+                  <Text style={styles.summaryLabel}>{item.quantity} × {item.price.toFixed(2)} $</Text>
                 </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryValue}>{qty}</Text>
-                  <Text style={styles.summaryLabel}>الكمية</Text>
-                </View>
-              </>
-            )}
+              </View>
+            ))}
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text style={styles.subtotalValue}>
                 {subtotal.toFixed(2)} $
               </Text>
-              <Text style={styles.subtotalLabel}>المجموع الفرعي ({totalItemCount} منتج)</Text>
+              <Text style={styles.subtotalLabel}>المجموع الفرعي ({totalItemCount} قطعة)</Text>
             </View>
           </View>
+
+          {draw && (
+            <View style={styles.ticketCard}>
+              <View style={styles.ticketIconWrap}>
+                <Ionicons name="ticket" size={20} color="#1A1A1A" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ticketCardTitle}>
+                  {expectedTickets > 0
+                    ? `${expectedTickets} ${expectedTickets === 1 ? "تذكرة" : "تذكرة"} لجولة "${draw.prizeName}"`
+                    : `لسا ما وصلت لأول تذكرة`}
+                </Text>
+                <Text style={styles.ticketCardSub}>
+                  كل {ticketPrice.toFixed(0)}$ = تذكرة · بتنمنح بعد تأكيد الدفع
+                </Text>
+              </View>
+            </View>
+          )}
 
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
@@ -852,8 +795,16 @@ export default function CheckoutScreen() {
             <View style={styles.totalDivider} />
             <View style={styles.totalRow}>
               <Text style={styles.grandTotal}>{total.toFixed(2)} $</Text>
-              <Text style={styles.grandTotalLabel}>الإجمالي</Text>
+              <Text style={styles.grandTotalLabel}>الإجمالي المستحق</Text>
             </View>
+            {draw && expectedTickets > 0 && (
+              <View style={[styles.totalRow, { marginTop: 6 }]}>
+                <Text style={[styles.totalRowValue, { color: Colors.light.accentDark }]}>
+                  {expectedTickets} تذكرة
+                </Text>
+                <Text style={styles.totalRowLabel}>تذاكر السحب 🎟️</Text>
+              </View>
+            )}
           </View>
 
           {pendingOrderId && (
@@ -921,6 +872,40 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
+  ticketCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#FFFBE6",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FFE566",
+  },
+  ticketIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFD000",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ticketCardTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    color: "#1A1A1A",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  ticketCardSub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "#8A7500",
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginTop: 2,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
@@ -1011,7 +996,7 @@ const styles = StyleSheet.create({
     color: Colors.light.accent,
     marginEnd: 12,
   },
-  campaignTitle: {
+  itemTitle: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
     color: Colors.light.text,

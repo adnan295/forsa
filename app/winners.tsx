@@ -16,9 +16,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
 import { buildMediaUrl } from "@/lib/query-client";
-import type { Campaign } from "@shared/schema";
 
-type WinnerCampaign = Campaign & { winnerUsername: string };
+/** الشكل اللي بيرجّعه GET /api/winners */
+interface DrawWinner {
+  drawId: string;
+  drawTitle: string;
+  prizeName: string;
+  prizeImageUrl: string | null;
+  ticketNumber: string | null;
+  drawnAt: string | null;
+  totalTickets: number;
+  winnerUsername: string | null;
+}
 
 function formatDrawDate(dateStr: string | null | undefined) {
   if (!dateStr) return "";
@@ -33,7 +42,7 @@ function formatDrawDate(dateStr: string | null | undefined) {
 export default function WinnersScreen() {
   const insets = useSafeAreaInsets();
 
-  const { data: completedCampaigns = [], isLoading } = useQuery<WinnerCampaign[]>({
+  const { data: winners = [], isLoading } = useQuery<DrawWinner[]>({
     queryKey: ["/api/winners"],
   });
 
@@ -48,7 +57,7 @@ export default function WinnersScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        colors={["#1A1A1A", "#2D2D2D"]}
         style={[
           styles.header,
           { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 },
@@ -73,49 +82,43 @@ export default function WinnersScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {completedCampaigns.length === 0 ? (
+        {winners.length === 0 ? (
           <View style={styles.emptyState}>
             <LinearGradient
-              colors={["rgba(124,58,237,0.08)", "rgba(236,72,153,0.08)"]}
+              colors={["rgba(255,208,0,0.12)", "rgba(230,184,0,0.12)"]}
               style={styles.emptyIconWrap}
             >
               <Ionicons name="trophy-outline" size={40} color={Colors.light.accent} />
             </LinearGradient>
             <Text style={styles.emptyTitle}>لا يوجد فائزون بعد</Text>
             <Text style={styles.emptyText}>
-              ستظهر هنا نتائج الحملات المكتملة والفائزون بالهدايا
+              ستظهر هنا نتائج جولات السحب المكتملة والفائزون بالجوائز
             </Text>
           </View>
         ) : (
-          completedCampaigns.map((campaign) => (
-            <WinnerCard key={campaign.id} campaign={campaign} />
-          ))
+          winners.map((w) => <WinnerCard key={w.drawId} winner={w} />)
         )}
       </ScrollView>
     </View>
   );
 }
 
-function WinnerCard({ campaign }: { campaign: WinnerCampaign }) {
-  const imageUri = buildMediaUrl(campaign.imageUrl);
+function WinnerCard({ winner }: { winner: DrawWinner }) {
+  const imageUri = buildMediaUrl(winner.prizeImageUrl);
 
   return (
     <View style={styles.card}>
       <View style={styles.cardImageArea}>
         {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
+          <Image source={{ uri: imageUri }} style={styles.cardImage} resizeMode="cover" />
         ) : (
           <LinearGradient
-            colors={["#7C3AED", "#A855F7", "#C084FC"]}
+            colors={["#1A1A1A", "#2D2D2D", "#3D3D3D"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.cardImagePlaceholder}
           >
-            <Ionicons name="trophy" size={28} color="#fff" />
+            <Ionicons name="trophy" size={28} color={Colors.light.accent} />
           </LinearGradient>
         )}
         <LinearGradient
@@ -124,28 +127,28 @@ function WinnerCard({ campaign }: { campaign: WinnerCampaign }) {
         />
         <View style={styles.completedBadge}>
           <Ionicons name="checkmark-circle" size={12} color="#fff" />
-          <Text style={styles.completedBadgeText}>مكتمل</Text>
+          <Text style={styles.completedBadgeText}>تم السحب</Text>
         </View>
       </View>
 
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle} numberOfLines={1}>
-          {campaign.title}
+          {winner.drawTitle}
         </Text>
 
         <View style={styles.infoRow}>
-          <View style={[styles.infoIconWrap, { backgroundColor: "rgba(124,58,237,0.1)" }]}>
-            <Ionicons name="trophy" size={14} color={Colors.light.accent} />
+          <View style={[styles.infoIconWrap, { backgroundColor: "rgba(255,208,0,0.18)" }]}>
+            <Ionicons name="trophy" size={14} color={Colors.light.accentDark} />
           </View>
           <View style={styles.infoTextArea}>
             <Text style={styles.infoLabel}>الجائزة</Text>
             <Text style={styles.infoValue} numberOfLines={1}>
-              {campaign.prizeName}
+              {winner.prizeName}
             </Text>
           </View>
         </View>
 
-        {campaign.winnerUsername ? (
+        {winner.winnerUsername ? (
           <View style={styles.infoRow}>
             <View style={[styles.infoIconWrap, { backgroundColor: "rgba(245,158,11,0.1)" }]}>
               <Ionicons name="person" size={14} color={Colors.light.warning} />
@@ -153,36 +156,44 @@ function WinnerCard({ campaign }: { campaign: WinnerCampaign }) {
             <View style={styles.infoTextArea}>
               <Text style={styles.infoLabel}>الفائز</Text>
               <Text style={[styles.infoValue, { color: Colors.light.warning }]}>
-                {campaign.winnerUsername}
+                {winner.winnerUsername}
               </Text>
             </View>
           </View>
         ) : null}
 
-        {campaign.winnerTicketId && (
+        {winner.ticketNumber && (
           <View style={styles.infoRow}>
-            <View style={[styles.infoIconWrap, { backgroundColor: "rgba(236,72,153,0.1)" }]}>
-              <Ionicons name="ticket" size={14} color={Colors.light.accentPink} />
+            <View style={[styles.infoIconWrap, { backgroundColor: "rgba(255,208,0,0.12)" }]}>
+              <Ionicons name="ticket" size={14} color={Colors.light.accentDark} />
             </View>
             <View style={styles.infoTextArea}>
               <Text style={styles.infoLabel}>تذكرة الفوز</Text>
-              <Text style={[styles.infoValue, { color: Colors.light.accentPink }]}>
-                #{campaign.winnerTicketId}
+              <Text style={[styles.infoValue, { color: Colors.light.accentDark }]}>
+                {winner.ticketNumber}
               </Text>
             </View>
           </View>
         )}
 
-        {campaign.drawAt && (
+        <View style={styles.infoRow}>
+          <View style={[styles.infoIconWrap, { backgroundColor: "rgba(59,130,246,0.1)" }]}>
+            <Ionicons name="people" size={14} color="#3B82F6" />
+          </View>
+          <View style={styles.infoTextArea}>
+            <Text style={styles.infoLabel}>إجمالي التذاكر</Text>
+            <Text style={styles.infoValue}>{winner.totalTickets.toLocaleString("en-US")}</Text>
+          </View>
+        </View>
+
+        {winner.drawnAt && (
           <View style={styles.infoRow}>
             <View style={[styles.infoIconWrap, { backgroundColor: "rgba(16,185,129,0.1)" }]}>
               <Ionicons name="calendar" size={14} color={Colors.light.success} />
             </View>
             <View style={styles.infoTextArea}>
-              <Text style={styles.infoLabel}>تاريخ الاختيار</Text>
-              <Text style={styles.infoValue}>
-                {formatDrawDate(campaign.drawAt as any)}
-              </Text>
+              <Text style={styles.infoLabel}>تاريخ السحب</Text>
+              <Text style={styles.infoValue}>{formatDrawDate(winner.drawnAt)}</Text>
             </View>
           </View>
         )}

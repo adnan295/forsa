@@ -5,13 +5,14 @@ import {
   StyleSheet,
   Pressable,
   Platform,
-  Image,
   FlatList,
   Alert,
 } from "react-native";
 import { router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useSharedValue,
@@ -23,23 +24,23 @@ import Colors from "@/constants/colors";
 import { useCart, CartItem } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { buildMediaUrl } from "@/lib/query-client";
-
-function formatImageUrl(url: string) {
-  return buildMediaUrl(url) ?? url;
-}
+import type { CurrentDraw } from "@/components/DrawBanner";
 
 function CartItemCard({ item }: { item: CartItem }) {
   const { updateQuantity, removeItem } = useCart();
+  const imageUri = buildMediaUrl(item.imageUrl);
+  const atMax = item.maxQuantity !== null && item.quantity >= item.maxQuantity;
 
   return (
     <View style={styles.itemCard}>
       <View style={styles.itemRow}>
         <View style={styles.itemImageWrap}>
-          {item.imageUrl ? (
+          {imageUri ? (
             <Image
-              source={{ uri: formatImageUrl(item.imageUrl) }}
+              source={{ uri: imageUri }}
               style={styles.itemImage}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="memory-disk"
             />
           ) : (
             <View style={styles.itemImagePlaceholder}>
@@ -48,20 +49,13 @@ function CartItemCard({ item }: { item: CartItem }) {
           )}
         </View>
         <View style={styles.itemInfo}>
-          <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
-          {item.productName && (
-            <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.accent, textAlign: "right", writingDirection: "rtl" as const, marginBottom: 2 }}>{item.productName}</Text>
-          )}
-          <View style={styles.itemPrizeRow}>
-            <Ionicons name="trophy" size={12} color="#A78BFA" />
-            <Text style={styles.itemPrize} numberOfLines={1}>{item.prizeName}</Text>
-          </View>
-          <Text style={styles.itemPrice}>{item.price.toFixed(2)} $</Text>
+          <Text style={styles.itemTitle} numberOfLines={2}>{item.name}</Text>
+          <Text style={styles.itemPrice}>{item.price.toFixed(2)} $ / القطعة</Text>
         </View>
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            removeItem(item.campaignId, item.productId);
+            removeItem(item.productId);
           }}
           style={styles.removeBtn}
         >
@@ -74,7 +68,7 @@ function CartItemCard({ item }: { item: CartItem }) {
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              updateQuantity(item.campaignId, item.quantity - 1, item.productId);
+              updateQuantity(item.productId, item.quantity - 1);
             }}
             style={styles.qtyBtn}
           >
@@ -85,15 +79,14 @@ function CartItemCard({ item }: { item: CartItem }) {
           </View>
           <Pressable
             onPress={() => {
-              if (item.quantity < item.maxQuantity) {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                updateQuantity(item.campaignId, item.quantity + 1, item.productId);
-              }
+              if (atMax) return;
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              updateQuantity(item.productId, item.quantity + 1);
             }}
-            style={[styles.qtyBtn, item.quantity >= item.maxQuantity && { opacity: 0.4 }]}
-            disabled={item.quantity >= item.maxQuantity}
+            style={[styles.qtyBtn, atMax && { opacity: 0.4 }]}
+            disabled={atMax}
           >
-            <Ionicons name="add" size={18} color={item.quantity >= item.maxQuantity ? Colors.light.border : Colors.light.text} />
+            <Ionicons name="add" size={18} color={atMax ? Colors.light.border : Colors.light.text} />
           </Pressable>
         </View>
       </View>
@@ -110,10 +103,20 @@ export default function CartScreen() {
     transform: [{ scale: checkoutScale.value }],
   }));
 
+  const { data: draw } = useQuery<CurrentDraw | null>({
+    queryKey: ["/api/draws/current"],
+    staleTime: 15000,
+  });
+
+  const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
+  const expectedTickets = ticketPrice > 0 ? Math.floor(totalPrice / ticketPrice) : 0;
+  const nextTicketAt = ticketPrice > 0 ? (expectedTickets + 1) * ticketPrice : 0;
+  const amountToNextTicket = nextTicketAt - totalPrice;
+
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        colors={["#1A1A1A", "#2D2D2D"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}
@@ -152,19 +155,16 @@ export default function CartScreen() {
             <Ionicons name="cart-outline" size={56} color={Colors.light.accentLight} />
           </View>
           <Text style={styles.emptyTitle}>سلتك فارغة</Text>
-          <Text style={styles.emptySubtitle}>تصفح الحملات وأضف المنتجات التي تعجبك</Text>
-          <Pressable
-            onPress={() => router.push("/(tabs)")}
-            style={styles.browseBtn}
-          >
+          <Text style={styles.emptySubtitle}>تصفّح المنتجات وكل مشترياتك بتعطيك تذاكر للسحب</Text>
+          <Pressable onPress={() => router.push("/(tabs)")} style={styles.browseBtn}>
             <LinearGradient
               colors={[Colors.light.accent, Colors.light.accentDark]}
               style={styles.browseBtnGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="flame" size={20} color="#fff" />
-              <Text style={styles.browseBtnText}>تصفح الحملات</Text>
+              <Ionicons name="storefront" size={20} color="#1A1A1A" />
+              <Text style={styles.browseBtnText}>تصفّح المتجر</Text>
             </LinearGradient>
           </Pressable>
         </View>
@@ -172,11 +172,31 @@ export default function CartScreen() {
         <>
           <FlatList
             data={items}
-            keyExtractor={(item) => item.productId ? `${item.campaignId}:${item.productId}` : item.campaignId}
+            keyExtractor={(item) => item.productId}
             renderItem={({ item }) => <CartItemCard item={item} />}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
-            scrollEnabled={!!items.length}
+            ListHeaderComponent={
+              ticketPrice > 0 ? (
+                <View style={styles.ticketPreview}>
+                  <View style={styles.ticketPreviewIcon}>
+                    <Ionicons name="ticket" size={20} color="#1A1A1A" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.ticketPreviewTitle}>
+                      {expectedTickets > 0
+                        ? `رح تاخد ${expectedTickets} ${expectedTickets === 1 ? "تذكرة" : "تذاكر"} للسحب`
+                        : "لسا ما وصلت لأول تذكرة"}
+                    </Text>
+                    <Text style={styles.ticketPreviewSub}>
+                      {amountToNextTicket > 0
+                        ? `ضيف ${amountToNextTicket.toFixed(2)}$ كمان وبتاخد تذكرة إضافية`
+                        : "بتنمنح بعد تأكيد الدفع"}
+                    </Text>
+                  </View>
+                </View>
+              ) : null
+            }
           />
           <View style={[styles.bottomBar, { paddingBottom: Platform.OS === "web" ? 34 : Math.max(insets.bottom, 16) }]}>
             <LinearGradient
@@ -186,7 +206,7 @@ export default function CartScreen() {
             <View style={styles.bottomSummary}>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryValue}>{totalItems}</Text>
-                <Text style={styles.summaryLabel}>عدد المنتجات</Text>
+                <Text style={styles.summaryLabel}>عدد القطع</Text>
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryRow}>
@@ -204,7 +224,7 @@ export default function CartScreen() {
                     return;
                   }
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  router.push({ pathname: "/checkout", params: { fromCart: "true" } } as any);
+                  router.push("/checkout" as any);
                 }}
                 style={styles.checkoutBtn}
               >
@@ -214,7 +234,7 @@ export default function CartScreen() {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                 >
-                  <Ionicons name="bag-check" size={22} color="#fff" />
+                  <Ionicons name="bag-check" size={22} color="#1A1A1A" />
                   <Text style={styles.checkoutBtnText}>إتمام الشراء</Text>
                 </LinearGradient>
               </Pressable>
@@ -227,6 +247,40 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
+  ticketPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#FFFBE6",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#FFE566",
+  },
+  ticketPreviewIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFD000",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ticketPreviewTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    color: "#1A1A1A",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  ticketPreviewSub: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "#8A7500",
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginTop: 2,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
@@ -307,7 +361,7 @@ const styles = StyleSheet.create({
   browseBtnText: {
     fontFamily: "Inter_700Bold",
     fontSize: 17,
-    color: "#fff",
+    color: "#1A1A1A",
     writingDirection: "rtl",
   },
   list: {
@@ -356,18 +410,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     textAlign: "right",
     writingDirection: "rtl",
-  },
-  itemPrizeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  itemPrize: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: "#A78BFA",
-    writingDirection: "rtl",
-    flex: 1,
   },
   itemPrice: {
     fontFamily: "Inter_700Bold",
@@ -494,7 +536,7 @@ const styles = StyleSheet.create({
   checkoutBtnText: {
     fontFamily: "Inter_700Bold",
     fontSize: 18,
-    color: "#fff",
+    color: "#1A1A1A",
     writingDirection: "rtl",
   },
 });

@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
-  Image,
+  TextInput,
+  ScrollView,
   Dimensions,
   Linking,
   AppState,
@@ -17,6 +18,7 @@ import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useSharedValue,
@@ -32,39 +34,48 @@ import { useCart } from "@/lib/cart-context";
 import { queryClient, buildMediaUrl } from "@/lib/query-client";
 import { useFavorites } from "@/lib/favorites-context";
 import { getNotificationPermissionStatus } from "@/lib/push-notifications";
-import type { Campaign } from "@shared/schema";
+import DrawBanner, { type CurrentDraw } from "@/components/DrawBanner";
+import type { Product } from "@shared/schema";
 
 const { width: W } = Dimensions.get("window");
 const CARD_W = (W - 48) / 2;
 
-// ─── Mini Countdown ──────────────────────────────────────────
-function useTick(endsAt?: string | Date | null) {
-  const [left, setLeft] = useState({ h: 0, m: 0, s: 0, expired: true });
-  useEffect(() => {
-    if (!endsAt) return;
-    const calc = () => {
-      const diff = new Date(endsAt).getTime() - Date.now();
-      if (diff <= 0) return { h: 0, m: 0, s: 0, expired: true };
-      return { h: Math.floor(diff / 3600000), m: Math.floor((diff % 3600000) / 60000), s: Math.floor((diff % 60000) / 1000), expired: false };
-    };
-    setLeft(calc());
-    const id = setInterval(() => setLeft(calc()), 1000);
-    return () => clearInterval(id);
-  }, [endsAt]);
-  return left;
-}
+const CATEGORIES: { key: string; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: "all", label: "الكل", icon: "apps" },
+  { key: "electronics", label: "إلكترونيات", icon: "phone-portrait" },
+  { key: "fashion", label: "أزياء", icon: "shirt" },
+  { key: "beauty", label: "جمال", icon: "sparkles" },
+  { key: "accessories", label: "إكسسوارات", icon: "watch" },
+  { key: "home", label: "منزل", icon: "home" },
+  { key: "other", label: "أخرى", icon: "ellipsis-horizontal" },
+];
 
-// ─── Grid Card ───────────────────────────────────────────────
-function GridCard({ campaign, index, onPress }: { campaign: Campaign; index: number; onPress: () => void }) {
+// ─── بطاقة منتج بالشبكة ────────────────────────────────────────
+function GridCard({
+  product,
+  ticketPrice,
+  index,
+  onPress,
+  onAdd,
+  inCart,
+}: {
+  product: Product;
+  ticketPrice: number;
+  index: number;
+  onPress: () => void;
+  onAdd: () => void;
+  inCart: number;
+}) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
   const ty = useSharedValue(20);
   const { toggleFavorite, isFavorite } = useFavorites();
-  const favorited = isFavorite(campaign.id);
-  const tick = useTick(campaign.endsAt);
-  const progress = campaign.totalQuantity > 0 ? campaign.soldQuantity / campaign.totalQuantity : 0;
-  const isCompleted = campaign.status === "completed";
-  const isSoldOut = campaign.status === "sold_out" || campaign.status === "drawing";
+  const favorited = isFavorite(product.id);
+
+  const price = parseFloat(product.price);
+  const outOfStock = product.stock !== null && product.stock <= 0;
+  const lowStock = product.stock !== null && product.stock > 0 && product.stock <= 5;
+  const tickets = ticketPrice > 0 ? Math.floor(price / ticketPrice) : 0;
 
   useEffect(() => {
     const delay = Math.min(index * 60, 300);
@@ -77,12 +88,7 @@ function GridCard({ campaign, index, onPress }: { campaign: Campaign; index: num
     transform: [{ scale: scale.value }, { translateY: ty.value }],
   }));
 
-  const getTag = () => {
-    if (isCompleted) return { label: "مكتمل", color: "#10B981" };
-    if (isSoldOut) return { label: "نفذ", color: "#94A3B8" };
-    return null;
-  };
-  const tag = getTag();
+  const imageUri = buildMediaUrl(product.imageUrl);
 
   return (
     <Animated.View style={[anim, { width: CARD_W }]}>
@@ -92,71 +98,65 @@ function GridCard({ campaign, index, onPress }: { campaign: Campaign; index: num
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
         style={g.card}
       >
-        {/* Image */}
         <View style={g.imgBox}>
-          {campaign.imageUrl ? (
-            <Image source={{ uri: buildMediaUrl(campaign.imageUrl)! }} style={g.img} resizeMode="cover" />
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={g.img} contentFit="cover" cachePolicy="memory-disk" transition={200} />
           ) : (
             <LinearGradient colors={["#1A1A1A", "#333333"]} style={g.img}>
-              <Ionicons name="gift-outline" size={32} color="#FFD000" />
+              <View style={g.imgPlaceholderInner}>
+                <Ionicons name="cube-outline" size={32} color="#FFD000" />
+              </View>
             </LinearGradient>
           )}
-          {/* Price chip */}
+
           <View style={g.priceChip}>
-            <Text style={g.priceText}>${parseFloat(campaign.productPrice).toFixed(0)}</Text>
+            <Text style={g.priceText}>${price.toFixed(0)}</Text>
           </View>
-          {/* Fav */}
+
           <Pressable
-            onPress={(e) => { e.stopPropagation(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleFavorite(campaign.id); }}
-            style={g.favBtn} hitSlop={8}
+            onPress={(e) => { e.stopPropagation(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleFavorite(product.id); }}
+            style={g.favBtn}
+            hitSlop={8}
           >
             <Ionicons name={favorited ? "heart" : "heart-outline"} size={16} color={favorited ? "#EF4444" : "#fff"} />
           </Pressable>
-          {/* Tag */}
-          {tag && (
-            <View style={[g.tag, { backgroundColor: tag.color }]}>
-              <Text style={g.tagText}>{tag.label}</Text>
+
+          {(outOfStock || lowStock) && (
+            <View style={[g.tag, { backgroundColor: outOfStock ? "#94A3B8" : "#F59E0B" }]}>
+              <Text style={g.tagText}>{outOfStock ? "نفذ" : `باقي ${product.stock}`}</Text>
             </View>
           )}
         </View>
 
-        {/* Body */}
         <View style={g.body}>
-          <Text style={g.title} numberOfLines={2}>{campaign.title}</Text>
+          <Text style={g.title} numberOfLines={2}>{product.name}</Text>
 
-          {/* Prize */}
-          <View style={g.prizeRow}>
-            <Ionicons name="trophy" size={11} color="#FFD000" />
-            <Text style={g.prizeText} numberOfLines={1}>{campaign.prizeName}</Text>
-          </View>
-
-          {/* Progress */}
-          <View style={g.barBg}>
-            <View style={[g.barFill, { width: `${Math.min(progress * 100, 100)}%` }]} />
-          </View>
-          <Text style={g.remaining}>
-            {campaign.totalQuantity - campaign.soldQuantity} تذكرة متبقية
-          </Text>
-
-          {/* Countdown */}
-          {campaign.endsAt && !isCompleted && !isSoldOut && !tick.expired && (
-            <View style={g.tickRow}>
-              <Text style={g.tickNum}>{String(tick.s).padStart(2,"0")}</Text>
-              <Text style={g.tickSep}>:</Text>
-              <Text style={g.tickNum}>{String(tick.m).padStart(2,"0")}</Text>
-              <Text style={g.tickSep}>:</Text>
-              <Text style={g.tickNum}>{String(tick.h).padStart(2,"0")}</Text>
-              <Ionicons name="timer-outline" size={11} color="#94A3B8" />
+          {tickets > 0 && (
+            <View style={g.ticketRow}>
+              <Ionicons name="ticket" size={11} color="#FFD000" />
+              <Text style={g.ticketText} numberOfLines={1}>
+                {tickets} {tickets === 1 ? "تذكرة" : "تذاكر"} للسحب
+              </Text>
             </View>
           )}
 
-          {/* CTA */}
           <Pressable
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
-            style={[g.cta, isCompleted && { backgroundColor: "#10B981" }, isSoldOut && { backgroundColor: "#CBD5E1" }]}
+            onPress={(e) => {
+              e.stopPropagation();
+              if (outOfStock) return;
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              onAdd();
+            }}
+            disabled={outOfStock}
+            style={[g.addBtn, outOfStock && g.addBtnDisabled, inCart > 0 && g.addBtnInCart]}
           >
-            <Text style={[g.ctaText, isSoldOut && { color: "#64748B" }]}>
-              {isCompleted ? "عرض النتائج" : isSoldOut ? "نفذت الكمية" : "اشترِ الآن"}
+            <Ionicons
+              name={inCart > 0 ? "checkmark" : "add"}
+              size={15}
+              color={outOfStock ? "#999" : "#1A1A1A"}
+            />
+            <Text style={[g.addBtnText, outOfStock && { color: "#999" }]}>
+              {outOfStock ? "غير متوفر" : inCart > 0 ? `بالسلة (${inCart})` : "أضف"}
             </Text>
           </Pressable>
         </View>
@@ -165,55 +165,9 @@ function GridCard({ campaign, index, onPress }: { campaign: Campaign; index: num
   );
 }
 
-// ─── Featured Hero Card ───────────────────────────────────────
-function HeroCard({ campaign, onPress }: { campaign: Campaign; onPress: () => void }) {
-  const scale = useSharedValue(1);
-  const progress = campaign.totalQuantity > 0 ? campaign.soldQuantity / campaign.totalQuantity : 0;
-
-  return (
-    <Pressable
-      onPressIn={() => { scale.value = withSpring(0.98, { damping: 15 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}
-      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onPress(); }}
-      style={hero.card}
-    >
-      <Animated.View style={useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))}>
-        <View style={hero.imgBox}>
-          {campaign.imageUrl ? (
-            <Image source={{ uri: buildMediaUrl(campaign.imageUrl)! }} style={hero.img} resizeMode="cover" />
-          ) : (
-            <LinearGradient colors={["#1A1A1A", "#2D2D2D", "#FFD000"]} style={hero.img}>
-              <Ionicons name="gift-outline" size={52} color="#fff" />
-            </LinearGradient>
-          )}
-          <LinearGradient colors={["transparent", "rgba(0,0,0,0.75)"]} style={hero.overlay} />
-
-          <View style={hero.badge}>
-            <View style={hero.liveDoc}/>
-            <Text style={hero.badgeText}>عرض مميز</Text>
-          </View>
-
-          <View style={hero.bottomRow}>
-            <Pressable style={hero.ctaBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onPress(); }}>
-              <Text style={hero.ctaBtnText}>اشترِ الآن</Text>
-            </Pressable>
-            <View>
-              <Text style={hero.heroTitle} numberOfLines={1}>{campaign.title}</Text>
-              <Text style={hero.heroSub} numberOfLines={1}>🏆 {campaign.prizeName}</Text>
-              <View style={hero.barBg}>
-                <View style={[hero.barFill, { width: `${Math.min(progress * 100, 100)}%` }]} />
-              </View>
-            </View>
-          </View>
-        </View>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-// ─── Recent Purchase Toast ────────────────────────────────────
+// ─── إشعار شراء حديث ──────────────────────────────────────────
 function PurchaseToast() {
-  const { data: purchases } = useQuery<{ campaignTitle: string; minutesAgo: number }[]>({
+  const { data: purchases } = useQuery<{ productName: string; minutesAgo: number }[]>({
     queryKey: ["/api/recent-purchases"], staleTime: 60000,
   });
   const [idx, setIdx] = useState(0);
@@ -241,14 +195,14 @@ function PurchaseToast() {
       <View style={toast.box}>
         <Ionicons name="bag-check" size={14} color="#10B981" />
         <Text style={toast.text} numberOfLines={1}>
-          مستخدم اشترى {item.campaignTitle} منذ {item.minutesAgo > 60 ? `${Math.floor(item.minutesAgo / 60)} ساعة` : `${item.minutesAgo} دقيقة`}
+          مستخدم اشترى {item.productName} منذ {item.minutesAgo > 60 ? `${Math.floor(item.minutesAgo / 60)} ساعة` : `${item.minutesAgo} دقيقة`}
         </Text>
       </View>
     </Animated.View>
   );
 }
 
-// ─── Notification Permission Banner ──────────────────────────
+// ─── بانر صلاحية الإشعارات ────────────────────────────────────
 function NotificationBanner() {
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState(false);
@@ -273,9 +227,7 @@ function NotificationBanner() {
   useEffect(() => {
     checkAndUpdate();
     const sub = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") {
-        checkAndUpdate();
-      }
+      if (nextState === "active") checkAndUpdate();
     });
     return () => sub.remove();
   }, [user]);
@@ -292,11 +244,6 @@ function NotificationBanner() {
     setTimeout(() => setDismissed(true), 260);
   }
 
-  function handleOpenSettings() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Linking.openSettings();
-  }
-
   if (dismissed || permStatus !== "denied" || Platform.OS === "web" || !user) return null;
 
   return (
@@ -307,10 +254,14 @@ function NotificationBanner() {
         </View>
         <View style={nb.textWrap}>
           <Text style={nb.title}>الإشعارات معطّلة</Text>
-          <Text style={nb.sub}>فعّل الإشعارات لتصلك تنبيهات الفوز والعروض الحصرية</Text>
+          <Text style={nb.sub}>فعّل الإشعارات لتصلك تنبيهات السحب والعروض</Text>
         </View>
         <View style={nb.actions}>
-          <Pressable style={nb.settingsBtn} onPress={handleOpenSettings} testID="notif-banner-settings">
+          <Pressable
+            style={nb.settingsBtn}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); Linking.openSettings(); }}
+            testID="notif-banner-settings"
+          >
             <Text style={nb.settingsBtnText}>تفعيل</Text>
           </Pressable>
           <Pressable style={nb.closeBtn} onPress={handleDismiss} testID="notif-banner-dismiss" hitSlop={8}>
@@ -322,39 +273,54 @@ function NotificationBanner() {
   );
 }
 
-// ─── Main Screen ─────────────────────────────────────────────
+// ─── الشاشة الرئيسية ──────────────────────────────────────────
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { totalItems } = useCart();
+  const { totalItems, addItem, getQuantity } = useCart();
 
-  const { data: campaigns, isLoading, refetch, isRefetching } = useQuery<Campaign[]>({
-    queryKey: ["/api/campaigns"], refetchInterval: 10000, staleTime: 5000,
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+
+  const { data: products, isLoading, refetch, isRefetching } = useQuery<Product[]>({
+    queryKey: ["/api/products"], refetchInterval: 20000, staleTime: 10000,
+  });
+  const { data: draw } = useQuery<CurrentDraw | null>({
+    queryKey: ["/api/draws/current"], refetchInterval: 15000, staleTime: 5000,
   });
   const { data: unreadData } = useQuery<{ count: number }>({
     queryKey: ["/api/notifications/unread-count"], enabled: !!user, refetchInterval: 15000, staleTime: 10000,
   });
   const unreadCount = unreadData?.count || 0;
 
-  const active = campaigns?.filter(c => c.status === "active") || [];
-  const featured = active[0];
-  const rest = active.slice(1);
+  const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
+
+  const filtered = useMemo(() => {
+    let list = products ?? [];
+    if (category !== "all") list = list.filter((p) => p.category === category);
+    const q = search.trim().toLowerCase();
+    if (q) list = list.filter((p) => p.name.toLowerCase().includes(q));
+    return list;
+  }, [products, category, search]);
 
   const onRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
     refetch();
   }, [refetch]);
 
-  // Pair items for 2-column grid rows
-  const rows: Campaign[][] = [];
-  for (let i = 0; i < rest.length; i += 2) {
-    rows.push(rest.slice(i, i + 2));
+  const rows: Product[][] = [];
+  for (let i = 0; i < filtered.length; i += 2) {
+    rows.push(filtered.slice(i, i + 2));
+  }
+
+  function handleAdd(product: Product) {
+    addItem(product, 1);
   }
 
   function Header() {
     return (
       <View style={s.header}>
-        {/* Nav */}
         <View style={[s.nav, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
           <View style={s.navLeft}>
             <Pressable onPress={() => router.push("/cart" as any)} style={s.navBtn} testID="cart-button">
@@ -383,22 +349,21 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Stats strip */}
-        <View style={s.strip}>
-          <View style={s.stripItem}>
-            <Text style={s.stripNum}>{campaigns?.filter(c => c.status === "completed").length || 0}</Text>
-            <Text style={s.stripLabel}>فائز</Text>
-          </View>
-          <View style={s.stripDiv} />
-          <View style={s.stripItem}>
-            <Text style={s.stripNum}>{active.reduce((n, c) => n + (c.totalQuantity - c.soldQuantity), 0)}</Text>
-            <Text style={s.stripLabel}>تذكرة متاحة</Text>
-          </View>
-          <View style={s.stripDiv} />
-          <View style={s.stripItem}>
-            <Text style={s.stripNum}>{active.length}</Text>
-            <Text style={s.stripLabel}>عرض نشط</Text>
-          </View>
+        <View style={s.searchRow}>
+          <Ionicons name="search" size={18} color="#999" />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="ابحث عن منتج…"
+            placeholderTextColor="#AAA"
+            style={s.searchInput}
+            returnKeyType="search"
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch("")} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color="#CCC" />
+            </Pressable>
+          )}
         </View>
       </View>
     );
@@ -419,12 +384,15 @@ export default function HomeScreen() {
         keyExtractor={(_, i) => String(i)}
         renderItem={({ item: row, index: rowIdx }) => (
           <View style={s.row}>
-            {row.map((c, ci) => (
+            {row.map((p, ci) => (
               <GridCard
-                key={c.id}
-                campaign={c}
-                index={rowIdx * 2 + ci + 1}
-                onPress={() => router.push({ pathname: "/campaign/[id]", params: { id: c.id } })}
+                key={p.id}
+                product={p}
+                ticketPrice={ticketPrice}
+                index={rowIdx * 2 + ci}
+                inCart={getQuantity(p.id)}
+                onAdd={() => handleAdd(p)}
+                onPress={() => router.push({ pathname: "/product/[id]", params: { id: p.id } })}
               />
             ))}
             {row.length === 1 && <View style={{ width: CARD_W }} />}
@@ -434,20 +402,46 @@ export default function HomeScreen() {
           <View>
             <Header />
             <NotificationBanner />
-            {featured && (
-              <View style={s.featuredWrap}>
-                <HeroCard
-                  campaign={featured}
-                  onPress={() => router.push({ pathname: "/campaign/[id]", params: { id: featured.id } })}
-                />
+
+            {draw ? (
+              <View style={s.drawWrap}>
+                <DrawBanner draw={draw} onPress={() => router.push("/draw" as any)} />
+              </View>
+            ) : (
+              <View style={s.noDrawWrap}>
+                <Ionicons name="gift-outline" size={20} color="#999" />
+                <Text style={s.noDrawText}>ما في جولة سحب مفتوحة حالياً — ترقّب الجائزة القادمة</Text>
               </View>
             )}
-            {rest.length > 0 && (
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.catRow}
+            >
+              {CATEGORIES.map((c) => {
+                const active = category === c.key;
+                return (
+                  <Pressable
+                    key={c.key}
+                    onPress={() => { Haptics.selectionAsync(); setCategory(c.key); }}
+                    style={[s.catChip, active && s.catChipActive]}
+                  >
+                    <Ionicons name={c.icon} size={14} color={active ? "#1A1A1A" : "#888"} />
+                    <Text style={[s.catChipText, active && s.catChipTextActive]}>{c.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {filtered.length > 0 && (
               <View style={s.sectionHead}>
                 <View style={s.sectionPill}>
-                  <Text style={s.sectionPillText}>{rest.length}</Text>
+                  <Text style={s.sectionPillText}>{filtered.length}</Text>
                 </View>
-                <Text style={s.sectionTitle}>جميع العروض</Text>
+                <Text style={s.sectionTitle}>
+                  {category === "all" ? "كل المنتجات" : CATEGORIES.find((c) => c.key === category)?.label}
+                </Text>
               </View>
             )}
           </View>
@@ -455,8 +449,12 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <View style={s.empty}>
             <Ionicons name="storefront-outline" size={52} color="#FFD000" />
-            <Text style={s.emptyTitle}>لا توجد عروض حالياً</Text>
-            <Text style={s.emptyText}>ترقّب! جوائز مذهلة في الطريق</Text>
+            <Text style={s.emptyTitle}>
+              {search || category !== "all" ? "ما في نتائج" : "لا توجد منتجات حالياً"}
+            </Text>
+            <Text style={s.emptyText}>
+              {search || category !== "all" ? "جرّب بحث أو تصنيف تاني" : "ترقّب! منتجات وجوائز بالطريق"}
+            </Text>
           </View>
         }
         contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 84 + 24 : 104 }}
@@ -468,7 +466,7 @@ export default function HomeScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────
+// ─── الأنماط ──────────────────────────────────────────────────
 const g = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
@@ -484,6 +482,7 @@ const g = StyleSheet.create({
   },
   imgBox: { height: 130, position: "relative", backgroundColor: "#F5F5F5", alignItems: "center", justifyContent: "center" },
   img: { width: "100%", height: "100%", position: "absolute" },
+  imgPlaceholderInner: { flex: 1, alignItems: "center", justifyContent: "center" },
   priceChip: {
     position: "absolute", bottom: 8, start: 8,
     backgroundColor: "#FFD000", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 8,
@@ -498,46 +497,83 @@ const g = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
   tagText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#fff" },
-  body: { padding: 10, gap: 5 },
-  title: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#1A1A1A", textAlign: "right", writingDirection: "rtl" },
-  prizeRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  prizeText: { fontFamily: "Inter_400Regular", fontSize: 11, color: "#888", flex: 1, textAlign: "right", writingDirection: "rtl" },
-  barBg: { height: 4, backgroundColor: "#F0F0F0", borderRadius: 2, overflow: "hidden" },
-  barFill: { height: "100%", backgroundColor: "#FFD000", borderRadius: 2 },
-  remaining: { fontFamily: "Inter_400Regular", fontSize: 10, color: "#AAA", textAlign: "right", writingDirection: "rtl" },
-  tickRow: { flexDirection: "row", alignItems: "center", gap: 2, justifyContent: "flex-end" },
-  tickNum: { fontFamily: "Inter_700Bold", fontSize: 11, color: "#475569", minWidth: 16, textAlign: "center" },
-  tickSep: { fontFamily: "Inter_700Bold", fontSize: 11, color: "#CBD5E1" },
-  cta: {
-    backgroundColor: "#FFD000", borderRadius: 10,
-    paddingVertical: 8, alignItems: "center", marginTop: 2,
+  body: { padding: 10, gap: 7 },
+  title: {
+    fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#1A1A1A",
+    textAlign: "right", writingDirection: "rtl", lineHeight: 19, minHeight: 38,
   },
-  ctaText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#1A1A1A", writingDirection: "rtl" },
+  ticketRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  ticketText: {
+    fontFamily: "Inter_500Medium", fontSize: 11, color: "#888",
+    flex: 1, textAlign: "right", writingDirection: "rtl",
+  },
+  addBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
+    backgroundColor: "#FFD000", paddingVertical: 8, borderRadius: 10,
+  },
+  addBtnInCart: { backgroundColor: "#FFE566" },
+  addBtnDisabled: { backgroundColor: "#F0F0F0" },
+  addBtnText: { fontFamily: "Inter_700Bold", fontSize: 12, color: "#1A1A1A", writingDirection: "rtl" },
 });
 
-const hero = StyleSheet.create({
-  card: { marginHorizontal: 16, borderRadius: 20, overflow: "hidden" },
-  imgBox: { height: 220, position: "relative", backgroundColor: "#1A1A1A", alignItems: "center", justifyContent: "center" },
-  img: { width: "100%", height: "100%", position: "absolute" },
-  overlay: { position: "absolute", bottom: 0, left: 0, right: 0, height: 150 },
-  badge: {
-    position: "absolute", top: 14, end: 14,
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: "#F8F8F8" },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F8F8F8" },
+  header: { backgroundColor: "#fff", marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  nav: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingBottom: 12,
+  },
+  navLeft: { flexDirection: "row", gap: 4, width: 90, justifyContent: "flex-start" },
+  navCenter: { alignItems: "center" },
+  navRight: { width: 90, alignItems: "flex-end" },
+  navBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", position: "relative" },
+  dot: {
+    position: "absolute", top: 4, end: 4, minWidth: 16, height: 16,
+    borderRadius: 8, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center",
+  },
+  dotText: { fontFamily: "Inter_700Bold", fontSize: 9, color: "#fff" },
+  logo: { fontFamily: "Inter_700Bold", fontSize: 24, color: "#1A1A1A" },
+  logoUnder: { height: 3, width: 32, backgroundColor: "#FFD000", borderRadius: 2, marginTop: 1, alignSelf: "center" },
+  username: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#666", maxWidth: 80 },
+  loginBtn: { backgroundColor: "#FFD000", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 },
+  loginText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#1A1A1A" },
+  searchRow: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    marginHorizontal: 16, marginBottom: 12,
+    backgroundColor: "#F5F5F5", borderRadius: 12, paddingHorizontal: 12, height: 42,
+  },
+  searchInput: {
+    flex: 1, fontFamily: "Inter_400Regular", fontSize: 14, color: "#1A1A1A",
+    textAlign: "right", writingDirection: "rtl", padding: 0,
+  },
+  drawWrap: { marginHorizontal: 16, marginBottom: 16 },
+  noDrawWrap: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    marginHorizontal: 16, marginBottom: 16, padding: 16,
+    backgroundColor: "#fff", borderRadius: 16, borderWidth: 1, borderColor: "#F0F0F0",
+  },
+  noDrawText: {
+    fontFamily: "Inter_500Medium", fontSize: 13, color: "#888",
+    textAlign: "center", writingDirection: "rtl", flexShrink: 1,
+  },
+  catRow: { paddingHorizontal: 16, gap: 8, paddingBottom: 14 },
+  catChip: {
     flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "#FFD000", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20,
+    backgroundColor: "#fff", borderWidth: 1, borderColor: "#EBEBEB",
   },
-  liveDoc: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#1A1A1A" },
-  badgeText: { fontFamily: "Inter_700Bold", fontSize: 12, color: "#1A1A1A" },
-  bottomRow: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    flexDirection: "row", alignItems: "flex-end",
-    paddingHorizontal: 14, paddingBottom: 14, gap: 10,
-  },
-  heroTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff", textAlign: "right", writingDirection: "rtl", flex: 1 },
-  heroSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.7)", textAlign: "right", writingDirection: "rtl", marginBottom: 6, flex: 1 },
-  barBg: { height: 4, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 2, overflow: "hidden", flex: 1 },
-  barFill: { height: "100%", backgroundColor: "#FFD000", borderRadius: 2 },
-  ctaBtn: { backgroundColor: "#FFD000", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, flexShrink: 0 },
-  ctaBtnText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#1A1A1A", writingDirection: "rtl" },
+  catChipActive: { backgroundColor: "#FFD000", borderColor: "#FFD000" },
+  catChipText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "#888", writingDirection: "rtl" },
+  catChipTextActive: { fontFamily: "Inter_700Bold", color: "#1A1A1A" },
+  sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, marginBottom: 10 },
+  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#1A1A1A", writingDirection: "rtl" },
+  sectionPill: { backgroundColor: "#FFD000", paddingHorizontal: 9, paddingVertical: 2, borderRadius: 8 },
+  sectionPillText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#1A1A1A" },
+  row: { flexDirection: "row", paddingHorizontal: 16, gap: 16, marginBottom: 16 },
+  empty: { alignItems: "center", gap: 12, paddingVertical: 60, paddingHorizontal: 40 },
+  emptyTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: "#1A1A1A", textAlign: "center", writingDirection: "rtl" },
+  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: "#888", textAlign: "center", writingDirection: "rtl" },
 });
 
 const toast = StyleSheet.create({
@@ -624,45 +660,4 @@ const nb = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-});
-
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8F8F8" },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F8F8F8" },
-  header: { backgroundColor: "#fff", marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  nav: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingBottom: 12,
-  },
-  navLeft: { flexDirection: "row", gap: 4, width: 90, justifyContent: "flex-start" },
-  navCenter: { alignItems: "center" },
-  navRight: { width: 90, alignItems: "flex-end" },
-  navBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", position: "relative" },
-  dot: {
-    position: "absolute", top: 4, end: 4, minWidth: 16, height: 16,
-    borderRadius: 8, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center",
-  },
-  dotText: { fontFamily: "Inter_700Bold", fontSize: 9, color: "#fff" },
-  logo: { fontFamily: "Inter_700Bold", fontSize: 24, color: "#1A1A1A" },
-  logoUnder: { height: 3, width: 32, backgroundColor: "#FFD000", borderRadius: 2, marginTop: 1, alignSelf: "center" },
-  username: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#666", maxWidth: 80 },
-  loginBtn: { backgroundColor: "#FFD000", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 },
-  loginText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#1A1A1A" },
-  strip: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-around",
-    paddingVertical: 12, borderTopWidth: 1, borderTopColor: "#F0F0F0",
-  },
-  stripItem: { alignItems: "center", gap: 2 },
-  stripNum: { fontFamily: "Inter_700Bold", fontSize: 18, color: "#1A1A1A" },
-  stripLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: "#888", writingDirection: "rtl" },
-  stripDiv: { width: 1, height: 28, backgroundColor: "#EBEBEB" },
-  featuredWrap: { marginBottom: 16 },
-  sectionHead: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, marginBottom: 10 },
-  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#1A1A1A", writingDirection: "rtl" },
-  sectionPill: { backgroundColor: "#FFD000", paddingHorizontal: 9, paddingVertical: 2, borderRadius: 8 },
-  sectionPillText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#1A1A1A" },
-  row: { flexDirection: "row", paddingHorizontal: 16, gap: 16, marginBottom: 16 },
-  empty: { alignItems: "center", gap: 12, paddingVertical: 60, paddingHorizontal: 40 },
-  emptyTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: "#1A1A1A", textAlign: "center", writingDirection: "rtl" },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: "#888", textAlign: "center", writingDirection: "rtl" },
 });

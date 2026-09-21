@@ -90,8 +90,10 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
 function handleNotificationData(data: Record<string, any> | undefined) {
   if (!data) return;
-  if (data.campaignId) {
-    router.push(`/campaign/${data.campaignId}`);
+  if (data.drawId) {
+    router.push("/draw");
+  } else if (data.productId) {
+    router.push(`/product/${data.productId}`);
   } else if (data.orderId) {
     router.push(`/order/${data.orderId}`);
   }
