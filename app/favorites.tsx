@@ -40,7 +40,7 @@ export default function FavoritesScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#1A1A1A", "#2D2D2D"]}
+        colors={["#10224D", "#1B3A7A"]}
         style={[
           styles.header,
           { paddingTop: Platform.OS === "web" ? 67 : insets.top },
@@ -103,11 +103,10 @@ export default function FavoritesScreen() {
             paddingBottom: Platform.OS === "web" ? 34 : Math.max(insets.bottom, 16),
           }}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => (
+          renderItem={({ item }) => (
             <ProductCard
               product={item}
-              index={index}
-              ticketPrice={ticketPrice}
+              showFavorite
               inCartQuantity={getQuantity(item.id)}
               onAddToCart={() => addItem(item, 1)}
               onPress={() => router.push(`/product/${item.id}`)}
@@ -145,7 +144,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 22,
     color: "#FFFFFF",
     textAlign: "right",
@@ -158,7 +157,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   countText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 14,
     color: "#FFFFFF",
   },
@@ -196,7 +195,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 20,
     color: Colors.light.text,
     marginBottom: 8,
@@ -204,7 +203,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 15,
     color: Colors.light.textSecondary,
     textAlign: "center",
@@ -223,9 +222,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   browseText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 16,
-    color: "#1A1A1A",
+    color: "#10224D",
     writingDirection: "rtl",
     textAlign: "center",
   },

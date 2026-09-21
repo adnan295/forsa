@@ -90,7 +90,7 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <LinearGradient colors={["#7C3AED", "#A855F7", "#EC4899"]} style={styles.gradient}>
+    <LinearGradient colors={["#10224D", "#1B3A7A", "#155EEF"]} style={styles.gradient}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -169,7 +169,7 @@ export default function ForgotPasswordScreen() {
               <>
                 {fallbackCode && (
                   <View style={styles.fallbackBox}>
-                    <Ionicons name="warning" size={18} color="#92400E" />
+                    <Ionicons name="warning" size={18} color="#754500" />
                     <Text style={styles.fallbackText}>
                       تعذّر إرسال البريد الإلكتروني، رمز التحقق هو:
                     </Text>
@@ -319,14 +319,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   logoText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 26,
     color: "#FFFFFF",
     marginBottom: 8,
     writingDirection: "rtl",
   },
   tagline: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: "rgba(255,255,255,0.6)",
     writingDirection: "rtl",
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 16,
     color: "#FFFFFF",
     height: 56,
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   submitText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: Colors.light.accent,
     writingDirection: "rtl",
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   switchText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: "rgba(255,255,255,0.6)",
     writingDirection: "rtl",
@@ -395,33 +395,33 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   resendText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: "rgba(255,255,255,0.8)",
     writingDirection: "rtl",
     textDecorationLine: "underline",
   },
   fallbackBox: {
-    backgroundColor: "#FEF3C7",
+    backgroundColor: "#FFF4D6",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
     gap: 8,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#F59E0B",
+    borderColor: "#B54708",
   },
   fallbackText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
-    color: "#92400E",
+    color: "#754500",
     textAlign: "center",
     writingDirection: "rtl" as const,
   },
   fallbackCode: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 28,
-    color: "#92400E",
+    color: "#754500",
     letterSpacing: 6,
   },
 });

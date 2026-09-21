@@ -29,6 +29,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import Colors from "@/constants/colors";
+import { parseProductSpecs } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
 
@@ -85,7 +86,7 @@ export default function AdminPanel() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#7C3AED", "#A855F7", "#EC4899"]} style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+      <LinearGradient colors={["#10224D", "#1B3A7A", "#155EEF"]} style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} style={styles.headerBackBtn}>
             <Ionicons name="arrow-forward" size={24} color="#fff" />
@@ -205,16 +206,16 @@ function DashboardSection() {
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sectionPadding}>
       <Text style={styles.sectionTitle}>نظرة عامة</Text>
       <View style={styles.statsGrid}>
-        <StatCard icon="cash" label="إجمالي الإيرادات" value={`${stats?.totalRevenue || "0"} $`} color="#9B59B6" />
-        <StatCard icon="receipt" label="إجمالي الطلبات" value={stats?.totalOrders?.toString() || "0"} color="#3498DB" />
-        <StatCard icon="people" label="المستخدمين" value={stats?.totalUsers?.toString() || "0"} color="#2ECC71" />
+        <StatCard icon="cash" label="إجمالي الإيرادات" value={`${stats?.totalRevenue || "0"} $`} color="#1B3A7A" />
+        <StatCard icon="receipt" label="إجمالي الطلبات" value={stats?.totalOrders?.toString() || "0"} color="#175CD3" />
+        <StatCard icon="people" label="المستخدمين" value={stats?.totalUsers?.toString() || "0"} color="#067647" />
         <StatCard icon="cube" label="منتجات معروضة" value={stats?.activeProducts?.toString() || "0"} color={Colors.light.accentDark} />
-        <StatCard icon="today" label="طلبات اليوم" value={stats?.ordersToday?.toString() || "0"} color="#E74C3C" />
-        <StatCard icon="person-add" label="مستخدمين جدد (أسبوع)" value={stats?.newUsersThisWeek?.toString() || "0"} color="#1ABC9C" />
-        <StatCard icon="trending-up" label="معدل التحويل" value={`${stats?.conversionRate || "0"}%`} color="#E67E22" />
-        <StatCard icon="cart" label="متوسط قيمة الطلب" value={`${stats?.averageOrderValue || "0"} $`} color="#8E44AD" />
-        <StatCard icon="hourglass" label="طلبات بانتظار المراجعة" value={stats?.pendingReviewOrders?.toString() || "0"} color="#F39C12" />
-        <StatCard icon="ticket" label="تذاكر الجولة الحالية" value={stats?.ticketsInActiveDraw?.toString() || "0"} color="#9B59B6" />
+        <StatCard icon="today" label="طلبات اليوم" value={stats?.ordersToday?.toString() || "0"} color="#B42318" />
+        <StatCard icon="person-add" label="مستخدمين جدد (أسبوع)" value={stats?.newUsersThisWeek?.toString() || "0"} color="#067647" />
+        <StatCard icon="trending-up" label="معدل التحويل" value={`${stats?.conversionRate || "0"}%`} color="#B54708" />
+        <StatCard icon="cart" label="متوسط قيمة الطلب" value={`${stats?.averageOrderValue || "0"} $`} color="#10224D" />
+        <StatCard icon="hourglass" label="طلبات بانتظار المراجعة" value={stats?.pendingReviewOrders?.toString() || "0"} color="#B54708" />
+        <StatCard icon="ticket" label="تذاكر الجولة الحالية" value={stats?.ticketsInActiveDraw?.toString() || "0"} color="#1B3A7A" />
       </View>
 
       {stats?.activeDraw && (
@@ -303,8 +304,8 @@ function OrdersSection() {
     return map[s] || s;
   };
   const getShippingColor = (s: string) => {
-    const map: Record<string, string> = { pending: "#F39C12", processing: "#3498DB", shipped: "#9B59B6", delivered: "#2ECC71", cancelled: "#E74C3C" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { pending: "#B54708", processing: "#175CD3", shipped: "#1B3A7A", delivered: "#067647", cancelled: "#B42318" };
+    return map[s] || "#475467";
   };
   const getOrderStatusAr = (s: string) => {
     const map: Record<string, string> = { pending: "معلق", paid: "مدفوع", failed: "فشل", refunded: "مسترد" };
@@ -315,8 +316,8 @@ function OrdersSection() {
     return map[s] || s;
   };
   const getPaymentColor = (s: string) => {
-    const map: Record<string, string> = { pending_payment: "#F39C12", pending_review: "#3498DB", confirmed: "#2ECC71", rejected: "#E74C3C" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { pending_payment: "#B54708", pending_review: "#175CD3", confirmed: "#067647", rejected: "#B42318" };
+    return map[s] || "#475467";
   };
 
   return (
@@ -340,10 +341,10 @@ function OrdersSection() {
                     }
                   } catch (e) {}
                 }}
-                style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#2ECC7115", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#06764715", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
               >
-                <Ionicons name="download-outline" size={16} color="#2ECC71" />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#2ECC71" }}>CSV</Text>
+                <Ionicons name="download-outline" size={16} color="#067647" />
+                <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: "#067647" }}>CSV</Text>
               </Pressable>
             </View>
           </View>
@@ -367,8 +368,8 @@ function OrdersSection() {
             </View>
             <View style={styles.orderFooter}>
               <Text style={styles.orderAmount}>{item.totalAmount} $</Text>
-              <View style={[styles.statusPill, { backgroundColor: item.status === "paid" ? "#2ECC7120" : "#F39C1220" }]}>
-                <Text style={[styles.statusPillText, { color: item.status === "paid" ? "#2ECC71" : "#F39C12" }]}>{getOrderStatusAr(item.status)}</Text>
+              <View style={[styles.statusPill, { backgroundColor: item.status === "paid" ? "#06764720" : "#B5470820" }]}>
+                <Text style={[styles.statusPillText, { color: item.status === "paid" ? "#067647" : "#B54708" }]}>{getOrderStatusAr(item.status)}</Text>
               </View>
               {item.paymentStatus && (
                 <View style={[styles.statusPill, { backgroundColor: getPaymentColor(item.paymentStatus) + "20" }]}>
@@ -413,8 +414,8 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
     return map[s] || s;
   };
   const getPaymentColor = (s: string) => {
-    const map: Record<string, string> = { pending_payment: "#F39C12", pending_review: "#3498DB", confirmed: "#2ECC71", rejected: "#E74C3C" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { pending_payment: "#B54708", pending_review: "#175CD3", confirmed: "#067647", rejected: "#B42318" };
+    return map[s] || "#475467";
   };
 
   const statuses = [
@@ -594,10 +595,10 @@ function UsersSection() {
                 }
               } catch (e) {}
             }}
-            style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#2ECC7115", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#06764715", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
           >
-            <Ionicons name="download-outline" size={16} color="#2ECC71" />
-            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#2ECC71" }}>CSV</Text>
+            <Ionicons name="download-outline" size={16} color="#067647" />
+            <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: "#067647" }}>CSV</Text>
           </Pressable>
         </View>
       }
@@ -614,10 +615,10 @@ function UsersSection() {
                 <View style={styles.adminPill}><Text style={styles.adminPillText}>أدمن</Text></View>
               )}
               {item.emailVerified ? (
-                <View style={styles.verifiedPill}><Ionicons name="checkmark-circle" size={12} color="#10B981" /><Text style={styles.verifiedPillText}>مفعّل</Text></View>
+                <View style={styles.verifiedPill}><Ionicons name="checkmark-circle" size={12} color="#067647" /><Text style={styles.verifiedPillText}>مفعّل</Text></View>
               ) : (
                 <Pressable onPress={() => handleVerify(item.id, item.username)} style={styles.unverifiedPill}>
-                  <Ionicons name="close-circle" size={12} color="#EF4444" />
+                  <Ionicons name="close-circle" size={12} color="#B42318" />
                   <Text style={styles.unverifiedPillText}>تفعيل</Text>
                 </Pressable>
               )}
@@ -666,16 +667,16 @@ function SupportTicketsSection() {
     return map[s] || s;
   };
   const getStatusColor = (s: string) => {
-    const map: Record<string, string> = { open: "#F39C12", in_progress: "#3498DB", closed: "#2ECC71" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { open: "#B54708", in_progress: "#175CD3", closed: "#067647" };
+    return map[s] || "#475467";
   };
   const getPriorityAr = (s: string) => {
     const map: Record<string, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية" };
     return map[s] || s;
   };
   const getPriorityColor = (s: string) => {
-    const map: Record<string, string> = { low: "#2ECC71", medium: "#F39C12", high: "#E74C3C" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { low: "#067647", medium: "#B54708", high: "#B42318" };
+    return map[s] || "#475467";
   };
 
   const filters: { key: TicketStatusFilter; label: string }[] = [
@@ -701,13 +702,13 @@ function SupportTicketsSection() {
               {(openCount > 0 || inProgressCount > 0) && (
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {openCount > 0 && (
-                    <View style={[styles.statusPill, { backgroundColor: "#F39C1220" }]}>
-                      <Text style={[styles.statusPillText, { color: "#F39C12" }]}>{openCount} جديدة</Text>
+                    <View style={[styles.statusPill, { backgroundColor: "#B5470820" }]}>
+                      <Text style={[styles.statusPillText, { color: "#B54708" }]}>{openCount} جديدة</Text>
                     </View>
                   )}
                   {inProgressCount > 0 && (
-                    <View style={[styles.statusPill, { backgroundColor: "#3498DB20" }]}>
-                      <Text style={[styles.statusPillText, { color: "#3498DB" }]}>{inProgressCount} قيد المعالجة</Text>
+                    <View style={[styles.statusPill, { backgroundColor: "#175CD320" }]}>
+                      <Text style={[styles.statusPillText, { color: "#175CD3" }]}>{inProgressCount} قيد المعالجة</Text>
                     </View>
                   )}
                 </View>
@@ -743,8 +744,8 @@ function SupportTicketsSection() {
                 </View>
               </View>
             </View>
-            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 4 }}>{item.subject}</Text>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 8 }} numberOfLines={2}>{item.message}</Text>
+            <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 4 }}>{item.subject}</Text>
+            <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 8 }} numberOfLines={2}>{item.message}</Text>
             <View style={styles.orderFooter}>
               <View style={styles.orderRow}>
                 <Ionicons name="person" size={14} color={Colors.light.textSecondary} />
@@ -797,8 +798,8 @@ function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; tic
     return map[s] || s;
   };
   const getPriorityColor = (s: string) => {
-    const map: Record<string, string> = { low: "#2ECC71", medium: "#F39C12", high: "#E74C3C" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { low: "#067647", medium: "#B54708", high: "#B42318" };
+    return map[s] || "#475467";
   };
 
   const statuses = [
@@ -837,7 +838,7 @@ function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; tic
 
             <View style={orderMgmtStyles.infoSection}>
               <Text style={orderMgmtStyles.infoSectionTitle}>رسالة المستخدم</Text>
-              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", lineHeight: 22 }}>{ticket.message}</Text>
+              <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", lineHeight: 22 }}>{ticket.message}</Text>
             </View>
 
             <Text style={modalStyles.inputLabel}>حالة التذكرة</Text>
@@ -1006,11 +1007,11 @@ function ProductsSection() {
                 <View
                   style={[
                     styles.statusPill,
-                    { backgroundColor: (item.isActive ? "#2ECC71" : "#95A5A6") + "20" },
+                    { backgroundColor: (item.isActive ? "#067647" : "#667085") + "20" },
                   ]}
                 >
                   <Text
-                    style={[styles.statusPillText, { color: item.isActive ? "#2ECC71" : "#95A5A6" }]}
+                    style={[styles.statusPillText, { color: item.isActive ? "#067647" : "#667085" }]}
                   >
                     {item.isActive ? "ظاهر" : "مخفي"}
                   </Text>
@@ -1019,7 +1020,7 @@ function ProductsSection() {
 
               <View style={styles.campaignInfo}>
                 <Text style={styles.campaignInfoText}>السعر: {parseFloat(item.price).toFixed(2)} $</Text>
-                <Text style={[styles.campaignInfoText, outOfStock && { color: "#E74C3C" }]}>
+                <Text style={[styles.campaignInfoText, outOfStock && { color: "#B42318" }]}>
                   المخزون: {item.stock === null ? "غير محدود" : item.stock}
                 </Text>
                 <Text style={styles.campaignInfoText}>المباع: {item.soldCount}</Text>
@@ -1033,12 +1034,12 @@ function ProductsSection() {
                   onPress={() => { setEditing(item); setShowForm(true); }}
                   style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}
                 >
-                  <Ionicons name="create" size={16} color="#1A1A1A" />
-                  <Text style={[styles.actionBtnText, { color: "#1A1A1A" }]}>تعديل</Text>
+                  <Ionicons name="create" size={16} color="#10224D" />
+                  <Text style={[styles.actionBtnText, { color: "#10224D" }]}>تعديل</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => toggleMutation.mutate({ id: item.id, isActive: !item.isActive })}
-                  style={[styles.actionBtn, { backgroundColor: item.isActive ? "#95A5A6" : "#2ECC71" }]}
+                  style={[styles.actionBtn, { backgroundColor: item.isActive ? "#667085" : "#067647" }]}
                 >
                   <Ionicons name={item.isActive ? "eye-off" : "eye"} size={16} color="#fff" />
                   <Text style={styles.actionBtnText}>{item.isActive ? "إخفاء" : "إظهار"}</Text>
@@ -1046,7 +1047,7 @@ function ProductsSection() {
                 {item.soldCount === 0 && (
                   <Pressable
                     onPress={() => handleDelete(item)}
-                    style={[styles.actionBtn, { backgroundColor: "#E74C3C" }]}
+                    style={[styles.actionBtn, { backgroundColor: "#B42318" }]}
                   >
                     <Ionicons name="trash" size={16} color="#fff" />
                     <Text style={styles.actionBtnText}>حذف</Text>
@@ -1075,6 +1076,9 @@ function ProductFormModal({ product, onClose }: { product: any | null; onClose: 
   const [unlimitedStock, setUnlimitedStock] = useState(product ? product.stock === null : false);
   const [stock, setStock] = useState(product?.stock != null ? String(product.stock) : "");
   const [category, setCategory] = useState(product?.category || "other");
+  const [specs, setSpecs] = useState<string[]>(() =>
+    parseProductSpecs(product?.specsJson).map((sp) => sp.text)
+  );
   const [imageUri, setImageUri] = useState<string | null>(product?.imageUrl || null);
   const [imageFile, setImageFile] = useState<any>(null);
   const [imageChanged, setImageChanged] = useState(false);
@@ -1097,6 +1101,9 @@ function ProductFormModal({ product, onClose }: { product: any | null; onClose: 
         stock: unlimitedStock ? null : parseInt(stock, 10) || 0,
         category,
         imageUrl,
+        specsJson: JSON.stringify(
+          specs.map((t) => t.trim()).filter(Boolean).map((text) => ({ text }))
+        ),
       };
 
       const res = isEdit
@@ -1163,6 +1170,37 @@ function ProductFormModal({ product, onClose }: { product: any | null; onClose: 
               <ModalInput label="" value={stock} onChangeText={setStock} placeholder="عدد القطع المتوفرة" keyboardType="numeric" />
             )}
 
+            <Text style={modalStyles.inputLabel}>المواصفات (تظهر كنقاط بصفحة المنتج)</Text>
+            {specs.map((spec, i) => (
+              <View key={i} style={modalStyles.specRow}>
+                <Pressable
+                  onPress={() => setSpecs((prev) => prev.filter((_, idx) => idx !== i))}
+                  hitSlop={8}
+                  accessibilityLabel="حذف المواصفة"
+                  style={modalStyles.specRemove}
+                >
+                  <Ionicons name="close-circle" size={20} color={Colors.light.danger} />
+                </Pressable>
+                <TextInput
+                  value={spec}
+                  onChangeText={(t) =>
+                    setSpecs((prev) => prev.map((v, idx) => (idx === i ? t : v)))
+                  }
+                  placeholder="مثال: قدرة 2000 واط"
+                  placeholderTextColor={Colors.light.textMuted}
+                  style={[modalStyles.input, { flex: 1 }]}
+                />
+              </View>
+            ))}
+            <Pressable
+              onPress={() => setSpecs((prev) => [...prev, ""])}
+              style={modalStyles.specAdd}
+              accessibilityRole="button"
+            >
+              <Ionicons name="add" size={18} color={Colors.light.accent} />
+              <Text style={modalStyles.specAddText}>إضافة مواصفة</Text>
+            </Pressable>
+
             <Text style={modalStyles.inputLabel}>التصنيف</Text>
             <View style={modalStyles.chipRow}>
               {PRODUCT_CATEGORIES.map((c) => (
@@ -1211,7 +1249,7 @@ function ProductFormModal({ product, onClose }: { product: any | null; onClose: 
               style={[modalStyles.submitButton, (mutation.isPending || uploading) && { opacity: 0.5 }]}
             >
               {mutation.isPending || uploading ? (
-                <ActivityIndicator color="#1A1A1A" size="small" />
+                <ActivityIndicator color="#10224D" size="small" />
               ) : (
                 <Text style={modalStyles.submitButtonText}>{isEdit ? "حفظ" : "إضافة"}</Text>
               )}
@@ -1231,11 +1269,11 @@ const DRAW_STATUS_AR: Record<string, string> = {
   cancelled: "ملغاة",
 };
 const DRAW_STATUS_COLOR: Record<string, string> = {
-  scheduled: "#95A5A6",
-  active: "#2ECC71",
-  ready_to_draw: "#F39C12",
-  completed: "#3498DB",
-  cancelled: "#E74C3C",
+  scheduled: "#667085",
+  active: "#067647",
+  ready_to_draw: "#B54708",
+  completed: "#175CD3",
+  cancelled: "#B42318",
 };
 
 function DrawsSection() {
@@ -1344,7 +1382,7 @@ function DrawsSection() {
           const progress = item.targetTickets > 0
             ? Math.min(item.soldTickets / item.targetTickets, 1)
             : 0;
-          const color = DRAW_STATUS_COLOR[item.status] || "#666";
+          const color = DRAW_STATUS_COLOR[item.status] || "#475467";
           return (
             <View style={styles.campaignCard}>
               <View style={styles.campaignHeader}>
@@ -1384,14 +1422,14 @@ function DrawsSection() {
                     onPress={() => { setEditing(item); setShowForm(true); }}
                     style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}
                   >
-                    <Ionicons name="create" size={16} color="#1A1A1A" />
-                    <Text style={[styles.actionBtnText, { color: "#1A1A1A" }]}>تعديل</Text>
+                    <Ionicons name="create" size={16} color="#10224D" />
+                    <Text style={[styles.actionBtnText, { color: "#10224D" }]}>تعديل</Text>
                   </Pressable>
                 )}
                 {item.status === "scheduled" && (
                   <Pressable
                     onPress={() => activateMutation.mutate(item.id)}
-                    style={[styles.actionBtn, { backgroundColor: "#2ECC71" }]}
+                    style={[styles.actionBtn, { backgroundColor: "#067647" }]}
                   >
                     <Ionicons name="play" size={16} color="#fff" />
                     <Text style={styles.actionBtnText}>تفعيل</Text>
@@ -1402,7 +1440,7 @@ function DrawsSection() {
                     onPress={() => handleDraw(item)}
                     style={[
                       styles.actionBtn,
-                      { backgroundColor: item.status === "ready_to_draw" ? "#F39C12" : "#9B59B6" },
+                      { backgroundColor: item.status === "ready_to_draw" ? "#B54708" : "#1B3A7A" },
                     ]}
                   >
                     <Ionicons name="dice" size={16} color="#fff" />
@@ -1412,7 +1450,7 @@ function DrawsSection() {
                 {item.status !== "completed" && (
                   <Pressable
                     onPress={() => handleDelete(item)}
-                    style={[styles.actionBtn, { backgroundColor: "#E74C3C" }]}
+                    style={[styles.actionBtn, { backgroundColor: "#B42318" }]}
                   >
                     <Ionicons name="trash" size={16} color="#fff" />
                     <Text style={styles.actionBtnText}>حذف</Text>
@@ -1422,7 +1460,7 @@ function DrawsSection() {
 
               {item.status === "completed" && (
                 <View style={styles.winnerBanner}>
-                  <Ionicons name="trophy" size={16} color="#FFD700" />
+                  <Ionicons name="trophy" size={16} color="#F5A623" />
                   <Text style={styles.winnerText}>
                     الفائز: {item.winnerUsername || "—"} · تذكرة {item.winnerTicketNumber}
                   </Text>
@@ -1579,7 +1617,7 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
               style={[modalStyles.submitButton, (mutation.isPending || uploading) && { opacity: 0.5 }]}
             >
               {mutation.isPending || uploading ? (
-                <ActivityIndicator color="#1A1A1A" size="small" />
+                <ActivityIndicator color="#10224D" size="small" />
               ) : (
                 <Text style={modalStyles.submitButtonText}>{isEdit ? "حفظ" : "إنشاء"}</Text>
               )}
@@ -1654,26 +1692,26 @@ function PaymentsSection() {
               <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: Colors.light.border }}>
                 {item.bankName ? (
                   <View style={{ flexDirection: "row", gap: 6, marginBottom: 4 }}>
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>البنك:</Text>
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.text }}>{item.bankName}</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>البنك:</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.text }}>{item.bankName}</Text>
                   </View>
                 ) : null}
                 {item.accountName ? (
                   <View style={{ flexDirection: "row", gap: 6, marginBottom: 4 }}>
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>الحساب:</Text>
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.text }}>{item.accountName}</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>الحساب:</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.text }}>{item.accountName}</Text>
                   </View>
                 ) : null}
                 {item.iban ? (
                   <View style={{ flexDirection: "row", gap: 6, marginBottom: 4 }}>
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>IBAN:</Text>
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.light.text }}>{item.iban}</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>IBAN:</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 11, color: Colors.light.text }}>{item.iban}</Text>
                   </View>
                 ) : null}
                 {!item.bankName && !item.accountName && !item.iban && (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 }}>
                     <Ionicons name="warning" size={14} color={Colors.light.warning} />
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.warning, writingDirection: "rtl" }}>بيانات البنك غير مكتملة - اضغط تعديل لإضافتها</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.warning, writingDirection: "rtl" }}>بيانات البنك غير مكتملة - اضغط تعديل لإضافتها</Text>
                   </View>
                 )}
               </View>
@@ -1684,7 +1722,7 @@ function PaymentsSection() {
                 style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "12", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
               >
                 <Ionicons name="create-outline" size={14} color={Colors.light.accent} />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.accent }}>تعديل</Text>
+                <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.accent }}>تعديل</Text>
               </Pressable>
               <Pressable
                 onPress={() => Alert.alert("حذف", `حذف طريقة الدفع "${item.nameAr}"؟`, [
@@ -1694,7 +1732,7 @@ function PaymentsSection() {
                 style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.danger + "12", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
               >
                 <Ionicons name="trash-outline" size={14} color={Colors.light.danger} />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.danger }}>حذف</Text>
+                <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.danger }}>حذف</Text>
               </Pressable>
             </View>
           </View>
@@ -1800,7 +1838,7 @@ function ActivitySection() {
     return map[type] || "time";
   };
   const getTypeColor = (type: string) => {
-    const map: Record<string, string> = { user_register: "#2ECC71", purchase: "#3498DB", draw: "#FFD700", campaign_create: "#9B59B6", shipping_update: "#E67E22" };
+    const map: Record<string, string> = { user_register: "#067647", purchase: "#175CD3", draw: "#F5A623", campaign_create: "#1B3A7A", shipping_update: "#B54708" };
     return map[type] || Colors.light.textSecondary;
   };
 
@@ -1874,10 +1912,10 @@ function NotificationsSection() {
     return "notifications";
   };
   const getNotifColor = (type: string) => {
-    if (type === "new_order") return "#7C3AED";
-    if (type === "receipt_uploaded") return "#3498DB";
-    if (type === "new_user") return "#2ECC71";
-    if (type === "broadcast") return "#E67E22";
+    if (type === "new_order") return "#10224D";
+    if (type === "receipt_uploaded") return "#175CD3";
+    if (type === "new_user") return "#067647";
+    if (type === "broadcast") return "#B54708";
     return Colors.light.accent;
   };
 
@@ -1894,10 +1932,10 @@ function NotificationsSection() {
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Pressable
                   onPress={() => { setShowBroadcastModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#E67E2215", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#B5470815", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                 >
-                  <Ionicons name="megaphone-outline" size={16} color="#E67E22" />
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#E67E22" }}>إرسال إشعار</Text>
+                  <Ionicons name="megaphone-outline" size={16} color="#B54708" />
+                  <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: "#B54708" }}>إرسال إشعار</Text>
                 </Pressable>
                 {unreadCount > 0 && (
                   <Pressable
@@ -1905,7 +1943,7 @@ function NotificationsSection() {
                     style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "15", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                   >
                     <Ionicons name="checkmark-done" size={16} color={Colors.light.accent} />
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.accent }}>قراءة الكل ({unreadCount})</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.accent }}>قراءة الكل ({unreadCount})</Text>
                   </Pressable>
                 )}
               </View>
@@ -1916,15 +1954,15 @@ function NotificationsSection() {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => { if (!item.isRead) markReadMutation.mutate(item.id); }}
-            style={[styles.orderCard, { borderEndWidth: 3, borderEndColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#FAFBFF" }]}
+            style={[styles.orderCard, { borderEndWidth: 3, borderEndColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#F6F8FC" }]}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: getNotifColor(item.type) + "15", alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name={getNotifIcon(item.type) as any} size={18} color={getNotifColor(item.type)} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: item.isRead ? "Inter_400Regular" : "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" }}>{item.message}</Text>
-                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", marginTop: 4 }}>
+                <Text style={{ fontFamily: item.isRead ? "Tajawal_400Regular" : "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" }}>{item.message}</Text>
+                <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", marginTop: 4 }}>
                   {new Date(item.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </Text>
               </View>
@@ -2120,7 +2158,7 @@ function EditPaymentModal({ visible, method, onClose }: { visible: boolean; meth
             <View style={{ backgroundColor: "rgba(124,58,237,0.04)", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: Colors.light.accent + "20" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
                 <Ionicons name="business" size={16} color={Colors.light.accent} />
-                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" }}>بيانات الحساب البنكي</Text>
+                <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" }}>بيانات الحساب البنكي</Text>
               </View>
               <ModalInput label="اسم البنك" value={bankName} onChangeText={setBankName} placeholder="مثال: البنك الأهلي السعودي" />
               <ModalInput label="اسم صاحب الحساب" value={accountName} onChangeText={setAccountName} placeholder="الاسم كما في الحساب البنكي" />
@@ -2326,196 +2364,203 @@ function AccountSettingsSection() {
 
 const settingsStyles = StyleSheet.create({
   card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  cardTitle: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 14 },
+  cardTitle: { fontFamily: "Tajawal_700Bold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 14 },
   saveBtn: { backgroundColor: Colors.light.accent, borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center" },
-  createBtn: { backgroundColor: "#2ECC71", borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center" },
-  saveBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#fff", writingDirection: "rtl" },
+  createBtn: { backgroundColor: "#067647", borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center" },
+  saveBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 16, color: "#fff", writingDirection: "rtl" },
 });
 
 const styles = StyleSheet.create({
   activeDrawCard: {
-    backgroundColor: "#FFFBE6",
+    backgroundColor: "#FFF4D6",
     borderRadius: 16,
     padding: 16,
     marginTop: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: "#FFE566",
+    borderColor: "#F5A623",
   },
   activeDrawHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   activeDrawTitle: {
     flex: 1,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
     writingDirection: "rtl",
   },
   activeDrawSub: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 12,
-    color: "#8A7500",
+    color: "#754500",
     textAlign: "right",
     writingDirection: "rtl",
   },
   container: { flex: 1, backgroundColor: Colors.light.background },
   centered: { alignItems: "center", justifyContent: "center" },
-  errorText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: Colors.light.danger, marginBottom: 16, writingDirection: "rtl" },
+  errorText: { fontFamily: "Tajawal_500Medium", fontSize: 16, color: Colors.light.danger, marginBottom: 16, writingDirection: "rtl" },
   backBtn: { backgroundColor: Colors.light.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 },
-  backBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
+  backBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: "#fff", writingDirection: "rtl" },
   header: { paddingBottom: 0 },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12 },
   headerBackBtn: { padding: 8 },
-  headerTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#fff", writingDirection: "rtl" },
+  headerTitle: { fontFamily: "Tajawal_700Bold", fontSize: 20, color: "#fff", writingDirection: "rtl" },
   tabsRow: { flexDirection: "row", paddingHorizontal: 12, paddingBottom: 12, gap: 4 },
   tab: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   tabActive: { backgroundColor: "rgba(212, 168, 83, 0.15)" },
-  tabText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.5)", writingDirection: "rtl" },
-  tabTextActive: { color: Colors.light.accent, fontFamily: "Inter_600SemiBold" },
+  tabText: { fontFamily: "Tajawal_500Medium", fontSize: 12, color: "rgba(255,255,255,0.5)", writingDirection: "rtl" },
+  tabTextActive: { color: Colors.light.accent, fontFamily: "Tajawal_500Medium" },
   content: { flex: 1 },
   sectionPadding: { padding: 16, paddingBottom: 40 },
-  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.light.text, marginBottom: 14, textAlign: "right", writingDirection: "rtl" },
+  sectionTitle: { fontFamily: "Tajawal_700Bold", fontSize: 18, color: Colors.light.text, marginBottom: 14, textAlign: "right", writingDirection: "rtl" },
   sectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
   addBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
-  addBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff", writingDirection: "rtl" },
+  addBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: "#fff", writingDirection: "rtl" },
 
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   statCard: { width: "47%", backgroundColor: "#fff", borderRadius: 14, padding: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   statIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  statValue: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.light.text, marginBottom: 2, textAlign: "right", writingDirection: "rtl" },
-  statLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
+  statValue: { fontFamily: "Tajawal_700Bold", fontSize: 20, color: Colors.light.text, marginBottom: 2, textAlign: "right", writingDirection: "rtl" },
+  statLabel: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
 
   topCampaignItem: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#fff", padding: 14, borderRadius: 12, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   topCampaignRank: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.light.accent + "18", alignItems: "center", justifyContent: "center" },
-  topCampaignRankText: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.accent },
-  topCampaignTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
-  topCampaignSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
+  topCampaignRankText: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.accent },
+  topCampaignTitle: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  topCampaignSub: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
 
   orderCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   orderHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  orderIdText: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" },
+  orderIdText: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" },
   orderRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
-  orderDetailText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  orderDetailText: { fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
   orderFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.light.border },
-  orderAmount: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.light.text },
-  orderDate: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary },
+  orderAmount: { fontFamily: "Tajawal_700Bold", fontSize: 16, color: Colors.light.text },
+  orderDate: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary },
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  statusPillText: { fontFamily: "Inter_600SemiBold", fontSize: 11, writingDirection: "rtl" },
+  statusPillText: { fontFamily: "Tajawal_500Medium", fontSize: 11, writingDirection: "rtl" },
 
   statusPicker: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
   statusOption: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: Colors.light.progressBg },
   statusOptionActive: { backgroundColor: Colors.light.accent },
-  statusOptionText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  statusOptionText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
   statusOptionTextActive: { color: "#fff" },
 
   userCard: { flexDirection: "row", backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, gap: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   userAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.light.accent + "18", alignItems: "center", justifyContent: "center" },
-  userAvatarText: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.light.accent },
+  userAvatarText: { fontFamily: "Tajawal_700Bold", fontSize: 18, color: Colors.light.accent },
   userNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  userName: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
-  userEmail: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
-  adminPill: { backgroundColor: "#FFD70020", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  adminPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#FFD700", writingDirection: "rtl" as const },
-  verifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#10B98118", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  verifiedPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#10B981", writingDirection: "rtl" as const },
-  unverifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#EF444418", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  unverifiedPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#EF4444", writingDirection: "rtl" as const },
+  userName: { fontFamily: "Tajawal_500Medium", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  userEmail: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
+  adminPill: { backgroundColor: "#F5A62320", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  adminPillText: { fontFamily: "Tajawal_500Medium", fontSize: 10, color: "#F5A623", writingDirection: "rtl" as const },
+  verifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#06764718", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  verifiedPillText: { fontFamily: "Tajawal_500Medium", fontSize: 10, color: "#067647", writingDirection: "rtl" as const },
+  unverifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#B4231818", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  unverifiedPillText: { fontFamily: "Tajawal_500Medium", fontSize: 10, color: "#B42318", writingDirection: "rtl" as const },
   userStatsRow: { flexDirection: "row", gap: 12, marginTop: 8 },
   userStat: { flexDirection: "row", alignItems: "center", gap: 4 },
-  userStatText: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  userStatText: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
 
   campaignCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   campaignHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  campaignTitle: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.light.text, flex: 1, textAlign: "right", writingDirection: "rtl" },
+  campaignTitle: { fontFamily: "Tajawal_700Bold", fontSize: 15, color: Colors.light.text, flex: 1, textAlign: "right", writingDirection: "rtl" },
   campaignInfo: { marginBottom: 10 },
-  campaignInfoText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 2 },
+  campaignInfoText: { fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 2 },
   campaignProgressWrap: { marginBottom: 10 },
   campaignProgressBg: { height: 6, backgroundColor: Colors.light.progressBg, borderRadius: 3, overflow: "hidden" },
   campaignProgressFill: { height: "100%", borderRadius: 3 },
   campaignActions: { flexDirection: "row", gap: 8 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
-  actionBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff", writingDirection: "rtl" },
-  winnerBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFD70012", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 10 },
-  winnerText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#B8912D", writingDirection: "rtl" },
+  actionBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: "#fff", writingDirection: "rtl" },
+  winnerBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F5A62312", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 10 },
+  winnerText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: "#754500", writingDirection: "rtl" },
 
   paymentCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   paymentRow: { flexDirection: "row", alignItems: "center", gap: 14 },
-  paymentName: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
-  paymentNameEn: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right" },
-  paymentDesc: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
+  paymentName: { fontFamily: "Tajawal_500Medium", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  paymentNameEn: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right" },
+  paymentDesc: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
   deletePaymentBtn: { alignSelf: "flex-start", padding: 8, marginTop: 8 },
 
   couponCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   couponHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   couponCodeBadge: { backgroundColor: Colors.light.accent + "18", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
-  couponCode: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.light.accent, letterSpacing: 1 },
+  couponCode: { fontFamily: "Tajawal_700Bold", fontSize: 16, color: Colors.light.accent, letterSpacing: 1 },
   couponDetails: { flexDirection: "row", justifyContent: "space-around", marginBottom: 12 },
   couponStat: { alignItems: "center" },
-  couponStatLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, marginBottom: 2, writingDirection: "rtl" },
-  couponStatValue: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.light.text },
+  couponStatLabel: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, marginBottom: 2, writingDirection: "rtl" },
+  couponStatValue: { fontFamily: "Tajawal_700Bold", fontSize: 15, color: Colors.light.text },
   deleteCouponBtn: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", padding: 4 },
-  deleteCouponText: { fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.danger, writingDirection: "rtl" },
+  deleteCouponText: { fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.danger, writingDirection: "rtl" },
 
   activityItem: { flexDirection: "row", gap: 12, backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   activityIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  activityTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
-  activityDesc: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
-  activityTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.tabIconDefault, textAlign: "right", writingDirection: "rtl", marginTop: 4 },
+  activityTitle: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  activityDesc: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
+  activityTime: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.tabIconDefault, textAlign: "right", writingDirection: "rtl", marginTop: 4 },
 
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.textSecondary, textAlign: "center", marginTop: 40, writingDirection: "rtl" },
+  emptyText: { fontFamily: "Tajawal_400Regular", fontSize: 14, color: Colors.light.textSecondary, textAlign: "center", marginTop: 40, writingDirection: "rtl" },
 });
 
 const modalStyles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
   container: { backgroundColor: Colors.light.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "90%" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.light.border },
-  title: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  title: { fontFamily: "Tajawal_700Bold", fontSize: 20, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
   scrollContent: { padding: 20, paddingBottom: 40 },
   inputGroup: { marginBottom: 16 },
-  inputLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.textSecondary, marginBottom: 6, textAlign: "right", writingDirection: "rtl" },
-  input: { backgroundColor: "#fff", borderRadius: 12, padding: 14, fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl" },
+  inputLabel: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, marginBottom: 6, textAlign: "right", writingDirection: "rtl" },
+  input: { backgroundColor: "#fff", borderRadius: 12, padding: 14, fontFamily: "Tajawal_400Regular", fontSize: 15, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl" },
   createBtn: { backgroundColor: Colors.light.accent, borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center", marginTop: 8 },
-  createBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#1A1A1A", writingDirection: "rtl" },
+  createBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 16, color: "#10224D", writingDirection: "rtl" },
 
+  specRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  specRemove: { width: 28, alignItems: "center", justifyContent: "center" },
+  specAdd: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    paddingVertical: 12, borderRadius: 12, backgroundColor: Colors.light.accentLight, marginBottom: 14,
+  },
+  specAddText: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" },
   switchRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12, justifyContent: "flex-end" },
-  switchLabel: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" },
+  switchLabel: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" },
 
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14, justifyContent: "flex-end" },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.light.border },
   chipActive: { backgroundColor: Colors.light.accent, borderColor: Colors.light.accent },
-  chipText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
-  chipTextActive: { fontFamily: "Inter_700Bold", color: "#1A1A1A" },
+  chipText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  chipTextActive: { fontFamily: "Tajawal_700Bold", color: "#10224D" },
 
-  hintBox: { flexDirection: "row", gap: 8, backgroundColor: "#FFFBE6", borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: "#FFE566" },
-  hintText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 12, color: "#8A7500", textAlign: "right", writingDirection: "rtl", lineHeight: 19 },
+  hintBox: { flexDirection: "row", gap: 8, backgroundColor: "#FFF4D6", borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: "#F5A623" },
+  hintText: { flex: 1, fontFamily: "Tajawal_400Regular", fontSize: 12, color: "#754500", textAlign: "right", writingDirection: "rtl", lineHeight: 19 },
 
   imagePicker: { height: 130, borderRadius: 14, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.light.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 14, overflow: "hidden" },
   imagePreview: { width: "100%", height: "100%" },
-  imagePickerText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  imagePickerText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
 
   errorBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(239,68,68,0.08)", borderRadius: 10, padding: 12, marginBottom: 8 },
-  errorText: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.danger, textAlign: "right", writingDirection: "rtl" },
+  errorText: { flex: 1, fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.danger, textAlign: "right", writingDirection: "rtl" },
 
   footerRow: { flexDirection: "row", gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: Colors.light.border },
   cancelButton: { flex: 1, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: Colors.light.inputBg },
-  cancelButtonText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  cancelButtonText: { fontFamily: "Tajawal_500Medium", fontSize: 15, color: Colors.light.textSecondary, writingDirection: "rtl" },
   submitButton: { flex: 2, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: Colors.light.accent },
-  submitButtonText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1A1A1A", writingDirection: "rtl" },
+  submitButtonText: { fontFamily: "Tajawal_700Bold", fontSize: 16, color: "#10224D", writingDirection: "rtl" },
 });
 
 const orderMgmtStyles = StyleSheet.create({
   infoSection: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: Colors.light.border },
-  infoSectionTitle: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 10 },
+  infoSectionTitle: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 10 },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
-  infoText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
-  receiptLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
+  infoText: { fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
+  receiptLabel: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
   receiptImage: { width: "100%", height: 200, borderRadius: 10, backgroundColor: Colors.light.inputBg },
   paymentActions: { marginTop: 8 },
-  confirmBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#2ECC71", borderRadius: 10, paddingVertical: 12 },
-  confirmBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
-  rejectBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#E74C3C", borderRadius: 10, paddingVertical: 12, marginTop: 8 },
-  rejectBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
-  rejectionInput: { backgroundColor: Colors.light.inputBg, borderRadius: 10, padding: 12, fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
+  confirmBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#067647", borderRadius: 10, paddingVertical: 12 },
+  confirmBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: "#fff", writingDirection: "rtl" },
+  rejectBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#B42318", borderRadius: 10, paddingVertical: 12, marginTop: 8 },
+  rejectBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: "#fff", writingDirection: "rtl" },
+  rejectionInput: { backgroundColor: Colors.light.inputBg, borderRadius: 10, padding: 12, fontFamily: "Tajawal_400Regular", fontSize: 14, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
 });
 
 const chartStyles = StyleSheet.create({
@@ -2523,13 +2568,13 @@ const chartStyles = StyleSheet.create({
   headerRow: { marginBottom: 16 },
   summaryRow: { flexDirection: "row", gap: 4, marginTop: -4 },
   summaryItem: { alignItems: "center" },
-  summaryValue: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.light.text },
-  summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  summaryValue: { fontFamily: "Tajawal_700Bold", fontSize: 16, color: Colors.light.text },
+  summaryLabel: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
   barsContainer: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", height: 180, paddingTop: 8 },
   barCol: { flex: 1, alignItems: "center", gap: 4 },
-  barValue: { fontFamily: "Inter_600SemiBold", fontSize: 9, color: Colors.light.accent, minHeight: 14, textAlign: "center" },
+  barValue: { fontFamily: "Tajawal_500Medium", fontSize: 9, color: Colors.light.accent, minHeight: 14, textAlign: "center" },
   barTrack: { width: 28, height: 120, backgroundColor: Colors.light.progressBg, borderRadius: 6, justifyContent: "flex-end", overflow: "hidden" },
   barFill: { width: "100%", borderRadius: 6 },
-  barLabel: { fontFamily: "Inter_500Medium", fontSize: 9, color: Colors.light.textSecondary, writingDirection: "rtl", textAlign: "center" },
-  barCount: { fontFamily: "Inter_400Regular", fontSize: 9, color: Colors.light.tabIconDefault },
+  barLabel: { fontFamily: "Tajawal_500Medium", fontSize: 9, color: Colors.light.textSecondary, writingDirection: "rtl", textAlign: "center" },
+  barCount: { fontFamily: "Tajawal_400Regular", fontSize: 9, color: Colors.light.tabIconDefault },
 });

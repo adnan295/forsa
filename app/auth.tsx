@@ -106,11 +106,11 @@ const otpStyles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.2)",
     textAlign: "center",
     fontSize: 22,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     color: "#FFFFFF",
   },
   boxFilled: {
-    borderColor: "#A78BFA",
+    borderColor: "#155EEF",
     backgroundColor: "rgba(167, 139, 250, 0.15)",
   },
 });
@@ -220,7 +220,7 @@ export default function AuthScreen() {
 
   if (verificationStep) {
     return (
-      <LinearGradient colors={["#7C3AED", "#A855F7", "#EC4899"]} style={styles.gradient}>
+      <LinearGradient colors={["#10224D", "#1B3A7A", "#155EEF"]} style={styles.gradient}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -241,13 +241,13 @@ export default function AuthScreen() {
 
             <View style={styles.logoArea}>
               <View style={[styles.iconCircle, { backgroundColor: "rgba(16, 185, 129, 0.2)" }]}>
-                <Ionicons name="mail" size={36} color="#10B981" />
+                <Ionicons name="mail" size={36} color="#067647" />
               </View>
               <Text style={styles.logoText}>تحقق من بريدك</Text>
               <Text style={styles.tagline}>
                 أرسلنا رمز تحقق مكوّن من 6 أرقام إلى
               </Text>
-              <Text style={[styles.tagline, { color: "#A78BFA", fontFamily: "Inter_600SemiBold", marginTop: 4 }]}>
+              <Text style={[styles.tagline, { color: "#155EEF", fontFamily: "Tajawal_500Medium", marginTop: 4 }]}>
                 {verificationEmail}
               </Text>
             </View>
@@ -256,7 +256,7 @@ export default function AuthScreen() {
               {fallbackCode && (
                 <View style={fallbackStyles.container}>
                   <View style={fallbackStyles.iconRow}>
-                    <Ionicons name="information-circle" size={20} color="#FBBF24" />
+                    <Ionicons name="information-circle" size={20} color="#B54708" />
                     <Text style={fallbackStyles.title}>رمز التحقق الخاص بك</Text>
                   </View>
                   <Text style={fallbackStyles.code}>{fallbackCode}</Text>
@@ -300,7 +300,7 @@ export default function AuthScreen() {
   }
 
   return (
-    <LinearGradient colors={["#7C3AED", "#A855F7", "#EC4899"]} style={styles.gradient}>
+    <LinearGradient colors={["#10224D", "#1B3A7A", "#155EEF"]} style={styles.gradient}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -464,14 +464,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   logoText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 32,
     color: "#FFFFFF",
     marginBottom: 8,
     writingDirection: "rtl",
   },
   tagline: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 16,
     color: "rgba(255,255,255,0.6)",
     writingDirection: "rtl",
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 16,
     color: "#FFFFFF",
     height: 56,
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   submitText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: Colors.light.accent,
     writingDirection: "rtl",
@@ -529,13 +529,13 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   switchText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: "rgba(255,255,255,0.6)",
     writingDirection: "rtl",
   },
   switchTextBold: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     color: "#FFFFFF",
   },
   forgotBtn: {
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   forgotText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 13,
     color: "rgba(255,255,255,0.7)",
     writingDirection: "rtl",
@@ -557,15 +557,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   resendLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: "rgba(255,255,255,0.5)",
     writingDirection: "rtl",
   },
   resendBtn: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
-    color: "#A78BFA",
+    color: "#155EEF",
     writingDirection: "rtl",
   },
 });
@@ -586,20 +586,20 @@ const fallbackStyles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
-    color: "#FBBF24",
+    color: "#B54708",
     writingDirection: "rtl",
   },
   code: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 32,
     color: "#FFFFFF",
     letterSpacing: 8,
     textAlign: "center",
   },
   hint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.5)",
     writingDirection: "rtl",

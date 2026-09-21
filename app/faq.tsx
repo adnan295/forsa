@@ -113,7 +113,7 @@ export default function FAQScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#EC4899"]}
+        colors={["#10224D", "#155EEF"]}
         style={[
           styles.header,
           { paddingTop: Platform.OS === "web" ? 67 + 12 : insets.top + 12 },
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 20,
     color: "#FFFFFF",
     writingDirection: "rtl",
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 20,
     marginBottom: 12,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -252,13 +252,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   questionNumber: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 13,
     color: Colors.light.accent,
   },
   questionText: {
     flex: 1,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   answerText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "right",

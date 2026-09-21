@@ -1,100 +1,66 @@
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
-import { BlurView } from "expo-blur";
 import { Platform, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 
-import Colors from "@/constants/colors";
-import { useTheme } from "@/lib/theme-context";
+import Colors, { Fonts, FontSize } from "@/constants/colors";
 
-function NativeTabLayout() {
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "flame", selected: "flame.fill" }} />
-        <Label>الحملات</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="tickets">
-        <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
-        <Label>تذاكري</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="client">
-        <Icon sf={{ default: "briefcase", selected: "briefcase.fill" }} />
-        <Label>عميل</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>حسابي</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
-
-function ClassicTabLayout() {
-  const { isDark, colors } = useTheme();
+/**
+ * شريط تنقّل أبيض — التبويب النشط أزرق والباقي رمادي.
+ * الترتيب (يمين ← يسار): الرئيسية · قسائمي · المنتجات · حسابي
+ */
+export default function TabLayout() {
+  const c = Colors.light;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.tabIconDefault,
+        tabBarActiveTintColor: c.primary,
+        tabBarInactiveTintColor: c.textMuted,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: Platform.select({
-            ios: "transparent",
-            android: isDark ? "#1F2937" : "#FFFFFF",
-            web: isDark ? "#1F2937" : "#FFFFFF",
-          }),
-          borderTopWidth: isDark ? 1 : 0,
-          borderTopColor: colors.border,
+          backgroundColor: c.surface,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: c.border,
           elevation: 0,
           height: Platform.OS === "web" ? 84 : undefined,
-          shadowColor: isDark ? "#000" : "#7C3AED",
+          paddingTop: 6,
+          shadowColor: c.navy,
           shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
+          shadowOpacity: 0.04,
           shadowRadius: 12,
         },
-        tabBarBackground: () =>
-          Platform.OS === "ios" ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : null,
         tabBarLabelStyle: {
-          fontFamily: "Inter_600SemiBold",
-          fontSize: 11,
+          fontFamily: Fonts.medium,
+          fontSize: FontSize.label,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "الحملات",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flame" size={size} color={color} />
+          title: "الرئيسية",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="tickets"
         options={{
-          title: "تذاكري",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="ticket" size={size} color={color} />
+          title: "قسائمي",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "ticket" : "ticket-outline"} size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="client"
+        name="products"
         options={{
-          title: "عميل",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="briefcase" size={size} color={color} />
+          title: "المنتجات",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "grid" : "grid-outline"} size={24} color={color} />
           ),
         }}
       />
@@ -102,18 +68,12 @@ function ClassicTabLayout() {
         name="profile"
         options={{
           title: "حسابي",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
           ),
         }}
       />
+      <Tabs.Screen name="client" options={{ href: null }} />
     </Tabs>
   );
-}
-
-export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
 }

@@ -57,7 +57,7 @@ export default function WinnersScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#1A1A1A", "#2D2D2D"]}
+        colors={["#10224D", "#1B3A7A"]}
         style={[
           styles.header,
           { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 },
@@ -113,7 +113,7 @@ function WinnerCard({ winner }: { winner: DrawWinner }) {
           <Image source={{ uri: imageUri }} style={styles.cardImage} resizeMode="cover" />
         ) : (
           <LinearGradient
-            colors={["#1A1A1A", "#2D2D2D", "#3D3D3D"]}
+            colors={["#10224D", "#1B3A7A", "#1B3A7A"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.cardImagePlaceholder}
@@ -178,7 +178,7 @@ function WinnerCard({ winner }: { winner: DrawWinner }) {
 
         <View style={styles.infoRow}>
           <View style={[styles.infoIconWrap, { backgroundColor: "rgba(59,130,246,0.1)" }]}>
-            <Ionicons name="people" size={14} color="#3B82F6" />
+            <Ionicons name="people" size={14} color="#175CD3" />
           </View>
           <View style={styles.infoTextArea}>
             <Text style={styles.infoLabel}>إجمالي التذاكر</Text>
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 22,
     color: "#FFFFFF",
     writingDirection: "rtl",
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 20,
     color: Colors.light.text,
     marginBottom: 8,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "center",
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: "hidden",
     marginBottom: 16,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.success,
   },
   completedBadgeText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 11,
     color: "#FFFFFF",
     writingDirection: "rtl",
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: Colors.light.text,
     textAlign: "right",
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 11,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   infoValue: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     textAlign: "right",

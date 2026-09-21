@@ -11,6 +11,7 @@ var __export = (target, all) => {
 // shared/schema.ts
 var schema_exports = {};
 __export(schema_exports, {
+  DEFAULT_DELIVERY_FEE: () => DEFAULT_DELIVERY_FEE,
   activityLog: () => activityLog,
   adminNotifications: () => adminNotifications,
   campaignClientRequests: () => campaignClientRequests,
@@ -34,6 +35,7 @@ __export(schema_exports, {
   orderStatusEnum: () => orderStatusEnum,
   orders: () => orders,
   ordersRelations: () => ordersRelations,
+  parseProductSpecs: () => parseProductSpecs,
   passwordResetTokens: () => passwordResetTokens,
   paymentMethods: () => paymentMethods,
   paymentStatusEnum: () => paymentStatusEnum,
@@ -65,7 +67,24 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var roleEnum, drawStatusEnum, orderStatusEnum, paymentStatusEnum, shippingStatusEnum, users, products, draws, orders, orderItems, tickets, paymentMethods, coupons, activityLog, reviews, adminNotifications, userNotifications, emailVerificationTokens, passwordResetTokens, supportTickets, walletTransactions, campaignClientRequests, usersRelations, productsRelations, drawsRelations, ordersRelations, orderItemsRelations, ticketsRelations, reviewsRelations, insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, checkoutSchema;
+function parseProductSpecs(specsJson) {
+  if (!specsJson) return [];
+  try {
+    const parsed = JSON.parse(specsJson);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item) => {
+      if (typeof item === "string") return { text: item };
+      if (item && typeof item === "object" && typeof item.text === "string") {
+        const icon = item.icon;
+        return { text: item.text, icon: typeof icon === "string" ? icon : void 0 };
+      }
+      return null;
+    }).filter((x) => x !== null && x.text.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+var roleEnum, drawStatusEnum, orderStatusEnum, paymentStatusEnum, shippingStatusEnum, users, products, draws, orders, orderItems, tickets, paymentMethods, coupons, activityLog, reviews, adminNotifications, userNotifications, emailVerificationTokens, passwordResetTokens, supportTickets, walletTransactions, campaignClientRequests, usersRelations, productsRelations, drawsRelations, ordersRelations, orderItemsRelations, ticketsRelations, reviewsRelations, insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, checkoutSchema, DEFAULT_DELIVERY_FEE;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -123,6 +142,8 @@ var init_schema = __esm({
       description: text("description").notNull().default(""),
       imageUrl: text("image_url"),
       imagesJson: text("images_json"),
+      /** JSON: [{ text: string; icon?: string }] — نقاط المواصفات بصفحة المنتج */
+      specsJson: text("specs_json"),
       price: decimal("price", { precision: 10, scale: 2 }).notNull(),
       /** null = مخزون غير محدود */
       stock: integer("stock"),
@@ -156,6 +177,8 @@ var init_schema = __esm({
       userId: varchar("user_id").notNull().references(() => users.id),
       subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
       discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+      /** رسوم التوصيل — لا تدخل في احتساب فرص السحب */
+      deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).notNull().default("0"),
       walletAmount: decimal("wallet_amount", { precision: 10, scale: 2 }).notNull().default("0"),
       /** المبلغ المستحق فعلياً بعد الخصم والمحفظة */
       totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
@@ -382,6 +405,7 @@ var init_schema = __esm({
       description: z.string().optional().default(""),
       imageUrl: z.string().optional().nullable(),
       imagesJson: z.string().optional().nullable(),
+      specsJson: z.string().optional().nullable(),
       price: z.union([z.string(), z.number()]).transform((v) => String(v)),
       stock: z.union([z.number(), z.null()]).optional(),
       category: z.string().optional().default("other"),
@@ -456,6 +480,7 @@ var init_schema = __esm({
       couponCode: z.string().optional().nullable(),
       useWallet: z.boolean().optional().default(false)
     });
+    DEFAULT_DELIVERY_FEE = 2;
   }
 });
 
@@ -534,6 +559,7 @@ var init_storage = __esm({
           description: data.description ?? "",
           imageUrl: data.imageUrl ?? null,
           imagesJson: data.imagesJson ?? null,
+          specsJson: data.specsJson ?? null,
           price: data.price,
           stock: data.stock ?? null,
           category: data.category ?? "other",
@@ -742,21 +768,24 @@ var init_storage = __esm({
             await tx.update(coupons).set({ usedCount: coupon.usedCount + 1 }).where(eq(coupons.id, coupon.id));
           }
           const afterDiscount = Math.max(0, subtotal - discountAmount);
+          const deliveryFee = DEFAULT_DELIVERY_FEE;
+          const payable = afterDiscount + deliveryFee;
           let walletAmount = 0;
           if (payload.useWallet) {
             const [user] = await tx.select({ walletBalance: users.walletBalance }).from(users).where(eq(users.id, userId)).for("update");
             const balance = parseFloat(user?.walletBalance ?? "0");
-            walletAmount = Math.min(balance, afterDiscount);
+            walletAmount = Math.min(balance, payable);
             if (walletAmount > 0) {
               await tx.update(users).set({ walletBalance: sql2`${users.walletBalance} - ${walletAmount.toFixed(2)}` }).where(eq(users.id, userId));
             }
           }
-          const totalDue = Math.max(0, afterDiscount - walletAmount);
+          const totalDue = Math.max(0, payable - walletAmount);
           const isBankTransfer = payload.paymentMethod === "bank_transfer";
           const [order] = await tx.insert(orders).values({
             userId,
             subtotal: subtotal.toFixed(2),
             discountAmount: discountAmount.toFixed(2),
+            deliveryFee: deliveryFee.toFixed(2),
             walletAmount: walletAmount.toFixed(2),
             totalAmount: totalDue.toFixed(2),
             // التذاكر بتنحسب على قيمة البضاعة بعد الخصم، قبل خصم المحفظة
@@ -2356,6 +2385,7 @@ async function registerRoutes(app2) {
       if (b.description !== void 0) data.description = b.description;
       if (b.imageUrl !== void 0) data.imageUrl = b.imageUrl;
       if (b.imagesJson !== void 0) data.imagesJson = b.imagesJson;
+      if (b.specsJson !== void 0) data.specsJson = b.specsJson;
       if (b.price !== void 0) data.price = String(b.price);
       if (b.stock !== void 0) data.stock = b.stock === null || b.stock === "" ? null : Number(b.stock);
       if (b.category !== void 0) data.category = b.category;

@@ -14,15 +14,17 @@ import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useCart } from "@/lib/cart-context";
-import { useFavorites } from "@/lib/favorites-context";
 import { buildMediaUrl } from "@/lib/query-client";
-import DrawBanner, { type CurrentDraw } from "@/components/DrawBanner";
-import type { Product, Review } from "@shared/schema";
+import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
+import { Header, Button, ChanceNote } from "@/components/ui";
+import type { CurrentDraw } from "@/components/DrawBanner";
+import { parseProductSpecs, type Product, type Review } from "@shared/schema";
 
+const c = Colors.light;
 const { width: W } = Dimensions.get("window");
+const GALLERY_H = 260;
 
 function parseImages(product: Product | undefined): string[] {
   if (!product) return [];
@@ -40,8 +42,7 @@ function parseImages(product: Product | undefined): string[] {
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { addItem, getQuantity, totalItems } = useCart();
-  const { toggleFavorite, isFavorite } = useFavorites();
+  const { addItem, getQuantity } = useCart();
 
   const [quantity, setQuantity] = useState(1);
   const [imageIndex, setImageIndex] = useState(0);
@@ -60,24 +61,24 @@ export default function ProductScreen() {
   });
 
   const images = useMemo(() => parseImages(product), [product]);
-  const inCart = product ? getQuantity(product.id) : 0;
+  const specs = useMemo(() => parseProductSpecs(product?.specsJson), [product]);
 
   if (isLoading) {
     return (
       <View style={s.loading}>
-        <ActivityIndicator size="large" color="#FFD000" />
+        <ActivityIndicator size="large" color={c.primary} />
       </View>
     );
   }
 
   if (!product) {
     return (
-      <View style={s.loading}>
-        <Ionicons name="alert-circle-outline" size={48} color="#999" />
-        <Text style={s.notFound}>المنتج غير موجود</Text>
-        <Pressable onPress={() => router.back()} style={s.backLink}>
-          <Text style={s.backLinkText}>رجوع</Text>
-        </Pressable>
+      <View style={s.root}>
+        <Header title="تفاصيل المنتج" showBack />
+        <View style={s.loading}>
+          <Ionicons name="alert-circle-outline" size={44} color={c.textMuted} />
+          <Text style={s.notFound}>المنتج غير موجود</Text>
+        </View>
       </View>
     );
   }
@@ -86,9 +87,9 @@ export default function ProductScreen() {
   const outOfStock = product.stock !== null && product.stock <= 0;
   const maxQty = product.stock === null ? 50 : Math.min(product.stock, 50);
   const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
-  const ticketsForOne = ticketPrice > 0 ? Math.floor(price / ticketPrice) : 0;
-  const ticketsForSelection = ticketPrice > 0 ? Math.floor((price * quantity) / ticketPrice) : 0;
-  const favorited = isFavorite(product.id);
+  const chancesForOne = ticketPrice > 0 ? Math.floor(price / ticketPrice) : 0;
+  const chancesForSelection = ticketPrice > 0 ? Math.floor((price * quantity) / ticketPrice) : 0;
+  const inCart = getQuantity(product.id);
 
   const avgRating =
     reviews && reviews.length > 0
@@ -99,7 +100,7 @@ export default function ProductScreen() {
     if (!product || outOfStock) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addItem(product, quantity);
-    Alert.alert("تمت الإضافة", `تمت إضافة ${quantity} × ${product.name} للسلة`, [
+    Alert.alert("تمت الإضافة", `${quantity} × ${product.name}`, [
       { text: "متابعة التسوق", style: "cancel" },
       { text: "عرض السلة", onPress: () => router.push("/cart" as any) },
     ]);
@@ -108,11 +109,9 @@ export default function ProductScreen() {
   return (
     <View style={s.root}>
       <Stack.Screen options={{ headerShown: false }} />
+      <Header title="تفاصيل المنتج" showBack />
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 130 }}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
         {/* ───── الصور ───── */}
         <View style={s.gallery}>
           {images.length > 0 ? (
@@ -121,14 +120,14 @@ export default function ProductScreen() {
               pagingEnabled
               showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={(e) =>
-                setImageIndex(Math.round(e.nativeEvent.contentOffset.x / W))
+                setImageIndex(Math.round(e.nativeEvent.contentOffset.x / (W - Spacing.screen * 2)))
               }
             >
               {images.map((img, i) => (
                 <Image
                   key={i}
                   source={{ uri: buildMediaUrl(img)! }}
-                  style={{ width: W, height: 340 }}
+                  style={{ width: W - Spacing.screen * 2, height: GALLERY_H }}
                   contentFit="cover"
                   cachePolicy="memory-disk"
                   transition={200}
@@ -136,9 +135,9 @@ export default function ProductScreen() {
               ))}
             </ScrollView>
           ) : (
-            <LinearGradient colors={["#1A1A1A", "#333333"]} style={s.galleryPlaceholder}>
-              <Ionicons name="cube-outline" size={64} color="#FFD000" />
-            </LinearGradient>
+            <View style={s.galleryFallback}>
+              <Ionicons name="cube-outline" size={56} color={c.textMuted} />
+            </View>
           )}
 
           {images.length > 1 && (
@@ -148,306 +147,346 @@ export default function ProductScreen() {
               ))}
             </View>
           )}
+        </View>
 
-          <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
-            <Pressable onPress={() => router.back()} style={s.iconBtn} hitSlop={8}>
-              <Ionicons name="arrow-forward" size={22} color="#fff" />
-            </Pressable>
-            <View style={s.topBarRight}>
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  toggleFavorite(product.id);
-                }}
-                style={s.iconBtn}
-                hitSlop={8}
-              >
+        {/* ───── الاسم والسعر ───── */}
+        <View style={s.titleBlock}>
+          <Text style={s.name}>{product.name}</Text>
+          <Text style={s.price}>${price.toFixed(0)}</Text>
+        </View>
+
+        {/* ───── المواصفات ───── */}
+        {specs.length > 0 && (
+          <View style={s.card}>
+            {specs.map((spec, i) => (
+              <View key={i} style={[s.specRow, i > 0 && s.specRowDivided]}>
+                <Text style={s.specText}>{spec.text}</Text>
                 <Ionicons
-                  name={favorited ? "heart" : "heart-outline"}
-                  size={22}
-                  color={favorited ? "#EF4444" : "#fff"}
+                  name={(spec.icon as any) ?? "ellipse"}
+                  size={18}
+                  color={c.primary}
+                  style={s.specIcon}
                 />
-              </Pressable>
-              <Pressable onPress={() => router.push("/cart" as any)} style={s.iconBtn} hitSlop={8}>
-                <Ionicons name="cart-outline" size={22} color="#fff" />
-                {totalItems > 0 && (
-                  <View style={s.cartDot}>
-                    <Text style={s.cartDotText}>{totalItems}</Text>
-                  </View>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-
-        {/* ───── التفاصيل ───── */}
-        <View style={s.body}>
-          <View style={s.titleRow}>
-            <Text style={s.price}>${price.toFixed(2)}</Text>
-            <Text style={s.title}>{product.name}</Text>
-          </View>
-
-          <View style={s.metaRow}>
-            {reviews && reviews.length > 0 && (
-              <View style={s.metaItem}>
-                <Ionicons name="star" size={14} color="#FFD000" />
-                <Text style={s.metaText}>
-                  {avgRating.toFixed(1)} ({reviews.length})
-                </Text>
               </View>
-            )}
-            <View style={s.metaItem}>
-              <Ionicons
-                name={outOfStock ? "close-circle" : "checkmark-circle"}
-                size={14}
-                color={outOfStock ? "#EF4444" : "#10B981"}
-              />
-              <Text style={s.metaText}>
-                {outOfStock
-                  ? "نفدت الكمية"
-                  : product.stock === null
-                  ? "متوفر"
-                  : `متوفر (${product.stock})`}
-              </Text>
-            </View>
-          </View>
-
-          {/* كم تذكرة بيعطي */}
-          {ticketsForOne > 0 && (
-            <View style={s.ticketCard}>
-              <View style={s.ticketIconWrap}>
-                <Ionicons name="ticket" size={20} color="#1A1A1A" />
-              </View>
-              <View style={s.ticketTextWrap}>
-                <Text style={s.ticketTitle}>
-                  شراء هذا المنتج بيعطيك {ticketsForOne} {ticketsForOne === 1 ? "تذكرة" : "تذاكر"}
-                </Text>
-                <Text style={s.ticketSub}>
-                  كل {ticketPrice.toFixed(0)}$ من مشترياتك = تذكرة سحب وحدة
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {product.description ? (
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>الوصف</Text>
-              <Text style={s.description}>{product.description}</Text>
-            </View>
-          ) : null}
-
-          {/* الجولة الحالية */}
-          {draw && (
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>جولة السحب الحالية</Text>
-              <DrawBanner draw={draw} compact onPress={() => router.push("/draw" as any)} />
-            </View>
-          )}
-
-          {/* التقييمات */}
-          {reviews && reviews.length > 0 && (
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>التقييمات ({reviews.length})</Text>
-              {reviews.slice(0, 5).map((r) => (
-                <View key={r.id} style={s.review}>
-                  <View style={s.reviewHead}>
-                    <View style={s.stars}>
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <Ionicons
-                          key={n}
-                          name={n <= r.rating ? "star" : "star-outline"}
-                          size={12}
-                          color="#FFD000"
-                        />
-                      ))}
-                    </View>
-                    <Text style={s.reviewUser}>{r.username}</Text>
-                  </View>
-                  {r.comment ? <Text style={s.reviewComment}>{r.comment}</Text> : null}
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* ───── شريط الشراء ───── */}
-      <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        {!outOfStock && (
-          <View style={s.qtyRow}>
-            <Pressable
-              onPress={() => {
-                Haptics.selectionAsync();
-                setQuantity((q) => Math.max(1, q - 1));
-              }}
-              style={s.qtyBtn}
-              hitSlop={6}
-            >
-              <Ionicons name="remove" size={18} color="#1A1A1A" />
-            </Pressable>
-            <Text style={s.qtyValue}>{quantity}</Text>
-            <Pressable
-              onPress={() => {
-                Haptics.selectionAsync();
-                setQuantity((q) => Math.min(maxQty, q + 1));
-              }}
-              style={s.qtyBtn}
-              hitSlop={6}
-            >
-              <Ionicons name="add" size={18} color="#1A1A1A" />
-            </Pressable>
+            ))}
           </View>
         )}
 
-        <Pressable onPress={handleAdd} disabled={outOfStock} style={s.addBtnWrap}>
-          <LinearGradient
-            colors={outOfStock ? ["#E5E5E5", "#E5E5E5"] : ["#FFD000", "#E6B800"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={s.addBtn}
-          >
-            <Ionicons name="cart" size={18} color={outOfStock ? "#999" : "#1A1A1A"} />
-            <View>
-              <Text style={[s.addBtnText, outOfStock && { color: "#999" }]}>
-                {outOfStock ? "غير متوفر" : `أضف للسلة · ${(price * quantity).toFixed(2)}$`}
-              </Text>
-              {!outOfStock && ticketsForSelection > 0 && (
-                <Text style={s.addBtnSub}>= {ticketsForSelection} تذكرة سحب</Text>
-              )}
-            </View>
-          </LinearGradient>
-        </Pressable>
-      </View>
+        {product.description ? (
+          <View style={s.card}>
+            <Text style={s.sectionTitle}>الوصف</Text>
+            <Text style={s.description}>{product.description}</Text>
+          </View>
+        ) : null}
 
-      {inCart > 0 && (
-        <View style={[s.inCartPill, { bottom: Math.max(insets.bottom, 12) + 78 }]}>
-          <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-          <Text style={s.inCartText}>عندك {inCart} من هالمنتج بالسلة</Text>
+        {/* ───── فرص السحب ───── */}
+        {chancesForOne > 0 && (
+          <ChanceNote>
+            {chancesForOne === 1
+              ? "فرصة سحب واحدة مع هذا المنتج"
+              : `${chancesForOne} فرص سحب مع هذا المنتج`}
+          </ChanceNote>
+        )}
+
+        <View style={s.confirmNote}>
+          <Ionicons name="checkmark-circle" size={17} color={StatusColors.success.fg} />
+          <Text style={s.confirmNoteText}>تُفعّل الفرص بعد تأكيد الدفع</Text>
         </View>
-      )}
+
+        {/* ───── الكمية ───── */}
+        {!outOfStock && (
+          <View style={s.qtyCard}>
+            <View style={s.qtyControls}>
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setQuantity((q) => Math.max(1, q - 1));
+                }}
+                style={s.qtyBtn}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel="إنقاص الكمية"
+              >
+                <Ionicons name="remove" size={20} color={c.navy} />
+              </Pressable>
+
+              <View style={s.qtyValue}>
+                <Text style={s.qtyText}>{quantity}</Text>
+              </View>
+
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setQuantity((q) => Math.min(maxQty, q + 1));
+                }}
+                style={s.qtyBtn}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel="زيادة الكمية"
+              >
+                <Ionicons name="add" size={20} color={c.navy} />
+              </Pressable>
+            </View>
+
+            <Text style={s.qtyLabel}>الكمية</Text>
+          </View>
+        )}
+
+        {/* ───── التقييمات ───── */}
+        {reviews && reviews.length > 0 && (
+          <View style={s.card}>
+            <View style={s.reviewHead}>
+              <View style={s.ratingRow}>
+                <Text style={s.ratingValue}>{avgRating.toFixed(1)}</Text>
+                <Ionicons name="star" size={15} color={c.gold} />
+              </View>
+              <Text style={s.sectionTitle}>التقييمات ({reviews.length})</Text>
+            </View>
+
+            {reviews.slice(0, 5).map((r) => (
+              <View key={r.id} style={s.review}>
+                <View style={s.reviewTop}>
+                  <View style={s.stars}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Ionicons
+                        key={n}
+                        name={n <= r.rating ? "star" : "star-outline"}
+                        size={12}
+                        color={c.gold}
+                      />
+                    ))}
+                  </View>
+                  <Text style={s.reviewUser}>{r.username}</Text>
+                </View>
+                {r.comment ? <Text style={s.reviewComment}>{r.comment}</Text> : null}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {inCart > 0 && (
+          <View style={s.inCartNote}>
+            <Ionicons name="cart" size={15} color={StatusColors.info.fg} />
+            <Text style={s.inCartText}>عندك {inCart} من هذا المنتج في السلة</Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* ───── شريط الإضافة ───── */}
+      <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}>
+        <Button
+          label={
+            outOfStock
+              ? "غير متوفر"
+              : chancesForSelection > 0
+              ? `أضف إلى السلة · ${chancesForSelection} فرصة`
+              : "أضف إلى السلة"
+          }
+          icon="cart"
+          onPress={handleAdd}
+          disabled={outOfStock}
+        />
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8F8F8" },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F8F8F8", gap: 12 },
-  notFound: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#666", writingDirection: "rtl" },
-  backLink: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: "#FFD000", borderRadius: 10 },
-  backLinkText: { fontFamily: "Inter_700Bold", fontSize: 14, color: "#1A1A1A", writingDirection: "rtl" },
+  root: { flex: 1, backgroundColor: c.background },
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.background,
+    gap: Spacing.md,
+  },
+  notFound: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.body,
+    color: c.textSecondary,
+    writingDirection: "rtl",
+  },
+  content: { padding: Spacing.screen, paddingBottom: 130, gap: Spacing.md },
 
-  gallery: { height: 340, backgroundColor: "#1A1A1A", position: "relative" },
-  galleryPlaceholder: { width: "100%", height: 340, alignItems: "center", justifyContent: "center" },
+  gallery: {
+    height: GALLERY_H,
+    borderRadius: Radius.card,
+    overflow: "hidden",
+    backgroundColor: c.surface,
+    position: "relative",
+  },
+  galleryFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
   dots: {
-    position: "absolute", bottom: 14, left: 0, right: 0,
-    flexDirection: "row", justifyContent: "center", gap: 6,
+    position: "absolute",
+    bottom: Spacing.md,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 5,
   },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.4)" },
-  dotActive: { backgroundColor: "#FFD000", width: 18 },
-  topBar: {
-    position: "absolute", top: 0, start: 0, end: 0,
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingBottom: 8,
-  },
-  topBarRight: { flexDirection: "row", gap: 8 },
-  iconBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: "rgba(0,0,0,0.35)", alignItems: "center", justifyContent: "center",
-  },
-  cartDot: {
-    position: "absolute", top: 2, end: 2, minWidth: 16, height: 16, borderRadius: 8,
-    backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", paddingHorizontal: 3,
-  },
-  cartDotText: { fontFamily: "Inter_700Bold", fontSize: 9, color: "#fff" },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.65)" },
+  dotActive: { backgroundColor: c.primary, width: 18 },
 
-  body: {
-    backgroundColor: "#fff", marginTop: -20,
-    borderTopStartRadius: 24, borderTopEndRadius: 24,
-    padding: 20, gap: 16,
+  titleBlock: { gap: Spacing.xs, paddingHorizontal: Spacing.xs },
+  name: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h2,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 30,
   },
-  titleRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
-  title: {
-    fontFamily: "Inter_700Bold", fontSize: 20, color: "#1A1A1A",
-    flex: 1, textAlign: "right", writingDirection: "rtl", lineHeight: 29,
-  },
-  price: { fontFamily: "Inter_700Bold", fontSize: 22, color: "#E6B800" },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 16, flexWrap: "wrap" },
-  metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  metaText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "#666", writingDirection: "rtl" },
+  price: { fontFamily: Fonts.bold, fontSize: FontSize.h2, color: c.primary, textAlign: "right" },
 
-  ticketCard: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: "#FFFBE6", borderRadius: 16, padding: 14,
-    borderWidth: 1, borderColor: "#FFE566",
+  card: {
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
-  ticketIconWrap: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: "#FFD000",
-    alignItems: "center", justifyContent: "center",
-  },
-  ticketTextWrap: { flex: 1, gap: 2 },
-  ticketTitle: {
-    fontFamily: "Inter_700Bold", fontSize: 14, color: "#1A1A1A",
-    textAlign: "right", writingDirection: "rtl",
-  },
-  ticketSub: {
-    fontFamily: "Inter_400Regular", fontSize: 12, color: "#8A7500",
-    textAlign: "right", writingDirection: "rtl",
-  },
-
-  section: { gap: 10 },
   sectionTitle: {
-    fontFamily: "Inter_700Bold", fontSize: 16, color: "#1A1A1A",
-    textAlign: "right", writingDirection: "rtl",
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h3,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   description: {
-    fontFamily: "Inter_400Regular", fontSize: 14, color: "#666",
-    textAlign: "right", writingDirection: "rtl", lineHeight: 23,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 23,
   },
 
-  review: {
-    backgroundColor: "#F8F8F8", borderRadius: 12, padding: 12, gap: 6,
+  specRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md, paddingVertical: 2 },
+  specRowDivided: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.borderSubtle,
+    paddingTop: Spacing.md,
+    marginTop: Spacing.xs,
   },
+  specIcon: { width: 22, textAlign: "center" },
+  specText: {
+    flex: 1,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.text,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+
+  confirmNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    backgroundColor: StatusColors.success.bg,
+    borderRadius: Radius.button,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  confirmNoteText: {
+    flex: 1,
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: StatusColors.success.fg,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+
+  qtyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    padding: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
+  },
+  qtyControls: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
+  qtyBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: Radius.button,
+    backgroundColor: c.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyValue: {
+    minWidth: 58,
+    height: 38,
+    borderRadius: Radius.button,
+    backgroundColor: c.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyText: { fontFamily: Fonts.bold, fontSize: FontSize.body, color: c.navy },
+  qtyLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.body,
+    color: c.navy,
+    writingDirection: "rtl",
+  },
+
   reviewHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  ratingValue: { fontFamily: Fonts.bold, fontSize: FontSize.caption, color: c.navy },
+  review: {
+    backgroundColor: c.background,
+    borderRadius: Radius.button,
+    padding: Spacing.md,
+    gap: 6,
+  },
+  reviewTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   stars: { flexDirection: "row", gap: 1 },
-  reviewUser: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#1A1A1A", writingDirection: "rtl" },
+  reviewUser: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.label,
+    color: c.navy,
+    writingDirection: "rtl",
+  },
   reviewComment: {
-    fontFamily: "Inter_400Regular", fontSize: 13, color: "#666",
-    textAlign: "right", writingDirection: "rtl", lineHeight: 20,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 21,
+  },
+
+  inCartNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    backgroundColor: StatusColors.info.bg,
+    borderRadius: Radius.button,
+    padding: Spacing.md,
+  },
+  inCartText: {
+    flex: 1,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: StatusColors.info.fg,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
 
   bottomBar: {
-    position: "absolute", bottom: 0, start: 0, end: 0,
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: "#fff", paddingHorizontal: 16, paddingTop: 12,
-    borderTopWidth: 1, borderTopColor: "#F0F0F0",
+    position: "absolute",
+    bottom: 0,
+    start: 0,
+    end: 0,
+    backgroundColor: c.surface,
+    paddingHorizontal: Spacing.screen,
+    paddingTop: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
   },
-  qtyRow: {
-    flexDirection: "row", alignItems: "center", gap: 10,
-    backgroundColor: "#F5F5F5", borderRadius: 12, paddingHorizontal: 8, paddingVertical: 8,
-  },
-  qtyBtn: {
-    width: 30, height: 30, borderRadius: 8, backgroundColor: "#fff",
-    alignItems: "center", justifyContent: "center",
-  },
-  qtyValue: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#1A1A1A", minWidth: 20, textAlign: "center" },
-  addBtnWrap: { flex: 1, borderRadius: 14, overflow: "hidden" },
-  addBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    paddingVertical: 12, paddingHorizontal: 16,
-  },
-  addBtnText: {
-    fontFamily: "Inter_700Bold", fontSize: 14, color: "#1A1A1A",
-    textAlign: "center", writingDirection: "rtl",
-  },
-  addBtnSub: {
-    fontFamily: "Inter_500Medium", fontSize: 11, color: "rgba(26,26,26,0.65)",
-    textAlign: "center", writingDirection: "rtl",
-  },
-
-  inCartPill: {
-    position: "absolute", alignSelf: "center",
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: "#1A1A1A", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-  },
-  inCartText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "#fff", writingDirection: "rtl" },
 });

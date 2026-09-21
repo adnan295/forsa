@@ -170,7 +170,7 @@ export default function EditProfileScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        colors={["#10224D", "#1B3A7A", "#155EEF"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[
@@ -415,7 +415,7 @@ export default function EditProfileScreen() {
                     <Text
                       style={[
                         styles.countryItemText,
-                        isSelected && { color: Colors.light.accent, fontFamily: "Inter_600SemiBold" },
+                        isSelected && { color: Colors.light.accent, fontFamily: "Tajawal_500Medium" },
                       ]}
                     >
                       {item.label}
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.15)",
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     color: "#FFFFFF",
     textAlign: "center",
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 22,
     padding: 20,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 16,
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 16,
     color: Colors.light.text,
     textAlign: "right",
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     marginVertical: 14,
   },
   inputLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     textAlign: "right",
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.danger,
   },
   errorText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.danger,
     textAlign: "right",
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   },
   countryPickerText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   saveText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: "#FFFFFF",
     writingDirection: "rtl",
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     color: Colors.light.text,
     textAlign: "center",
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     paddingVertical: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   countryGroupTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 14,
     color: Colors.light.accent,
     textAlign: "right",
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
   },
   countryItemText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",

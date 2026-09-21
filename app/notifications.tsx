@@ -32,12 +32,12 @@ type UserNotification = {
 };
 
 const NOTIFICATION_CONFIG: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string }> = {
-  new_campaign: { icon: "megaphone", color: "#7C3AED", bg: "rgba(124, 58, 237, 0.1)" },
-  low_stock: { icon: "flash", color: "#F59E0B", bg: "rgba(245, 158, 11, 0.1)" },
-  sold_out: { icon: "flame", color: "#EF4444", bg: "rgba(239, 68, 68, 0.1)" },
-  draw_completed: { icon: "dice", color: "#6366F1", bg: "rgba(99, 102, 241, 0.1)" },
-  winner_announced: { icon: "trophy", color: "#EC4899", bg: "rgba(236, 72, 153, 0.1)" },
-  you_won: { icon: "star", color: "#F59E0B", bg: "rgba(245, 158, 11, 0.15)" },
+  new_campaign: { icon: "megaphone", color: "#10224D", bg: "rgba(124, 58, 237, 0.1)" },
+  low_stock: { icon: "flash", color: "#B54708", bg: "rgba(245, 158, 11, 0.1)" },
+  sold_out: { icon: "flame", color: "#B42318", bg: "rgba(239, 68, 68, 0.1)" },
+  draw_completed: { icon: "dice", color: "#155EEF", bg: "rgba(99, 102, 241, 0.1)" },
+  winner_announced: { icon: "trophy", color: "#155EEF", bg: "rgba(236, 72, 153, 0.1)" },
+  you_won: { icon: "star", color: "#B54708", bg: "rgba(245, 158, 11, 0.15)" },
 };
 
 function getTimeAgo(dateStr: string): string {
@@ -102,7 +102,7 @@ export default function NotificationsScreen() {
   const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
 
   const renderNotification = ({ item }: { item: UserNotification }) => {
-    const config = NOTIFICATION_CONFIG[item.type] || { icon: "notifications", color: "#6B7280", bg: "rgba(107, 114, 128, 0.1)" };
+    const config = NOTIFICATION_CONFIG[item.type] || { icon: "notifications", color: "#475467", bg: "rgba(107, 114, 128, 0.1)" };
 
     return (
       <Pressable
@@ -142,7 +142,7 @@ export default function NotificationsScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        colors={["#10224D", "#1B3A7A", "#155EEF"]}
         style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 }]}
       >
         <View style={styles.headerContent}>
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 20,
     color: "#fff",
     writingDirection: "rtl",
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   markAllText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 12,
     color: "#fff",
     writingDirection: "rtl",
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   notificationTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     textAlign: "right",
@@ -292,17 +292,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   unreadTitle: {
-    fontFamily: "Inter_700Bold",
-    color: "#7C3AED",
+    fontFamily: "Tajawal_700Bold",
+    color: "#10224D",
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#7C3AED",
+    backgroundColor: "#10224D",
   },
   notificationBody: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 13,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -310,9 +310,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   timeText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 11,
-    color: "#9CA3AF",
+    color: "#667085",
     textAlign: "right",
     writingDirection: "rtl",
     marginTop: 2,
@@ -332,14 +332,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 18,
     color: Colors.light.text,
     marginBottom: 8,
     writingDirection: "rtl",
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "center",
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   loginBtnText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: "#fff",
   },

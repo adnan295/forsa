@@ -139,7 +139,7 @@ export default function ProfileScreen() {
       <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
         <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top, alignItems: "center", paddingHorizontal: 32 }}>
           <LinearGradient
-            colors={["#7C3AED", "#EC4899"]}
+            colors={["#10224D", "#155EEF"]}
             style={styles.emptyIconCircle}
           >
             <Ionicons name="person" size={40} color="#fff" />
@@ -153,7 +153,7 @@ export default function ProfileScreen() {
             style={styles.signInButton}
           >
             <LinearGradient
-              colors={[Colors.light.accent, Colors.light.accentPink]}
+              colors={[Colors.light.accent, Colors.light.accent]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.signInGradient}
@@ -173,49 +173,49 @@ export default function ProfileScreen() {
       icon: "person-circle-outline" as const,
       label: "تعديل الملف الشخصي",
       subtitle: isProfileComplete ? "مكتمل ✓" : "أكمل بياناتك للشراء",
-      color: isProfileComplete ? "#10B981" : "#EF4444",
+      color: isProfileComplete ? "#067647" : "#B42318",
       onPress: () => router.push("/edit-profile" as any),
     },
     {
       icon: "receipt-outline" as const,
       label: "طلباتي",
       subtitle: `${stats?.totalOrders || 0} طلب`,
-      color: "#7C3AED",
+      color: "#10224D",
       onPress: () => router.push("/(tabs)/tickets" as any),
     },
     {
       icon: "ticket-outline" as const,
       label: "تذاكر الهدايا",
       subtitle: `${stats?.totalTickets || 0} تذكرة`,
-      color: "#EC4899",
+      color: "#155EEF",
       onPress: () => router.push("/(tabs)/tickets" as any),
     },
     {
       icon: "heart-outline" as const,
       label: "المفضلة",
       subtitle: "الحملات المحفوظة",
-      color: "#EF4444",
+      color: "#B42318",
       onPress: () => router.push("/favorites" as any),
     },
     {
       icon: "trophy-outline" as const,
       label: "جوائزي",
       subtitle: stats?.winningTickets ? `${stats.winningTickets} فوز` : "لم تفز بعد",
-      color: "#F59E0B",
+      color: "#B54708",
       onPress: () => router.push("/(tabs)/tickets" as any),
     },
     {
       icon: "gift-outline" as const,
       label: "برنامج الإحالة",
       subtitle: "ادعُ أصدقاءك واحصل على مكافآت",
-      color: "#06B6D4",
+      color: "#175CD3",
       onPress: () => router.push("/referral" as any),
     },
     {
       icon: "people-outline" as const,
       label: "الفائزون السابقون",
       subtitle: "عرض جميع الفائزين",
-      color: "#8B5CF6",
+      color: "#155EEF",
       onPress: () => router.push("/winners" as any),
     },
   ];
@@ -226,7 +226,7 @@ export default function ProfileScreen() {
         {
           icon: "notifications-outline" as const,
           label: notifStatus === "denied" ? "فتح إعدادات الإشعارات" : "تفعيل الإشعارات",
-          color: "#F59E0B",
+          color: "#B54708",
           badge: true,
           onPress: handleEnableNotifications,
         },
@@ -238,37 +238,37 @@ export default function ProfileScreen() {
     {
       icon: "help-circle-outline" as const,
       label: "الأسئلة الشائعة",
-      color: "#7C3AED",
+      color: "#10224D",
       onPress: () => router.push("/faq" as any),
     },
     {
       icon: "information-circle-outline" as const,
       label: "عن التطبيق",
-      color: "#6366F1",
+      color: "#155EEF",
       onPress: () => router.push({ pathname: "/info", params: { type: "about" } }),
     },
     {
       icon: "document-text-outline" as const,
       label: "الشروط والأحكام",
-      color: "#8B5CF6",
+      color: "#155EEF",
       onPress: () => router.push({ pathname: "/info", params: { type: "terms" } }),
     },
     {
       icon: "shield-checkmark-outline" as const,
       label: "سياسة الخصوصية",
-      color: "#06B6D4",
+      color: "#175CD3",
       onPress: () => router.push({ pathname: "/info", params: { type: "privacy" } }),
     },
     {
       icon: "chatbubble-ellipses-outline" as const,
       label: "تواصل معنا",
-      color: "#10B981",
+      color: "#067647",
       onPress: () => router.push({ pathname: "/info", params: { type: "contact" } }),
     },
     {
       icon: "star-outline" as const,
       label: "قيّم التطبيق",
-      color: "#F59E0B",
+      color: "#B54708",
       onPress: () => {},
     },
   ];
@@ -283,7 +283,7 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        colors={["#10224D", "#1B3A7A", "#155EEF"]}
         style={styles.headerGradient}
       >
         <View style={styles.headerContent}>
@@ -298,7 +298,7 @@ export default function ProfileScreen() {
                 <Text style={styles.userName}>{user.fullName || user.username}</Text>
                 {isAdmin && (
                   <View style={styles.adminBadge}>
-                    <Ionicons name="shield-checkmark" size={11} color="#FFD700" />
+                    <Ionicons name="shield-checkmark" size={11} color="#F5A623" />
                     <Text style={styles.adminText}>مدير</Text>
                   </View>
                 )}
@@ -325,7 +325,7 @@ export default function ProfileScreen() {
             value={stats?.totalOrders?.toString() || "0"}
             label="الطلبات"
             icon="receipt"
-            color="#7C3AED"
+            color="#10224D"
             colors={colors}
           />
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -333,7 +333,7 @@ export default function ProfileScreen() {
             value={stats?.totalTickets?.toString() || "0"}
             label="التذاكر"
             icon="ticket"
-            color="#EC4899"
+            color="#155EEF"
             colors={colors}
           />
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -341,7 +341,7 @@ export default function ProfileScreen() {
             value={`$${stats?.totalSpent || "0"}`}
             label="المشتريات"
             icon="wallet"
-            color="#10B981"
+            color="#067647"
             colors={colors}
           />
         </View>
@@ -354,7 +354,7 @@ export default function ProfileScreen() {
             style={{ borderRadius: 20, overflow: "hidden" }}
           >
             <LinearGradient
-              colors={["#059669", "#10B981", "#34D399"]}
+              colors={["#067647", "#067647", "#067647"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={{ padding: 18, flexDirection: "row", alignItems: "center", gap: 14, direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr" }}
@@ -363,10 +363,10 @@ export default function ProfileScreen() {
                 <Ionicons name="wallet" size={26} color="#fff" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#fff", writingDirection: "rtl" as const, textAlign: "right" }}>
+                <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 22, color: "#fff", writingDirection: "rtl" as const, textAlign: "right" }}>
                   {parseFloat(String(walletData.balance || 0)).toFixed(2)} $
                 </Text>
-                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.85)", writingDirection: "rtl" as const, textAlign: "right" }}>
+                <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 13, color: "rgba(255,255,255,0.85)", writingDirection: "rtl" as const, textAlign: "right" }}>
                   رصيد المحفظة · اضغط لعرض تفاصيل الإحالة
                 </Text>
               </View>
@@ -389,7 +389,7 @@ export default function ProfileScreen() {
             ]}
           >
             <LinearGradient
-              colors={["#7C3AED", "#EC4899"]}
+              colors={["#10224D", "#155EEF"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.adminCardGradient}
@@ -409,9 +409,9 @@ export default function ProfileScreen() {
 
           {adminStats && (
             <View style={styles.adminStatsRow}>
-              <MiniStat value={adminStats.activeCampaigns.toString()} label="نشطة" color="#7C3AED" colors={colors} />
-              <MiniStat value={adminStats.totalCampaigns.toString()} label="الحملات" color="#3B82F6" colors={colors} />
-              <MiniStat value={`$${adminStats.totalRevenue}`} label="الإيرادات" color="#10B981" colors={colors} />
+              <MiniStat value={adminStats.activeCampaigns.toString()} label="نشطة" color="#10224D" colors={colors} />
+              <MiniStat value={adminStats.totalCampaigns.toString()} label="الحملات" color="#175CD3" colors={colors} />
+              <MiniStat value={`$${adminStats.totalRevenue}`} label="الإيرادات" color="#067647" colors={colors} />
             </View>
           )}
         </View>
@@ -429,7 +429,7 @@ export default function ProfileScreen() {
                 }}
                 style={({ pressed }) => [
                   styles.menuItem,
-                  pressed && { backgroundColor: isDark ? colors.border : "#F9FAFB" },
+                  pressed && { backgroundColor: isDark ? colors.border : "#F6F8FC" },
                 ]}
               >
                 <View style={[styles.menuIconWrap, { backgroundColor: item.color + "12" }]}>
@@ -459,7 +459,7 @@ export default function ProfileScreen() {
                 }}
                 style={({ pressed }) => [
                   styles.menuItem,
-                  pressed && { backgroundColor: isDark ? colors.border : "#F9FAFB" },
+                  pressed && { backgroundColor: isDark ? colors.border : "#F6F8FC" },
                 ]}
               >
                 <View style={[styles.menuIconWrap, { backgroundColor: item.color + "12" }]}>
@@ -509,7 +509,7 @@ export default function ProfileScreen() {
 
       <View style={styles.versionArea}>
         <Text style={[styles.versionText, { color: colors.textSecondary }]}>فرصة v1.0.0</Text>
-        <Text style={[styles.versionSub, { color: isDark ? colors.border : "#D1D5DB" }]}>صُنع بحب</Text>
+        <Text style={[styles.versionSub, { color: isDark ? colors.border : "#D0D5DD" }]}>صُنع بحب</Text>
       </View>
     </ScrollView>
   );
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 22,
     color: Colors.light.text,
     marginBottom: 8,
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 15,
     color: Colors.light.textSecondary,
     textAlign: "center",
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   signInButtonText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: "#FFFFFF",
     writingDirection: "rtl",
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.3)",
   },
   avatarText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 28,
     color: "#FFFFFF",
   },
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
     direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   userName: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 22,
     color: "#FFFFFF",
     writingDirection: "rtl",
@@ -667,13 +667,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   adminText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 11,
-    color: "#FFD700",
+    color: "#F5A623",
     writingDirection: "rtl",
   },
   userEmail: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: "rgba(255,255,255,0.6)",
     writingDirection: "rtl",
@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
     direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   joinDate: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.5)",
     writingDirection: "rtl",
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 20,
     paddingHorizontal: 8,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 16,
@@ -730,12 +730,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   statValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     color: Colors.light.text,
   },
   statLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   sectionTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     color: Colors.light.text,
     marginBottom: 12,
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
   adminCard: {
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -783,14 +783,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   adminCardTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: "#FFFFFF",
     textAlign: "right",
     writingDirection: "rtl",
   },
   adminCardSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.7)",
     textAlign: "right",
@@ -809,19 +809,19 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     alignItems: "center",
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
   miniStatValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     marginBottom: 2,
   },
   miniStatLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 11,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
@@ -831,7 +831,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 14,
@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#EF4444",
+    backgroundColor: "#B42318",
     borderWidth: 1.5,
     borderColor: "#fff",
   },
@@ -868,14 +868,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
     writingDirection: "rtl",
   },
   menuSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(239, 68, 68, 0.15)",
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
     direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   logoutText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.danger,
     writingDirection: "rtl",
@@ -921,9 +921,9 @@ const styles = StyleSheet.create({
     direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
   },
   deleteText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 13,
-    color: "#9CA3AF",
+    color: "#667085",
     writingDirection: "rtl" as const,
     textAlign: "center",
   },
@@ -933,13 +933,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   versionText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 13,
     color: Colors.light.textSecondary,
   },
   versionSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
-    color: "#D1D5DB",
+    color: "#D0D5DD",
   },
 });

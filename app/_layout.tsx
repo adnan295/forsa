@@ -18,11 +18,10 @@ import { setupNotificationHandlers, registerForPushNotifications } from "@/lib/p
 import { useAuth } from "@/lib/auth-context";
 import {
   useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
+  Tajawal_400Regular,
+  Tajawal_500Medium,
+  Tajawal_700Bold,
+} from "@expo-google-fonts/tajawal";
 
 if (!I18nManager.isRTL && Platform.OS !== "web") {
   I18nManager.allowRTL(true);
@@ -88,7 +87,7 @@ const offlineStyles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#EF4444",
+    backgroundColor: "#B42318",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -99,7 +98,7 @@ const offlineStyles = StyleSheet.create({
   text: {
     color: "#fff",
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
   },
 });
 
@@ -198,10 +197,9 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Tajawal_400Regular,
+    Tajawal_500Medium,
+    Tajawal_700Bold,
   });
 
   useEffect(() => {

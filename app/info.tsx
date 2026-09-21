@@ -30,22 +30,22 @@ const PAGE_CONFIG: Record<PageType, {
   about: {
     title: "عن التطبيق",
     icon: "information-circle",
-    colors: ["#7C3AED", "#EC4899"],
+    colors: ["#10224D", "#155EEF"],
   },
   terms: {
     title: "الشروط والأحكام",
     icon: "document-text",
-    colors: ["#A855F7", "#EC4899"],
+    colors: ["#1B3A7A", "#155EEF"],
   },
   privacy: {
     title: "سياسة الخصوصية",
     icon: "shield-checkmark",
-    colors: ["#06B6D4", "#0891B2"],
+    colors: ["#175CD3", "#175CD3"],
   },
   contact: {
     title: "تواصل معنا",
     icon: "chatbubble-ellipses",
-    colors: ["#10B981", "#059669"],
+    colors: ["#067647", "#067647"],
   },
 };
 
@@ -66,11 +66,11 @@ function AboutContent() {
         <BulletPoint text="يتم إبلاغ الفائز وشحن الهدية" />
       </ContentCard>
       <ContentCard title="مميزاتنا">
-        <FeatureRow icon="shield-checkmark" text="اختيار عشوائي آمن ومشفّر" color="#10B981" />
-        <FeatureRow icon="card" text="خيارات دفع متعددة" color="#3B82F6" />
-        <FeatureRow icon="gift" text="هدايا حقيقية ومضمونة" color="#F59E0B" />
-        <FeatureRow icon="airplane" text="شحن سريع لجميع المناطق" color="#8B5CF6" />
-        <FeatureRow icon="headset" text="دعم فني على مدار الساعة" color="#EC4899" />
+        <FeatureRow icon="shield-checkmark" text="اختيار عشوائي آمن ومشفّر" color="#067647" />
+        <FeatureRow icon="card" text="خيارات دفع متعددة" color="#175CD3" />
+        <FeatureRow icon="gift" text="هدايا حقيقية ومضمونة" color="#B54708" />
+        <FeatureRow icon="airplane" text="شحن سريع لجميع المناطق" color="#155EEF" />
+        <FeatureRow icon="headset" text="دعم فني على مدار الساعة" color="#155EEF" />
       </ContentCard>
       <View style={styles.versionBox}>
         <Text style={styles.versionLabel}>الإصدار</Text>
@@ -161,15 +161,15 @@ interface SupportTicket {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  open: { label: "مفتوحة", color: "#F59E0B", bg: "#FEF3C7" },
-  in_progress: { label: "قيد المعالجة", color: "#3B82F6", bg: "#DBEAFE" },
-  closed: { label: "مغلقة", color: "#10B981", bg: "#D1FAE5" },
+  open: { label: "مفتوحة", color: "#B54708", bg: "#FFF4D6" },
+  in_progress: { label: "قيد المعالجة", color: "#175CD3", bg: "#EFF4FF" },
+  closed: { label: "مغلقة", color: "#067647", bg: "#ECFDF3" },
 };
 
 const PRIORITY_OPTIONS: { value: "low" | "medium" | "high"; label: string; color: string }[] = [
-  { value: "low", label: "منخفضة", color: "#10B981" },
-  { value: "medium", label: "متوسطة", color: "#F59E0B" },
-  { value: "high", label: "عالية", color: "#EF4444" },
+  { value: "low", label: "منخفضة", color: "#067647" },
+  { value: "medium", label: "متوسطة", color: "#B54708" },
+  { value: "high", label: "عالية", color: "#B42318" },
 ];
 
 function TicketStatusPill({ status }: { status: string }) {
@@ -287,7 +287,7 @@ function TicketForm({ onCancel, onSuccess }: { onCancel: () => void; onSuccess: 
               <Text
                 style={[
                   ticketStyles.priorityOptionText,
-                  priority === opt.value && { color: opt.color, fontFamily: "Inter_600SemiBold" },
+                  priority === opt.value && { color: opt.color, fontFamily: "Tajawal_500Medium" },
                 ]}
               >
                 {opt.label}
@@ -424,8 +424,8 @@ function ContactContent() {
             pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
           ]}
         >
-          <View style={[styles.contactIconWrap, { backgroundColor: "#3B82F6" + "15" }]}>
-            <Ionicons name="mail" size={22} color="#3B82F6" />
+          <View style={[styles.contactIconWrap, { backgroundColor: "#175CD3" + "15" }]}>
+            <Ionicons name="mail" size={22} color="#175CD3" />
           </View>
           <View style={styles.contactInfo}>
             <Text style={styles.contactLabel}>البريد الإلكتروني</Text>
@@ -436,8 +436,8 @@ function ContactContent() {
       </View>
 
       <ContentCard title="ساعات العمل">
-        <FeatureRow icon="time" text="السبت - الخميس: 9 صباحاً - 9 مساءً" color="#7C3AED" />
-        <FeatureRow icon="time" text="الجمعة: 2 ظهراً - 9 مساءً" color="#EC4899" />
+        <FeatureRow icon="time" text="السبت - الخميس: 9 صباحاً - 9 مساءً" color="#10224D" />
+        <FeatureRow icon="time" text="الجمعة: 2 ظهراً - 9 مساءً" color="#155EEF" />
       </ContentCard>
     </>
   );
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 20,
     color: "#FFFFFF",
     writingDirection: "rtl",
@@ -585,14 +585,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginBottom: 14,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 3,
   },
   contentCardTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: Colors.light.text,
     textAlign: "right",
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   paragraph: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
   },
   bulletText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   },
   featureText: {
     flex: 1,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     textAlign: "right",
@@ -656,12 +656,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   versionLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 13,
     color: Colors.light.textSecondary,
   },
   versionValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 16,
     color: Colors.light.accent,
   },
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
     gap: 14,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -693,14 +693,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contactLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     textAlign: "right",
     writingDirection: "rtl",
   },
   contactValue: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 13,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -717,7 +717,7 @@ const ticketStyles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   statusPillText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 11,
   },
   backRow: {
@@ -727,7 +727,7 @@ const ticketStyles = StyleSheet.create({
     marginBottom: 14,
   },
   backText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.accent,
     writingDirection: "rtl",
@@ -738,7 +738,7 @@ const ticketStyles = StyleSheet.create({
     marginBottom: 4,
   },
   dateText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -755,7 +755,7 @@ const ticketStyles = StyleSheet.create({
     borderColor: Colors.light.accent + "20",
   },
   fieldLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.text,
     textAlign: "right",
@@ -768,7 +768,7 @@ const ticketStyles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.text,
     writingDirection: "rtl",
@@ -793,7 +793,7 @@ const ticketStyles = StyleSheet.create({
     backgroundColor: Colors.light.inputBg,
   },
   priorityOptionText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.textSecondary,
   },
@@ -808,7 +808,7 @@ const ticketStyles = StyleSheet.create({
     marginTop: 20,
   },
   submitBtnText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 15,
     color: "#fff",
   },
@@ -826,7 +826,7 @@ const ticketStyles = StyleSheet.create({
     borderRadius: 18,
   },
   newTicketText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 15,
     color: "#fff",
   },
@@ -841,7 +841,7 @@ const ticketStyles = StyleSheet.create({
     marginBottom: 14,
   },
   emptyText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.textSecondary,
   },
@@ -852,7 +852,7 @@ const ticketStyles = StyleSheet.create({
     marginTop: 6,
   },
   ticketDate: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 11,
     color: Colors.light.textSecondary,
   },

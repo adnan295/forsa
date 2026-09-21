@@ -646,6 +646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (b.description !== undefined) data.description = b.description;
       if (b.imageUrl !== undefined) data.imageUrl = b.imageUrl;
       if (b.imagesJson !== undefined) data.imagesJson = b.imagesJson;
+      if (b.specsJson !== undefined) data.specsJson = b.specsJson;
       if (b.price !== undefined) data.price = String(b.price);
       if (b.stock !== undefined) data.stock = b.stock === null || b.stock === "" ? null : Number(b.stock);
       if (b.category !== undefined) data.category = b.category;

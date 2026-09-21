@@ -35,6 +35,7 @@ import {
   emailVerificationTokens,
   supportTickets,
   walletTransactions,
+  DEFAULT_DELIVERY_FEE,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ne, asc, desc, and, or, sql, count, sum, gte, inArray, isNull } from "drizzle-orm";
@@ -96,6 +97,7 @@ export class DatabaseStorage {
         description: data.description ?? "",
         imageUrl: data.imageUrl ?? null,
         imagesJson: data.imagesJson ?? null,
+        specsJson: data.specsJson ?? null,
         price: data.price,
         stock: data.stock ?? null,
         category: data.category ?? "other",
@@ -443,6 +445,10 @@ export class DatabaseStorage {
 
       const afterDiscount = Math.max(0, subtotal - discountAmount);
 
+      // التوصيل بينضاف للمستحق بس ما بيدخل باحتساب فرص السحب
+      const deliveryFee = DEFAULT_DELIVERY_FEE;
+      const payable = afterDiscount + deliveryFee;
+
       // المحفظة — المبلغ بينحسب بالسيرفر، مو من العميل
       let walletAmount = 0;
       if (payload.useWallet) {
@@ -453,7 +459,7 @@ export class DatabaseStorage {
           .for("update");
 
         const balance = parseFloat(user?.walletBalance ?? "0");
-        walletAmount = Math.min(balance, afterDiscount);
+        walletAmount = Math.min(balance, payable);
 
         if (walletAmount > 0) {
           await tx
@@ -463,7 +469,7 @@ export class DatabaseStorage {
         }
       }
 
-      const totalDue = Math.max(0, afterDiscount - walletAmount);
+      const totalDue = Math.max(0, payable - walletAmount);
 
       const isBankTransfer = payload.paymentMethod === "bank_transfer";
       const [order] = await tx
@@ -472,6 +478,7 @@ export class DatabaseStorage {
           userId,
           subtotal: subtotal.toFixed(2),
           discountAmount: discountAmount.toFixed(2),
+          deliveryFee: deliveryFee.toFixed(2),
           walletAmount: walletAmount.toFixed(2),
           totalAmount: totalDue.toFixed(2),
           // التذاكر بتنحسب على قيمة البضاعة بعد الخصم، قبل خصم المحفظة

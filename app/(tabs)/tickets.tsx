@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
-  SectionList,
+  ScrollView,
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
@@ -11,177 +11,140 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { useTheme } from "@/lib/theme-context";
 import { queryClient } from "@/lib/query-client";
-import type { Ticket, Order } from "@shared/schema";
+import Colors, { Fonts, FontSize, Radius, Spacing } from "@/constants/colors";
+import { Header, StatusBadge, EmptyState, NavRow } from "@/components/ui";
+import DrawBanner, { type CurrentDraw } from "@/components/DrawBanner";
+import type { Order, Ticket } from "@shared/schema";
 
-type TabKey = "orders" | "tickets";
+const c = Colors.light;
 
-const getPaymentStatusAr = (s: string) => {
-  const map: Record<string, string> = { pending_payment: "في انتظار الدفع", pending_review: "قيد المراجعة", confirmed: "تم التأكيد", rejected: "مرفوض" };
-  return map[s] || s;
-};
-const getPaymentColor = (s: string) => {
-  const map: Record<string, string> = { pending_payment: "#F39C12", pending_review: "#3498DB", confirmed: "#2ECC71", rejected: "#E74C3C" };
-  return map[s] || "#666";
-};
-const getPaymentIcon = (s: string): keyof typeof Ionicons.glyphMap => {
-  const map: Record<string, keyof typeof Ionicons.glyphMap> = { pending_payment: "time", pending_review: "hourglass", confirmed: "checkmark-circle", rejected: "close-circle" };
-  return map[s] || "help-circle";
-};
-const getShippingStatusAr = (s: string) => {
-  const map: Record<string, string> = { pending: "قيد الانتظار", processing: "قيد التجهيز", shipped: "تم الشحن", delivered: "تم التوصيل", cancelled: "ملغي" };
-  return map[s] || s;
-};
-const getShippingColor = (s: string) => {
-  const map: Record<string, string> = { pending: "#F39C12", processing: "#3498DB", shipped: "#9B59B6", delivered: "#2ECC71", cancelled: "#E74C3C" };
-  return map[s] || "#666";
-};
-const getShippingIcon = (s: string): keyof typeof Ionicons.glyphMap => {
-  const map: Record<string, keyof typeof Ionicons.glyphMap> = { pending: "cube-outline", processing: "build-outline", shipped: "airplane-outline", delivered: "checkmark-done", cancelled: "ban" };
-  return map[s] || "help-circle";
-};
-
+type SubTab = "chances" | "orders";
 type OrderWithItems = Order & { items?: { productName: string; quantity: number }[] };
 
-function OrderItem({ order, colors }: { order: OrderWithItems; colors: ReturnType<typeof useTheme>["colors"] }) {
-  const itemCount = (order.items ?? []).reduce((sum, i) => sum + i.quantity, 0);
-  const summary = (order.items ?? []).map((i) => i.productName).join("، ");
-  const paymentColor = getPaymentColor(order.paymentStatus);
-  const shippingColor = getShippingColor(order.shippingStatus);
+const PAYMENT_STATUS: Record<
+  string,
+  { label: string; kind: "success" | "warning" | "error" | "info" }
+> = {
+  confirmed: { label: "مؤكدة", kind: "success" },
+  pending_review: { label: "قيد التأكيد", kind: "warning" },
+  pending_payment: { label: "بانتظار الدفع", kind: "warning" },
+  rejected: { label: "مرفوضة", kind: "error" },
+};
+
+const SHIPPING_STATUS: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  pending: { label: "قيد المعالجة", icon: "cube-outline" },
+  processing: { label: "جاري التجهيز", icon: "construct-outline" },
+  shipped: { label: "تم الشحن", icon: "airplane-outline" },
+  delivered: { label: "تم التوصيل", icon: "checkmark-done" },
+  cancelled: { label: "ملغي", icon: "ban-outline" },
+};
+
+/** قسيمة سحب — بطاقة بيضاء بحدود متقطعة ورقم كحلي */
+function ChanceCard({ ticket, drawTitle }: { ticket: Ticket; drawTitle: string }) {
+  return (
+    <View style={[s.chanceCard, ticket.isWinner && s.chanceCardWinner]}>
+      <View style={s.chanceTop}>
+        <StatusBadge
+          kind={ticket.isWinner ? "success" : "success"}
+          label={ticket.isWinner ? "فائزة" : "مؤكدة"}
+          icon={ticket.isWinner ? "trophy" : "checkmark-circle"}
+        />
+        <Text style={s.chanceNumber}>{ticket.ticketNumber}</Text>
+      </View>
+      <View style={s.chanceDivider} />
+      <Text style={s.chanceDraw}>{drawTitle}</Text>
+    </View>
+  );
+}
+
+function OrderCard({ order }: { order: OrderWithItems }) {
+  const payment = PAYMENT_STATUS[order.paymentStatus] ?? {
+    label: order.paymentStatus,
+    kind: "info" as const,
+  };
+  const shipping = SHIPPING_STATUS[order.shippingStatus] ?? {
+    label: order.shippingStatus,
+    icon: "help-circle-outline" as const,
+  };
+  const summary = (order.items ?? []).map((i) => `${i.productName} ×${i.quantity}`).join("، ");
 
   return (
     <Pressable
-      style={[styles.orderCard, { backgroundColor: colors.card }]}
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({ pathname: "/order/[id]", params: { id: order.id } });
       }}
+      accessibilityRole="button"
+      style={({ pressed }) => [s.orderCard, pressed && { opacity: 0.95 }]}
     >
-      <View style={styles.orderTop}>
-        <View style={styles.orderIdArea}>
-          <View style={styles.orderIconWrap}>
-            <Ionicons name="receipt" size={18} color={colors.accent} />
-          </View>
-          <View>
-            <Text style={[styles.orderIdText, { color: colors.text }]}>#{order.id.slice(0, 8)}</Text>
-            <Text style={[styles.orderDate, { color: colors.textSecondary }]}>
-              {new Date(order.createdAt).toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" })}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.orderAmountArea}>
-          <Text style={[styles.orderAmount, { color: colors.text }]}>{parseFloat(order.totalAmount).toFixed(2)} $</Text>
-          <Text style={[styles.orderQty, { color: colors.textSecondary }]}>{itemCount} قطعة</Text>
+      <View style={s.orderTop}>
+        <Text style={s.orderAmount}>${parseFloat(order.totalAmount).toFixed(0)}</Text>
+        <View style={s.orderIdBlock}>
+          <Text style={s.orderId}>#{order.id.slice(0, 8)}</Text>
+          <Text style={s.orderDate}>
+            {new Date(order.createdAt).toLocaleDateString("ar-EG", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          </Text>
         </View>
       </View>
 
-      <View style={[styles.orderDivider, { backgroundColor: colors.border }]} />
-
       {summary ? (
-        <Text style={[styles.orderSummary, { color: colors.textSecondary }]} numberOfLines={2}>
+        <Text style={s.orderSummary} numberOfLines={2}>
           {summary}
         </Text>
       ) : null}
 
       {order.ticketsAwarded > 0 && (
-        <View style={[styles.orderTicketsRow, { backgroundColor: colors.accent + "18" }]}>
-          <Ionicons name="ticket" size={13} color={colors.accentDark} />
-          <Text style={[styles.orderTicketsText, { color: colors.accentDark }]}>
-            حصلت على {order.ticketsAwarded} تذكرة من هذا الطلب
+        <View style={s.orderChances}>
+          <Ionicons name="ticket" size={14} color={c.goldText} />
+          <Text style={s.orderChancesText}>
+            حصلت على {order.ticketsAwarded} فرصة من هذا الطلب
           </Text>
         </View>
       )}
 
-      <View style={styles.orderPills}>
-        <View style={[styles.pill, { backgroundColor: paymentColor + "12", borderColor: paymentColor + "30" }]}>
-          <Ionicons name={getPaymentIcon(order.paymentStatus)} size={13} color={paymentColor} />
-          <Text style={[styles.pillText, { color: paymentColor }]}>
-            {getPaymentStatusAr(order.paymentStatus)}
-          </Text>
-        </View>
-        <View style={[styles.pill, { backgroundColor: shippingColor + "12", borderColor: shippingColor + "30" }]}>
-          <Ionicons name={getShippingIcon(order.shippingStatus)} size={13} color={shippingColor} />
-          <Text style={[styles.pillText, { color: shippingColor }]}>
-            {getShippingStatusAr(order.shippingStatus)}
-          </Text>
-        </View>
+      <View style={s.orderPills}>
+        <Ionicons name="chevron-back" size={17} color={c.textMuted} />
         <View style={{ flex: 1 }} />
-        <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
+        <View style={s.shippingPill}>
+          <Ionicons name={shipping.icon} size={13} color={c.textSecondary} />
+          <Text style={s.shippingText}>{shipping.label}</Text>
+        </View>
+        <StatusBadge kind={payment.kind} label={payment.label} />
       </View>
     </Pressable>
   );
 }
 
-function TicketItem({ ticket, colors }: { ticket: Ticket; colors: ReturnType<typeof useTheme>["colors"] }) {
-  const isWinner = !!ticket.isWinner;
-
-  return (
-    <View style={[styles.ticketCard, { backgroundColor: colors.card }, isWinner && styles.winnerCard]}>
-      <View style={[styles.ticketNotch, { backgroundColor: colors.background }]} />
-      <View style={[styles.ticketNotchRight, { backgroundColor: colors.background }]} />
-
-      <View style={styles.ticketLeft}>
-        <View style={[styles.ticketIconWrap, isWinner && styles.ticketIconWrapWinner]}>
-          <Ionicons
-            name={isWinner ? "trophy" : "ticket"}
-            size={22}
-            color={isWinner ? "#FFD700" : colors.accent}
-          />
-        </View>
-      </View>
-
-      <View style={[styles.ticketDashed, { borderLeftColor: colors.border }]} />
-
-      <View style={styles.ticketRight}>
-        <Text style={[styles.ticketNumber, { color: colors.text }]}>{ticket.ticketNumber}</Text>
-        <Text style={[styles.ticketDate, { color: colors.textSecondary }]}>
-          {new Date(ticket.createdAt).toLocaleDateString("ar-SA", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
-        </Text>
-        {isWinner && (
-          <View style={styles.winnerBadge}>
-            <Ionicons name="star" size={11} color="#FFD700" />
-            <Text style={styles.winnerText}>فائز</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-}
-
 export default function TicketsScreen() {
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { isDark, colors } = useTheme();
-  const [activeTab, setActiveTab] = useState<TabKey>("orders");
+  const [tab, setTab] = useState<SubTab>("chances");
+
+  const { data: draw } = useQuery<CurrentDraw | null>({
+    queryKey: ["/api/draws/current"],
+    refetchInterval: 15000,
+    staleTime: 5000,
+  });
 
   const {
     data: tickets,
     isLoading: ticketsLoading,
     refetch: refetchTickets,
-    isRefetching: ticketsRefetching,
+    isRefetching,
   } = useQuery<Ticket[]>({
     queryKey: ["/api/tickets"],
     enabled: !!user,
     staleTime: 5000,
   });
 
-  const {
-    data: orders,
-    isLoading: ordersLoading,
-    refetch: refetchOrders,
-    isRefetching: ordersRefetching,
-  } = useQuery<OrderWithItems[]>({
+  const { data: orders, isLoading: ordersLoading } = useQuery<OrderWithItems[]>({
     queryKey: ["/api/orders"],
     enabled: !!user,
     staleTime: 5000,
@@ -190,484 +153,254 @@ export default function TicketsScreen() {
   const onRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
     queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
     refetchTickets();
-    refetchOrders();
-  }, [refetchTickets, refetchOrders]);
+  }, [refetchTickets]);
 
   if (!user) {
     return (
-      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
-        <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top, alignItems: "center" }}>
-          <View style={styles.emptyIconWrap}>
-            <Ionicons name="receipt-outline" size={40} color={colors.tabIconDefault} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>سجّل الدخول لعرض طلباتك</Text>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            ستظهر طلباتك وتذاكرك هنا بعد شراء المنتجات
-          </Text>
-          <Pressable
-            onPress={() => router.push("/auth")}
-            style={styles.signInButton}
-          >
-            <LinearGradient
-              colors={[Colors.light.accent, Colors.light.accentDark]}
-              style={styles.signInGradient}
-            >
-              <Text style={styles.signInButtonText}>تسجيل الدخول</Text>
-            </LinearGradient>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  const isLoading = ticketsLoading || ordersLoading;
-  const isRefetching = ticketsRefetching || ordersRefetching;
-
-  if (isLoading) {
-    return (
-      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </View>
-    );
-  }
-
-  const renderItem = ({ item, section }: any) => {
-    if (section.key === "orders") {
-      return <OrderItem order={item} colors={colors} />;
-    }
-    return <TicketItem ticket={item} colors={colors} />;
-  };
-
-  const currentData = activeTab === "orders" ? (orders || []) : (tickets || []);
-  const sections = currentData.length > 0 ? [{ key: activeTab, data: currentData }] : [];
-
-  const EmptyState = () => (
-    <View style={styles.emptyWrap}>
-      <LinearGradient
-        colors={activeTab === "orders" ? ["rgba(124,58,237,0.08)", "rgba(236,72,153,0.08)"] : ["rgba(236,72,153,0.08)", "rgba(124,58,237,0.08)"]}
-        style={styles.emptyIconWrap}
-      >
-        <Ionicons
-          name={activeTab === "orders" ? "bag-outline" : "sparkles-outline"}
-          size={36}
-          color={activeTab === "orders" ? colors.accent : colors.accentPink}
+      <View style={s.root}>
+        <Header title="قسائمي" />
+        <EmptyState
+          icon="ticket-outline"
+          title="سجّل الدخول لعرض قسائمك"
+          body="بتظهر هنا فرصك بالسحب وطلباتك"
+          action={{ label: "تسجيل الدخول", onPress: () => router.push("/auth") }}
         />
-      </LinearGradient>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {activeTab === "orders" ? "لا توجد طلبات بعد" : "لا توجد تذاكر بعد"}
-      </Text>
-      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-        {activeTab === "orders"
-          ? "اكتشف المنتجات المميزة واحصل على فرصة للفوز بهدية!"
-          : "كل منتج تشتريه يمنحك فرصة للحصول على هدية!"}
-      </Text>
-      <Pressable
-        onPress={() => router.push("/(tabs)/" as any)}
-        style={styles.emptyActionBtn}
-      >
-        <LinearGradient
-          colors={[Colors.light.accent, Colors.light.accentPink]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.emptyActionGradient}
-        >
-          <Ionicons name="compass" size={18} color="#fff" />
-          <Text style={styles.emptyActionText}>تصفّح المنتجات</Text>
-        </LinearGradient>
-      </Pressable>
-    </View>
-  );
+      </View>
+    );
+  }
+
+  const isLoading = tab === "chances" ? ticketsLoading : ordersLoading;
+  const currentTickets = (tickets ?? []).filter((t) => draw && t.drawId === draw.id);
+  const pendingTickets = (tickets ?? []).filter((t) => t.drawId === null);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.headerArea, { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 }]}>
-        <Text style={[styles.screenTitle, { color: colors.text }]}>طلباتي</Text>
+    <View style={s.root}>
+      <Header title="قسائمي" />
 
-        <View style={styles.tabRow}>
-          <Pressable
-            onPress={() => {
-              setActiveTab("orders");
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-            style={[styles.tabBtn, { backgroundColor: colors.card, borderColor: colors.border }, activeTab === "orders" && styles.tabBtnActive]}
-          >
-            <Ionicons name="receipt" size={16} color={activeTab === "orders" ? "#fff" : colors.textSecondary} />
-            <Text style={[styles.tabBtnText, { color: colors.textSecondary }, activeTab === "orders" && styles.tabBtnTextActive]}>
-              الطلبات ({orders?.length || 0})
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              setActiveTab("tickets");
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-            style={[styles.tabBtn, { backgroundColor: colors.card, borderColor: colors.border }, activeTab === "tickets" && styles.tabBtnActive]}
-          >
-            <Ionicons name="ticket" size={16} color={activeTab === "tickets" ? "#fff" : colors.textSecondary} />
-            <Text style={[styles.tabBtnText, { color: colors.textSecondary }, activeTab === "tickets" && styles.tabBtnTextActive]}>
-              التذاكر ({tickets?.length || 0})
-            </Text>
-          </Pressable>
-        </View>
+      <View style={s.tabs}>
+        {(
+          [
+            { key: "chances" as const, label: "فرصي" },
+            { key: "orders" as const, label: "طلباتي" },
+          ]
+        ).map((t) => {
+          const active = tab === t.key;
+          return (
+            <Pressable
+              key={t.key}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setTab(t.key);
+              }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              style={[s.tab, active && s.tabActive]}
+            >
+              <Text style={[s.tabText, active && s.tabTextActive]}>{t.label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
 
-      <SectionList
-        sections={sections}
-        keyExtractor={(item: any) => item.id}
-        renderItem={renderItem}
-        renderSectionHeader={() => null}
-        ListEmptyComponent={<EmptyState />}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: Platform.OS === "web" ? 84 + 20 : 100 },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={onRefresh}
-            tintColor={colors.accent}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      {isLoading ? (
+        <View style={s.loading}>
+          <ActivityIndicator size="large" color={c.primary} />
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={s.content}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={c.primary} />
+          }
+        >
+          {tab === "chances" ? (
+            <>
+              {draw && <DrawBanner draw={draw} onPress={() => router.push("/draw" as any)} />}
+
+              {currentTickets.length === 0 && pendingTickets.length === 0 ? (
+                <EmptyState
+                  icon="ticket-outline"
+                  title="ما عندك فرص بعد"
+                  body="اشترِ من المتجر وكل مبلغ محدّد من مشترياتك بيعطيك فرصة"
+                  action={{
+                    label: "تصفّح المتجر",
+                    onPress: () => router.push("/(tabs)/products" as any),
+                  }}
+                />
+              ) : (
+                <>
+                  {currentTickets.map((t) => (
+                    <ChanceCard key={t.id} ticket={t} drawTitle={draw?.title ?? "السحب الحالي"} />
+                  ))}
+
+                  {pendingTickets.length > 0 && (
+                    <>
+                      <Text style={s.groupTitle}>بانتظار السحب القادم</Text>
+                      {pendingTickets.map((t) => (
+                        <ChanceCard key={t.id} ticket={t} drawTitle="لم يُحدَّد بعد" />
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
+
+              <NavRow
+                icon="information-circle-outline"
+                title="شروط السحب"
+                subtitle="اطّلع على جميع تفاصيل وآلية السحب والمعايير المعتمدة."
+                onPress={() => router.push({ pathname: "/info", params: { type: "terms" } } as any)}
+              />
+            </>
+          ) : (orders ?? []).length === 0 ? (
+            <EmptyState
+              icon="receipt-outline"
+              title="ما في طلبات بعد"
+              body="طلباتك بتظهر هنا مع حالتها وفرصك منها"
+              action={{
+                label: "تصفّح المتجر",
+                onPress: () => router.push("/(tabs)/products" as any),
+              }}
+            />
+          ) : (
+            (orders ?? []).map((o) => <OrderCard key={o.id} order={o} />)
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  orderSummary: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginBottom: 8,
-    lineHeight: 19,
-  },
-  orderTicketsRow: {
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.background },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+
+  tabs: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    marginBottom: 10,
+    gap: Spacing.sm,
+    padding: Spacing.screen,
+    paddingBottom: Spacing.md,
+    backgroundColor: c.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
   },
-  orderTicketsText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-    writingDirection: "rtl",
-  },
-  container: {
+  tab: {
     flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  centered: {
+    height: 42,
+    borderRadius: Radius.button,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: c.background,
   },
-  headerArea: {
-    paddingHorizontal: 16,
+  tabActive: { backgroundColor: c.primary },
+  tabText: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    writingDirection: "rtl",
   },
-  listContent: {
-    paddingHorizontal: 16,
+  tabTextActive: { color: c.surface },
+
+  content: {
+    padding: Spacing.screen,
+    paddingBottom: Platform.OS === "web" ? 110 : 120,
+    gap: Spacing.md,
   },
-  screenTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 28,
-    color: Colors.light.text,
-    marginBottom: 14,
-    paddingHorizontal: 4,
+  groupTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
     textAlign: "right",
     writingDirection: "rtl",
+    marginTop: Spacing.sm,
   },
-  tabRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
-  },
-  tabBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+
+  chanceCard: {
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    gap: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.light.border,
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    borderStyle: "dashed",
+    borderColor: c.border,
   },
-  tabBtnActive: {
-    backgroundColor: Colors.light.accent,
-    borderColor: Colors.light.accent,
-    shadowOpacity: 0.12,
+  chanceCardWinner: { borderColor: c.gold, backgroundColor: c.goldSoft },
+  chanceTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  chanceNumber: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h3,
+    color: c.navy,
+    /** ثابت الاتجاه حتى ما ينعكس ضمن النص العربي */
+    writingDirection: "ltr",
   },
-  tabBtnText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: Colors.light.textSecondary,
+  chanceDivider: { height: StyleSheet.hairlineWidth, backgroundColor: c.borderSubtle },
+  chanceDraw: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textSecondary,
+    textAlign: "right",
     writingDirection: "rtl",
-  },
-  tabBtnTextActive: {
-    color: "#FFFFFF",
   },
 
   orderCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    elevation: 4,
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
-  orderTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  orderIdArea: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  orderIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: "rgba(124, 58, 237, 0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  orderIdText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 15,
-    color: Colors.light.text,
-    textAlign: "right",
-  },
+  orderTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  orderIdBlock: { alignItems: "flex-end", gap: 2 },
+  orderId: { fontFamily: Fonts.medium, fontSize: FontSize.caption, color: c.navy, writingDirection: "ltr" },
   orderDate: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.light.textSecondary,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textMuted,
+    writingDirection: "rtl",
+  },
+  orderAmount: { fontFamily: Fonts.bold, fontSize: FontSize.h3, color: c.primary },
+  orderSummary: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textSecondary,
     textAlign: "right",
     writingDirection: "rtl",
-    marginTop: 2,
+    lineHeight: 20,
   },
-  orderAmountArea: {
-    alignItems: "flex-start",
-  },
-  orderAmount: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: Colors.light.text,
-  },
-  orderQty: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl",
-    marginTop: 2,
-  },
-  orderDivider: {
-    height: 1,
-    backgroundColor: Colors.light.border,
-    marginVertical: 12,
-  },
-  orderPills: {
+  orderChances: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+    backgroundColor: c.goldSoft,
+    borderRadius: Radius.button,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  pillText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-    writingDirection: "rtl",
-  },
-
-  ticketCard: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    marginBottom: 12,
-    overflow: "hidden",
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-    position: "relative",
-  },
-  winnerCard: {
-    borderWidth: 2,
-    borderColor: "#FFD700",
-    shadowColor: "#FFD700",
-    shadowOpacity: 0.2,
-  },
-  ticketNotch: {
-    position: "absolute",
-    top: "50%",
-    end: -8,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: Colors.light.background,
-    marginTop: -8,
-    zIndex: 2,
-  },
-  ticketNotchRight: {
-    position: "absolute",
-    top: "50%",
-    start: -8,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: Colors.light.background,
-    marginTop: -8,
-    zIndex: 2,
-  },
-  ticketLeft: {
-    width: 74,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 18,
-  },
-  ticketIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: "rgba(124, 58, 237, 0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ticketIconWrapWinner: {
-    backgroundColor: "rgba(255, 215, 0, 0.15)",
-  },
-  ticketDashed: {
-    width: 1,
-    borderLeftWidth: 1.5,
-    borderLeftColor: Colors.light.border,
-    borderStyle: "dashed",
-    marginVertical: 12,
-  },
-  ticketRight: {
+  orderChancesText: {
     flex: 1,
-    padding: 16,
-    paddingEnd: 12,
-    justifyContent: "center",
-  },
-  ticketNumber: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 14,
-    color: Colors.light.text,
-    letterSpacing: 0.3,
-    marginBottom: 4,
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.label,
+    color: c.goldText,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  ticketDate: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  winnerBadge: {
+  orderPills: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
+  shippingPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 8,
-    backgroundColor: "rgba(255, 215, 0, 0.12)",
-    paddingHorizontal: 10,
+    backgroundColor: c.background,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: "flex-end",
+    borderRadius: Radius.pill,
   },
-  winnerText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
-    color: "#B8860B",
-    writingDirection: "rtl",
-  },
-
-  emptyWrap: {
-    alignItems: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    color: Colors.light.text,
-    marginTop: 4,
-    marginBottom: 8,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: "center",
-    writingDirection: "rtl",
-    lineHeight: 22,
-  },
-  emptyActionBtn: {
-    borderRadius: 14,
-    overflow: "hidden",
-    marginTop: 20,
-  },
-  emptyActionGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 14,
-  },
-  emptyActionText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: "#FFFFFF",
-    writingDirection: "rtl",
-  },
-  signInButton: {
-    borderRadius: 14,
-    overflow: "hidden",
-    marginTop: 20,
-  },
-  signInGradient: {
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 14,
-  },
-  signInButtonText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-    color: "#FFFFFF",
+  shippingText: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.label,
+    color: c.textSecondary,
     writingDirection: "rtl",
   },
 });

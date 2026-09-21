@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,31 +10,99 @@ import {
 } from "react-native";
 import { router, Stack } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@/lib/auth-context";
 import { buildMediaUrl, queryClient } from "@/lib/query-client";
+import Colors, { Fonts, FontSize, Radius, Spacing } from "@/constants/colors";
+import { Header, Button, ChanceNote, EmptyState, NavRow } from "@/components/ui";
 import DrawBanner, { type CurrentDraw } from "@/components/DrawBanner";
 import type { Ticket } from "@shared/schema";
 
-/** كيف بيشتغل السحب — شرح مختصر للمستخدم */
-const STEPS: { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }[] = [
-  { icon: "cart", title: "اشترِ من المتجر", body: "أي منتج من الكتالوج، بأي كمية" },
-  { icon: "checkmark-circle", title: "يتأكّد دفعك", body: "بعد ما نراجع الدفع بتنمنحك التذاكر تلقائياً" },
-  { icon: "ticket", title: "خذ تذاكرك", body: "كل مبلغ محدّد من مشترياتك = تذكرة سحب" },
-  { icon: "trophy", title: "ننتظر اكتمال العدد", body: "لما تنباع كل تذاكر الجولة منعمل السحب" },
-];
+const c = Colors.light;
+
+type Tab = "current" | "past";
+
+interface DrawWinner {
+  drawId: string;
+  drawTitle: string;
+  prizeName: string;
+  prizeImageUrl: string | null;
+  ticketNumber: string | null;
+  drawnAt: string | null;
+  totalTickets: number;
+  winnerUsername: string | null;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "";
+  return new Date(value).toLocaleDateString("ar-EG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function WinnerCard({ winner }: { winner: DrawWinner }) {
+  const prizeImage = buildMediaUrl(winner.prizeImageUrl);
+
+  return (
+    <View style={s.winnerCard}>
+      <View style={s.winnerImageWrap}>
+        {prizeImage ? (
+          <Image
+            source={{ uri: prizeImage }}
+            style={s.winnerImage}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <Ionicons name="trophy" size={40} color={c.gold} />
+        )}
+      </View>
+
+      <Text style={s.winnerPrize}>الجائزة: {winner.prizeName}</Text>
+
+      {winner.winnerUsername && (
+        <Text style={s.winnerName}>الفائز: {winner.winnerUsername}</Text>
+      )}
+
+      {winner.ticketNumber && (
+        <Text style={s.winnerTicket}>
+          القسيمة: <Text style={s.winnerTicketNum}>{winner.ticketNumber}</Text>
+        </Text>
+      )}
+
+      <View style={s.winnerMeta}>
+        <View style={s.winnerMetaItem}>
+          <Ionicons name="calendar-outline" size={14} color={c.textMuted} />
+          <Text style={s.winnerMetaText}>{formatDate(winner.drawnAt)}</Text>
+        </View>
+        <View style={s.winnerMetaItem}>
+          <Ionicons name="ticket-outline" size={14} color={c.textMuted} />
+          <Text style={s.winnerMetaText}>
+            {winner.totalTickets.toLocaleString("en-US")} فرصة
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function DrawScreen() {
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const [tab, setTab] = useState<Tab>("current");
 
   const { data: draw, isLoading, refetch, isRefetching } = useQuery<CurrentDraw | null>({
     queryKey: ["/api/draws/current"],
     refetchInterval: 15000,
     staleTime: 5000,
+  });
+
+  const { data: winners } = useQuery<DrawWinner[]>({
+    queryKey: ["/api/winners"],
+    staleTime: 30000,
   });
 
   const { data: myTickets } = useQuery<Ticket[]>({
@@ -43,262 +111,294 @@ export default function DrawScreen() {
     staleTime: 10000,
   });
 
-  const ticketsInThisDraw =
-    draw && myTickets ? myTickets.filter((t) => t.drawId === draw.id) : [];
-  const pendingTickets = myTickets ? myTickets.filter((t) => t.drawId === null) : [];
-
-  function onRefresh() {
+  const onRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/winners"] });
     queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
     refetch();
-  }
+  }, [refetch]);
+
+  const myChances = draw && myTickets ? myTickets.filter((t) => t.drawId === draw.id) : [];
+  const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
+  const prizeImage = draw ? buildMediaUrl(draw.prizeImageUrl) : null;
 
   if (isLoading) {
     return (
       <View style={s.loading}>
-        <ActivityIndicator size="large" color="#FFD000" />
+        <ActivityIndicator size="large" color={c.primary} />
       </View>
     );
   }
 
-  const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
-  const prizeImage = draw ? buildMediaUrl(draw.prizeImageUrl) : null;
-
   return (
     <View style={s.root}>
       <Stack.Screen options={{ headerShown: false }} />
+      <Header title="السحوبات والفائزون" showBack />
 
-      <View style={[s.header, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={8}>
-          <Ionicons name="arrow-forward" size={22} color="#1A1A1A" />
-        </Pressable>
-        <Text style={s.headerTitle}>السحب</Text>
-        <Pressable onPress={() => router.push("/winners" as any)} style={s.backBtn} hitSlop={8}>
-          <Ionicons name="trophy-outline" size={21} color="#1A1A1A" />
-        </Pressable>
+      <View style={s.tabs}>
+        {(
+          [
+            { key: "current" as const, label: "السحب الحالي" },
+            { key: "past" as const, label: "السابقة" },
+          ]
+        ).map((t) => {
+          const active = tab === t.key;
+          return (
+            <Pressable
+              key={t.key}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setTab(t.key);
+              }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              style={[s.tab, active && s.tabActive]}
+            >
+              <Text style={[s.tabText, active && s.tabTextActive]}>{t.label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40, gap: 16 }}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor="#FFD000" />}
+        contentContainerStyle={s.content}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={c.primary} />
+        }
       >
-        {draw ? (
-          <>
-            <DrawBanner draw={draw} />
+        {tab === "current" ? (
+          draw ? (
+            <>
+              <DrawBanner draw={draw} showLabel={false} />
 
-            {/* صورة الجائزة ووصفها */}
-            {(prizeImage || draw.prizeDescription) && (
-              <View style={s.card}>
-                {prizeImage && (
-                  <Image
-                    source={{ uri: prizeImage }}
-                    style={s.prizeImage}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                    transition={200}
-                  />
-                )}
-                <View style={s.cardBody}>
+              {(prizeImage || draw.prizeDescription) && (
+                <View style={s.card}>
+                  {prizeImage && (
+                    <View style={s.prizeImageWrap}>
+                      <Image
+                        source={{ uri: prizeImage }}
+                        style={s.prizeImage}
+                        contentFit="contain"
+                        cachePolicy="memory-disk"
+                      />
+                    </View>
+                  )}
                   <Text style={s.cardTitle}>{draw.prizeName}</Text>
                   {draw.prizeDescription ? (
-                    <Text style={s.cardText}>{draw.prizeDescription}</Text>
+                    <Text style={s.cardBody}>{draw.prizeDescription}</Text>
                   ) : null}
                 </View>
-              </View>
-            )}
+              )}
 
-            {/* تذاكري بهالجولة */}
-            {user && (
-              <View style={s.card}>
-                <View style={s.cardBody}>
-                  <View style={s.myTicketsHead}>
-                    <View style={s.myTicketsCount}>
-                      <Text style={s.myTicketsNum}>{ticketsInThisDraw.length}</Text>
+              {ticketPrice > 0 && (
+                <ChanceNote>كل {ticketPrice.toFixed(0)}$ من مشترياتك = فرصة سحب</ChanceNote>
+              )}
+
+              {user && (
+                <View style={s.card}>
+                  <View style={s.myChancesRow}>
+                    <View style={s.myChancesBox}>
+                      <Text style={s.myChancesNum}>{myChances.length}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={s.cardTitle}>تذاكري بهذه الجولة</Text>
-                      <Text style={s.cardText}>
-                        {ticketsInThisDraw.length === 0
-                          ? "ما عندك تذاكر بعد — اشترِ من المتجر لتحصل عليها"
-                          : `فرصتك ${((ticketsInThisDraw.length / Math.max(draw.soldTickets, 1)) * 100).toFixed(1)}% من التذاكر المباعة`}
+                      <Text style={s.cardTitle}>فرصي في هذا السحب</Text>
+                      <Text style={s.cardBody}>
+                        {myChances.length === 0
+                          ? "ما عندك فرص بعد — اشترِ من المتجر"
+                          : `نسبتك ${((myChances.length / Math.max(draw.soldTickets, 1)) * 100).toFixed(1)}% من الفرص المباعة`}
                       </Text>
                     </View>
                   </View>
 
-                  {ticketsInThisDraw.length > 0 && (
-                    <View style={s.ticketChips}>
-                      {ticketsInThisDraw.slice(0, 12).map((t) => (
-                        <View key={t.id} style={s.ticketChip}>
-                          <Ionicons name="ticket-outline" size={11} color="#8A7500" />
-                          <Text style={s.ticketChipText}>{t.ticketNumber}</Text>
-                        </View>
-                      ))}
-                      {ticketsInThisDraw.length > 12 && (
-                        <Pressable onPress={() => router.push("/(tabs)/tickets" as any)} style={s.moreChip}>
-                          <Text style={s.moreChipText}>+{ticketsInThisDraw.length - 12} أخرى</Text>
-                        </Pressable>
-                      )}
-                    </View>
-                  )}
-
-                  {pendingTickets.length > 0 && (
-                    <View style={s.pendingNote}>
-                      <Ionicons name="time-outline" size={14} color="#F59E0B" />
-                      <Text style={s.pendingText}>
-                        عندك {pendingTickets.length} تذكرة بانتظار فتح الجولة القادمة
-                      </Text>
-                    </View>
+                  {myChances.length > 0 && (
+                    <Button
+                      label="عرض قسائمي"
+                      variant="secondary"
+                      small
+                      onPress={() => router.push("/(tabs)/tickets" as any)}
+                    />
                   )}
                 </View>
-              </View>
-            )}
+              )}
 
-            {/* دعوة للشراء */}
-            {draw.status === "active" && (
-              <Pressable onPress={() => router.push("/(tabs)" as any)} style={s.ctaWrap}>
-                <LinearGradient
-                  colors={["#FFD000", "#E6B800"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={s.cta}
-                >
-                  <Ionicons name="storefront" size={18} color="#1A1A1A" />
-                  <Text style={s.ctaText}>تسوّق واحصل على تذاكر</Text>
-                </LinearGradient>
-              </Pressable>
-            )}
-          </>
+              {draw.status === "active" && (
+                <Button
+                  label="تسوّق واحصل على فرص"
+                  icon="storefront"
+                  onPress={() => router.push("/(tabs)/products" as any)}
+                />
+              )}
+
+              <NavRow
+                icon="help-circle-outline"
+                title="كيف يتم السحب؟"
+                subtitle="تعرّف على آلية السحب خطوة بخطوة حسب الشروط المعتمدة."
+                onPress={() => router.push({ pathname: "/info", params: { type: "terms" } } as any)}
+              />
+
+              <NavRow
+                icon="chatbubble-ellipses-outline"
+                title="الأسئلة الشائعة"
+                subtitle="إجابات على أكثر الأسئلة شيوعاً حول السحب والمشتريات."
+                onPress={() => router.push("/faq" as any)}
+              />
+            </>
+          ) : (
+            <EmptyState
+              icon="gift-outline"
+              title="ما في سحب مفتوح"
+              body="ترقّب الجائزة القادمة. فرصك من أي شراء بتنحفظ وبتنضاف للسحب الجاي تلقائياً."
+              action={{ label: "شوف الفائزين السابقين", onPress: () => setTab("past") }}
+            />
+          )
+        ) : (winners ?? []).length === 0 ? (
+          <EmptyState
+            icon="trophy-outline"
+            title="لا يوجد فائزون بعد"
+            body="بتظهر هنا نتائج السحوبات المكتملة والفائزون بالجوائز"
+          />
         ) : (
-          <View style={s.emptyCard}>
-            <Ionicons name="gift-outline" size={52} color="#FFD000" />
-            <Text style={s.emptyTitle}>ما في جولة سحب مفتوحة</Text>
-            <Text style={s.emptyText}>
-              ترقّب الجائزة القادمة. تذاكرك من أي شراء بتنحفظ وبتنضاف للجولة الجاية تلقائياً.
-            </Text>
-            <Pressable onPress={() => router.push("/winners" as any)} style={s.emptyBtn}>
-              <Text style={s.emptyBtnText}>شوف الفائزين السابقين</Text>
-            </Pressable>
-          </View>
+          (winners ?? []).map((w) => <WinnerCard key={w.drawId} winner={w} />)
         )}
-
-        {/* كيف بيشتغل */}
-        <View style={s.card}>
-          <View style={s.cardBody}>
-            <Text style={s.cardTitle}>كيف بتاخد تذاكر؟</Text>
-            <View style={s.steps}>
-              {STEPS.map((step, i) => (
-                <View key={i} style={s.step}>
-                  <View style={s.stepIcon}>
-                    <Ionicons name={step.icon} size={17} color="#1A1A1A" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.stepTitle}>{step.title}</Text>
-                    <Text style={s.stepBody}>
-                      {i === 2 && ticketPrice > 0
-                        ? `كل ${ticketPrice.toFixed(0)}$ من مشترياتك = تذكرة سحب وحدة`
-                        : step.body}
-                    </Text>
-                  </View>
-                  <Text style={s.stepNum}>{i + 1}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
       </ScrollView>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8F8F8" },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F8F8F8" },
-  header: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingBottom: 12, backgroundColor: "#fff",
-    borderBottomWidth: 1, borderBottomColor: "#F0F0F0",
+  root: { flex: 1, backgroundColor: c.background },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: c.background },
+
+  tabs: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    padding: Spacing.screen,
+    paddingBottom: Spacing.md,
+    backgroundColor: c.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
   },
-  backBtn: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#1A1A1A", writingDirection: "rtl" },
+  tab: {
+    flex: 1,
+    height: 42,
+    borderRadius: Radius.button,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.background,
+  },
+  tabActive: { backgroundColor: c.primary },
+  tabText: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    writingDirection: "rtl",
+  },
+  tabTextActive: { color: c.surface },
+
+  content: { padding: Spacing.screen, paddingBottom: 40, gap: Spacing.md },
 
   card: {
-    backgroundColor: "#fff", borderRadius: 18, overflow: "hidden",
-    borderWidth: 1, borderColor: "#F0F0F0",
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
-  prizeImage: { width: "100%", height: 190 },
-  cardBody: { padding: 16, gap: 10 },
   cardTitle: {
-    fontFamily: "Inter_700Bold", fontSize: 16, color: "#1A1A1A",
-    textAlign: "right", writingDirection: "rtl",
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h3,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
-  cardText: {
-    fontFamily: "Inter_400Regular", fontSize: 13, color: "#777",
-    textAlign: "right", writingDirection: "rtl", lineHeight: 21,
+  cardBody: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 22,
   },
+  prizeImageWrap: {
+    height: 170,
+    borderRadius: Radius.button,
+    backgroundColor: c.background,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  prizeImage: { width: "100%", height: "100%" },
 
-  myTicketsHead: { flexDirection: "row", alignItems: "center", gap: 12 },
-  myTicketsCount: {
-    width: 52, height: 52, borderRadius: 16, backgroundColor: "#FFFBE6",
-    alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FFE566",
-  },
-  myTicketsNum: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#1A1A1A" },
-  ticketChips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  ticketChip: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: "#FFFBE6", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
-    borderWidth: 1, borderColor: "#FFE566",
-  },
-  ticketChipText: { fontFamily: "Inter_500Medium", fontSize: 10, color: "#8A7500" },
-  moreChip: {
-    backgroundColor: "#F5F5F5", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+  myChancesRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
+  myChancesBox: {
+    width: 56,
+    height: 56,
+    borderRadius: Radius.card,
+    backgroundColor: c.primarySoft,
+    alignItems: "center",
     justifyContent: "center",
   },
-  moreChipText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#666", writingDirection: "rtl" },
-  pendingNote: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: "#FFF7E6", padding: 10, borderRadius: 10,
-  },
-  pendingText: {
-    fontFamily: "Inter_500Medium", fontSize: 12, color: "#B45309",
-    flex: 1, textAlign: "right", writingDirection: "rtl",
-  },
+  myChancesNum: { fontFamily: Fonts.bold, fontSize: FontSize.h2, color: c.primary },
 
-  ctaWrap: { borderRadius: 16, overflow: "hidden" },
-  cta: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    paddingVertical: 15,
+  winnerCard: {
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    alignItems: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
-  ctaText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#1A1A1A", writingDirection: "rtl" },
-
-  emptyCard: {
-    backgroundColor: "#fff", borderRadius: 18, padding: 28, alignItems: "center", gap: 12,
-    borderWidth: 1, borderColor: "#F0F0F0",
+  winnerImageWrap: {
+    width: 110,
+    height: 130,
+    borderRadius: Radius.button,
+    backgroundColor: c.background,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    marginBottom: Spacing.xs,
   },
-  emptyTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#1A1A1A", writingDirection: "rtl" },
-  emptyText: {
-    fontFamily: "Inter_400Regular", fontSize: 13, color: "#888",
-    textAlign: "center", writingDirection: "rtl", lineHeight: 21,
+  winnerImage: { width: "100%", height: "100%" },
+  winnerPrize: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h3,
+    color: c.navy,
+    textAlign: "center",
+    writingDirection: "rtl",
   },
-  emptyBtn: {
-    marginTop: 4, paddingHorizontal: 18, paddingVertical: 10,
-    backgroundColor: "#F5F5F5", borderRadius: 12,
+  winnerName: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.body,
+    color: c.text,
+    textAlign: "center",
+    writingDirection: "rtl",
   },
-  emptyBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#1A1A1A", writingDirection: "rtl" },
-
-  steps: { gap: 12 },
-  step: { flexDirection: "row", alignItems: "center", gap: 12 },
-  stepIcon: {
-    width: 38, height: 38, borderRadius: 12, backgroundColor: "#FFFBE6",
-    alignItems: "center", justifyContent: "center",
+  winnerTicket: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "center",
+    writingDirection: "rtl",
   },
-  stepTitle: {
-    fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#1A1A1A",
-    textAlign: "right", writingDirection: "rtl",
+  winnerTicketNum: { fontFamily: Fonts.bold, color: c.navy, writingDirection: "ltr" },
+  winnerMeta: {
+    flexDirection: "row",
+    gap: Spacing.lg,
+    marginTop: Spacing.xs,
+    paddingTop: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.borderSubtle,
+    alignSelf: "stretch",
+    justifyContent: "center",
   },
-  stepBody: {
-    fontFamily: "Inter_400Regular", fontSize: 12, color: "#888",
-    textAlign: "right", writingDirection: "rtl", lineHeight: 19,
+  winnerMetaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  winnerMetaText: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textMuted,
+    writingDirection: "rtl",
   },
-  stepNum: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#F0F0F0" },
 });

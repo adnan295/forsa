@@ -48,7 +48,7 @@ function getPaymentStatusConfig(status: string) {
     case "pending_review":
       return {
         icon: "hourglass" as const,
-        color: "#3498DB",
+        color: "#175CD3",
         bg: "rgba(52, 152, 219, 0.08)",
         borderColor: "rgba(52, 152, 219, 0.2)",
         label: "قيد المراجعة",
@@ -243,7 +243,7 @@ export default function OrderDetailScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#1A1A1A", "#2D2D2D"]}
+        colors={["#10224D", "#1B3A7A"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[
@@ -438,7 +438,7 @@ export default function OrderDetailScreen() {
             <>
               <View style={styles.divider} />
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryValue, { color: "#10B981" }]}>
+                <Text style={[styles.summaryValue, { color: "#067647" }]}>
                   -${parseFloat(order.walletAmount).toFixed(2)}
                 </Text>
                 <Text style={styles.summaryLabel}>خصم المحفظة</Text>
@@ -452,7 +452,7 @@ export default function OrderDetailScreen() {
             <Text style={styles.summaryTotal}>
               ${parseFloat(order.totalAmount).toFixed(2)}
             </Text>
-            <Text style={[styles.summaryLabel, { fontFamily: "Inter_600SemiBold" }]}>
+            <Text style={[styles.summaryLabel, { fontFamily: "Tajawal_500Medium" }]}>
               الإجمالي المستحق
             </Text>
           </View>
@@ -496,7 +496,7 @@ export default function OrderDetailScreen() {
                 <Text style={[styles.summaryTotal, { color: Colors.light.accentDark }]}>
                   {order.ticketsAwarded}
                 </Text>
-                <Text style={[styles.summaryLabel, { fontFamily: "Inter_600SemiBold" }]}>
+                <Text style={[styles.summaryLabel, { fontFamily: "Tajawal_500Medium" }]}>
                   عدد التذاكر
                 </Text>
               </View>
@@ -507,7 +507,7 @@ export default function OrderDetailScreen() {
                       <Ionicons
                         name={t.isWinner ? "trophy" : "ticket-outline"}
                         size={11}
-                        color={t.isWinner ? "#fff" : "#8A7500"}
+                        color={t.isWinner ? "#fff" : "#754500"}
                       />
                       <Text style={[styles.ticketChipText, t.isWinner && { color: "#fff" }]}>
                         {t.ticketNumber}
@@ -588,8 +588,8 @@ export default function OrderDetailScreen() {
                             ? Colors.light.accent
                             : Colors.light.text,
                           fontFamily: isCurrent
-                            ? "Inter_600SemiBold"
-                            : "Inter_500Medium",
+                            ? "Tajawal_500Medium"
+                            : "Tajawal_500Medium",
                         },
                       ]}
                     >
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   ticketsPendingText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.warning,
     flex: 1,
@@ -742,24 +742,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#FFFBE6",
+    backgroundColor: "#FFF4D6",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#FFE566",
+    borderColor: "#F5A623",
   },
   ticketChipWinner: {
-    backgroundColor: "#F59E0B",
-    borderColor: "#F59E0B",
+    backgroundColor: "#B54708",
+    borderColor: "#B54708",
   },
   ticketChipText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 10,
-    color: "#8A7500",
+    color: "#754500",
   },
   ticketMore: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 11,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -796,14 +796,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     color: "#FFFFFF",
     textAlign: "center",
     writingDirection: "rtl",
   },
   headerOrderId: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: "rgba(255,255,255,0.7)",
     marginTop: 2,
@@ -814,7 +814,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
     borderWidth: 1,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statusLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 20,
     textAlign: "center",
     writingDirection: "rtl",
@@ -845,7 +845,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   rejectionText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 13,
     color: Colors.light.danger,
     flex: 1,
@@ -857,14 +857,14 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 20,
     marginBottom: 16,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 16,
     elevation: 5,
   },
   cardTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: Colors.light.text,
     marginBottom: 16,
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   reuploadHint: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 13,
     color: Colors.light.warning,
     textAlign: "right",
@@ -891,7 +891,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.inputBg,
   },
   uploadTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 16,
     color: Colors.light.text,
     marginTop: 12,
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   uploadSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 13,
     color: Colors.light.textSecondary,
     marginTop: 6,
@@ -930,7 +930,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   previewChangeText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
@@ -951,7 +951,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   uploadButtonText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 16,
     color: "#FFFFFF",
     writingDirection: "rtl",
@@ -976,14 +976,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   summaryLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "right",
     writingDirection: "rtl",
   },
   summaryValue: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     textAlign: "right",
@@ -991,7 +991,7 @@ const styles = StyleSheet.create({
     maxWidth: "60%",
   },
   summaryTotal: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     color: Colors.light.accent,
   },
@@ -1010,7 +1010,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(231, 76, 60, 0.15)",
   },
   cancelledText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.danger,
     textAlign: "right",
@@ -1049,7 +1049,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   timelineLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     marginEnd: 12,
@@ -1072,7 +1072,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   trackingLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -1080,7 +1080,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   trackingNumber: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
@@ -1093,7 +1093,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   addressText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.text,
     flex: 1,

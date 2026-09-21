@@ -312,7 +312,7 @@ export default function CheckoutScreen() {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={["#1A1A1A", "#2D2D2D"]}
+          colors={["#10224D", "#1B3A7A"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
@@ -330,10 +330,10 @@ export default function CheckoutScreen() {
           <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(239,68,68,0.1)", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
             <Ionicons name="person-circle-outline" size={44} color={Colors.light.danger} />
           </View>
-          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.light.text, textAlign: "center", writingDirection: "rtl", marginBottom: 8 }}>
+          <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 20, color: Colors.light.text, textAlign: "center", writingDirection: "rtl", marginBottom: 8 }}>
             أكمل ملفك الشخصي أولاً
           </Text>
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", lineHeight: 24, marginBottom: 24 }}>
+          <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 15, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", lineHeight: 24, marginBottom: 24 }}>
             يجب إكمال بياناتك الشخصية (الاسم، الهاتف، العنوان) قبل إتمام عملية الشراء
           </Text>
           <Pressable
@@ -346,7 +346,7 @@ export default function CheckoutScreen() {
               end={{ x: 1, y: 0 }}
               style={{ paddingVertical: 16, alignItems: "center", borderRadius: 16 }}
             >
-              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 17, color: "#FFFFFF", writingDirection: "rtl" }}>
+              <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 17, color: "#FFFFFF", writingDirection: "rtl" }}>
                 إكمال الملف الشخصي
               </Text>
             </LinearGradient>
@@ -359,7 +359,7 @@ export default function CheckoutScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#1A1A1A", "#2D2D2D"]}
+        colors={["#10224D", "#1B3A7A"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[
@@ -417,7 +417,7 @@ export default function CheckoutScreen() {
           {draw && (
             <View style={styles.ticketCard}>
               <View style={styles.ticketIconWrap}>
-                <Ionicons name="ticket" size={20} color="#1A1A1A" />
+                <Ionicons name="ticket" size={20} color="#10224D" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.ticketCardTitle}>
@@ -549,10 +549,10 @@ export default function CheckoutScreen() {
                 ) : !selectedMethod.imageUrl ? (
                   <View style={{ paddingVertical: 12, alignItems: "center" }}>
                     <Ionicons name="alert-circle" size={28} color={Colors.light.warning} />
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.light.warning, textAlign: "center", writingDirection: "rtl", marginTop: 8 }}>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.warning, textAlign: "center", writingDirection: "rtl", marginTop: 8 }}>
                       بيانات الحساب غير متوفرة حالياً
                     </Text>
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", marginTop: 4 }}>
+                    <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", marginTop: 4 }}>
                       يرجى التواصل مع الإدارة للحصول على بيانات الدفع
                     </Text>
                   </View>
@@ -568,7 +568,7 @@ export default function CheckoutScreen() {
                 <View style={{ marginTop: 16 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
                     <Ionicons name="cloud-upload-outline" size={18} color={Colors.light.accent} />
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>
                       رفع وصل الدفع <Text style={{ color: Colors.light.danger }}>*</Text>
                     </Text>
                   </View>
@@ -668,24 +668,24 @@ export default function CheckoutScreen() {
           {walletBalance > 0 && (
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="wallet-outline" size={20} color="#10B981" />
+                <Ionicons name="wallet-outline" size={20} color="#067647" />
                 <Text style={styles.sectionTitle}>المحفظة</Text>
               </View>
               <View style={styles.divider} />
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
                   <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(16,185,129,0.1)", alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="wallet" size={20} color="#10B981" />
+                    <Ionicons name="wallet" size={20} color="#067647" />
                   </View>
                   <View>
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" as const }}>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" as const }}>
                       استخدام رصيد المحفظة
                     </Text>
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "#10B981", textAlign: "right", writingDirection: "rtl" as const }}>
+                    <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 13, color: "#067647", textAlign: "right", writingDirection: "rtl" as const }}>
                       الرصيد: {walletBalance.toFixed(2)} $
                     </Text>
                     {useWallet && walletDeduction > 0 && (
-                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#059669", textAlign: "right", writingDirection: "rtl" as const }}>
+                      <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: "#067647", textAlign: "right", writingDirection: "rtl" as const }}>
                         خصم: -{walletDeduction.toFixed(2)} $
                       </Text>
                     )}
@@ -697,7 +697,7 @@ export default function CheckoutScreen() {
                     setUseWallet(v);
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
-                  trackColor={{ true: "#10B981" }}
+                  trackColor={{ true: "#067647" }}
                 />
               </View>
             </View>
@@ -786,7 +786,7 @@ export default function CheckoutScreen() {
             )}
             {useWallet && walletDeduction > 0 && (
               <View style={styles.totalRow}>
-                <Text style={[styles.totalRowValue, { color: "#10B981" }]}>
+                <Text style={[styles.totalRowValue, { color: "#067647" }]}>
                   -{walletDeduction.toFixed(2)} $
                 </Text>
                 <Text style={styles.totalRowLabel}>خصم المحفظة 💳</Text>
@@ -811,11 +811,11 @@ export default function CheckoutScreen() {
             <View style={styles.retryUploadCard}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <Ionicons name="warning-outline" size={20} color={Colors.light.warning} />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.warning, writingDirection: "rtl", flex: 1 }}>
+                <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.warning, writingDirection: "rtl", flex: 1 }}>
                   تم إنشاء طلبك لكن فشل رفع الوصل
                 </Text>
               </View>
-              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 12 }}>
+              <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 12 }}>
                 يرجى تغيير الصورة إن لزم ثم اضغط «إعادة رفع الوصل»
               </Text>
               <Pressable
@@ -828,7 +828,7 @@ export default function CheckoutScreen() {
                 ) : (
                   <>
                     <Ionicons name="cloud-upload" size={18} color="#fff" />
-                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff", writingDirection: "rtl" }}>إعادة رفع الوصل</Text>
+                    <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 15, color: "#fff", writingDirection: "rtl" }}>إعادة رفع الوصل</Text>
                   </>
                 )}
               </Pressable>
@@ -876,32 +876,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#FFFBE6",
+    backgroundColor: "#FFF4D6",
     borderRadius: 16,
     padding: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#FFE566",
+    borderColor: "#F5A623",
   },
   ticketIconWrap: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FFD000",
+    backgroundColor: "#155EEF",
     alignItems: "center",
     justifyContent: "center",
   },
   ticketCardTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 14,
-    color: "#1A1A1A",
+    color: "#10224D",
     textAlign: "right",
     writingDirection: "rtl",
   },
   ticketCardSub: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
-    color: "#8A7500",
+    color: "#754500",
     textAlign: "right",
     writingDirection: "rtl",
     marginTop: 2,
@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   errorText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 16,
     color: Colors.light.textSecondary,
     marginTop: 12,
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -944,7 +944,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     color: "#FFFFFF",
     textAlign: "center",
@@ -958,7 +958,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 22,
     padding: 20,
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 16,
@@ -970,7 +970,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 16,
     color: Colors.light.text,
     textAlign: "right",
@@ -991,13 +991,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cartItemPrice: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 15,
     color: Colors.light.accent,
     marginEnd: 12,
   },
   itemTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
@@ -1011,25 +1011,25 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   summaryLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "right",
     writingDirection: "rtl",
   },
   summaryValue: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
   },
   subtotalLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     writingDirection: "rtl",
   },
   subtotalValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 16,
     color: Colors.light.accent,
   },
@@ -1067,14 +1067,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   paymentName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
     writingDirection: "rtl",
   },
   paymentDesc: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -1100,7 +1100,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   bankHeaderText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.accent,
     textAlign: "right",
@@ -1115,13 +1115,13 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(124, 58, 237, 0.12)",
   },
   bankLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
   },
   bankValue: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     writingDirection: "rtl",
@@ -1139,7 +1139,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   bankNoteText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.warning,
     textAlign: "right",
@@ -1158,7 +1158,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   payImageCaption: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: "center",
@@ -1174,7 +1174,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.inputBg,
     borderRadius: 12,
     padding: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     textAlign: "right",
@@ -1189,7 +1189,7 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   couponBtnText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 14,
     color: "#FFFFFF",
   },
@@ -1203,7 +1203,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   couponSuccessText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.success,
     textAlign: "right",
@@ -1219,14 +1219,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   couponErrorText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.danger,
     textAlign: "right",
     writingDirection: "rtl",
   },
   inputLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.text,
     textAlign: "right",
@@ -1238,7 +1238,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.inputBg,
     borderRadius: 14,
     padding: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.text,
     textAlign: "right",
@@ -1253,13 +1253,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   totalRowLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
   },
   totalRowValue: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
   },
@@ -1269,13 +1269,13 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   grandTotalLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 16,
     color: Colors.light.text,
     writingDirection: "rtl",
   },
   grandTotal: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 26,
     color: Colors.light.accent,
   },
@@ -1307,14 +1307,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   uploadTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.accent,
     textAlign: "center",
     writingDirection: "rtl",
   },
   uploadSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: "center",
@@ -1348,7 +1348,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
   },
   previewChangeText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
@@ -1372,13 +1372,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   placeOrderText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: "#FFFFFF",
     writingDirection: "rtl",
   },
   placeOrderPrice: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: "rgba(255,255,255,0.85)",
   },

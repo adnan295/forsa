@@ -100,7 +100,7 @@ export default function ReferralScreen() {
       </View>
 
       <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        colors={["#10224D", "#1B3A7A", "#155EEF"]}
         style={styles.heroGradient}
       >
         <View style={styles.heroDecor1} />
@@ -139,7 +139,7 @@ export default function ReferralScreen() {
           </Pressable>
           <Pressable onPress={handleShare} style={styles.actionBtn}>
             <LinearGradient
-              colors={[Colors.light.accentPink, Colors.light.accentPinkDark]}
+              colors={[Colors.light.accent, Colors.light.accentDark]}
               style={styles.actionGradient}
             >
               <Ionicons name="share-social" size={20} color="#fff" />
@@ -151,22 +151,22 @@ export default function ReferralScreen() {
 
       <View style={styles.statsSection}>
         <View style={styles.statsCard}>
-          <View style={[styles.statIconWrap, { backgroundColor: "#7C3AED15" }]}>
-            <Ionicons name="people" size={24} color="#7C3AED" />
+          <View style={[styles.statIconWrap, { backgroundColor: "#10224D15" }]}>
+            <Ionicons name="people" size={24} color="#10224D" />
           </View>
           <Text style={styles.statValue}>{data?.referralCount ?? 0}</Text>
           <Text style={styles.statLabel}>دعوات ناجحة</Text>
         </View>
         <View style={styles.statsCard}>
-          <View style={[styles.statIconWrap, { backgroundColor: "#10B98115" }]}>
-            <Ionicons name="wallet" size={24} color="#10B981" />
+          <View style={[styles.statIconWrap, { backgroundColor: "#06764715" }]}>
+            <Ionicons name="wallet" size={24} color="#067647" />
           </View>
           <Text style={styles.statValue}>{referralEarnings.toFixed(0)} ر</Text>
           <Text style={styles.statLabel}>أرباح الإحالة</Text>
         </View>
         <View style={styles.statsCard}>
-          <View style={[styles.statIconWrap, { backgroundColor: "#F59E0B15" }]}>
-            <Ionicons name="cash" size={24} color="#F59E0B" />
+          <View style={[styles.statIconWrap, { backgroundColor: "#B5470815" }]}>
+            <Ionicons name="cash" size={24} color="#B54708" />
           </View>
           <Text style={styles.statValue}>{walletData?.balance ? parseFloat(String(walletData.balance)).toFixed(0) : 0} ر</Text>
           <Text style={styles.statLabel}>رصيد المحفظة</Text>
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 16,
     color: Colors.light.textSecondary,
   },
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     color: Colors.light.text,
     writingDirection: "rtl",
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.25)",
   },
   heroTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 24,
     color: "#fff",
     writingDirection: "rtl",
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   heroSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: "rgba(255,255,255,0.75)",
     textAlign: "center",
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   codeSectionLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   codeText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 32,
     color: Colors.light.accent,
     letterSpacing: 6,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   actionText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: "#fff",
     writingDirection: "rtl",
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     alignItems: "center",
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -396,13 +396,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 22,
     color: Colors.light.text,
     textAlign: "center",
   },
   statLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   listTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     color: Colors.light.text,
     textAlign: "right",
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#7C3AED",
+    shadowColor: "#10224D",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 14,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   listAvatarText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: Colors.light.accent,
   },
@@ -456,14 +456,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listUsername: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
     writingDirection: "rtl",
   },
   listDate: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 17,
     color: Colors.light.text,
     writingDirection: "rtl",
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   emptySubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "center",

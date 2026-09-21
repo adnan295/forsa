@@ -85,6 +85,8 @@ export const products = pgTable("products", {
   description: text("description").notNull().default(""),
   imageUrl: text("image_url"),
   imagesJson: text("images_json"),
+  /** JSON: [{ text: string; icon?: string }] — نقاط المواصفات بصفحة المنتج */
+  specsJson: text("specs_json"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   /** null = مخزون غير محدود */
   stock: integer("stock"),
@@ -127,6 +129,8 @@ export const orders = pgTable("orders", {
     .references(() => users.id),
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  /** رسوم التوصيل — لا تدخل في احتساب فرص السحب */
+  deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).notNull().default("0"),
   walletAmount: decimal("wallet_amount", { precision: 10, scale: 2 }).notNull().default("0"),
   /** المبلغ المستحق فعلياً بعد الخصم والمحفظة */
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
@@ -423,6 +427,7 @@ export const insertProductSchema = z.object({
   description: z.string().optional().default(""),
   imageUrl: z.string().optional().nullable(),
   imagesJson: z.string().optional().nullable(),
+  specsJson: z.string().optional().nullable(),
   price: z.union([z.string(), z.number()]).transform((v) => String(v)),
   stock: z.union([z.number(), z.null()]).optional(),
   category: z.string().optional().default("other"),
@@ -536,3 +541,34 @@ export type WalletTransaction = typeof walletTransactions.$inferSelect;
 export type CampaignClientRequest = typeof campaignClientRequests.$inferSelect;
 export type InsertCampaignClientRequest = z.infer<typeof insertCampaignClientRequestSchema>;
 export type CheckoutPayload = z.infer<typeof checkoutSchema>;
+
+/** نقطة مواصفة على صفحة المنتج */
+export interface ProductSpec {
+  text: string;
+  /** اسم أيقونة من Ionicons — بدونه بتنعرض نقطة افتراضية */
+  icon?: string;
+}
+
+/** يقرأ specsJson بأمان — أي محتوى غير صالح بيرجع قائمة فاضية */
+export function parseProductSpecs(specsJson: string | null | undefined): ProductSpec[] {
+  if (!specsJson) return [];
+  try {
+    const parsed = JSON.parse(specsJson);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item: unknown): ProductSpec | null => {
+        if (typeof item === "string") return { text: item };
+        if (item && typeof item === "object" && typeof (item as any).text === "string") {
+          const icon = (item as any).icon;
+          return { text: (item as any).text, icon: typeof icon === "string" ? icon : undefined };
+        }
+        return null;
+      })
+      .filter((x): x is ProductSpec => x !== null && x.text.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
+/** رسوم التوصيل الافتراضية — لا تُحتسب ضمن فرص السحب */
+export const DEFAULT_DELIVERY_FEE = 2;
