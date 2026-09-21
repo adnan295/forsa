@@ -1,0 +1,12 @@
+.git
+.github
+.expo
+.local
+node_modules
+server_dist
+static-build
+backups
+.env
+.env.*
+!.env.production.example
+npm-debug.log*

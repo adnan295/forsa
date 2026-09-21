@@ -13,6 +13,7 @@ var schema_exports = {};
 __export(schema_exports, {
   activityLog: () => activityLog,
   adminNotifications: () => adminNotifications,
+  campaignClientRequests: () => campaignClientRequests,
   campaignProducts: () => campaignProducts,
   campaignProductsRelations: () => campaignProductsRelations,
   campaignStatusEnum: () => campaignStatusEnum,
@@ -20,6 +21,8 @@ __export(schema_exports, {
   campaignsRelations: () => campaignsRelations,
   coupons: () => coupons,
   emailVerificationTokens: () => emailVerificationTokens,
+  insertCampaignClientRequestSchema: () => insertCampaignClientRequestSchema,
+  insertCampaignProductSchema: () => insertCampaignProductSchema,
   insertCampaignSchema: () => insertCampaignSchema,
   insertCouponSchema: () => insertCouponSchema,
   insertPaymentMethodSchema: () => insertPaymentMethodSchema,
@@ -59,7 +62,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var roleEnum, campaignStatusEnum, orderStatusEnum, paymentStatusEnum, shippingStatusEnum, users, campaigns, orders, tickets, paymentMethods, coupons, activityLog, reviews, adminNotifications, userNotifications, emailVerificationTokens, passwordResetTokens, supportTickets, walletTransactions, insertSupportTicketSchema, usersRelations, campaignProducts, campaignsRelations, campaignProductsRelations, reviewsRelations, ordersRelations, ticketsRelations, insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema;
+var roleEnum, campaignStatusEnum, orderStatusEnum, paymentStatusEnum, shippingStatusEnum, users, campaigns, orders, tickets, paymentMethods, coupons, activityLog, reviews, adminNotifications, userNotifications, emailVerificationTokens, passwordResetTokens, supportTickets, walletTransactions, insertSupportTicketSchema, usersRelations, campaignProducts, campaignsRelations, campaignProductsRelations, reviewsRelations, ordersRelations, ticketsRelations, insertUserSchema, loginSchema, insertCampaignSchema, insertCampaignProductSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, campaignClientRequests, insertCampaignClientRequestSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -105,6 +108,8 @@ var init_schema = __esm({
       referralCode: text("referral_code").unique(),
       referredBy: varchar("referred_by"),
       pushToken: text("push_token"),
+      fcmToken: text("fcm_token"),
+      apnToken: text("apn_token"),
       walletBalance: decimal("wallet_balance", { precision: 10, scale: 2 }).notNull().default("0"),
       isSuspended: boolean("is_suspended").notNull().default(false),
       createdAt: timestamp("created_at").defaultNow().notNull()
@@ -174,6 +179,7 @@ var init_schema = __esm({
       bankName: text("bank_name"),
       accountName: text("account_name"),
       iban: text("iban"),
+      imageUrl: text("image_url"),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
     coupons = pgTable("coupons", {
@@ -277,6 +283,7 @@ var init_schema = __esm({
       name: text("name").notNull(),
       nameAr: text("name_ar"),
       imageUrl: text("image_url"),
+      imagesJson: text("images_json"),
       price: decimal("price", { precision: 10, scale: 2 }).notNull(),
       quantity: integer("quantity").notNull(),
       soldQuantity: integer("sold_quantity").notNull().default(0),
@@ -358,6 +365,15 @@ var init_schema = __esm({
       flashSaleEndsAt: true,
       originalPrice: true
     });
+    insertCampaignProductSchema = createInsertSchema(campaignProducts).pick({
+      name: true,
+      nameAr: true,
+      imageUrl: true,
+      imagesJson: true,
+      price: true,
+      quantity: true,
+      sortOrder: true
+    });
     insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick({
       name: true,
       nameAr: true,
@@ -366,13 +382,15 @@ var init_schema = __esm({
       description: true,
       bankName: true,
       accountName: true,
-      iban: true
+      iban: true,
+      imageUrl: true
     });
     insertCouponSchema = createInsertSchema(coupons).pick({
       code: true,
       discountPercent: true,
       maxUses: true,
-      expiresAt: true
+      expiresAt: true,
+      enabled: true
     });
     updateProfileSchema = z.object({
       fullName: z.string().min(2, "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644 \u0645\u0637\u0644\u0648\u0628"),
@@ -385,6 +403,28 @@ var init_schema = __esm({
       campaignId: z.string().min(1),
       rating: z.number().min(1).max(5),
       comment: z.string().optional()
+    });
+    campaignClientRequests = pgTable("campaign_client_requests", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      businessName: text("business_name").notNull(),
+      contactName: text("contact_name").notNull(),
+      phone: text("phone").notNull(),
+      email: text("email"),
+      productName: text("product_name").notNull(),
+      productValue: decimal("product_value", { precision: 10, scale: 2 }),
+      description: text("description"),
+      status: text("status").notNull().default("pending"),
+      adminNotes: text("admin_notes"),
+      createdAt: timestamp("created_at").defaultNow().notNull()
+    });
+    insertCampaignClientRequestSchema = z.object({
+      businessName: z.string().min(2, "\u0627\u0633\u0645 \u0627\u0644\u0646\u0634\u0627\u0637 \u0627\u0644\u062A\u062C\u0627\u0631\u064A \u0645\u0637\u0644\u0648\u0628"),
+      contactName: z.string().min(2, "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644 \u0645\u0637\u0644\u0648\u0628"),
+      phone: z.string().min(7, "\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D"),
+      email: z.string().email("\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D").optional().or(z.literal("")),
+      productName: z.string().min(2, "\u0627\u0633\u0645 \u0627\u0644\u0645\u0646\u062A\u062C \u0645\u0637\u0644\u0648\u0628"),
+      productValue: z.string().optional(),
+      description: z.string().optional()
     });
   }
 });
@@ -482,6 +522,7 @@ var init_storage = __esm({
           name: data.name,
           nameAr: data.nameAr,
           imageUrl: data.imageUrl,
+          imagesJson: data.imagesJson,
           price: data.price,
           quantity: data.quantity,
           sortOrder: data.sortOrder || 0
@@ -1000,6 +1041,22 @@ var init_storage = __esm({
         const result = await db.select({ pushToken: users.pushToken }).from(users).where(inArray(users.id, userIds));
         return result.map((r) => r.pushToken).filter((t) => !!t);
       }
+      async getUserApnTokensByIds(userIds) {
+        if (userIds.length === 0) return [];
+        const result = await db.select({ apnToken: users.apnToken }).from(users).where(inArray(users.id, userIds));
+        return result.map((r) => r.apnToken).filter((t) => !!t && t.length > 20);
+      }
+      async updateUserDeviceTokens(userId, tokens) {
+        const update = {};
+        if (tokens.fcmToken !== void 0) update.fcmToken = tokens.fcmToken;
+        if (tokens.apnToken !== void 0) update.apnToken = tokens.apnToken;
+        if (Object.keys(update).length === 0) return;
+        await db.update(users).set(update).where(eq(users.id, userId));
+      }
+      async getAllUsersWithFcmTokens() {
+        const result = await db.select({ id: users.id, fcmToken: users.fcmToken, apnToken: users.apnToken }).from(users).where(eq(users.isSuspended, false));
+        return result;
+      }
       async getWalletBalance(userId) {
         const [u] = await db.select({ walletBalance: users.walletBalance }).from(users).where(eq(users.id, userId));
         return parseFloat(u?.walletBalance || "0");
@@ -1126,7 +1183,273 @@ import { createServer } from "node:http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
-import { sum as sum2, count as count2, and as and2, gte as gte2, sql as sql3, eq as eq2, desc as desc2 } from "drizzle-orm";
+
+// server/firebase.ts
+import admin from "firebase-admin";
+var initialized = false;
+function initFirebase() {
+  if (initialized || admin.apps.length > 0) return;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  if (!projectId || !clientEmail || !privateKey) {
+    console.warn("[Firebase] Missing credentials \u2014 FCM disabled. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY.");
+    return;
+  }
+  admin.initializeApp({
+    credential: admin.credential.cert({ projectId, clientEmail, privateKey })
+  });
+  initialized = true;
+  console.log("[Firebase] Admin SDK initialized for project:", projectId);
+}
+initFirebase();
+async function sendFcmNotification(tokens, title, body, data) {
+  const result = { success: 0, failure: 0, errors: [] };
+  if (!initialized && admin.apps.length === 0) {
+    result.errors.push("Firebase not initialized");
+    result.failure = tokens.length;
+    return result;
+  }
+  const validTokens = tokens.filter((t) => typeof t === "string" && t.length > 10);
+  if (validTokens.length === 0) return result;
+  const CHUNK = 500;
+  for (let i = 0; i < validTokens.length; i += CHUNK) {
+    const chunk = validTokens.slice(i, i + CHUNK);
+    try {
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens: chunk,
+        notification: { title, body },
+        data: data || {},
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "default",
+            sound: "default",
+            icon: "notification_icon",
+            color: "#FFD000"
+          }
+        },
+        apns: {
+          payload: { aps: { sound: "default", badge: 1 } },
+          headers: { "apns-priority": "10" }
+        }
+      });
+      result.success += response.successCount;
+      result.failure += response.failureCount;
+      response.responses.forEach((r, idx) => {
+        if (!r.success && r.error) {
+          result.errors.push(`Token[${i + idx}]: ${r.error.message}`);
+        }
+      });
+    } catch (err) {
+      result.failure += chunk.length;
+      result.errors.push(err.message || "Unknown error");
+    }
+  }
+  return result;
+}
+async function sendFcmToUser(userId, fcmToken, title, body, data) {
+  const tokens = [fcmToken].filter((t) => !!t && t.length > 10);
+  return sendFcmNotification(tokens, title, body, data);
+}
+
+// server/apns.ts
+import http2 from "http2";
+import jwt from "jsonwebtoken";
+var APN_HOST = "api.push.apple.com";
+var BUNDLE_ID = process.env.APN_BUNDLE_ID || "app.replit.forsa";
+var REQUEST_TIMEOUT_MS = 1e4;
+var CONNECT_TIMEOUT_MS = 8e3;
+var cachedToken = null;
+var tokenGeneratedAt = 0;
+function parseKey(raw) {
+  let key = raw.replace(/\\n/g, "\n").replace(/\\r/g, "").trim();
+  const beginMatch = key.match(/-----BEGIN [A-Z ]+-----/);
+  const endMatch = key.match(/-----END [A-Z ]+-----/);
+  if (!beginMatch || !endMatch) return key;
+  const beginIdx = key.indexOf(beginMatch[0]) + beginMatch[0].length;
+  const endIdx = key.indexOf(endMatch[0]);
+  const body = key.slice(beginIdx, endIdx).replace(/[\s\n\r]+/g, "");
+  const wrapped = body.match(/.{1,64}/g)?.join("\n") || body;
+  return `${beginMatch[0]}
+${wrapped}
+${endMatch[0]}
+`;
+}
+function getJWT() {
+  const now = Date.now();
+  if (cachedToken && now - tokenGeneratedAt < 45 * 60 * 1e3) {
+    return cachedToken;
+  }
+  const rawKey = process.env.APN_KEY;
+  const keyId = process.env.APN_KEY_ID?.trim();
+  const teamId = process.env.APPLE_TEAM_ID?.trim();
+  if (!rawKey || !keyId || !teamId) {
+    throw new Error("[APNs] Missing credentials: APN_KEY, APN_KEY_ID, APPLE_TEAM_ID must be set");
+  }
+  const key = parseKey(rawKey);
+  if (!key.includes("-----BEGIN") || !key.includes("-----END")) {
+    throw new Error("[APNs] APN_KEY does not look like a valid PEM key \u2014 make sure the full .p8 file content is stored including the BEGIN/END lines");
+  }
+  cachedToken = jwt.sign({}, key, {
+    algorithm: "ES256",
+    keyid: keyId,
+    issuer: teamId,
+    expiresIn: "1h"
+  });
+  tokenGeneratedAt = now;
+  console.log(`[APNs] JWT generated for team=${teamId} keyId=${keyId}`);
+  return cachedToken;
+}
+function isApnsConfigured() {
+  return !!(process.env.APN_KEY && process.env.APN_KEY_ID && process.env.APPLE_TEAM_ID);
+}
+async function sendApnsNotifications(deviceTokens, title, body, data) {
+  const result = { success: 0, failure: 0, invalidTokens: [] };
+  const validTokens = [...new Set(deviceTokens.filter((t) => typeof t === "string" && t.length > 20))];
+  if (validTokens.length === 0) return result;
+  let token;
+  try {
+    token = getJWT();
+  } catch (err) {
+    console.error("[APNs]", err.message);
+    result.failure = validTokens.length;
+    return result;
+  }
+  const expirationTimestamp = Math.floor(Date.now() / 1e3) + 86400;
+  const payload = JSON.stringify({
+    aps: {
+      alert: { title, body },
+      sound: "default",
+      badge: 1
+    },
+    ...data || {}
+  });
+  return new Promise((resolve2) => {
+    let client = null;
+    let pending = validTokens.length;
+    let resolved = false;
+    const overallTimer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        console.error(`[APNs] Overall timeout reached \u2014 ${pending} requests incomplete`);
+        result.failure += pending;
+        try {
+          client?.destroy();
+        } catch {
+        }
+        resolve2(result);
+      }
+    }, CONNECT_TIMEOUT_MS + REQUEST_TIMEOUT_MS * validTokens.length + 2e3);
+    function finish() {
+      if (pending > 0) pending--;
+      if (pending === 0 && !resolved) {
+        resolved = true;
+        clearTimeout(overallTimer);
+        try {
+          client?.close();
+        } catch {
+        }
+        resolve2(result);
+      }
+    }
+    function abortAll(reason) {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(overallTimer);
+        console.error(`[APNs] Aborting all ${pending} pending requests: ${reason}`);
+        result.failure += pending;
+        pending = 0;
+        try {
+          client?.destroy();
+        } catch {
+        }
+        resolve2(result);
+      }
+    }
+    const connectTimer = setTimeout(() => {
+      abortAll("Connection timed out");
+    }, CONNECT_TIMEOUT_MS);
+    try {
+      client = http2.connect(`https://${APN_HOST}`, {}, () => {
+        clearTimeout(connectTimer);
+      });
+      client.on("error", (err) => {
+        clearTimeout(connectTimer);
+        abortAll(`Connection error: ${err.message}`);
+      });
+      client.on("connect", () => {
+        clearTimeout(connectTimer);
+      });
+      for (const deviceToken of validTokens) {
+        if (resolved) break;
+        try {
+          const req = client.request({
+            ":method": "POST",
+            ":path": `/3/device/${deviceToken}`,
+            "authorization": `bearer ${token}`,
+            "apns-topic": BUNDLE_ID,
+            "apns-push-type": "alert",
+            "apns-priority": "10",
+            "apns-expiration": String(expirationTimestamp),
+            "content-type": "application/json",
+            "content-length": String(Buffer.byteLength(payload))
+          });
+          let statusCode = 0;
+          let responseBody = "";
+          const reqTimer = setTimeout(() => {
+            console.error(`[APNs] Request timeout for token ${deviceToken.slice(0, 8)}...`);
+            result.failure++;
+            req.destroy();
+            finish();
+          }, REQUEST_TIMEOUT_MS);
+          req.on("response", (headers) => {
+            statusCode = headers[":status"];
+          });
+          req.on("data", (chunk) => {
+            responseBody += chunk;
+          });
+          req.on("end", () => {
+            clearTimeout(reqTimer);
+            if (statusCode === 200) {
+              result.success++;
+            } else {
+              let parsedReason = "unknown";
+              try {
+                const parsed = JSON.parse(responseBody);
+                parsedReason = parsed.reason || "unknown";
+              } catch {
+              }
+              console.error(`[APNs] status=${statusCode} reason=${parsedReason} token=${deviceToken.slice(0, 8)}...`);
+              if (parsedReason === "BadDeviceToken" || parsedReason === "Unregistered" || parsedReason === "DeviceTokenNotForTopic") {
+                result.invalidTokens.push(deviceToken);
+              }
+              result.failure++;
+            }
+            finish();
+          });
+          req.on("error", (err) => {
+            clearTimeout(reqTimer);
+            console.error(`[APNs] Request error for token ${deviceToken.slice(0, 8)}...: ${err.message}`);
+            result.failure++;
+            finish();
+          });
+          req.end(payload);
+        } catch (reqErr) {
+          console.error("[APNs] Failed to create request:", reqErr.message);
+          result.failure++;
+          finish();
+        }
+      }
+    } catch (connErr) {
+      clearTimeout(connectTimer);
+      abortAll(`Failed to connect: ${connErr.message}`);
+    }
+  });
+}
+
+// server/routes.ts
+import { sum as sum2, count as count2, and as and2, gte as gte2, sql as sql3, eq as eq2, desc as desc2, inArray as inArray2 } from "drizzle-orm";
 
 // server/email.ts
 import { Resend } from "resend";
@@ -1332,51 +1655,70 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import multer from "multer";
 import path from "path";
-import { mkdirSync } from "fs";
-mkdirSync("uploads/receipts", { recursive: true });
-mkdirSync("uploads/campaigns", { recursive: true });
 async function sendPushNotifications(userIds, title, body, data) {
   try {
-    const rawTokens = await storage.getUserPushTokensByIds(userIds);
-    const tokens = [...new Set(rawTokens)];
-    if (tokens.length === 0) return;
-    const messages = tokens.map((token) => ({
-      to: token,
-      sound: "default",
-      title,
-      body,
-      data: data || {}
-    }));
-    const chunks = [];
-    for (let i = 0; i < messages.length; i += 100) {
-      chunks.push(messages.slice(i, i + 100));
+    const [expoTokens, apnTokens] = await Promise.all([
+      storage.getUserPushTokensByIds(userIds),
+      isApnsConfigured() ? storage.getUserApnTokensByIds(userIds) : Promise.resolve([])
+    ]);
+    const uniqueExpoTokens = [...new Set(expoTokens)].filter((t) => typeof t === "string" && t.length > 10);
+    const uniqueApnTokens = [...new Set(apnTokens)].filter((t) => typeof t === "string" && t.length > 20);
+    const promises = [];
+    if (uniqueExpoTokens.length > 0) {
+      const messages = uniqueExpoTokens.map((token) => ({
+        to: token,
+        sound: "default",
+        title,
+        body,
+        data: data || {},
+        priority: "high",
+        channelId: "default",
+        _contentAvailable: true
+      }));
+      const chunks = [];
+      for (let i = 0; i < messages.length; i += 100) {
+        chunks.push(messages.slice(i, i + 100));
+      }
+      for (const chunk of chunks) {
+        promises.push(
+          fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: {
+              "Accept": "application/json",
+              "Accept-Encoding": "gzip, deflate",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(chunk)
+          }).then((res) => res.json()).then((json) => {
+            if (json.data) {
+              json.data.forEach((item, idx) => {
+                if (item.status === "error") {
+                  console.error(`[Push/Expo] Error for token[${idx}]:`, item.message, item.details);
+                }
+              });
+            }
+          }).catch((err) => console.error("[Push/Expo] Chunk failed:", err))
+        );
+      }
     }
-    for (const chunk of chunks) {
-      await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(chunk)
-      }).catch(() => {
-      });
+    if (uniqueApnTokens.length > 0) {
+      promises.push(
+        sendApnsNotifications(uniqueApnTokens, title, body, data).then(async (apnsResult) => {
+          console.log(`[Push/APNs] Sent: ${apnsResult.success} success, ${apnsResult.failure} failure`);
+          if (apnsResult.invalidTokens.length > 0) {
+            console.warn(`[Push/APNs] Clearing ${apnsResult.invalidTokens.length} invalid APN token(s)`);
+            await db.update(users).set({ apnToken: null }).where(inArray2(users.apnToken, apnsResult.invalidTokens)).catch((err) => console.error("[Push/APNs] Failed to clear invalid tokens:", err));
+          }
+        })
+      );
     }
+    await Promise.all(promises);
   } catch (e) {
-    console.error("Push notification error:", e);
+    console.error("[Push] sendPushNotifications error:", e);
   }
 }
-var receiptStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, "uploads/receipts/");
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
 var uploadReceipt = multer({
-  storage: receiptStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp|pdf/;
@@ -1389,17 +1731,23 @@ var uploadReceipt = multer({
     }
   }
 });
-var campaignStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, "uploads/campaigns/");
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+var imageMemoryStorage = multer.memoryStorage();
+var uploadPaymentMethodImage = multer({
+  storage: imageMemoryStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
   }
 });
 var uploadCampaignImage = multer({
-  storage: campaignStorage,
+  storage: imageMemoryStorage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -1451,19 +1799,23 @@ async function requireAdmin(req, res, next) {
   next();
 }
 async function registerRoutes(app2) {
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret && process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET must be set in production");
+  }
   app2.use(
     session({
       store: new PgSession({
         pool,
         createTableIfMissing: true
       }),
-      secret: process.env.SESSION_SECRET || "forsa-secret-key",
+      secret: sessionSecret || "development-only-session-secret",
       resave: false,
       saveUninitialized: false,
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1e3,
         httpOnly: true,
-        secure: false,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "lax"
       }
     })
@@ -1715,6 +2067,18 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
+  app2.put("/api/auth/device-tokens", requireAuth, async (req, res) => {
+    try {
+      const { fcmToken, apnToken } = req.body;
+      await storage.updateUserDeviceTokens(req.session.userId, {
+        ...fcmToken !== void 0 && { fcmToken: fcmToken || null },
+        ...apnToken !== void 0 && { apnToken: apnToken || null }
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   app2.get("/api/user/stats", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId;
@@ -1765,12 +2129,28 @@ async function registerRoutes(app2) {
   });
   app2.post("/api/campaigns", requireAdmin, async (req, res) => {
     try {
-      const { products: productsData, ...campaignData } = req.body;
+      const { products: productsData, ...rawData } = req.body;
+      const campaignData = { ...rawData };
+      if (campaignData.totalQuantity !== void 0) campaignData.totalQuantity = Number(campaignData.totalQuantity);
+      if (campaignData.productPrice !== void 0) campaignData.productPrice = String(campaignData.productPrice);
+      if (campaignData.originalPrice !== void 0 && campaignData.originalPrice !== null) campaignData.originalPrice = String(campaignData.originalPrice);
+      if (campaignData.endsAt) campaignData.endsAt = new Date(campaignData.endsAt);
+      if (campaignData.flashSaleEndsAt) campaignData.flashSaleEndsAt = new Date(campaignData.flashSaleEndsAt);
+      if (!campaignData.description) campaignData.description = " ";
+      const requestedStatus = campaignData.status;
+      delete campaignData.status;
+      if (!productsData || !Array.isArray(productsData) || productsData.length < 2) {
+        return res.status(400).json({ message: "\u064A\u062C\u0628 \u0625\u0636\u0627\u0641\u0629 \u0645\u0646\u062A\u062C\u064A\u0646 (\u0645\u0648\u062F\u064A\u0644\u064A\u0646) \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0644\u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062D\u0645\u0644\u0629" });
+      }
       const parsed = insertCampaignSchema.safeParse(campaignData);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
       }
-      const campaign = await storage.createCampaign(parsed.data);
+      let campaign = await storage.createCampaign(parsed.data);
+      const validStatuses = ["active", "paused", "sold_out", "drawing", "completed"];
+      if (requestedStatus && validStatuses.includes(requestedStatus) && requestedStatus !== "active") {
+        campaign = await storage.updateCampaign(campaign.id, { status: requestedStatus }) ?? campaign;
+      }
       if (productsData && Array.isArray(productsData) && productsData.length > 0) {
         for (let i = 0; i < productsData.length; i++) {
           const p = productsData[i];
@@ -1784,6 +2164,7 @@ async function registerRoutes(app2) {
             name: p.name,
             nameAr: p.nameAr || p.name,
             imageUrl: p.imageUrl,
+            imagesJson: p.imagesJson,
             price: prc.toFixed(2),
             quantity: qty,
             sortOrder: i
@@ -1833,7 +2214,7 @@ async function registerRoutes(app2) {
       const campaignId = req.params.id;
       const campaign = await storage.getCampaign(campaignId);
       if (!campaign) return res.status(404).json({ message: "Campaign not found" });
-      const { name, nameAr, imageUrl, price, quantity, sortOrder } = req.body;
+      const { name, nameAr, imageUrl, imagesJson, price, quantity, sortOrder } = req.body;
       if (!name || !price || !quantity) {
         return res.status(400).json({ message: "Name, price and quantity are required" });
       }
@@ -1842,6 +2223,7 @@ async function registerRoutes(app2) {
         name,
         nameAr,
         imageUrl,
+        imagesJson,
         price: String(price),
         quantity: parseInt(quantity),
         sortOrder: sortOrder || 0
@@ -1880,6 +2262,10 @@ async function registerRoutes(app2) {
     try {
       const product = await storage.getCampaignProduct(req.params.id);
       if (!product) return res.status(404).json({ message: "Product not found" });
+      const existingProducts = await storage.getCampaignProducts(product.campaignId);
+      if (existingProducts.length <= 2) {
+        return res.status(400).json({ message: "\u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0630\u0641 \u0627\u0644\u0645\u0646\u062A\u062C \u2014 \u064A\u062C\u0628 \u0627\u0644\u0625\u0628\u0642\u0627\u0621 \u0639\u0644\u0649 \u0645\u0646\u062A\u062C\u064A\u0646 (\u0645\u0648\u062F\u064A\u0644\u064A\u0646) \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0641\u064A \u0627\u0644\u062D\u0645\u0644\u0629" });
+      }
       const deleted = await storage.deleteCampaignProduct(req.params.id);
       if (deleted) {
         await storage.syncCampaignAggregates(product.campaignId);
@@ -2197,7 +2583,7 @@ async function registerRoutes(app2) {
       if (!req.file) {
         return res.status(400).json({ message: "Receipt file is required" });
       }
-      const receiptUrl = `/uploads/receipts/${req.file.filename}`;
+      const receiptUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
       const updated = await storage.updateOrderPayment(order.id, {
         paymentStatus: "pending_review",
         receiptUrl
@@ -2250,6 +2636,15 @@ async function registerRoutes(app2) {
             req.params.campaignId
           );
           sendPushNotifications([result.winner.id], "\u0645\u0628\u0631\u0648\u0643 \u0623\u0646\u062A \u0627\u0644\u0641\u0627\u0626\u0632! \u{1F3C6}\u{1F389}", `\u0644\u0642\u062F \u0641\u0632\u062A \u0628\u062C\u0627\u0626\u0632\u0629 ${drawnCampaign.prizeName} \u0641\u064A \u062D\u0645\u0644\u0629 ${drawnCampaign.title}!`, { campaignId: req.params.campaignId });
+          sendFcmToUser(
+            result.winner.id,
+            result.winner.fcmToken ?? null,
+            "\u0645\u0628\u0631\u0648\u0643 \u0623\u0646\u062A \u0627\u0644\u0641\u0627\u0626\u0632! \u{1F3C6}\u{1F389}",
+            `\u0644\u0642\u062F \u0641\u0632\u062A \u0628\u062C\u0627\u0626\u0632\u0629 ${drawnCampaign.prizeName} \u0641\u064A \u062D\u0645\u0644\u0629 ${drawnCampaign.title}!`,
+            { campaignId: req.params.campaignId }
+          ).then((fcmResult) => {
+            console.log(`[FCM] Winner notification \u2014 success: ${fcmResult.success}, failure: ${fcmResult.failure}`, fcmResult.errors.length ? fcmResult.errors : "");
+          }).catch((e) => console.error("[FCM] Winner notification error:", e));
           const campaignTickets = await storage.getTicketsByCampaign(req.params.campaignId);
           const participantIds = [...new Set(campaignTickets.map((t) => t.userId))].filter((id) => id !== result.winner.id);
           if (participantIds.length > 0) {
@@ -2439,6 +2834,8 @@ async function registerRoutes(app2) {
             referredBy: user.referredBy,
             isSuspended: user.isSuspended,
             createdAt: user.createdAt,
+            fcmToken: user.fcmToken ?? null,
+            apnToken: user.apnToken ?? null,
             ...stats
           };
         })
@@ -2720,7 +3117,12 @@ async function registerRoutes(app2) {
   });
   app2.put("/api/admin/campaigns/:id", requireAdmin, async (req, res) => {
     try {
-      const { title, description, price, productPrice, totalQuantity, imageUrl, endsAt, isFlashSale, originalPrice, flashSaleEndsAt, status, prizeName } = req.body;
+      const { title, description, price, productPrice, totalQuantity, imageUrl, endsAt, isFlashSale, originalPrice, flashSaleEndsAt, status, prizeName, products: productsData } = req.body;
+      if (productsData !== void 0) {
+        if (!Array.isArray(productsData) || productsData.length < 2) {
+          return res.status(400).json({ message: "\u064A\u062C\u0628 \u0627\u0644\u0625\u0628\u0642\u0627\u0621 \u0639\u0644\u0649 \u0645\u0646\u062A\u062C\u064A\u0646 (\u0645\u0648\u062F\u064A\u0644\u064A\u0646) \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0641\u064A \u0627\u0644\u062D\u0645\u0644\u0629" });
+        }
+      }
       const updateData = {};
       if (title !== void 0) updateData.title = title;
       if (description !== void 0) updateData.description = description;
@@ -2998,15 +3400,80 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Server error" });
     }
   });
+  app2.post("/api/admin/send-fcm", requireAdmin, async (req, res) => {
+    try {
+      const { title, body, targetUserId } = req.body;
+      if (!title || !body) return res.status(400).json({ message: "\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628\u0627\u0646" });
+      if (targetUserId) {
+        const user = await storage.getUser(targetUserId);
+        if (!user) return res.status(404).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+        const tokens2 = [user.fcmToken].filter((t) => !!t && t.length > 10);
+        if (tokens2.length === 0) return res.status(400).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0644\u0627 \u064A\u0645\u0644\u0643 \u062A\u0648\u0643\u0646 FCM \u0645\u0633\u062C\u0651\u0644" });
+        const result2 = await sendFcmNotification(tokens2, title, body);
+        return res.json({ success: true, result: result2, target: user.username });
+      }
+      const allUserTokens = await storage.getAllUsersWithFcmTokens();
+      const tokens = allUserTokens.map((u) => u.fcmToken).filter((t) => !!t && t.length > 10);
+      if (tokens.length === 0) return res.status(400).json({ message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0633\u062A\u062E\u062F\u0645\u0648\u0646 \u0628\u062A\u0648\u0643\u0646\u0627\u062A FCM \u0645\u0633\u062C\u0651\u0644\u0629" });
+      const result = await sendFcmNotification([...new Set(tokens)], title, body);
+      await storage.logActivity("broadcast_notification", "\u0625\u0634\u0639\u0627\u0631 FCM \u062C\u0645\u0627\u0639\u064A", `${title} \u2014 ${result.success} \u0646\u0627\u062C\u062D / ${result.failure} \u0641\u0634\u0644`, req.session.userId);
+      res.json({ success: true, result, target: "all" });
+    } catch (error) {
+      console.error("FCM send error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+  app2.post("/api/admin/send-fcm/:userId", requireAdmin, async (req, res) => {
+    try {
+      const { title, body } = req.body;
+      if (!title || !body) return res.status(400).json({ message: "\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628\u0627\u0646" });
+      const user = await storage.getUser(req.params.userId);
+      if (!user) return res.status(404).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+      const tokens = [user.fcmToken].filter((t) => !!t && t.length > 10);
+      if (tokens.length === 0) return res.status(400).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0644\u0627 \u064A\u0645\u0644\u0643 \u062A\u0648\u0643\u0646 FCM \u0645\u0633\u062C\u0651\u0644" });
+      const result = await sendFcmNotification(tokens, title, body);
+      res.json({ success: true, result, username: user.username });
+    } catch (error) {
+      console.error("FCM send to user error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+  app2.post("/api/admin/payment-methods/upload-image", requireAdmin, uploadPaymentMethodImage.single("image"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Image file is required" });
+      }
+      const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      if (req.body.methodId) {
+        await storage.updatePaymentMethod(req.body.methodId, { imageUrl });
+      }
+      res.json({ imageUrl });
+    } catch (error) {
+      console.error("Upload payment method image error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
   app2.post("/api/admin/campaigns/upload-image", requireAdmin, uploadCampaignImage.single("image"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "Image file is required" });
       }
-      const imageUrl = `/uploads/campaigns/${req.file.filename}`;
+      const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
       res.json({ imageUrl });
     } catch (error) {
       console.error("Upload campaign image error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+  app2.post("/api/admin/campaigns/upload-product-image", requireAdmin, uploadCampaignImage.single("image"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Image file is required" });
+      }
+      const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      res.json({ imageUrl });
+    } catch (error) {
+      console.error("Upload product image error:", error);
       res.status(500).json({ message: error.message || "Server error" });
     }
   });
@@ -3540,9 +4007,9 @@ async function registerRoutes(app2) {
     try {
       const { email, currentPassword, newPassword } = req.body;
       const adminId = req.session.userId;
-      const admin = await storage.getUserById(adminId);
-      if (!admin) return res.status(404).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
-      if (email && email !== admin.email) {
+      const admin2 = await storage.getUserById(adminId);
+      if (!admin2) return res.status(404).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+      if (email && email !== admin2.email) {
         const existing = await storage.getUserByEmail(email);
         if (existing && existing.id !== adminId) {
           return res.status(409).json({ message: "\u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0645\u0633\u062A\u062E\u062F\u0645 \u0628\u0627\u0644\u0641\u0639\u0644" });
@@ -3551,7 +4018,7 @@ async function registerRoutes(app2) {
       }
       if (newPassword) {
         if (!currentPassword) return res.status(400).json({ message: "\u064A\u062C\u0628 \u0625\u062F\u062E\u0627\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0633\u0631 \u0627\u0644\u062D\u0627\u0644\u064A\u0629" });
-        const valid = await bcrypt.compare(currentPassword, admin.password);
+        const valid = await bcrypt.compare(currentPassword, admin2.password);
         if (!valid) return res.status(401).json({ message: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0633\u0631 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
         const hashed = await bcrypt.hash(newPassword, 10);
         await storage.updateUserPassword(adminId, hashed);
@@ -3606,6 +4073,46 @@ async function registerRoutes(app2) {
       return res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0633\u0631" });
     }
   });
+  app2.post("/api/campaign-requests", async (req, res) => {
+    try {
+      const parsed = insertCampaignClientRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0].message });
+      }
+      const [request] = await db.insert(campaignClientRequests).values({
+        businessName: parsed.data.businessName,
+        contactName: parsed.data.contactName,
+        phone: parsed.data.phone,
+        email: parsed.data.email || null,
+        productName: parsed.data.productName,
+        productValue: parsed.data.productValue || null,
+        description: parsed.data.description || null
+      }).returning();
+      res.json({ message: "\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628\u0643 \u0628\u0646\u062C\u0627\u062D! \u0633\u0646\u062A\u0648\u0627\u0635\u0644 \u0645\u0639\u0643 \u0642\u0631\u064A\u0628\u0627\u064B.", id: request.id });
+    } catch (error) {
+      console.error("Campaign request error:", error);
+      res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623\u060C \u062D\u0627\u0648\u0644 \u0645\u062C\u062F\u062F\u0627\u064B" });
+    }
+  });
+  app2.get("/api/campaign-requests", requireAdmin, async (req, res) => {
+    try {
+      const requests = await db.select().from(campaignClientRequests).orderBy(desc2(campaignClientRequests.createdAt));
+      res.json(requests);
+    } catch (error) {
+      console.error("Get campaign requests error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  app2.patch("/api/campaign-requests/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const { status, adminNotes } = req.body;
+      await db.update(campaignClientRequests).set({ status, adminNotes: adminNotes || null }).where(eq2(campaignClientRequests.id, req.params.id));
+      res.json({ message: "\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B" });
+    } catch (error) {
+      console.error("Update campaign request error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
   const httpServer = createServer(app2);
   return httpServer;
 }
@@ -3619,6 +4126,12 @@ var log = console.log;
 function setupCors(app2) {
   app2.use((req, res, next) => {
     const origins = /* @__PURE__ */ new Set();
+    if (process.env.APP_ORIGINS) {
+      process.env.APP_ORIGINS.split(",").forEach((origin2) => {
+        const normalized = origin2.trim().replace(/\/$/, "");
+        if (normalized) origins.add(normalized);
+      });
+    }
     if (process.env.REPLIT_DEV_DOMAIN) {
       origins.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
     }
@@ -3629,7 +4142,8 @@ function setupCors(app2) {
     }
     const origin = req.header("origin");
     const isLocalhost = origin?.startsWith("http://localhost:") || origin?.startsWith("http://127.0.0.1:");
-    if (origin && (origins.has(origin) || isLocalhost)) {
+    const normalizedOrigin = origin?.replace(/\/$/, "");
+    if (origin && (origins.has(normalizedOrigin || origin) || isLocalhost)) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header(
         "Access-Control-Allow-Methods",
@@ -3647,12 +4161,13 @@ function setupCors(app2) {
 function setupBodyParsing(app2) {
   app2.use(
     express.json({
+      limit: "50mb",
       verify: (req, _res, buf) => {
         req.rawBody = buf;
       }
     })
   );
-  app2.use(express.urlencoded({ extended: false }));
+  app2.use(express.urlencoded({ extended: false, limit: "50mb" }));
 }
 function setupRequestLogging(app2) {
   app2.use((req, res, next) => {
@@ -3750,10 +4265,12 @@ function configureExpoAndLanding(app2) {
   const adminIndexHtml = fs.readFileSync(adminIndexPath, "utf-8");
   app2.get("/admin/login", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.status(200).send(adminLoginHtml);
   });
   app2.get("/admin", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.status(200).send(adminIndexHtml);
   });
   log("Serving static Expo files with dynamic manifest routing");
@@ -3780,6 +4297,16 @@ function configureExpoAndLanding(app2) {
   });
   app2.use("/assets", express.static(path2.resolve(process.cwd(), "assets")));
   app2.use(express.static(path2.resolve(process.cwd(), "static-build")));
+  const spaIndexPath = path2.resolve(process.cwd(), "static-build", "index.html");
+  if (fs.existsSync(spaIndexPath)) {
+    app2.use((req, res, next) => {
+      if (req.path.startsWith("/api") || req.path.startsWith("/uploads") || req.path.startsWith("/assets")) {
+        return next();
+      }
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.sendFile(spaIndexPath);
+    });
+  }
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }
 function setupErrorHandler(app2) {
@@ -3798,11 +4325,17 @@ function setupErrorHandler(app2) {
   setupCors(app);
   setupBodyParsing(app);
   setupRequestLogging(app);
-  const { mkdirSync: mkdirSync2 } = await import("fs");
-  mkdirSync2("uploads/receipts", { recursive: true });
-  app.use("/uploads", express.static("uploads"));
   configureExpoAndLanding(app);
   const server = await registerRoutes(app);
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const { pool: pool2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      await pool2.query("select 1");
+      res.status(200).json({ status: "ok" });
+    } catch {
+      res.status(503).json({ status: "unavailable" });
+    }
+  });
   try {
     const { storage: storage2 } = await Promise.resolve().then(() => (init_storage(), storage_exports));
     const bcryptSeed = await import("bcryptjs");
@@ -3814,7 +4347,10 @@ function setupErrorHandler(app2) {
     }
     const existingAdmin = await storage2.getUserByUsername("admin");
     if (!existingAdmin) {
-      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      if (!adminPassword) {
+        throw new Error("ADMIN_PASSWORD must be set before creating the admin user");
+      }
       const hashedPassword = await bcryptSeed.hash(adminPassword, 10);
       await storage2.createUser({
         username: "admin",
