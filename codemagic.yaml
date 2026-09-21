@@ -1,0 +1,74 @@
+workflows:
+  nayvo-ios:
+    name: NAYVO - iOS upload
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    inputs:
+      release_version:
+        description: App Store version (confirm against the existing app before building)
+        type: string
+      build_number:
+        description: Unused build number greater than the latest uploaded build
+        type: string
+    integrations:
+      app_store_connect: NAYVO
+    environment:
+      node: 22
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.replit.forsa
+      vars:
+        EXPO_PUBLIC_DOMAIN: nayvo.store
+        CI: "1"
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        RELEASE_BUILD: ${{ inputs.build_number }}
+    scripts:
+      - name: Validate release identity and version
+        script: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const config = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+          const version = process.env.RELEASE_VERSION;
+          const build = process.env.RELEASE_BUILD;
+          if (config.expo.ios.bundleIdentifier !== 'app.replit.forsa') throw new Error('Existing iOS bundle identifier must be preserved');
+          if (!/^\d+\.\d+\.\d+$/.test(version || '')) throw new Error('Enter a release version such as 1.0.3');
+          if (!/^[1-9]\d{0,3}$/.test(build || '')) throw new Error('Enter an unused integer build number from 1 to 9999');
+          config.expo.version = version;
+          config.expo.ios.buildNumber = build;
+          fs.writeFileSync('app.json', JSON.stringify(config, null, 2) + '\n');
+          console.log(`Building NAYVO ${version} (${build}) for app.replit.forsa`);
+          NODE
+      - name: Install JavaScript dependencies
+        script: npm ci
+      - name: Generate native iOS project
+        script: npx expo prebuild --platform ios --no-install
+      - name: Install iOS dependencies
+        script: |
+          set -euo pipefail
+          cd ios
+          pod install
+      - name: Apply distribution signing
+        script: xcode-project use-profiles
+      - name: Build signed IPA
+        script: |
+          set -euo pipefail
+          shopt -s nullglob
+          workspaces=(ios/*.xcworkspace)
+          if [ "${#workspaces[@]}" -ne 1 ]; then
+            echo "Expected exactly one generated iOS workspace"
+            exit 1
+          fi
+          workspace="${workspaces[0]}"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcode-project build-ipa --workspace "$workspace" --scheme "$scheme"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false
