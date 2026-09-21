@@ -7,7 +7,7 @@ RUN npm ci
 
 COPY . .
 
-ARG EXPO_PUBLIC_DOMAIN=forsa.today
+ARG EXPO_PUBLIC_DOMAIN=nayvo.store
 ENV EXPO_PUBLIC_DOMAIN=${EXPO_PUBLIC_DOMAIN}
 
 RUN npm run expo:static:build \

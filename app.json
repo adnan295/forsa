@@ -57,7 +57,7 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://nayvo.store/"
         }
       ],
       "expo-font",
@@ -88,7 +88,7 @@
     },
     "extra": {
       "router": {
-        "origin": "https://replit.com/"
+        "origin": "https://nayvo.store/"
       },
       "eas": {
         "projectId": "e753d7dd-1651-4cc5-ae69-b77ba5629277"

@@ -2520,7 +2520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div class="card">
       <h2>البريد الإلكتروني</h2>
       <p>يمكنك أيضاً التواصل معنا عبر البريد الإلكتروني:</p>
-      <p><a href="mailto:support@forsa.today" class="email-link">support@forsa.today</a></p>
+      <p><a href="mailto:support@nayvo.store" class="email-link">support@nayvo.store</a></p>
     </div>
     <div class="card">
       <h2>الأسئلة الشائعة</h2>

@@ -319,7 +319,7 @@ function setupErrorHandler(app: express.Application) {
       const hashedPassword = await bcryptSeed.hash(adminPassword, 10);
       await storage.createUser({
         username: "admin",
-        email: "admin@forsa.app",
+        email: "admin@nayvo.store",
         password: hashedPassword,
       });
       const adminUser = await storage.getUserByUsername("admin");

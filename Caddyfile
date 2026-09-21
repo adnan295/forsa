@@ -1,4 +1,4 @@
-{$DOMAIN}, www.{$DOMAIN} {
+{$DOMAIN}, www.{$DOMAIN}, {$OLD_DOMAIN}, www.{$OLD_DOMAIN} {
   encode zstd gzip
 
   header {

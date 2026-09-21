@@ -418,7 +418,7 @@ function ContactContent() {
 
       <View style={styles.contactList}>
         <Pressable
-          onPress={() => Linking.openURL("mailto:info@forsa.app")}
+          onPress={() => Linking.openURL("mailto:info@nayvo.store")}
           style={({ pressed }) => [
             styles.contactItem,
             pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
@@ -429,7 +429,7 @@ function ContactContent() {
           </View>
           <View style={styles.contactInfo}>
             <Text style={styles.contactLabel}>البريد الإلكتروني</Text>
-            <Text style={styles.contactValue}>info@forsa.app</Text>
+            <Text style={styles.contactValue}>info@nayvo.store</Text>
           </View>
           <Ionicons name="open-outline" size={18} color={Colors.light.textSecondary} />
         </Pressable>

@@ -4,7 +4,7 @@ Target: Hostinger KVM 2, Ubuntu 24.04 LTS, Docker Engine and Docker Compose.
 
 ## First deployment
 
-1. Point `forsa.today` and `www.forsa.today` A records to the VPS IPv4 address.
+1. Point `nayvo.store` and `www.nayvo.store` A records to the VPS IPv4 address. Keep `forsa.today` pointed to the same VPS during the app migration window.
 2. Install Docker Engine and the Compose plugin.
 3. Clone this repository into `/opt/forsa`.
 4. Copy `.env.production.example` to `.env.production` and replace every placeholder.
@@ -14,7 +14,7 @@ Target: Hostinger KVM 2, Ubuntu 24.04 LTS, Docker Engine and Docker Compose.
    docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
    ```
 
-6. Verify `https://forsa.today/api/health` returns `{ "status": "ok" }`.
+6. Verify `https://nayvo.store/api/health` returns `{ "status": "ok" }`.
 
 Caddy requests and renews the TLS certificate automatically after DNS points to the VPS and ports 80/443 are open.
 
