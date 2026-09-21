@@ -5,8 +5,8 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
 import { pool, db } from "./db";
-import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, campaignClientRequests, reviews, orders, users, type Campaign } from "@shared/schema";
+import { storage, DEFAULT_TICKET_PRICE } from "./storage";
+import { insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, checkoutSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, campaignClientRequests, reviews, orders, users } from "@shared/schema";
 import { sendFcmNotification, sendFcmToUser } from "./firebase";
 import { sendApnsNotifications, isApnsConfigured } from "./apns";
 import { sum, count, and, gte, sql, eq, desc, inArray } from "drizzle-orm";
@@ -524,200 +524,279 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/campaigns", async (_req: Request, res: Response) => {
+  /* ================================ المنتجات ================================ */
+
+  app.get("/api/products", async (_req: Request, res: Response) => {
     try {
-      const allCampaigns = await storage.getCampaigns();
-      const campaignsWithProducts = await Promise.all(
-        allCampaigns.map(async (c) => {
-          const products = await storage.getCampaignProducts(c.id);
-          return { ...c, products };
+      res.json(await storage.getProducts());
+    } catch (error) {
+      console.error("Get products error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/products/:id", async (req: Request, res: Response) => {
+    try {
+      const product = await storage.getProduct(req.params.id as string);
+      if (!product) return res.status(404).json({ message: "المنتج غير موجود" });
+      res.json(product);
+    } catch (error) {
+      console.error("Get product error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  /* =============================== جولات السحب =============================== */
+
+  /** الجولة الحالية + تقدّمها + تذاكر المستخدم فيها */
+  app.get("/api/draws/current", async (req: Request, res: Response) => {
+    try {
+      const draw = await storage.getCurrentDraw();
+      if (!draw) return res.json(null);
+
+      const participants = await storage.getDrawParticipantCount(draw.id);
+      const myTickets = req.session?.userId
+        ? await storage.getUserTicketCountForDraw(req.session.userId, draw.id)
+        : 0;
+
+      res.json({ ...draw, participants, myTickets });
+    } catch (error) {
+      console.error("Get current draw error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  /** الجولات المنتهية مع الفائزين */
+  app.get("/api/draws/completed", async (_req: Request, res: Response) => {
+    try {
+      const completed = await storage.getCompletedDraws();
+      const withWinners = await Promise.all(
+        completed.map(async (d) => {
+          const winner = d.winnerId ? await storage.getUser(d.winnerId) : undefined;
+          return { ...d, winnerUsername: winner?.username ?? null };
         })
       );
-      res.json(campaignsWithProducts);
+      res.json(withWinners);
     } catch (error) {
-      console.error("Get campaigns error:", error);
+      console.error("Get completed draws error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.get("/api/campaigns/:id", async (req: Request, res: Response) => {
+  app.get("/api/draws/:id", async (req: Request, res: Response) => {
     try {
-      const campaign = await storage.getCampaign(req.params.id as string);
-      if (!campaign) {
-        return res.status(404).json({ message: "Campaign not found" });
-      }
-      const products = await storage.getCampaignProducts(campaign.id);
-      res.json({ ...campaign, products });
+      const draw = await storage.getDraw(req.params.id as string);
+      if (!draw) return res.status(404).json({ message: "الجولة غير موجودة" });
+      const participants = await storage.getDrawParticipantCount(draw.id);
+      const winner = draw.winnerId ? await storage.getUser(draw.winnerId) : undefined;
+      res.json({ ...draw, participants, winnerUsername: winner?.username ?? null });
     } catch (error) {
-      console.error("Get campaign error:", error);
+      console.error("Get draw error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.post("/api/campaigns", requireAdmin as any, async (req: Request, res: Response) => {
+  /* ============================ المنتجات — إدارة ============================ */
+
+  app.get("/api/admin/products", requireAdmin as any, async (_req: Request, res: Response) => {
     try {
-      const { products: productsData, ...rawData } = req.body;
-      // coerce types coming from HTML form / JSON
-      const campaignData: any = { ...rawData };
-      if (campaignData.totalQuantity !== undefined) campaignData.totalQuantity = Number(campaignData.totalQuantity);
-      if (campaignData.productPrice !== undefined) campaignData.productPrice = String(campaignData.productPrice);
-      if (campaignData.originalPrice !== undefined && campaignData.originalPrice !== null) campaignData.originalPrice = String(campaignData.originalPrice);
-      if (campaignData.endsAt) campaignData.endsAt = new Date(campaignData.endsAt);
-      if (campaignData.flashSaleEndsAt) campaignData.flashSaleEndsAt = new Date(campaignData.flashSaleEndsAt);
-      if (!campaignData.description) campaignData.description = ' ';
-      const requestedStatus = campaignData.status;
-      delete campaignData.status; // not part of insertCampaignSchema, applied after creation
+      res.json(await storage.getProducts(true));
+    } catch (error) {
+      console.error("Admin get products error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
-      // Validate minimum 2 products
-      if (!productsData || !Array.isArray(productsData) || productsData.length < 2) {
-        return res.status(400).json({ message: "يجب إضافة منتجين (موديلين) على الأقل لإنشاء الحملة" });
-      }
-
-      const parsed = insertCampaignSchema.safeParse(campaignData);
+  app.post("/api/admin/products", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const parsed = insertProductSchema.safeParse({
+        ...req.body,
+        stock:
+          req.body.stock === "" || req.body.stock === undefined || req.body.stock === null
+            ? null
+            : Number(req.body.stock),
+        sortOrder: req.body.sortOrder === undefined ? 0 : Number(req.body.sortOrder),
+      });
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
-      }
-      let campaign = await storage.createCampaign(parsed.data);
-      // apply status if different from default
-      const validStatuses = ["active","paused","sold_out","drawing","completed"];
-      if (requestedStatus && validStatuses.includes(requestedStatus) && requestedStatus !== "active") {
-        campaign = await storage.updateCampaign(campaign.id, { status: requestedStatus as any }) ?? campaign;
+        return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "بيانات غير صحيحة" });
       }
 
-      if (productsData && Array.isArray(productsData) && productsData.length > 0) {
-        for (let i = 0; i < productsData.length; i++) {
-          const p = productsData[i];
-          const qty = parseInt(p.quantity);
-          const prc = parseFloat(p.price);
-          if (!p.name || isNaN(qty) || qty <= 0 || isNaN(prc) || prc <= 0) {
-            return res.status(400).json({ message: `Invalid variant data at index ${i}` });
+      const product = await storage.createProduct(parsed.data);
+
+      await storage.logActivity(
+        "product_created",
+        "منتج جديد",
+        `تمت إضافة المنتج ${product.name}`,
+        req.session.userId!,
+        JSON.stringify({ productId: product.id })
+      );
+
+      res.json(product);
+    } catch (error: any) {
+      console.error("Create product error:", error);
+      res.status(400).json({ message: error.message || "فشل إنشاء المنتج" });
+    }
+  });
+
+  app.put("/api/admin/products/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const data: any = {};
+      const b = req.body;
+      if (b.name !== undefined) data.name = b.name;
+      if (b.description !== undefined) data.description = b.description;
+      if (b.imageUrl !== undefined) data.imageUrl = b.imageUrl;
+      if (b.imagesJson !== undefined) data.imagesJson = b.imagesJson;
+      if (b.price !== undefined) data.price = String(b.price);
+      if (b.stock !== undefined) data.stock = b.stock === null || b.stock === "" ? null : Number(b.stock);
+      if (b.category !== undefined) data.category = b.category;
+      if (b.isActive !== undefined) data.isActive = !!b.isActive;
+      if (b.sortOrder !== undefined) data.sortOrder = Number(b.sortOrder);
+
+      const updated = await storage.updateProduct(req.params.id as string, data);
+      if (!updated) return res.status(404).json({ message: "المنتج غير موجود" });
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Update product error:", error);
+      res.status(400).json({ message: error.message || "فشل تعديل المنتج" });
+    }
+  });
+
+  app.delete("/api/admin/products/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const ok = await storage.deleteProduct(req.params.id as string);
+      if (!ok) return res.status(404).json({ message: "المنتج غير موجود" });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Delete product error:", error);
+      res.status(400).json({ message: "ما بينفع تحذف منتج مرتبط بطلبات — عطّله بدل ما تحذفه" });
+    }
+  });
+
+  /* =========================== جولات السحب — إدارة =========================== */
+
+  app.get("/api/admin/draws", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const all = await storage.getDraws();
+      const enriched = await Promise.all(
+        all.map(async (d) => {
+          const participants = await storage.getDrawParticipantCount(d.id);
+          const winner = d.winnerId ? await storage.getUser(d.winnerId) : undefined;
+          return { ...d, participants, winnerUsername: winner?.username ?? null };
+        })
+      );
+      res.json(enriched);
+    } catch (error) {
+      console.error("Admin get draws error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/admin/draws", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const parsed = insertDrawSchema.safeParse({
+        ...req.body,
+        targetTickets: Number(req.body.targetTickets),
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "بيانات غير صحيحة" });
+      }
+
+      const draw = await storage.createDraw(parsed.data);
+
+      await storage.logActivity(
+        "draw_created",
+        "جولة سحب جديدة",
+        `تم إنشاء جولة ${draw.title} — الجائزة ${draw.prizeName}`,
+        req.session.userId!,
+        JSON.stringify({ drawId: draw.id })
+      );
+
+      // إشعار كل المستخدمين بالجولة الجديدة لما تصير نشطة
+      if (draw.status === "active") {
+        try {
+          const allUsers = await storage.getAllUsers();
+          const ids = allUsers.filter((u) => u.role !== "admin").map((u) => u.id);
+          if (ids.length > 0) {
+            const title = "جولة سحب جديدة! 🎁";
+            const body = `الجائزة: ${draw.prizeName} — كل ${parseFloat(draw.ticketPrice)}$ من مشترياتك = تذكرة`;
+            await storage.createBulkUserNotifications(ids, "new_draw", title, body, draw.id);
+            sendPushNotifications(ids, title, body, { drawId: draw.id });
           }
-          await storage.createCampaignProduct({
-            campaignId: campaign.id,
-            name: p.name,
-            nameAr: p.nameAr || p.name,
-            imageUrl: p.imageUrl,
-            imagesJson: p.imagesJson,
-            price: prc.toFixed(2),
-            quantity: qty,
-            sortOrder: i,
+        } catch (e) {
+          console.error("New draw notification error:", e);
+        }
+      }
+
+      res.json(draw);
+    } catch (error: any) {
+      console.error("Create draw error:", error);
+      res.status(400).json({ message: error.message || "فشل إنشاء الجولة" });
+    }
+  });
+
+  app.put("/api/admin/draws/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const existing = await storage.getDraw(req.params.id as string);
+      if (!existing) return res.status(404).json({ message: "الجولة غير موجودة" });
+      if (existing.status === "completed") {
+        return res.status(400).json({ message: "ما بينفع تعدّل جولة تم السحب عليها" });
+      }
+
+      const data: any = {};
+      const b = req.body;
+      if (b.title !== undefined) data.title = b.title;
+      if (b.prizeName !== undefined) data.prizeName = b.prizeName;
+      if (b.prizeDescription !== undefined) data.prizeDescription = b.prizeDescription;
+      if (b.prizeImageUrl !== undefined) data.prizeImageUrl = b.prizeImageUrl;
+      if (b.ticketPrice !== undefined) data.ticketPrice = String(b.ticketPrice);
+      if (b.targetTickets !== undefined) {
+        const target = Number(b.targetTickets);
+        if (target < existing.soldTickets) {
+          return res.status(400).json({
+            message: `العدد المستهدف ما بينفع يكون أقل من التذاكر المباعة (${existing.soldTickets})`,
           });
         }
-        await storage.syncCampaignAggregates(campaign.id);
+        data.targetTickets = target;
       }
 
-      try {
-        const allUsers = await storage.getAllUsers();
-        const userIds = allUsers.filter(u => u.role !== "admin").map(u => u.id);
-        if (userIds.length > 0) {
-          await storage.createBulkUserNotifications(
-            userIds,
-            "new_campaign",
-            "منتج جديد 🎉",
-            `تم إضافة منتج جديد: ${campaign.title}`,
-            campaign.id
-          );
-          sendPushNotifications(userIds, "منتج جديد 🎉", `تم إضافة منتج جديد: ${campaign.title}`, { campaignId: campaign.id });
-        }
-      } catch (e) {
-        console.error("Notification error:", e);
-      }
-
-      const products = await storage.getCampaignProducts(campaign.id);
-      const updatedCampaign = await storage.getCampaign(campaign.id);
-      res.json({ ...updatedCampaign, products });
-    } catch (error) {
-      console.error("Create campaign error:", error);
-      res.status(500).json({ message: "Server error" });
+      const updated = await storage.updateDraw(req.params.id as string, data);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Update draw error:", error);
+      res.status(400).json({ message: error.message || "فشل تعديل الجولة" });
     }
   });
 
-  app.put("/api/campaigns/:id", requireAdmin as any, async (req: Request, res: Response) => {
+  app.delete("/api/admin/draws/:id", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const campaign = await storage.updateCampaign(req.params.id as string, req.body);
-      if (!campaign) {
-        return res.status(404).json({ message: "Campaign not found" });
-      }
-      const products = await storage.getCampaignProducts(campaign.id);
-      res.json({ ...campaign, products });
-    } catch (error) {
-      console.error("Update campaign error:", error);
-      res.status(500).json({ message: "Server error" });
+      const ok = await storage.deleteDraw(req.params.id as string);
+      if (!ok) return res.status(404).json({ message: "الجولة غير موجودة" });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Delete draw error:", error);
+      res.status(400).json({ message: error.message || "فشل حذف الجولة" });
     }
   });
 
-  app.post("/api/admin/campaigns/:id/products", requireAdmin as any, async (req: Request, res: Response) => {
+  /** تفعيل جولة مجدولة يدوياً (بتستلم التذاكر المعلّقة) */
+  app.post("/api/admin/draws/:id/activate", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const campaignId = req.params.id as string;
-      const campaign = await storage.getCampaign(campaignId);
-      if (!campaign) return res.status(404).json({ message: "Campaign not found" });
-
-      const { name, nameAr, imageUrl, imagesJson, price, quantity, sortOrder } = req.body;
-      if (!name || !price || !quantity) {
-        return res.status(400).json({ message: "Name, price and quantity are required" });
+      const draw = await storage.getDraw(req.params.id as string);
+      if (!draw) return res.status(404).json({ message: "الجولة غير موجودة" });
+      if (draw.status !== "scheduled") {
+        return res.status(400).json({ message: "الجولة لازم تكون مجدولة حتى تتفعّل" });
+      }
+      const current = await storage.getActiveDraw();
+      if (current) {
+        return res.status(400).json({ message: `في جولة نشطة حالياً (${current.title}) — لازم تخلص أولاً` });
       }
 
-      const product = await storage.createCampaignProduct({
-        campaignId,
-        name,
-        nameAr,
-        imageUrl,
-        imagesJson,
-        price: String(price),
-        quantity: parseInt(quantity),
-        sortOrder: sortOrder || 0,
-      });
-      await storage.syncCampaignAggregates(campaignId);
-      res.json(product);
-    } catch (error) {
-      console.error("Add product error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  app.put("/api/admin/campaign-products/:id", requireAdmin as any, async (req: Request, res: Response) => {
-    try {
-      const { price, quantity, ...rest } = req.body;
-      const updateData: any = { ...rest };
-      if (price !== undefined) {
-        const prc = parseFloat(price);
-        if (isNaN(prc) || prc <= 0) return res.status(400).json({ message: "Invalid price" });
-        updateData.price = prc.toFixed(2);
-      }
-      if (quantity !== undefined) {
-        const qty = parseInt(quantity);
-        if (isNaN(qty) || qty <= 0) return res.status(400).json({ message: "Invalid quantity" });
-        updateData.quantity = qty;
-      }
-      const product = await storage.updateCampaignProduct(req.params.id as string, updateData);
-      if (!product) return res.status(404).json({ message: "Product not found" });
-      await storage.syncCampaignAggregates(product.campaignId);
-      res.json(product);
-    } catch (error) {
-      console.error("Update product error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  app.delete("/api/admin/campaign-products/:id", requireAdmin as any, async (req: Request, res: Response) => {
-    try {
-      const product = await storage.getCampaignProduct(req.params.id as string);
-      if (!product) return res.status(404).json({ message: "Product not found" });
-
-      // Enforce minimum 2 products per campaign
-      const existingProducts = await storage.getCampaignProducts(product.campaignId);
-      if (existingProducts.length <= 2) {
-        return res.status(400).json({ message: "لا يمكن حذف المنتج — يجب الإبقاء على منتجين (موديلين) على الأقل في الحملة" });
-      }
-
-      const deleted = await storage.deleteCampaignProduct(req.params.id as string);
-      if (deleted) {
-        await storage.syncCampaignAggregates(product.campaignId);
-      }
-      res.json({ success: deleted });
-    } catch (error) {
-      console.error("Delete product error:", error);
-      res.status(500).json({ message: "Server error" });
+      await storage.updateDraw(draw.id, { status: "active", startedAt: new Date() });
+      await storage.assignPendingTicketsToDraw(draw.id);
+      res.json(await storage.getDraw(draw.id));
+    } catch (error: any) {
+      console.error("Activate draw error:", error);
+      res.status(400).json({ message: error.message || "فشل تفعيل الجولة" });
     }
   });
 
@@ -748,247 +827,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/purchase", requireAuth as any, async (req: Request, res: Response) => {
+  app.post("/api/checkout", requireAuth as any, async (req: Request, res: Response) => {
     try {
-      const {
-        campaignId,
-        quantity = 1,
-        paymentMethod = "card",
-        productId,
-        shippingFullName,
-        shippingPhone,
-        shippingCity,
-        shippingAddress,
-        shippingCountry,
-        couponCode,
-        useWallet = false,
-        walletAmount = 0,
-      } = req.body;
-      if (!campaignId) {
-        return res.status(400).json({ message: "Campaign ID required" });
+      const parsed = checkoutSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "بيانات الطلب غير صحيحة" });
       }
 
-      const shippingData = shippingFullName
-        ? {
-            fullName: shippingFullName,
-            phone: shippingPhone || "",
-            city: shippingCity || "",
-            address: shippingAddress || "",
-            country: shippingCountry,
-          }
-        : undefined;
-
-      const result = await storage.purchaseProduct(
-        req.session.userId!,
-        campaignId,
-        quantity,
-        paymentMethod,
-        shippingData,
-        couponCode,
-        productId
-      );
-
-      if (useWallet && walletAmount > 0) {
-        await storage.deductWalletBalance(
-          req.session.userId!,
-          walletAmount,
-          `خصم محفظة - طلب ${result.order.id}`,
-          result.order.id
-        );
-      }
+      const order = await storage.checkout(req.session.userId!, parsed.data);
+      const buyer = await storage.getUser(req.session.userId!);
 
       await storage.logActivity(
         "purchase",
-        "New purchase",
-        `User purchased ${result.tickets.length} ticket(s) for order ${result.order.id}`,
+        "طلب جديد",
+        `طلب ${order.id} بقيمة ${order.totalAmount}$`,
         req.session.userId!,
-        JSON.stringify({ orderId: result.order.id, campaignId, quantity, paymentMethod })
+        JSON.stringify({ orderId: order.id, itemCount: order.items.length })
       );
 
       await storage.createAdminNotification(
         "new_order",
         "طلب جديد",
-        `طلب جديد من المستخدم بقيمة ${result.order.totalAmount}`,
-        JSON.stringify({ orderId: result.order.id, userId: req.session.userId })
+        `طلب جديد بقيمة ${order.totalAmount}$ — بانتظار تأكيد الدفع`,
+        JSON.stringify({ orderId: order.id, userId: req.session.userId })
       );
 
-      const buyer = await storage.getUser(req.session.userId!);
-      const campaign = await storage.getCampaign(campaignId);
-      if (buyer && campaign) {
+      // كم تذكرة رح ياخد لما ينتأكد الدفع
+      const activeDraw = await storage.getActiveDraw();
+      const ticketPrice = activeDraw ? parseFloat(activeDraw.ticketPrice) : DEFAULT_TICKET_PRICE;
+      const expectedTickets = Math.floor(parseFloat(order.ticketEligibleAmount) / ticketPrice);
+
+      if (buyer) {
         sendOrderConfirmation(buyer.email, {
-          orderId: result.order.id,
-          campaignTitle: campaign.title,
-          quantity: result.tickets.length,
-          totalAmount: result.order.totalAmount,
-          ticketNumbers: result.tickets.map((t: any) => t.ticketNumber),
-          paymentMethod: paymentMethod,
+          orderId: order.id,
+          totalAmount: order.totalAmount,
+          items: order.items.map((i) => ({ name: i.productName, quantity: i.quantity, lineTotal: i.lineTotal })),
+          paymentMethod: parsed.data.paymentMethod,
+          expectedTickets,
         });
-
-        try {
-          const remaining = campaign.totalQuantity - campaign.soldQuantity;
-          const threshold = Math.ceil(campaign.totalQuantity * 0.1);
-          if (remaining <= threshold && remaining > 0) {
-            const campaignTickets = await storage.getTicketsByCampaign(campaignId);
-            const participantIds = [...new Set(campaignTickets.map(t => t.userId))];
-            if (participantIds.length > 0) {
-              await storage.createBulkUserNotifications(
-                participantIds,
-                "low_stock",
-                "الكمية قاربت على النفاد ⚡",
-                `بقي ${remaining} قطعة فقط من ${campaign.title}! سارع بالشراء`,
-                campaignId
-              );
-              sendPushNotifications(participantIds, "الكمية قاربت على النفاد ⚡", `بقي ${remaining} قطعة فقط من ${campaign.title}! سارع بالشراء`, { campaignId });
-            }
-          }
-          if (remaining <= 0) {
-            const campaignTickets = await storage.getTicketsByCampaign(campaignId);
-            const participantIds = [...new Set(campaignTickets.map(t => t.userId))];
-            if (participantIds.length > 0) {
-              await storage.createBulkUserNotifications(
-                participantIds,
-                "sold_out",
-                "نفدت الكمية! 🔥",
-                `تم بيع كامل كمية ${campaign.title}! اختيار الفائز قريباً`,
-                campaignId
-              );
-              sendPushNotifications(participantIds, "نفدت الكمية! 🔥", `تم بيع كامل كمية ${campaign.title}! اختيار الفائز قريباً`, { campaignId });
-            }
-          }
-        } catch (e) {
-          console.error("Notification error:", e);
-        }
       }
 
       res.json({
-        order: result.order,
-        tickets: result.tickets,
-        message: `Purchase successful! You received ${result.tickets.length} ticket(s).`,
+        order,
+        expectedTickets,
+        message: `تم استلام طلبك. رح تاخد ${expectedTickets} تذكرة بعد تأكيد الدفع.`,
       });
     } catch (error: any) {
-      console.error("Purchase error:", error);
-      res.status(400).json({ message: error.message || "Purchase failed" });
-    }
-  });
-
-  app.post("/api/cart-purchase", requireAuth as any, async (req: Request, res: Response) => {
-    try {
-      const {
-        items,
-        paymentMethod = "card",
-        shippingFullName,
-        shippingPhone,
-        shippingCity,
-        shippingAddress,
-        shippingCountry,
-        couponCode,
-        useWallet = false,
-        walletAmount = 0,
-      } = req.body;
-
-      if (!items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ message: "Cart items required" });
-      }
-
-      const shippingData = shippingFullName
-        ? {
-            fullName: shippingFullName,
-            phone: shippingPhone || "",
-            city: shippingCity || "",
-            address: shippingAddress || "",
-            country: shippingCountry,
-          }
-        : undefined;
-
-      const allOrders: any[] = [];
-      const allTickets: any[] = [];
-
-      for (const item of items) {
-        const { campaignId, quantity, productId } = item;
-        if (!campaignId || !quantity) continue;
-
-        const result = await storage.purchaseProduct(
-          req.session.userId!,
-          campaignId,
-          quantity,
-          paymentMethod,
-          shippingData,
-          couponCode,
-          productId
-        );
-
-        allOrders.push(result.order);
-        allTickets.push(...result.tickets);
-
-        await storage.logActivity(
-          "purchase",
-          "New purchase",
-          `User purchased ${result.tickets.length} ticket(s) for order ${result.order.id}`,
-          req.session.userId!,
-          JSON.stringify({ orderId: result.order.id, campaignId, quantity, paymentMethod })
-        );
-
-        await storage.createAdminNotification(
-          "new_order",
-          "طلب جديد",
-          `طلب جديد من المستخدم بقيمة ${result.order.totalAmount}`,
-          JSON.stringify({ orderId: result.order.id, userId: req.session.userId })
-        );
-
-        const buyer = await storage.getUser(req.session.userId!);
-        const campaign = await storage.getCampaign(campaignId);
-        if (buyer && campaign) {
-          sendOrderConfirmation(buyer.email, {
-            orderId: result.order.id,
-            campaignTitle: campaign.title,
-            quantity: result.tickets.length,
-            totalAmount: result.order.totalAmount,
-            ticketNumbers: result.tickets.map((t: any) => t.ticketNumber),
-            paymentMethod: paymentMethod,
-          });
-
-          try {
-            const remaining = campaign.totalQuantity - campaign.soldQuantity;
-            const threshold = Math.ceil(campaign.totalQuantity * 0.1);
-            if (remaining <= threshold && remaining > 0) {
-              const cTickets = await storage.getTicketsByCampaign(campaignId);
-              const pIds = [...new Set(cTickets.map(t => t.userId))];
-              if (pIds.length > 0) {
-                await storage.createBulkUserNotifications(pIds, "low_stock", "الكمية قاربت على النفاد ⚡", `بقي ${remaining} قطعة فقط من ${campaign.title}! سارع بالشراء`, campaignId);
-                sendPushNotifications(pIds, "الكمية قاربت على النفاد ⚡", `بقي ${remaining} قطعة فقط من ${campaign.title}! سارع بالشراء`, { campaignId });
-              }
-            }
-            if (remaining <= 0) {
-              const cTickets = await storage.getTicketsByCampaign(campaignId);
-              const pIds = [...new Set(cTickets.map(t => t.userId))];
-              if (pIds.length > 0) {
-                await storage.createBulkUserNotifications(pIds, "sold_out", "نفدت الكمية! 🔥", `تم بيع كامل كمية ${campaign.title}! اختيار الفائز قريباً`, campaignId);
-                sendPushNotifications(pIds, "نفدت الكمية! 🔥", `تم بيع كامل كمية ${campaign.title}! اختيار الفائز قريباً`, { campaignId });
-              }
-            }
-          } catch (e) {
-            console.error("Notification error:", e);
-          }
-        }
-      }
-
-      if (useWallet && walletAmount > 0) {
-        await storage.deductWalletBalance(
-          req.session.userId!,
-          walletAmount,
-          `خصم محفظة - طلب سلة (${allOrders.length} طلب)`,
-          allOrders[0]?.id
-        );
-      }
-
-      res.json({
-        orders: allOrders,
-        tickets: allTickets,
-        message: `Purchase successful! You received ${allTickets.length} ticket(s) across ${allOrders.length} order(s).`,
-      });
-    } catch (error: any) {
-      console.error("Cart purchase error:", error);
-      res.status(400).json({ message: error.message || "Cart purchase failed" });
+      console.error("Checkout error:", error);
+      res.status(400).json({ message: error.message || "فشل إتمام الطلب" });
     }
   });
 
@@ -1013,20 +899,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tickets/campaign/:campaignId", async (req: Request, res: Response) => {
-    try {
-      const campaignTickets = await storage.getTicketsByCampaign(req.params.campaignId as string);
-      res.json(campaignTickets);
-    } catch (error) {
-      console.error("Get campaign tickets error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
   app.get("/api/orders", requireAuth as any, async (req: Request, res: Response) => {
     try {
       const userOrders = await storage.getOrdersByUser(req.session.userId!);
-      res.json(userOrders);
+      const withItems = await Promise.all(
+        userOrders.map(async (o) => ({ ...o, items: await storage.getOrderItems(o.id) }))
+      );
+      res.json(withItems);
     } catch (error) {
       console.error("Get orders error:", error);
       res.status(500).json({ message: "Server error" });
@@ -1035,14 +914,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/orders/:id", requireAuth as any, async (req: Request, res: Response) => {
     try {
-      const order = await storage.getOrder(req.params.id as string);
+      const order = await storage.getOrderWithItems(req.params.id as string);
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
       if (order.userId !== req.session.userId!) {
         return res.status(403).json({ message: "Access denied" });
       }
-      res.json(order);
+      const orderTickets = (await storage.getTicketsByUser(order.userId)).filter(
+        (t) => t.orderId === order.id
+      );
+      res.json({ ...order, tickets: orderTickets });
     } catch (error) {
       console.error("Get order error:", error);
       res.status(500).json({ message: "Server error" });
@@ -1090,109 +972,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/draw/:campaignId", requireAdmin as any, async (req: Request, res: Response) => {
+  app.post("/api/admin/draws/:id/draw-winner", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const result = await storage.drawWinner(req.params.campaignId as string);
-      if (!result) {
-        return res.status(400).json({ message: "No tickets found for this campaign" });
-      }
+      const result = await storage.drawWinner(req.params.id as string);
+      const { winner, ticket, draw } = result;
 
       await storage.logActivity(
         "draw",
-        "Winner drawn",
-        `Winner ${result.winner.username} drawn for campaign with ticket ${result.ticket.ticketNumber}`,
+        "تم اختيار الفائز",
+        `الفائز ${winner.username} بجولة ${draw.title} بالتذكرة ${ticket.ticketNumber}`,
         req.session.userId!,
-        JSON.stringify({ campaignId: req.params.campaignId, winnerId: result.winner.id, ticketNumber: result.ticket.ticketNumber })
+        JSON.stringify({ drawId: draw.id, winnerId: winner.id, ticketNumber: ticket.ticketNumber })
       );
 
-      const drawnCampaign = await storage.getCampaign(req.params.campaignId as string);
-      if (drawnCampaign) {
-        sendWinnerNotification(result.winner.email, {
-          campaignTitle: drawnCampaign.title,
-          prizeName: drawnCampaign.prizeName,
-          ticketNumber: result.ticket.ticketNumber,
-        });
+      sendWinnerNotification(winner.email, {
+        drawTitle: draw.title,
+        prizeName: draw.prizeName,
+        ticketNumber: ticket.ticketNumber,
+      });
 
-        try {
-          await storage.createUserNotification(
-            result.winner.id,
-            "you_won",
-            "مبروك أنت الفائز! 🏆🎉",
-            `لقد فزت بجائزة ${drawnCampaign.prizeName} في حملة ${drawnCampaign.title} بالتذكرة ${result.ticket.ticketNumber}!`,
-            req.params.campaignId as string
-          );
-          sendPushNotifications([result.winner.id], "مبروك أنت الفائز! 🏆🎉", `لقد فزت بجائزة ${drawnCampaign.prizeName} في حملة ${drawnCampaign.title}!`, { campaignId: req.params.campaignId as string });
-          sendFcmToUser(
-            result.winner.id,
-            result.winner.fcmToken ?? null,
-            "مبروك أنت الفائز! 🏆🎉",
-            `لقد فزت بجائزة ${drawnCampaign.prizeName} في حملة ${drawnCampaign.title}!`,
-            { campaignId: req.params.campaignId as string }
-          ).then(fcmResult => {
-            console.log(`[FCM] Winner notification — success: ${fcmResult.success}, failure: ${fcmResult.failure}`, fcmResult.errors.length ? fcmResult.errors : "");
-          }).catch(e => console.error("[FCM] Winner notification error:", e));
+      try {
+        const winTitle = "مبروك أنت الفائز! 🏆🎉";
+        const winBody = `فزت بـ${draw.prizeName} في جولة ${draw.title} بالتذكرة ${ticket.ticketNumber}!`;
+        await storage.createUserNotification(winner.id, "you_won", winTitle, winBody, draw.id);
+        sendPushNotifications([winner.id], winTitle, winBody, { drawId: draw.id });
+        sendFcmToUser(winner.id, winner.fcmToken ?? null, winTitle, winBody, { drawId: draw.id })
+          .then((r) => console.log(`[FCM] Winner — success: ${r.success}, failure: ${r.failure}`))
+          .catch((e) => console.error("[FCM] Winner notification error:", e));
 
-          const campaignTickets = await storage.getTicketsByCampaign(req.params.campaignId as string);
-          const participantIds = [...new Set(campaignTickets.map(t => t.userId))].filter(id => id !== result.winner.id);
-          if (participantIds.length > 0) {
-            await storage.createBulkUserNotifications(
-              participantIds,
-              "draw_completed",
-              "تم اختيار الفائز 🎁",
-              `تم اختيار الفائز بالهدية في حملة ${drawnCampaign.title}! حظاً أوفر في المرة القادمة`,
-              req.params.campaignId as string
-            );
-            sendPushNotifications(participantIds, "تم اختيار الفائز 🎁", `تم اختيار الفائز بالهدية في حملة ${drawnCampaign.title}! حظاً أوفر في المرة القادمة`, { campaignId: req.params.campaignId as string });
-          }
-
-          const allUsers = await storage.getAllUsers();
-          const nonParticipantIds = allUsers
-            .filter(u => u.role !== "admin" && u.id !== result.winner.id && !participantIds.includes(u.id))
-            .map(u => u.id);
-          if (nonParticipantIds.length > 0) {
-            await storage.createBulkUserNotifications(
-              nonParticipantIds,
-              "winner_announced",
-              "فائز جديد! 🎊",
-              `تم اختيار الفائز في حملة ${drawnCampaign.title}!`,
-              req.params.campaignId as string
-            );
-            sendPushNotifications(nonParticipantIds, "فائز جديد! 🎊", `تم اختيار الفائز في حملة ${drawnCampaign.title}!`, { campaignId: req.params.campaignId as string });
-          }
-        } catch (e) {
-          console.error("Notification error:", e);
+        const drawTickets = await storage.getTicketsByDraw(draw.id);
+        const participantIds = [...new Set(drawTickets.map((t) => t.userId))].filter(
+          (id) => id !== winner.id
+        );
+        if (participantIds.length > 0) {
+          const t = "تم اختيار الفائز 🎁";
+          const b = `تم اختيار الفائز بـ${draw.prizeName} في جولة ${draw.title}! حظاً أوفر المرة الجاية`;
+          await storage.createBulkUserNotifications(participantIds, "draw_completed", t, b, draw.id);
+          sendPushNotifications(participantIds, t, b, { drawId: draw.id });
         }
+
+        const allUsers = await storage.getAllUsers();
+        const others = allUsers
+          .filter((u) => u.role !== "admin" && u.id !== winner.id && !participantIds.includes(u.id))
+          .map((u) => u.id);
+        if (others.length > 0) {
+          const t = "فائز جديد! 🎊";
+          const b = `تم اختيار الفائز بـ${draw.prizeName} في جولة ${draw.title}!`;
+          await storage.createBulkUserNotifications(others, "winner_announced", t, b, draw.id);
+          sendPushNotifications(others, t, b, { drawId: draw.id });
+        }
+      } catch (e) {
+        console.error("Draw notification error:", e);
       }
 
+      const nextDraw = await storage.getActiveDraw();
       res.json({
-        winner: {
-          id: result.winner.id,
-          username: result.winner.username,
-        },
-        ticket: result.ticket,
-        message: `Winner drawn! ${result.winner.username} with ticket ${result.ticket.ticketNumber}`,
+        winner: { id: winner.id, username: winner.username },
+        ticket,
+        draw,
+        nextDraw: nextDraw ?? null,
+        message: `الفائز ${winner.username} بالتذكرة ${ticket.ticketNumber}`,
       });
     } catch (error: any) {
       console.error("Draw error:", error);
-      res.status(400).json({ message: error.message || "Draw failed" });
+      res.status(400).json({ message: error.message || "فشل السحب" });
     }
   });
 
   app.get("/api/admin/stats", requireAdmin as any, async (_req: Request, res: Response) => {
     try {
-      const allCampaigns = await storage.getCampaigns();
-      const totalCampaigns = allCampaigns.length;
-      const activeCampaigns = allCampaigns.filter((c) => c.status === "active").length;
-      const completedCampaigns = allCampaigns.filter((c) => c.status === "completed").length;
-      const totalRevenue = allCampaigns.reduce((sum, c) => {
-        return sum + parseFloat(c.productPrice) * c.soldQuantity;
-      }, 0);
+      const allProducts = await storage.getProducts(true);
+      const allDraws = await storage.getDraws();
 
       res.json({
-        totalCampaigns,
-        activeCampaigns,
-        completedCampaigns,
-        totalRevenue: totalRevenue.toFixed(2),
+        totalProducts: allProducts.length,
+        activeProducts: allProducts.filter((p) => p.isActive).length,
+        totalDraws: allDraws.length,
+        completedDraws: allDraws.filter((d) => d.status === "completed").length,
+        activeDraw: allDraws.find((d) => d.status === "active") ?? null,
       });
     } catch (error) {
       console.error("Stats error:", error);
@@ -1236,11 +1093,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const shippingOrder = await storage.getOrder(req.params.id as string);
         if (shippingOrder) {
           const shippingUser = await storage.getUser(shippingOrder.userId);
-          const shippingCampaign = await storage.getCampaign(shippingOrder.campaignId);
-          if (shippingUser && shippingCampaign) {
+          const shippingItems = await storage.getOrderItems(shippingOrder.id);
+          const shippingSummary = shippingItems.map((i) => i.productName).join("، ") || "طلبك";
+          if (shippingUser) {
             sendShippingUpdate(shippingUser.email, {
               orderId: shippingOrder.id,
-              campaignTitle: shippingCampaign.title,
+              itemsSummary: shippingSummary,
               status: shippingStatus,
               trackingNumber,
             });
@@ -1249,10 +1107,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               shippingOrder.userId,
               "shipping_update",
               `تحديث الشحن: ${statusText} 📦`,
-              `طلبك من ${shippingCampaign.title} — ${statusText}`,
-              shippingOrder.campaignId
+              `طلبك (${shippingSummary}) — ${statusText}`
             );
-            sendPushNotifications([shippingOrder.userId], `تحديث الشحن: ${statusText} 📦`, `طلبك من ${shippingCampaign.title} — ${statusText}`, { orderId: shippingOrder.id });
+            sendPushNotifications([shippingOrder.userId], `تحديث الشحن: ${statusText} 📦`, `طلبك (${shippingSummary}) — ${statusText}`, { orderId: shippingOrder.id });
           }
         }
       }
@@ -1268,7 +1125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { paymentStatus, rejectionReason } = req.body;
       if (!paymentStatus || !["confirmed", "rejected"].includes(paymentStatus)) {
-        return res.status(400).json({ message: "Invalid payment status. Must be 'confirmed' or 'rejected'" });
+        return res.status(400).json({ message: "حالة الدفع لازم تكون confirmed أو rejected" });
       }
 
       const order = await storage.getOrder(req.params.id as string);
@@ -1276,46 +1133,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Order not found" });
       }
 
+      let awardedTickets = 0;
+
       if (paymentStatus === "confirmed") {
         await storage.updateOrder(order.id, { status: "paid" as any });
         await storage.updateOrderPayment(order.id, { paymentStatus: "confirmed" });
 
+        // هون بتنمنح التذاكر — بعد تأكيد الدفع فقط
+        const award = await storage.awardTicketsForOrder(order.id);
+        awardedTickets = award.created;
+
         await storage.logActivity(
           "payment_confirmed",
-          "Payment confirmed",
-          `Admin confirmed payment for order ${order.id}`,
+          "تم تأكيد الدفع",
+          `تأكيد دفع الطلب ${order.id} — ${awardedTickets} تذكرة`,
           req.session.userId!,
-          JSON.stringify({ orderId: order.id })
+          JSON.stringify({ orderId: order.id, awardedTickets })
         );
+
+        try {
+          if (awardedTickets > 0) {
+            const t = "تذاكرك جاهزة! 🎟️";
+            const b = `تم تأكيد دفعك وحصلت على ${awardedTickets} تذكرة للسحب. بالتوفيق!`;
+            await storage.createUserNotification(order.userId, "tickets_awarded", t, b, award.drawIds[0]);
+            sendPushNotifications([order.userId], t, b, { orderId: order.id });
+          }
+
+          // إشعار الأدمن إذا في جولة وصلت للعدد المستهدف
+          for (const drawId of award.drawIds) {
+            const d = await storage.getDraw(drawId);
+            if (d && d.status === "ready_to_draw") {
+              await storage.createAdminNotification(
+                "draw_ready",
+                "جولة جاهزة للسحب 🎯",
+                `جولة "${d.title}" وصلت ${d.soldTickets}/${d.targetTickets} تذكرة — جاهزة للسحب`,
+                JSON.stringify({ drawId: d.id })
+              );
+
+              const drawTickets = await storage.getTicketsByDraw(d.id);
+              const participantIds = [...new Set(drawTickets.map((x) => x.userId))];
+              if (participantIds.length > 0) {
+                const t = "اكتمل العدد! 🔥";
+                const b = `جولة ${d.title} وصلت للعدد المطلوب — السحب على ${d.prizeName} قريباً`;
+                await storage.createBulkUserNotifications(participantIds, "draw_full", t, b, d.id);
+                sendPushNotifications(participantIds, t, b, { drawId: d.id });
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Ticket award notification error:", e);
+        }
       } else {
         await storage.updateOrderPayment(order.id, {
           paymentStatus: "rejected",
           rejectionReason: rejectionReason || "",
         });
 
+        // إرجاع المبلغ المخصوم من المحفظة
+        const walletUsed = parseFloat(order.walletAmount);
+        if (walletUsed > 0) {
+          await storage.addWalletCredit(
+            order.userId,
+            walletUsed,
+            "refund",
+            `إرجاع رصيد — طلب مرفوض ${order.id.slice(0, 8)}`,
+            order.id
+          );
+        }
+
         await storage.logActivity(
           "payment_rejected",
-          "Payment rejected",
-          `Admin rejected payment for order ${order.id}: ${rejectionReason || "No reason provided"}`,
+          "تم رفض الدفع",
+          `رفض دفع الطلب ${order.id}: ${rejectionReason || "بدون سبب"}`,
           req.session.userId!,
           JSON.stringify({ orderId: order.id, rejectionReason })
         );
       }
 
       const updated = await storage.getOrder(order.id);
-
       const orderUser = await storage.getUser(order.userId);
-      const orderCampaign = await storage.getCampaign(order.campaignId);
-      if (orderUser && orderCampaign) {
+      if (orderUser) {
         sendPaymentStatusUpdate(orderUser.email, {
           orderId: order.id,
           status: paymentStatus,
-          campaignTitle: orderCampaign.title,
           rejectionReason,
+          awardedTickets,
         });
       }
 
-      res.json(updated);
+      res.json({ ...updated, awardedTickets });
     } catch (error) {
       console.error("Update payment error:", error);
       res.status(500).json({ message: "Server error" });
@@ -1528,78 +1434,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/users/:id/orders", requireAdmin as any, async (req: Request, res: Response) => {
     try {
       const userOrders = await storage.getOrdersByUser(req.params.id as string);
-      const withCampaign = await Promise.all(userOrders.map(async (o) => {
-        const campaign = await storage.getCampaign(o.campaignId);
-        return { ...o, campaignTitle: campaign?.title || "—" };
+      const withItems = await Promise.all(userOrders.map(async (o) => {
+        const items = await storage.getOrderItems(o.id);
+        return { ...o, items, summary: items.map((i) => `${i.productName} ×${i.quantity}`).join("، ") || "—" };
       }));
-      res.json(withCampaign);
+      res.json(withItems);
     } catch (error) {
       console.error("Get user orders error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.get("/api/admin/campaigns/:id/orders", requireAdmin as any, async (req: Request, res: Response) => {
+  app.get("/api/admin/winners", requireAdmin as any, async (_req: Request, res: Response) => {
     try {
-      const campaignTickets = await storage.getTicketsByCampaign(req.params.id as string);
-      const enriched = await Promise.all(campaignTickets.map(async (t) => {
-        const u = await storage.getUser(t.userId);
-        const order = t.orderId ? await storage.getOrder(t.orderId) : undefined;
-        return {
-          ticketNumber: t.ticketNumber,
-          userId: t.userId,
-          username: u?.username || "—",
-          fullName: u?.fullName || "—",
-          phone: u?.phone || "—",
-          isWinner: t.isWinner,
-          paymentStatus: order?.paymentStatus || "—",
-          totalAmount: order?.totalAmount || "—",
-          createdAt: t.createdAt,
-        };
-      }));
-      res.json(enriched);
+      const completed = await storage.getCompletedDraws();
+      const winners = await Promise.all(
+        completed.map(async (d) => {
+          const winner = d.winnerId ? await storage.getUser(d.winnerId) : undefined;
+          return {
+            drawId: d.id,
+            drawTitle: d.title,
+            prizeName: d.prizeName,
+            ticketNumber: d.winnerTicketNumber,
+            drawnAt: d.drawnAt,
+            totalTickets: d.soldTickets,
+            username: winner?.username ?? null,
+            email: winner?.email ?? null,
+            phone: winner?.phone ?? null,
+            fullName: winner?.fullName ?? null,
+            city: winner?.city ?? null,
+            address: winner?.address ?? null,
+          };
+        })
+      );
+      res.json(winners);
     } catch (error) {
-      console.error("Get campaign orders error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  app.get("/api/admin/winners", requireAdmin as any, async (req: Request, res: Response) => {
-    try {
-      const allCampaigns = await storage.getCampaigns();
-      const completed = allCampaigns.filter(c => c.status === "completed" && c.winnerId);
-      const results = await Promise.all(completed.map(async (campaign) => {
-        const winnerUser = campaign.winnerId ? await storage.getUser(campaign.winnerId) : null;
-        const winnerInfo = winnerUser ? {
-          winnerUsername: winnerUser.username,
-          winnerFullName: winnerUser.fullName || "—",
-          winnerPhone: winnerUser.phone || "",
-          winnerEmail: winnerUser.email,
-        } : {
-          winnerUsername: "—",
-          winnerFullName: "—",
-          winnerPhone: "",
-          winnerEmail: "",
-        };
-        const campaignTickets = await storage.getTicketsByCampaign(campaign.id);
-        const winningTicket = campaignTickets.find(t => t.isWinner);
-        const winnerOrder = winningTicket?.orderId ? await storage.getOrder(winningTicket.orderId) : undefined;
-        return {
-          campaignId: campaign.id,
-          campaignTitle: campaign.title,
-          prizeName: campaign.prizeName,
-          imageUrl: campaign.imageUrl,
-          drawnAt: campaign.drawAt || campaign.createdAt,
-          winningTicketNumber: winningTicket?.ticketNumber || "—",
-          winnerOrderId: winnerOrder?.id || null,
-          winnerOrderShipping: winnerOrder?.shippingStatus || "pending",
-          winnerId: campaign.winnerId,
-          ...winnerInfo,
-        };
-      }));
-      res.json(results);
-    } catch (error) {
-      console.error("Get admin winners error:", error);
+      console.error("Get winners error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -1610,11 +1480,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allReviews = await db.select().from(reviewsTable).orderBy(desc(reviewsTable.createdAt));
       const enriched = await Promise.all(allReviews.map(async (r) => {
         const u = await storage.getUser(r.userId);
-        const c = await storage.getCampaign(r.campaignId);
+        const prod = await storage.getProduct(r.productId);
         return {
           ...r,
           username: u?.username || "—",
-          campaignTitle: c?.title || "—",
+          productName: prod?.name || "—",
         };
       }));
       res.json(enriched);
@@ -1643,52 +1513,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Pending orders count error:", error);
       res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  app.put("/api/admin/campaigns/:id", requireAdmin as any, async (req: Request, res: Response) => {
-    try {
-      const { title, description, price, productPrice, totalQuantity, imageUrl, endsAt, isFlashSale, originalPrice, flashSaleEndsAt, status, prizeName, products: productsData } = req.body;
-
-      // If products array provided, validate minimum 2
-      if (productsData !== undefined) {
-        if (!Array.isArray(productsData) || productsData.length < 2) {
-          return res.status(400).json({ message: "يجب الإبقاء على منتجين (موديلين) على الأقل في الحملة" });
-        }
-      }
-
-      const updateData: Partial<Campaign> = {};
-      if (title !== undefined) updateData.title = title;
-      if (description !== undefined) updateData.description = description;
-      if (prizeName !== undefined) updateData.prizeName = prizeName;
-      const effectivePrice = productPrice ?? price;
-      if (effectivePrice !== undefined) updateData.productPrice = String(effectivePrice);
-      if (totalQuantity !== undefined) updateData.totalQuantity = Number(totalQuantity);
-      if (imageUrl !== undefined) updateData.imageUrl = imageUrl ?? null;
-      if (endsAt !== undefined) updateData.endsAt = endsAt ? new Date(endsAt) : null;
-      if (isFlashSale !== undefined) updateData.isFlashSale = Boolean(isFlashSale);
-      if (originalPrice !== undefined) updateData.originalPrice = originalPrice ? String(originalPrice) : null;
-      if (flashSaleEndsAt !== undefined) updateData.flashSaleEndsAt = flashSaleEndsAt ? new Date(flashSaleEndsAt) : null;
-      if (status !== undefined) updateData.status = status;
-      const updated = await storage.updateCampaign(req.params.id as string, updateData);
-      if (!updated) return res.status(404).json({ message: "Campaign not found" });
-      res.json(updated);
-    } catch (error: any) {
-      console.error("Update campaign error:", error);
-      res.status(400).json({ message: error.message || "Failed to update campaign" });
-    }
-  });
-
-  app.delete("/api/admin/campaigns/:id", requireAdmin as any, async (req: Request, res: Response) => {
-    try {
-      const deleted = await storage.deleteCampaign(req.params.id as string);
-      if (!deleted) {
-        return res.status(404).json({ message: "Campaign not found" });
-      }
-      res.json({ message: "Campaign deleted" });
-    } catch (error: any) {
-      console.error("Delete campaign error:", error);
-      res.status(400).json({ message: error.message || "Failed to delete campaign" });
     }
   });
 
@@ -1854,10 +1678,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reviews
-  app.get("/api/reviews/:campaignId", async (req: Request, res: Response) => {
+  app.get("/api/reviews/:productId", async (req: Request, res: Response) => {
     try {
-      const campaignReviews = await storage.getReviewsByCampaign(req.params.campaignId as string);
-      res.json(campaignReviews);
+      res.json(await storage.getReviewsByProduct(req.params.productId as string));
     } catch (error) {
       console.error("Get reviews error:", error);
       res.status(500).json({ message: "Server error" });
@@ -1868,17 +1691,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const parsed = insertReviewSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: "بيانات غير صحيحة", errors: parsed.error.flatten() });
+        return res.status(400).json({ message: "بيانات التقييم غير صحيحة" });
       }
-      const existing = await storage.getUserReviewForCampaign(req.session.userId!, parsed.data.campaignId);
+      const existing = await storage.getUserReviewForProduct(req.session.userId!, parsed.data.productId);
       if (existing) {
-        return res.status(400).json({ message: "لقد قمت بتقييم هذا المنتج مسبقاً" });
+        return res.status(400).json({ message: "قيّمت هذا المنتج من قبل" });
       }
-      const review = await storage.createReview(req.session.userId!, parsed.data);
-      res.json(review);
-    } catch (error: any) {
+      res.json(await storage.createReview(req.session.userId!, parsed.data));
+    } catch (error) {
       console.error("Create review error:", error);
-      res.status(500).json({ message: error.message || "Server error" });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -2017,29 +1839,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/campaigns/upload-image", requireAdmin as any, uploadCampaignImage.single("image"), async (req: Request, res: Response) => {
+  app.post("/api/admin/products/upload-image", requireAdmin as any, uploadCampaignImage.single("image"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: "Image file is required" });
+        return res.status(400).json({ message: "لم يتم رفع أي صورة" });
       }
-      const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
-      res.json({ imageUrl });
-    } catch (error: any) {
-      console.error("Upload campaign image error:", error);
-      res.status(500).json({ message: error.message || "Server error" });
-    }
-  });
-
-  app.post("/api/admin/campaigns/upload-product-image", requireAdmin as any, uploadCampaignImage.single("image"), async (req: Request, res: Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "Image file is required" });
-      }
-      const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
-      res.json({ imageUrl });
-    } catch (error: any) {
+      const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      res.json({ imageUrl: base64 });
+    } catch (error) {
       console.error("Upload product image error:", error);
-      res.status(500).json({ message: error.message || "Server error" });
+      res.status(500).json({ message: "فشل رفع الصورة" });
     }
   });
 
@@ -2075,9 +1884,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sanitized = /^[=+\-@]/.test(str) ? "'" + str : str;
         return '"' + sanitized.replace(/"/g, '""') + '"';
       };
-      const csvHeader = "Order ID,Username,Campaign,Quantity,Total,Payment Method,Payment Status,Shipping Status,Tracking Number,Date\n";
+      const csvHeader = "Order ID,Username,Items,Item Count,Total,Tickets,Payment Method,Payment Status,Shipping Status,Tracking Number,Date\n";
       const csvRows = allOrders.map(o => 
-        [o.id, o.username, o.campaignTitle, o.quantity, o.totalAmount, o.paymentMethod, o.paymentStatus, o.shippingStatus, o.trackingNumber, o.createdAt]
+        [o.id, o.username, o.summary, o.itemCount, o.totalAmount, o.ticketsAwarded, o.paymentMethod, o.paymentStatus, o.shippingStatus, o.trackingNumber, o.createdAt]
           .map(v => escapeCsv(v as any))
           .join(",")
       ).join("\n");
@@ -2183,26 +1992,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/winners", async (_req: Request, res: Response) => {
     try {
-      const allCampaigns = await storage.getCampaigns();
-      const completed = allCampaigns.filter(c => c.status === "completed" && c.winnerId);
-      const results = await Promise.all(
-        completed.map(async (campaign) => {
-          let winnerUsername = "";
-          if (campaign.winnerId) {
-            const winner = await storage.getUser(campaign.winnerId);
-            if (winner) {
-              winnerUsername = winner.username;
-            }
-          }
+      const completed = await storage.getCompletedDraws();
+      const winners = await Promise.all(
+        completed.map(async (d) => {
+          const winner = d.winnerId ? await storage.getUser(d.winnerId) : undefined;
           return {
-            ...campaign,
-            winnerUsername,
+            drawId: d.id,
+            drawTitle: d.title,
+            prizeName: d.prizeName,
+            prizeImageUrl: d.prizeImageUrl,
+            ticketNumber: d.winnerTicketNumber,
+            drawnAt: d.drawnAt,
+            totalTickets: d.soldTickets,
+            winnerUsername: winner?.username ?? null,
           };
         })
       );
-      res.json(results);
+      res.json(winners);
     } catch (error) {
-      console.error("Get winners error:", error);
+      console.error("Get public winners error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

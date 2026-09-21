@@ -90,23 +90,32 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
 
 export async function sendOrderConfirmation(
   to: string,
-  data: { orderId: string; campaignTitle: string; quantity: number; totalAmount: string; ticketNumbers: string[]; paymentMethod: string }
+  data: {
+    orderId: string;
+    totalAmount: string;
+    items: { name: string; quantity: number; lineTotal: string }[];
+    paymentMethod: string;
+    expectedTickets: number;
+  }
 ) {
-  const ticketsHtml = data.ticketNumbers.map(t => `<span class="badge badge-info" style="margin: 2px;">${t}</span>`).join(" ");
+  const itemsHtml = data.items
+    .map(
+      (i) =>
+        `<div class="info-row"><span class="info-label">${i.name} ×${i.quantity}</span><span class="info-value">${i.lineTotal} $</span></div>`
+    )
+    .join("");
 
   const html = baseTemplate(`
     <div class="body">
-      <h2>تم تأكيد طلبك بنجاح!</h2>
-      <p>شكراً لك! تم استلام طلبك وسيتم معالجته في أقرب وقت.</p>
+      <h2>تم استلام طلبك!</h2>
+      <p>شكراً لك! طلبك قيد المراجعة وسيتم تأكيده قريباً.</p>
       <div class="info-box">
         <div class="info-row"><span class="info-label">رقم الطلب</span><span class="info-value">#${data.orderId.slice(0, 8)}</span></div>
-        <div class="info-row"><span class="info-label">المنتج</span><span class="info-value">${data.campaignTitle}</span></div>
-        <div class="info-row"><span class="info-label">الكمية</span><span class="info-value">${data.quantity}</span></div>
-        <div class="info-row"><span class="info-label">المبلغ</span><span class="info-value">${data.totalAmount} $</span></div>
+        ${itemsHtml}
+        <div class="info-row"><span class="info-label">الإجمالي المستحق</span><span class="info-value">${data.totalAmount} $</span></div>
         <div class="info-row"><span class="info-label">طريقة الدفع</span><span class="info-value">${data.paymentMethod}</span></div>
       </div>
-      <p><strong>تذاكرك:</strong></p>
-      <div style="margin: 12px 0;">${ticketsHtml}</div>
+      <p><strong>تذاكر السحب:</strong> رح تحصل على <span class="badge badge-info">${data.expectedTickets} تذكرة</span> بمجرد تأكيد دفعتك.</p>
       <p>بالتوفيق!</p>
     </div>
   `);
@@ -116,10 +125,13 @@ export async function sendOrderConfirmation(
 
 export async function sendPaymentStatusUpdate(
   to: string,
-  data: { orderId: string; status: string; campaignTitle: string; rejectionReason?: string }
+  data: { orderId: string; status: string; rejectionReason?: string; awardedTickets?: number }
 ) {
+  const ticketLine = data.awardedTickets && data.awardedTickets > 0
+    ? ` وحصلت على ${data.awardedTickets} تذكرة للسحب!`
+    : "";
   const statusMap: Record<string, { label: string; badge: string; message: string }> = {
-    confirmed: { label: "تم التأكيد", badge: "badge-success", message: "تم تأكيد دفعتك بنجاح! سيتم شحن طلبك قريباً." },
+    confirmed: { label: "تم التأكيد", badge: "badge-success", message: `تم تأكيد دفعتك بنجاح!${ticketLine} سيتم شحن طلبك قريباً.` },
     rejected: { label: "مرفوض", badge: "badge-error", message: `تم رفض إيصال الدفع. ${data.rejectionReason ? `السبب: ${data.rejectionReason}` : "يرجى رفع إيصال صحيح."}` },
     pending_review: { label: "قيد المراجعة", badge: "badge-warning", message: "تم استلام إيصال الدفع وجاري مراجعته." },
   };
@@ -132,7 +144,6 @@ export async function sendPaymentStatusUpdate(
       <p>تم تحديث حالة الدفع لطلبك:</p>
       <div class="info-box">
         <div class="info-row"><span class="info-label">رقم الطلب</span><span class="info-value">#${data.orderId.slice(0, 8)}</span></div>
-        <div class="info-row"><span class="info-label">المنتج</span><span class="info-value">${data.campaignTitle}</span></div>
         <div class="info-row"><span class="info-label">الحالة</span><span class="info-value"><span class="${statusInfo.badge} badge">${statusInfo.label}</span></span></div>
       </div>
       <p>${statusInfo.message}</p>
@@ -144,7 +155,7 @@ export async function sendPaymentStatusUpdate(
 
 export async function sendWinnerNotification(
   to: string,
-  data: { campaignTitle: string; prizeName: string; ticketNumber: string }
+  data: { drawTitle: string; prizeName: string; ticketNumber: string }
 ) {
   const html = baseTemplate(`
     <div class="body">
@@ -153,7 +164,7 @@ export async function sendWinnerNotification(
         <p>لقد تم اختيارك كفائز بالهدية</p>
       </div>
       <div class="info-box">
-        <div class="info-row"><span class="info-label">الحملة</span><span class="info-value">${data.campaignTitle}</span></div>
+        <div class="info-row"><span class="info-label">الجولة</span><span class="info-value">${data.drawTitle}</span></div>
         <div class="info-row"><span class="info-label">الجائزة</span><span class="info-value">${data.prizeName}</span></div>
         <div class="info-row"><span class="info-label">تذكرة الفوز</span><span class="info-value">${data.ticketNumber}</span></div>
       </div>
@@ -162,7 +173,7 @@ export async function sendWinnerNotification(
     </div>
   `);
 
-  await sendEmail(to, `مبروك! أنت الفائز - ${data.campaignTitle} - ${APP_NAME}`, html);
+  await sendEmail(to, `مبروك! أنت الفائز - ${data.drawTitle} - ${APP_NAME}`, html);
 }
 
 export async function sendEmailVerificationCode(
@@ -214,7 +225,7 @@ export async function sendPasswordResetCode(
 
 export async function sendShippingUpdate(
   to: string,
-  data: { orderId: string; campaignTitle: string; status: string; trackingNumber?: string }
+  data: { orderId: string; itemsSummary: string; status: string; trackingNumber?: string }
 ) {
   const statusMap: Record<string, { label: string; emoji: string }> = {
     processing: { label: "جاري التجهيز", emoji: "📦" },
@@ -229,7 +240,7 @@ export async function sendShippingUpdate(
       <h2>${statusInfo.emoji} تحديث حالة الشحن</h2>
       <div class="info-box">
         <div class="info-row"><span class="info-label">رقم الطلب</span><span class="info-value">#${data.orderId.slice(0, 8)}</span></div>
-        <div class="info-row"><span class="info-label">المنتج</span><span class="info-value">${data.campaignTitle}</span></div>
+        <div class="info-row"><span class="info-label">المنتجات</span><span class="info-value">${data.itemsSummary}</span></div>
         <div class="info-row"><span class="info-label">حالة الشحن</span><span class="info-value">${statusInfo.label}</span></div>
         ${data.trackingNumber ? `<div class="info-row"><span class="info-label">رقم التتبع</span><span class="info-value">${data.trackingNumber}</span></div>` : ""}
       </div>
