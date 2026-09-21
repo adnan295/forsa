@@ -1,0 +1,51 @@
+default_platform(:ios)
+
+platform :ios do
+  desc 'Build NAYVO using the installed distribution certificate and profile'
+  lane :package_release do
+    root = File.expand_path('..', __dir__)
+    projects = Dir[File.join(root, 'ios', '*.xcodeproj')]
+    UI.user_error!('Expected exactly one application Xcode project') unless projects.length == 1
+    project = projects.first
+    scheme = File.basename(project, '.xcodeproj')
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: project,
+      team_id: ENV.fetch('IOS_TEAM_ID'),
+      code_sign_identity: 'Apple Distribution',
+      profile_uuid: ENV.fetch('IOS_PROFILE_UUID'),
+      build_configurations: ['Release']
+    )
+    build_app(
+      workspace: File.join(root, 'ios', "#{scheme}.xcworkspace"),
+      scheme: scheme,
+      configuration: 'Release',
+      export_method: 'app-store',
+      output_directory: File.join(root, 'build'),
+      output_name: 'NAYVO.ipa',
+      export_options: {
+        signingStyle: 'manual',
+        teamID: ENV.fetch('IOS_TEAM_ID'),
+        provisioningProfiles: { 'app.replit.forsa' => ENV.fetch('IOS_PROFILE_UUID') }
+      }
+    )
+  end
+
+  desc 'Upload the built IPA; do not submit for review or release publicly'
+  lane :upload_release do
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch('ASC_KEY_ID'),
+      issuer_id: ENV.fetch('ASC_ISSUER_ID'),
+      key_content: ENV.fetch('ASC_PRIVATE_KEY'),
+      in_house: false
+    )
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: 'app.replit.forsa',
+      ipa: File.expand_path('../build/NAYVO.ipa', __dir__),
+      skip_waiting_for_build_processing: true,
+      skip_submission: true,
+      distribute_external: false
+    )
+  end
+end
