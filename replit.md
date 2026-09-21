@@ -58,8 +58,14 @@ scheduled → active → ready_to_draw → completed
 - الشعار: «فرصة» كحلي والتاج ذهبي فوقه؛ وعلى الخلفيات الكحلية الكلمة بيضاء
 
 **المكوّنات المشتركة** (`components/ui.tsx`): `Header` · `Logo` · `Button` ·
-`StatusBadge` · `ChanceNote` · `InfoNote` · `DrawProgress` · `NavRow` ·
-`EmptyState` · `StatTile` · `Accordion`
+`Field` · `Card` · `StatusBadge` · `ChanceNote` · `InfoNote` · `DrawProgress` ·
+`NavRow` · `EmptyState` · `StatTile` · `Accordion`
+
+كل شاشات التطبيق (19 شاشة) مبنية على هذه المكوّنات — لا ألوان ولا مقاسات
+مكتوبة يدوياً خارج `constants/colors.ts`.
+
+**رسائل الخطأ**: `lib/errors.ts` يترجم رسائل الخادم الإنجليزية لعربي مفهوم،
+ويتعامل مع صيغ JSON و"404: الرسالة".
 
 **لوحة الإدارة**: قائمة جانبية كحلية على الشاشات ≥ 900px، وشريط تبويبات أفقي
 على الجوال — نفس الأقسام بالحالتين.
@@ -81,6 +87,11 @@ app/
   orders.tsx            طلباتي — تبويبات الكل/قيد التنفيذ/المكتملة
   faq.tsx               المساعدة — بحث وأسئلة قابلة للطيّ وزر الدعم
   referral.tsx          دعوة الأصدقاء — الكود والمشاركة وسجل الدعوات
+  auth.tsx              الدخول/حساب جديد + خطوة رمز التحقق
+  forgot-password.tsx   استعادة كلمة السر بأربع خطوات
+  edit-profile.tsx      بياناتي مع منتقي الدولة
+  notifications.tsx     الإشعارات — أيقونة ولون لكل نوع
+  favorites.tsx         المفضلة
   cart.tsx              السلة (AsyncStorage) مع معاينة التذاكر المتوقعة
   checkout.tsx          الدفع — طلب واحد متعدد المنتجات
   favorites.tsx         المفضلة

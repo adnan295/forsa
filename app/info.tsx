@@ -5,855 +5,523 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Platform,
-  Linking,
-  TextInput,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import Colors from "@/constants/colors";
-import { apiRequest, queryClient } from "@/lib/query-client";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@/lib/auth-context";
+import { apiRequest, queryClient } from "@/lib/query-client";
+import { translateError } from "@/lib/errors";
+import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
+import { Header, Button, Card, Field, StatusBadge, EmptyState } from "@/components/ui";
+import type { SupportTicket } from "@shared/schema";
+
+const c = Colors.light;
 
 type PageType = "about" | "terms" | "privacy" | "contact";
 
-const PAGE_CONFIG: Record<PageType, {
-  title: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  colors: [string, string];
-}> = {
-  about: {
-    title: "عن التطبيق",
-    icon: "information-circle",
-    colors: ["#10224D", "#155EEF"],
-  },
-  terms: {
-    title: "الشروط والأحكام",
-    icon: "document-text",
-    colors: ["#1B3A7A", "#155EEF"],
-  },
-  privacy: {
-    title: "سياسة الخصوصية",
-    icon: "shield-checkmark",
-    colors: ["#175CD3", "#175CD3"],
-  },
-  contact: {
-    title: "تواصل معنا",
-    icon: "chatbubble-ellipses",
-    colors: ["#067647", "#067647"],
-  },
+/** قسم محتوى: فقرة، أو قائمة نقاط، أو صف ميزة بأيقونة */
+type Section =
+  | { kind: "text"; title: string; body: string }
+  | { kind: "bullets"; title: string; items: string[] }
+  | { kind: "features"; title: string; items: { icon: keyof typeof Ionicons.glyphMap; text: string }[] };
+
+const PAGE_TITLE: Record<PageType, string> = {
+  about: "عن التطبيق",
+  terms: "الشروط والأحكام",
+  privacy: "سياسة الخصوصية",
+  contact: "تواصل معنا",
 };
 
-function AboutContent() {
-  return (
-    <>
-      <ContentCard title="ما هو فرصة؟">
-        <Text style={styles.paragraph}>
-          فرصة هو متجر إلكتروني يقدم منتجات مميزة بأسعار مناسبة، ومع كل عملية شراء تحصل على فرصة للحصول على هدايا قيمة. نقدم تجربة تسوّق آمنة وشفافة مع نظام هدايا عادل يضمن فرصاً متساوية لجميع المشترين.
-        </Text>
-      </ContentCard>
-      <ContentCard title="كيف يعمل التطبيق؟">
-        <BulletPoint text="تصفّح المنتجات المتاحة واختر ما يناسبك" />
-        <BulletPoint text="اشترِ المنتج وأكمل عملية الدفع" />
-        <BulletPoint text="تحصل تلقائياً على فرصة هدية مع كل منتج" />
-        <BulletPoint text="انتظر حتى تُباع جميع المنتجات في الحملة" />
-        <BulletPoint text="يتم اختيار الفائز بالهدية بشفافية تامة" />
-        <BulletPoint text="يتم إبلاغ الفائز وشحن الهدية" />
-      </ContentCard>
-      <ContentCard title="مميزاتنا">
-        <FeatureRow icon="shield-checkmark" text="اختيار عشوائي آمن ومشفّر" color="#067647" />
-        <FeatureRow icon="card" text="خيارات دفع متعددة" color="#175CD3" />
-        <FeatureRow icon="gift" text="هدايا حقيقية ومضمونة" color="#B54708" />
-        <FeatureRow icon="airplane" text="شحن سريع لجميع المناطق" color="#155EEF" />
-        <FeatureRow icon="headset" text="دعم فني على مدار الساعة" color="#155EEF" />
-      </ContentCard>
-      <View style={styles.versionBox}>
-        <Text style={styles.versionLabel}>الإصدار</Text>
-        <Text style={styles.versionValue}>1.0.0</Text>
-      </View>
-    </>
-  );
-}
+const CONTENT: Record<Exclude<PageType, "contact">, Section[]> = {
+  about: [
+    {
+      kind: "text",
+      title: "ما هو فرصة؟",
+      body: "فرصة متجر إلكتروني بيقدّم منتجات مميزة بأسعار مناسبة، ومع كل عملية شراء بتحصل على فرص لدخول سحب على جوائز قيّمة. تجربة تسوّق آمنة وشفافة، ونظام سحب عادل بيضمن فرص متساوية لكل المشترين.",
+    },
+    {
+      kind: "bullets",
+      title: "كيف بيشتغل التطبيق؟",
+      items: [
+        "تصفّح المنتجات واختر اللي بيناسبك",
+        "اشترِ وأكمل عملية الدفع",
+        "بعد تأكيد الدفع بتنمنحك فرص السحب تلقائياً",
+        "كل مبلغ محدّد من قيمة المنتجات = فرصة وحدة",
+        "لما ينباع كامل عدد فرص الجولة بيصير السحب",
+        "بنبلّغ الفائز وبنشحنله الجائزة",
+      ],
+    },
+    {
+      kind: "features",
+      title: "مميزاتنا",
+      items: [
+        { icon: "shield-checkmark", text: "اختيار عشوائي آمن ومشفّر" },
+        { icon: "card", text: "خيارات دفع متعددة" },
+        { icon: "gift", text: "جوائز حقيقية ومضمونة" },
+        { icon: "airplane", text: "شحن لجميع المناطق" },
+        { icon: "headset", text: "دعم عبر تذاكر داخل التطبيق" },
+      ],
+    },
+  ],
 
-function TermsContent() {
-  return (
-    <>
-      <ContentCard title="١. القبول بالشروط">
-        <Text style={styles.paragraph}>
-          باستخدامك لتطبيق فرصة، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي جزء منها، يُرجى عدم استخدام التطبيق.
-        </Text>
-      </ContentCard>
-      <ContentCard title="٢. الأهلية">
-        <Text style={styles.paragraph}>
-          يجب أن يكون عمرك 18 عاماً أو أكثر لاستخدام هذا التطبيق. بالتسجيل، أنت تؤكد أنك تستوفي هذا الشرط.
-        </Text>
-      </ContentCard>
-      <ContentCard title="٣. الحساب والأمان">
-        <Text style={styles.paragraph}>
-          أنت مسؤول عن الحفاظ على سرية معلومات حسابك وكلمة المرور. يجب إبلاغنا فوراً عن أي استخدام غير مصرح به.
-        </Text>
-      </ContentCard>
-      <ContentCard title="٤. عمليات الشراء والدفع">
-        <Text style={styles.paragraph}>
-          جميع عمليات الشراء نهائية وغير قابلة للاسترجاع بعد تأكيد الدفع. يتم التحقق من جميع المدفوعات قبل تأكيد الطلب. مع كل عملية شراء تحصل على فرصة للحصول على هدية.
-        </Text>
-      </ContentCard>
-      <ContentCard title="٥. الهدايا">
-        <Text style={styles.paragraph}>
-          يتم اختيار الفائز بالهدية بشكل عشوائي عند اكتمال بيع جميع المنتجات في الحملة. يتم شحن المنتجات والهدايا خلال 14 يوم عمل.
-        </Text>
-      </ContentCard>
-      <ContentCard title="٦. التعديلات">
-        <Text style={styles.paragraph}>
-          نحتفظ بالحق في تعديل هذه الشروط في أي وقت. سيتم إبلاغك بأي تغييرات جوهرية.
-        </Text>
-      </ContentCard>
-    </>
-  );
-}
+  terms: [
+    {
+      kind: "text",
+      title: "١. القبول بالشروط",
+      body: "باستخدامك لتطبيق فرصة، أنت بتوافق على الالتزام بهذه الشروط والأحكام. إذا ما كنت موافق على أي جزء منها، يُرجى عدم استخدام التطبيق.",
+    },
+    {
+      kind: "text",
+      title: "٢. الأهلية",
+      body: "لازم يكون عمرك 18 سنة أو أكثر لاستخدام التطبيق. بالتسجيل أنت بتأكّد إنك مستوفي هذا الشرط.",
+    },
+    {
+      kind: "text",
+      title: "٣. الحساب والأمان",
+      body: "أنت مسؤول عن الحفاظ على سرية معلومات حسابك وكلمة السر. لازم تبلّغنا فوراً عن أي استخدام غير مصرّح به.",
+    },
+    {
+      kind: "text",
+      title: "٤. الشراء والدفع",
+      body: "كل عمليات الشراء نهائية وغير قابلة للاسترجاع بعد تأكيد الدفع. بنتحقق من كل المدفوعات قبل تأكيد الطلب. فرص السحب بتنمنح بعد تأكيد الدفع فقط.",
+    },
+    {
+      kind: "bullets",
+      title: "٥. آلية السحب",
+      items: [
+        "كل جولة سحب إلها جائزة محدّدة وعدد فرص مستهدف",
+        "قيمة المنتجات بعد الخصم هي أساس احتساب الفرص — رسوم التوصيل ما بتُحتسب",
+        "لما ينباع كامل عدد فرص الجولة بتصير جاهزة للسحب",
+        "الفائز بينختار عشوائياً من كل الفرص المؤكدة بالجولة",
+        "إذا الطلب انرفض دفعه، فرصه بتنلغى",
+        "بنشحن المنتجات والجوائز خلال 14 يوم عمل",
+      ],
+    },
+    {
+      kind: "text",
+      title: "٦. التعديلات",
+      body: "بنحتفظ بالحق في تعديل هذه الشروط بأي وقت، وبنبلّغك بأي تغييرات جوهرية.",
+    },
+  ],
 
-function PrivacyContent() {
-  return (
-    <>
-      <ContentCard title="المعلومات التي نجمعها">
-        <BulletPoint text="بيانات الحساب: اسم المستخدم، البريد الإلكتروني" />
-        <BulletPoint text="بيانات الطلبات: تاريخ الشراء، المبالغ، المنتجات" />
-        <BulletPoint text="بيانات الشحن: العنوان، رقم الهاتف، المدينة" />
-        <BulletPoint text="إيصالات الدفع: صور إيصالات التحويل البنكي" />
-      </ContentCard>
-      <ContentCard title="كيف نستخدم بياناتك">
-        <BulletPoint text="معالجة طلباتك وتوصيل الهدايا" />
-        <BulletPoint text="التحقق من المدفوعات" />
-        <BulletPoint text="شحن المنتجات والهدايا للفائزين" />
-        <BulletPoint text="تحسين تجربة المستخدم" />
-        <BulletPoint text="التواصل معك بشأن طلباتك" />
-      </ContentCard>
-      <ContentCard title="حماية البيانات">
-        <Text style={styles.paragraph}>
-          نستخدم تقنيات تشفير متقدمة لحماية بياناتك الشخصية. لن نشارك معلوماتك مع أطراف ثالثة إلا بموافقتك أو عند الحاجة القانونية.
-        </Text>
-      </ContentCard>
-      <ContentCard title="حقوقك">
-        <BulletPoint text="طلب نسخة من بياناتك الشخصية" />
-        <BulletPoint text="تصحيح أو تحديث بياناتك" />
-        <BulletPoint text="طلب حذف حسابك وبياناتك" />
-        <BulletPoint text="إلغاء الاشتراك في الإشعارات" />
-      </ContentCard>
-    </>
-  );
-}
-
-interface SupportTicket {
-  id: number;
-  subject: string;
-  message: string;
-  status: "open" | "in_progress" | "closed";
-  priority: "low" | "medium" | "high";
-  adminReply?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  closedAt?: string | null;
-}
-
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  open: { label: "مفتوحة", color: "#B54708", bg: "#FFF4D6" },
-  in_progress: { label: "قيد المعالجة", color: "#175CD3", bg: "#EFF4FF" },
-  closed: { label: "مغلقة", color: "#067647", bg: "#ECFDF3" },
+  privacy: [
+    {
+      kind: "bullets",
+      title: "المعلومات التي نجمعها",
+      items: [
+        "بيانات الحساب: اسم المستخدم والبريد الإلكتروني",
+        "بيانات الطلبات: تاريخ الشراء والمبالغ والمنتجات",
+        "بيانات الشحن: العنوان ورقم الهاتف والمدينة",
+        "إيصالات الدفع: صور إيصالات التحويل البنكي",
+      ],
+    },
+    {
+      kind: "bullets",
+      title: "كيف نستخدم بياناتك",
+      items: [
+        "معالجة طلباتك وتوصيلها",
+        "التحقق من المدفوعات",
+        "شحن المنتجات والجوائز للفائزين",
+        "تحسين تجربة الاستخدام",
+        "التواصل معك بخصوص طلباتك",
+      ],
+    },
+    {
+      kind: "text",
+      title: "حماية البيانات",
+      body: "بنستخدم تقنيات تشفير لحماية بياناتك الشخصية. ما بنشارك معلوماتك مع أطراف ثالثة إلا بموافقتك أو عند الحاجة القانونية.",
+    },
+    {
+      kind: "bullets",
+      title: "حقوقك",
+      items: [
+        "طلب نسخة من بياناتك الشخصية",
+        "تصحيح أو تحديث بياناتك",
+        "طلب حذف حسابك وبياناتك",
+        "إلغاء الاشتراك في الإشعارات",
+      ],
+    },
+  ],
 };
 
-const PRIORITY_OPTIONS: { value: "low" | "medium" | "high"; label: string; color: string }[] = [
-  { value: "low", label: "منخفضة", color: "#067647" },
-  { value: "medium", label: "متوسطة", color: "#B54708" },
-  { value: "high", label: "عالية", color: "#B42318" },
+const TICKET_STATUS: Record<string, { label: string; kind: "success" | "warning" | "info" }> = {
+  open: { label: "مفتوحة", kind: "warning" },
+  replied: { label: "تم الرد", kind: "success" },
+  closed: { label: "مغلقة", kind: "info" },
+};
+
+const PRIORITIES = [
+  { key: "low" as const, label: "عادية" },
+  { key: "medium" as const, label: "متوسطة" },
+  { key: "high" as const, label: "عاجلة" },
 ];
 
-function TicketStatusPill({ status }: { status: string }) {
-  const config = STATUS_CONFIG[status] || STATUS_CONFIG.open;
-  return (
-    <View style={[ticketStyles.statusPill, { backgroundColor: config.bg }]}>
-      <Text style={[ticketStyles.statusPillText, { color: config.color }]}>{config.label}</Text>
-    </View>
-  );
-}
+/* ─────────────────────── نموذج تذكرة الدعم ─────────────────────── */
 
-function TicketDetailView({ ticket, onBack }: { ticket: SupportTicket; onBack: () => void }) {
-  const priorityConfig = PRIORITY_OPTIONS.find((p) => p.value === ticket.priority);
-  return (
-    <>
-      <Pressable onPress={onBack} style={ticketStyles.backRow}>
-        <Ionicons name="chevron-forward" size={20} color={Colors.light.accent} />
-        <Text style={ticketStyles.backText}>العودة للتذاكر</Text>
-      </Pressable>
-      <ContentCard title={ticket.subject}>
-        <View style={ticketStyles.detailMeta}>
-          <TicketStatusPill status={ticket.status} />
-          {priorityConfig && (
-            <View style={[ticketStyles.statusPill, { backgroundColor: priorityConfig.color + "20" }]}>
-              <Text style={[ticketStyles.statusPillText, { color: priorityConfig.color }]}>
-                {priorityConfig.label}
-              </Text>
-            </View>
-          )}
-        </View>
-        <Text style={[styles.paragraph, { marginTop: 12 }]}>{ticket.message}</Text>
-        <Text style={ticketStyles.dateText}>
-          {new Date(ticket.createdAt).toLocaleDateString("ar-SA", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </Text>
-      </ContentCard>
-      {ticket.adminReply && (
-        <ContentCard title="رد الإدارة">
-          <View style={ticketStyles.adminReplyBox}>
-            <Ionicons name="chatbubble" size={16} color={Colors.light.accent} />
-            <Text style={[styles.paragraph, { flex: 1 }]}>{ticket.adminReply}</Text>
-          </View>
-        </ContentCard>
-      )}
-    </>
-  );
-}
-
-function TicketForm({ onCancel, onSuccess }: { onCancel: () => void; onSuccess: () => void }) {
+function TicketForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const createMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/support-tickets", { subject, message, priority });
-    },
+    mutationFn: async () =>
+      apiRequest("POST", "/api/support-tickets", { subject: subject.trim(), message: message.trim(), priority }),
     onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["/api/support-tickets"] });
-      onSuccess();
+      onDone();
     },
     onError: (error: Error) => {
-      Alert.alert("خطأ", error.message || "حدث خطأ أثناء إنشاء التذكرة");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert("تعذّر الإرسال", translateError(error.message));
     },
   });
 
-  const isValid = subject.trim().length > 0 && message.trim().length > 0;
+  function submit() {
+    const next: Record<string, string> = {};
+    if (subject.trim().length < 3) next.subject = "الموضوع مطلوب";
+    if (message.trim().length < 10) next.message = "الرسالة قصيرة — وضّح أكثر";
+    setErrors(next);
+    if (Object.keys(next).length > 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+    createMutation.mutate();
+  }
 
   return (
-    <>
-      <Pressable onPress={onCancel} style={ticketStyles.backRow}>
-        <Ionicons name="chevron-forward" size={20} color={Colors.light.accent} />
-        <Text style={ticketStyles.backText}>العودة للتذاكر</Text>
-      </Pressable>
-      <ContentCard title="تذكرة جديدة">
-        <Text style={ticketStyles.fieldLabel}>الموضوع</Text>
-        <TextInput
-                textContentType="none"
-          style={ticketStyles.input}
-          value={subject}
-          onChangeText={setSubject}
-          placeholder="أدخل موضوع التذكرة"
-          placeholderTextColor={Colors.light.textSecondary}
-          textAlign="right"
-        />
-        <Text style={ticketStyles.fieldLabel}>الرسالة</Text>
-        <TextInput
-                textContentType="none"
-          style={[ticketStyles.input, ticketStyles.textArea]}
-          value={message}
-          onChangeText={setMessage}
-          placeholder="اكتب رسالتك بالتفصيل..."
-          placeholderTextColor={Colors.light.textSecondary}
-          textAlign="right"
-          multiline
-          numberOfLines={5}
-          textAlignVertical="top"
-        />
-        <Text style={ticketStyles.fieldLabel}>الأولوية</Text>
-        <View style={ticketStyles.priorityRow}>
-          {PRIORITY_OPTIONS.map((opt) => (
-            <Pressable
-              key={opt.value}
-              onPress={() => setPriority(opt.value)}
-              style={[
-                ticketStyles.priorityOption,
-                priority === opt.value && { backgroundColor: opt.color + "20", borderColor: opt.color },
-              ]}
-            >
-              <Text
-                style={[
-                  ticketStyles.priorityOptionText,
-                  priority === opt.value && { color: opt.color, fontFamily: "Tajawal_500Medium" },
-                ]}
+    <Card title="تذكرة جديدة" icon="create-outline">
+      <Field
+        label="الموضوع"
+        value={subject}
+        onChangeText={setSubject}
+        placeholder="مثال: استفسار عن طلبي"
+        error={errors.subject}
+      />
+
+      <Field
+        label="الرسالة"
+        value={message}
+        onChangeText={setMessage}
+        placeholder="اكتب تفاصيل استفسارك…"
+        multiline
+        error={errors.message}
+      />
+
+      <View style={s.field}>
+        <Text style={s.fieldLabel}>الأولوية</Text>
+        <View style={s.chipRow}>
+          {PRIORITIES.map((p) => {
+            const active = priority === p.key;
+            return (
+              <Pressable
+                key={p.key}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setPriority(p.key);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                style={[s.chip, active && s.chipActive]}
               >
-                {opt.label}
-              </Text>
-            </Pressable>
-          ))}
+                <Text style={[s.chipText, active && s.chipTextActive]}>{p.label}</Text>
+              </Pressable>
+            );
+          })}
         </View>
-        <Pressable
-          onPress={() => createMutation.mutate()}
-          disabled={!isValid || createMutation.isPending}
-          style={[ticketStyles.submitBtn, (!isValid || createMutation.isPending) && { opacity: 0.5 }]}
-        >
-          {createMutation.isPending ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <>
-              <Ionicons name="send" size={18} color="#fff" />
-              <Text style={ticketStyles.submitBtnText}>إرسال التذكرة</Text>
-            </>
-          )}
-        </Pressable>
-      </ContentCard>
-    </>
+      </View>
+
+      <View style={s.formActions}>
+        <Button label="إلغاء" variant="secondary" onPress={onCancel} style={s.flex} />
+        <Button
+          label="إرسال"
+          onPress={submit}
+          loading={createMutation.isPending}
+          style={s.flex}
+        />
+      </View>
+    </Card>
   );
 }
 
-function ContactContent() {
-  const { user } = useAuth();
-  const [view, setView] = useState<"list" | "form" | "detail">("list");
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+/* ─────────────────────── صفحة التواصل ─────────────────────── */
 
-  const ticketsQuery = useQuery<SupportTicket[]>({
+function ContactPage() {
+  const { user } = useAuth();
+  const [composing, setComposing] = useState(false);
+
+  const { data: tickets, isLoading } = useQuery<SupportTicket[]>({
     queryKey: ["/api/support-tickets"],
     enabled: !!user,
   });
 
-  const tickets = ticketsQuery.data || [];
-
-  if (view === "form" && user) {
+  if (!user) {
     return (
-      <TicketForm
-        onCancel={() => setView("list")}
-        onSuccess={() => setView("list")}
+      <EmptyState
+        icon="chatbubble-ellipses-outline"
+        title="سجّل الدخول للتواصل معنا"
+        body="بتقدر تفتح تذكرة دعم ونتابع معك"
+        action={{ label: "تسجيل الدخول", onPress: () => router.push("/auth") }}
       />
     );
   }
 
-  if (view === "detail" && selectedTicket) {
-    return (
-      <TicketDetailView
-        ticket={selectedTicket}
-        onBack={() => {
-          setSelectedTicket(null);
-          setView("list");
-        }}
-      />
-    );
+  if (composing) {
+    return <TicketForm onDone={() => setComposing(false)} onCancel={() => setComposing(false)} />;
   }
+
+  const list = tickets ?? [];
 
   return (
     <>
-      <ContentCard title="تواصل معنا">
-        <Text style={styles.paragraph}>
-          فريق الدعم متاح لمساعدتك على مدار الساعة. أرسل تذكرة دعم وسنرد عليك في أقرب وقت.
-        </Text>
-      </ContentCard>
+      <Button
+        label="تذكرة دعم جديدة"
+        icon="add-circle-outline"
+        onPress={() => setComposing(true)}
+      />
 
-      {user && (
-        <>
-          <Pressable
-            onPress={() => setView("form")}
-            style={({ pressed }) => [
-              ticketStyles.newTicketBtn,
-              pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-            ]}
-          >
-            <LinearGradient
-              colors={[Colors.light.accent, Colors.light.accentDark]}
-              style={ticketStyles.newTicketGradient}
-            >
-              <Ionicons name="add-circle" size={22} color="#fff" />
-              <Text style={ticketStyles.newTicketText}>تذكرة دعم جديدة</Text>
-            </LinearGradient>
-          </Pressable>
+      {isLoading ? (
+        <ActivityIndicator size="large" color={c.primary} style={{ marginTop: Spacing.xl }} />
+      ) : list.length === 0 ? (
+        <EmptyState
+          icon="chatbubbles-outline"
+          title="ما في تذاكر بعد"
+          body="افتح تذكرة وبنرجعلك بأسرع وقت"
+        />
+      ) : (
+        list.map((ticket) => {
+          const state = TICKET_STATUS[ticket.status] ?? { label: ticket.status, kind: "info" as const };
+          return (
+            <Card key={ticket.id}>
+              <View style={s.ticketHead}>
+                <StatusBadge kind={state.kind} label={state.label} />
+                <Text style={s.ticketSubject} numberOfLines={1}>
+                  {ticket.subject}
+                </Text>
+              </View>
 
-          {ticketsQuery.isLoading ? (
-            <View style={ticketStyles.loadingBox}>
-              <ActivityIndicator color={Colors.light.accent} />
-            </View>
-          ) : tickets.length > 0 ? (
-            <View style={styles.contactList}>
-              {tickets.map((ticket) => (
-                <Pressable
-                  key={ticket.id}
-                  onPress={() => {
-                    setSelectedTicket(ticket);
-                    setView("detail");
-                  }}
-                  style={({ pressed }) => [
-                    styles.contactItem,
-                    pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-                  ]}
-                >
-                  <View style={[styles.contactIconWrap, { backgroundColor: Colors.light.accent + "15" }]}>
-                    <Ionicons name="ticket" size={22} color={Colors.light.accent} />
+              <Text style={s.ticketMessage}>{ticket.message}</Text>
+
+              <Text style={s.ticketDate}>
+                {new Date(ticket.createdAt).toLocaleDateString("ar-EG", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </Text>
+
+              {ticket.adminReply ? (
+                <View style={s.replyBox}>
+                  <View style={s.replyHead}>
+                    <Ionicons name="chatbubble-ellipses" size={15} color={StatusColors.success.fg} />
+                    <Text style={s.replyLabel}>رد الإدارة</Text>
                   </View>
-                  <View style={styles.contactInfo}>
-                    <Text style={styles.contactLabel} numberOfLines={1}>{ticket.subject}</Text>
-                    <View style={ticketStyles.ticketMetaRow}>
-                      <TicketStatusPill status={ticket.status} />
-                      <Text style={ticketStyles.ticketDate}>
-                        {new Date(ticket.createdAt).toLocaleDateString("ar-SA")}
-                      </Text>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-back" size={18} color={Colors.light.textSecondary} />
-                </Pressable>
-              ))}
-            </View>
-          ) : (
-            <View style={ticketStyles.emptyBox}>
-              <Ionicons name="chatbubbles-outline" size={40} color={Colors.light.textSecondary} />
-              <Text style={ticketStyles.emptyText}>لا توجد تذاكر دعم حالياً</Text>
-            </View>
-          )}
-        </>
+                  <Text style={s.replyText}>{ticket.adminReply}</Text>
+                </View>
+              ) : null}
+            </Card>
+          );
+        })
       )}
-
-      <View style={styles.contactList}>
-        <Pressable
-          onPress={() => Linking.openURL("mailto:info@forsa.app")}
-          style={({ pressed }) => [
-            styles.contactItem,
-            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-          ]}
-        >
-          <View style={[styles.contactIconWrap, { backgroundColor: "#175CD3" + "15" }]}>
-            <Ionicons name="mail" size={22} color="#175CD3" />
-          </View>
-          <View style={styles.contactInfo}>
-            <Text style={styles.contactLabel}>البريد الإلكتروني</Text>
-            <Text style={styles.contactValue}>info@forsa.app</Text>
-          </View>
-          <Ionicons name="open-outline" size={18} color={Colors.light.textSecondary} />
-        </Pressable>
-      </View>
-
-      <ContentCard title="ساعات العمل">
-        <FeatureRow icon="time" text="السبت - الخميس: 9 صباحاً - 9 مساءً" color="#10224D" />
-        <FeatureRow icon="time" text="الجمعة: 2 ظهراً - 9 مساءً" color="#155EEF" />
-      </ContentCard>
     </>
   );
 }
 
-function ContentCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.contentCard}>
-      <Text style={styles.contentCardTitle}>{title}</Text>
-      {children}
-    </View>
-  );
-}
-
-function BulletPoint({ text }: { text: string }) {
-  return (
-    <View style={styles.bulletRow}>
-      <View style={styles.bulletDot} />
-      <Text style={styles.bulletText}>{text}</Text>
-    </View>
-  );
-}
-
-function FeatureRow({ icon, text, color }: { icon: keyof typeof Ionicons.glyphMap; text: string; color: string }) {
-  return (
-    <View style={styles.featureRow}>
-      <View style={[styles.featureIconWrap, { backgroundColor: color + "15" }]}>
-        <Ionicons name={icon} size={18} color={color} />
-      </View>
-      <Text style={styles.featureText}>{text}</Text>
-    </View>
-  );
-}
+/* ─────────────────────── الشاشة ─────────────────────── */
 
 export default function InfoScreen() {
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ type: string }>();
   const pageType = (params.type || "about") as PageType;
-  const config = PAGE_CONFIG[pageType] || PAGE_CONFIG.about;
+
+  const sections = pageType === "contact" ? [] : CONTENT[pageType] ?? CONTENT.about;
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={config.colors}
-        style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 + 12 : insets.top + 12 }]}
-      >
-        <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="chevron-forward" size={24} color="#fff" />
-          </Pressable>
-          <Text style={styles.headerTitle}>{config.title}</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.headerIconArea}>
-          <View style={styles.headerIconCircle}>
-            <Ionicons name={config.icon} size={32} color="#fff" />
-          </View>
-        </View>
-        <View style={styles.headerDecor1} />
-        <View style={styles.headerDecor2} />
-      </LinearGradient>
+    <View style={s.root}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <Header title={PAGE_TITLE[pageType] ?? PAGE_TITLE.about} showBack />
 
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: 20,
-          paddingBottom: Platform.OS === "web" ? 84 : 40,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        {pageType === "about" && <AboutContent />}
-        {pageType === "terms" && <TermsContent />}
-        {pageType === "privacy" && <PrivacyContent />}
-        {pageType === "contact" && <ContactContent />}
-      </ScrollView>
+      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={s.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          {pageType === "contact" ? (
+            <ContactPage />
+          ) : (
+            <>
+              {sections.map((section) => (
+                <Card key={section.title} title={section.title}>
+                  {section.kind === "text" && <Text style={s.paragraph}>{section.body}</Text>}
+
+                  {section.kind === "bullets" &&
+                    section.items.map((item, i) => (
+                      <View key={i} style={s.bulletRow}>
+                        <Text style={s.bulletText}>{item}</Text>
+                        <View style={s.bulletDot} />
+                      </View>
+                    ))}
+
+                  {section.kind === "features" &&
+                    section.items.map((item, i) => (
+                      <View key={i} style={s.featureRow}>
+                        <Text style={s.featureText}>{item.text}</Text>
+                        <View style={s.featureIcon}>
+                          <Ionicons name={item.icon} size={18} color={c.primary} />
+                        </View>
+                      </View>
+                    ))}
+                </Card>
+              ))}
+
+              {pageType === "about" && (
+                <Text style={s.version}>فرصة · الإصدار 1.0.2</Text>
+              )}
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  header: {
-    paddingBottom: 30,
-    paddingHorizontal: 16,
-    overflow: "hidden",
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 20,
-    color: "#FFFFFF",
-    writingDirection: "rtl",
-    textAlign: "center",
-  },
-  headerIconArea: {
-    alignItems: "center",
-    zIndex: 2,
-  },
-  headerIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  headerDecor1: {
-    position: "absolute",
-    top: -30,
-    right: -20,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255,255,255,0.05)",
-  },
-  headerDecor2: {
-    position: "absolute",
-    bottom: -40,
-    left: -30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  contentCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 14,
-    shadowColor: "#10224D",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  contentCardTitle: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 17,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginBottom: 14,
-  },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.background },
+  flex: { flex: 1 },
+  content: { padding: Spacing.screen, paddingBottom: 40, gap: Spacing.md },
+
   paragraph: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
     textAlign: "right",
     writingDirection: "rtl",
     lineHeight: 24,
   },
-  bulletRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    marginBottom: 10,
-  },
+
+  bulletRow: { flexDirection: "row", alignItems: "flex-start", gap: Spacing.sm },
   bulletDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.light.accent,
+    backgroundColor: c.primary,
     marginTop: 8,
   },
   bulletText: {
     flex: 1,
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
     textAlign: "right",
     writingDirection: "rtl",
-    lineHeight: 22,
+    lineHeight: 23,
   },
-  featureRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
-  },
-  featureIconWrap: {
+
+  featureRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
+  featureIcon: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: Radius.button,
+    backgroundColor: c.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   featureText: {
     flex: 1,
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 14,
-    color: Colors.light.text,
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.navy,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  versionBox: {
-    alignItems: "center",
-    paddingVertical: 20,
-    gap: 4,
-  },
-  versionLabel: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-  versionValue: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 16,
-    color: Colors.light.accent,
-  },
-  contactList: {
-    gap: 10,
-    marginBottom: 14,
-  },
-  contactItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 16,
-    gap: 14,
-    shadowColor: "#10224D",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  contactIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactLabel: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 14,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  contactValue: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginTop: 2,
-  },
-});
 
-const ticketStyles = StyleSheet.create({
-  statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-  },
-  statusPillText: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 11,
-  },
-  backRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 14,
-  },
-  backText: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 14,
-    color: Colors.light.accent,
+  version: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textMuted,
+    textAlign: "center",
     writingDirection: "rtl",
   },
-  detailMeta: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 4,
-  },
-  dateText: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginTop: 14,
-  },
-  adminReplyBox: {
-    flexDirection: "row",
-    gap: 10,
-    backgroundColor: Colors.light.accent + "08",
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.light.accent + "20",
-  },
+
+  field: { gap: 6 },
   fieldLabel: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 13,
-    color: Colors.light.text,
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.navy,
     textAlign: "right",
     writingDirection: "rtl",
-    marginBottom: 6,
-    marginTop: 10,
   },
-  input: {
-    backgroundColor: Colors.light.inputBg,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 14,
-    color: Colors.light.text,
-    writingDirection: "rtl",
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  textArea: {
-    minHeight: 120,
-  },
-  priorityRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 4,
-  },
-  priorityOption: {
+  chipRow: { flexDirection: "row", gap: Spacing.sm },
+  chip: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.inputBg,
-  },
-  priorityOptionText: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-  submitBtn: {
-    flexDirection: "row",
+    height: 42,
+    borderRadius: Radius.button,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    backgroundColor: Colors.light.accent,
-    borderRadius: 16,
-    paddingVertical: 14,
-    marginTop: 20,
+    backgroundColor: c.background,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
-  submitBtnText: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 15,
-    color: "#fff",
+  chipActive: { backgroundColor: c.primary, borderColor: c.primary },
+  chipText: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    writingDirection: "rtl",
   },
-  newTicketBtn: {
-    marginBottom: 14,
-    borderRadius: 18,
-    overflow: "hidden",
+  chipTextActive: { color: c.surface },
+  formActions: { flexDirection: "row", gap: Spacing.md },
+
+  ticketHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: Spacing.sm },
+  ticketSubject: {
+    flex: 1,
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.caption,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
-  newTicketGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 16,
-    borderRadius: 18,
-  },
-  newTicketText: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 15,
-    color: "#fff",
-  },
-  loadingBox: {
-    paddingVertical: 30,
-    alignItems: "center",
-  },
-  emptyBox: {
-    alignItems: "center",
-    paddingVertical: 30,
-    gap: 10,
-    marginBottom: 14,
-  },
-  emptyText: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-  },
-  ticketMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 6,
+  ticketMessage: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 22,
   },
   ticketDate: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 11,
-    color: Colors.light.textSecondary,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textMuted,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  replyBox: {
+    backgroundColor: StatusColors.success.bg,
+    borderRadius: Radius.button,
+    padding: Spacing.md,
+    gap: 6,
+  },
+  replyHead: { flexDirection: "row", alignItems: "center", gap: 6 },
+  replyLabel: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.label,
+    color: StatusColors.success.fg,
+    writingDirection: "rtl",
+  },
+  replyText: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: StatusColors.success.fg,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 22,
   },
 });

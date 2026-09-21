@@ -5,9 +5,10 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  TextInput,
+  type TextInputProps,
   type StyleProp,
   type ViewStyle,
-  type TextStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -304,6 +305,142 @@ export function EmptyState({
   );
 }
 
+/* ────────────────────────── حقل إدخال ────────────────────────── */
+
+interface FieldProps {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  /** رسالة خطأ تحت الحقل — بتلوّن الإطار أحمر */
+  error?: string;
+  hint?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  secureTextEntry?: boolean;
+  keyboardType?: TextInputProps["keyboardType"];
+  autoCapitalize?: TextInputProps["autoCapitalize"];
+  multiline?: boolean;
+  editable?: boolean;
+  maxLength?: number;
+  /** الأرقام واللاتينية ثابتة الاتجاه حتى ما تنعكس ضمن النص العربي */
+  ltr?: boolean;
+  onSubmitEditing?: () => void;
+  returnKeyType?: TextInputProps["returnKeyType"];
+  testID?: string;
+}
+
+/** حقل إدخال بعنوان ثابت فوقه — ارتفاع 52 وزوايا 12 */
+export function Field({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  error,
+  hint,
+  icon,
+  secureTextEntry = false,
+  keyboardType,
+  autoCapitalize = "none",
+  multiline = false,
+  editable = true,
+  maxLength,
+  ltr = false,
+  onSubmitEditing,
+  returnKeyType,
+  testID,
+}: FieldProps) {
+  const [hidden, setHidden] = React.useState(secureTextEntry);
+  const [focused, setFocused] = React.useState(false);
+
+  return (
+    <View style={s.field}>
+      <Text style={s.fieldLabel}>{label}</Text>
+
+      <View
+        style={[
+          s.fieldBox,
+          multiline && s.fieldBoxMultiline,
+          focused && s.fieldBoxFocused,
+          !!error && s.fieldBoxError,
+          !editable && s.fieldBoxDisabled,
+        ]}
+      >
+        {icon && <Ionicons name={icon} size={19} color={error ? StatusColors.error.fg : c.textMuted} />}
+
+        <TextInput
+          testID={testID}
+          value={value}
+          onChangeText={onChangeText}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={placeholder}
+          placeholderTextColor={c.textMuted}
+          secureTextEntry={hidden}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          multiline={multiline}
+          editable={editable}
+          maxLength={maxLength}
+          onSubmitEditing={onSubmitEditing}
+          returnKeyType={returnKeyType}
+          accessibilityLabel={label}
+          style={[
+            s.fieldInput,
+            multiline && s.fieldInputMultiline,
+            ltr && { textAlign: "left", writingDirection: "ltr" },
+          ]}
+        />
+
+        {secureTextEntry && (
+          <Pressable
+            onPress={() => setHidden((h) => !h)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? "إظهار كلمة المرور" : "إخفاء كلمة المرور"}
+          >
+            <Ionicons name={hidden ? "eye-outline" : "eye-off-outline"} size={19} color={c.textMuted} />
+          </Pressable>
+        )}
+      </View>
+
+      {error ? (
+        <View style={s.fieldMsg}>
+          <Ionicons name="alert-circle" size={13} color={StatusColors.error.fg} />
+          <Text style={[s.fieldMsgText, { color: StatusColors.error.fg }]}>{error}</Text>
+        </View>
+      ) : hint ? (
+        <Text style={s.fieldHint}>{hint}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+/* ────────────────────────── بطاقة قسم ────────────────────────── */
+
+export function Card({
+  title,
+  icon,
+  children,
+  style,
+}: {
+  title?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <View style={[s.card, style]}>
+      {title ? (
+        <View style={s.cardHead}>
+          {icon && <Ionicons name={icon} size={19} color={c.primary} />}
+          <Text style={s.cardTitle}>{title}</Text>
+        </View>
+      ) : null}
+      {children}
+    </View>
+  );
+}
+
 /* ────────────────────────── بطاقة إحصاء ────────────────────────── */
 
 /** مربّع رقم + تسمية + أيقونة ملوّنة — يستخدم بالحساب ولوحة الإدارة */
@@ -526,6 +663,67 @@ const s = StyleSheet.create({
     backgroundColor: c.primarySoft,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  field: { gap: 6 },
+  fieldLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  fieldBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    height: Sizing.inputHeight,
+    borderRadius: Radius.input,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  fieldBoxMultiline: { height: undefined, minHeight: 96, alignItems: "flex-start", paddingVertical: Spacing.md },
+  fieldBoxFocused: { borderColor: c.primary, backgroundColor: c.primarySoft },
+  fieldBoxError: { borderColor: StatusColors.error.fg, backgroundColor: StatusColors.error.bg },
+  fieldBoxDisabled: { backgroundColor: StatusColors.disabled.bg, borderColor: c.borderSubtle },
+  fieldInput: {
+    flex: 1,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.body,
+    color: c.text,
+    textAlign: "right",
+    writingDirection: "rtl",
+    padding: 0,
+  },
+  fieldInputMultiline: { textAlignVertical: "top", minHeight: 72 },
+  fieldMsg: { flexDirection: "row", alignItems: "center", gap: 4 },
+  fieldMsgText: { fontFamily: Fonts.regular, fontSize: FontSize.label, writingDirection: "rtl", flex: 1, textAlign: "right" },
+  fieldHint: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textMuted,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+
+  card: {
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
+  },
+  cardHead: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
+  cardTitle: {
+    flex: 1,
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h3,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
 
   statTile: {

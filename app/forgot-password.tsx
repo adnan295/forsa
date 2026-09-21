@@ -2,76 +2,103 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
-  Pressable,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Pressable,
 } from "react-native";
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
+import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
+import { Logo, Button, Field } from "@/components/ui";
 import { apiRequest } from "@/lib/query-client";
+import { translateError } from "@/lib/errors";
 
-type Step = "email" | "code" | "newPassword" | "done";
+const c = Colors.light;
+
+type Step = "email" | "code" | "password" | "done";
+
+const STEP_COPY: Record<Step, { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }> = {
+  email: {
+    icon: "mail-outline",
+    title: "استعادة كلمة السر",
+    body: "أدخل بريدك الإلكتروني ومنبعتلك رمز تأكيد",
+  },
+  code: {
+    icon: "key-outline",
+    title: "أدخل رمز التأكيد",
+    body: "بعتنالك رمز من 6 أرقام — تحقّق من بريدك",
+  },
+  password: {
+    icon: "lock-closed-outline",
+    title: "كلمة سر جديدة",
+    body: "اختر كلمة سر قوية ما استخدمتها قبل",
+  },
+  done: {
+    icon: "checkmark-circle",
+    title: "تم التغيير",
+    body: "صار فيك تسجّل دخولك بكلمة السر الجديدة",
+  },
+};
 
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
+
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  /** لما يفشل إرسال الإيميل بيرجّع الخادم الرمز حتى نعرضه */
   const [fallbackCode, setFallbackCode] = useState<string | null>(null);
 
-  async function handleSendCode() {
+  async function sendCode() {
     if (!email.trim()) {
-      Alert.alert("خطأ", "يرجى إدخال البريد الإلكتروني");
+      setErrors({ email: "البريد الإلكتروني مطلوب" });
       return;
     }
+    setErrors({});
     setLoading(true);
     try {
       const res = await apiRequest("POST", "/api/auth/forgot-password", { email: email.trim() });
       const data = await res.json();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (data.emailFailed && data.code) {
-        setFallbackCode(data.code);
-      }
+      if (data.emailFailed && data.code) setFallbackCode(data.code);
       setStep("code");
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("خطأ", error.message || "حدث خطأ");
+      Alert.alert("تعذّر الإرسال", translateError(error?.message));
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleVerifyAndReset() {
-    if (!code.trim()) {
-      Alert.alert("خطأ", "يرجى إدخال رمز التأكيد");
+  function goToPassword() {
+    if (code.trim().length < 4) {
+      setErrors({ code: "أدخل الرمز كاملاً" });
       return;
     }
-    if (step === "code") {
-      setStep("newPassword");
-      return;
-    }
-    if (!newPassword.trim() || newPassword.length < 6) {
-      Alert.alert("خطأ", "كلمة المرور يجب أن تكون 6 أحرف على الأقل");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      Alert.alert("خطأ", "كلمتا المرور غير متطابقتين");
+    setErrors({});
+    setStep("password");
+  }
+
+  async function resetPassword() {
+    const next: Record<string, string> = {};
+    if (newPassword.length < 6) next.newPassword = "كلمة السر لازم 6 أحرف على الأقل";
+    if (newPassword !== confirmPassword) next.confirmPassword = "كلمتا السر مو متطابقتين";
+    if (Object.keys(next).length > 0) {
+      setErrors(next);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
 
+    setErrors({});
     setLoading(true);
     try {
       await apiRequest("POST", "/api/auth/reset-password", {
@@ -83,345 +110,201 @@ export default function ForgotPasswordScreen() {
       setStep("done");
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("خطأ", error.message || "الرمز غير صحيح أو منتهي الصلاحية");
+      Alert.alert("تعذّر التغيير", translateError(error?.message));
+      // الرمز غالباً هو المشكلة — منرجّعه للمستخدم ليصححه
+      setStep("code");
     } finally {
       setLoading(false);
     }
   }
 
+  const copy = STEP_COPY[step];
+  const isDone = step === "done";
+
   return (
-    <LinearGradient colors={["#10224D", "#1B3A7A", "#155EEF"]} style={styles.gradient}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+    <View style={s.root}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <ScrollView
-          contentContainerStyle={[
-            styles.container,
-            {
-              paddingTop: Platform.OS === "web" ? 67 + 40 : insets.top + 40,
-              paddingBottom: Platform.OS === "web" ? 34 + 20 : insets.bottom + 20,
-            },
-          ]}
+          contentContainerStyle={[s.content, { paddingTop: insets.top + Spacing.xxl }]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-forward" size={28} color="rgba(255,255,255,0.8)" />
+          <Pressable
+            onPress={() => (router.canGoBack() ? router.back() : router.replace("/auth"))}
+            style={s.backBtn}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="رجوع"
+          >
+            <Ionicons name="chevron-back" size={24} color={c.textMuted} />
           </Pressable>
 
-          <View style={styles.logoArea}>
-            <View style={styles.iconCircle}>
-              <Ionicons
-                name={step === "done" ? "checkmark-circle" : "lock-open"}
-                size={36}
-                color="#fff"
-              />
-            </View>
-            <Text style={styles.logoText}>
-              {step === "done" ? "تم بنجاح!" : "استعادة كلمة المرور"}
-            </Text>
-            <Text style={styles.tagline}>
-              {step === "email" && "أدخل بريدك الإلكتروني لإرسال رمز التأكيد"}
-              {step === "code" && "أدخل الرمز المكون من 6 أرقام المرسل لبريدك"}
-              {step === "newPassword" && "أدخل كلمة المرور الجديدة"}
-              {step === "done" && "تم تغيير كلمة المرور بنجاح"}
-            </Text>
+          <View style={s.brand}>
+            <Logo size={30} />
           </View>
 
-          <View style={styles.form}>
+          <View style={[s.stepIcon, isDone && { backgroundColor: StatusColors.success.bg }]}>
+            <Ionicons
+              name={copy.icon}
+              size={34}
+              color={isDone ? StatusColors.success.fg : c.primary}
+            />
+          </View>
+
+          <Text style={s.title}>{copy.title}</Text>
+          <Text style={s.subtitle}>{copy.body}</Text>
+
+          {fallbackCode && step === "code" && (
+            <View style={s.fallbackBox}>
+              <Ionicons name="warning-outline" size={17} color={StatusColors.warning.fg} />
+              <View style={s.flex}>
+                <Text style={s.fallbackLabel}>تعذّر إرسال الإيميل — استخدم هذا الرمز:</Text>
+                <Text style={s.fallbackCode}>{fallbackCode}</Text>
+              </View>
+            </View>
+          )}
+
+          <View style={s.form}>
             {step === "email" && (
               <>
-                <View style={styles.inputGroup}>
-                  <Ionicons name="mail-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
-                  <TextInput
-                textContentType="none"
-                    style={styles.input}
-                    placeholder="البريد الإلكتروني"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    autoCorrect={false}
-                  />
-                </View>
-                <Pressable
-                  onPress={handleSendCode}
-                  disabled={loading}
-                  style={({ pressed }) => [
-                    styles.submitBtn,
-                    pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                    loading && { opacity: 0.6 },
-                  ]}
-                >
-                  <View style={styles.submitInner}>
-                    {loading ? (
-                      <ActivityIndicator color={Colors.light.accent} />
-                    ) : (
-                      <Text style={styles.submitText}>إرسال رمز التأكيد</Text>
-                    )}
-                  </View>
-                </Pressable>
+                <Field
+                  label="البريد الإلكتروني"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="name@example.com"
+                  icon="mail-outline"
+                  keyboardType="email-address"
+                  error={errors.email}
+                  ltr
+                />
+                <Button label="إرسال الرمز" onPress={sendCode} loading={loading} />
               </>
             )}
 
             {step === "code" && (
               <>
-                {fallbackCode && (
-                  <View style={styles.fallbackBox}>
-                    <Ionicons name="warning" size={18} color="#754500" />
-                    <Text style={styles.fallbackText}>
-                      تعذّر إرسال البريد الإلكتروني، رمز التحقق هو:
-                    </Text>
-                    <Text style={styles.fallbackCode}>{fallbackCode}</Text>
-                  </View>
-                )}
-                <View style={styles.inputGroup}>
-                  <Ionicons name="keypad-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
-                  <TextInput
-                textContentType="none"
-                    style={[styles.input, { textAlign: "center", letterSpacing: 8, fontSize: 24 }]}
-                    placeholder="------"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
-                    value={code}
-                    onChangeText={(t) => setCode(t.replace(/\D/g, "").slice(0, 6))}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                  />
-                </View>
-                <Pressable
-                  onPress={handleVerifyAndReset}
-                  disabled={loading || code.length < 6}
-                  style={({ pressed }) => [
-                    styles.submitBtn,
-                    pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                    (loading || code.length < 6) && { opacity: 0.6 },
-                  ]}
-                >
-                  <View style={styles.submitInner}>
-                    <Text style={styles.submitText}>التالي</Text>
-                  </View>
-                </Pressable>
-                <Pressable onPress={handleSendCode} style={styles.resendBtn}>
-                  <Text style={styles.resendText}>إعادة إرسال الرمز</Text>
+                <Field
+                  label="رمز التأكيد"
+                  value={code}
+                  onChangeText={setCode}
+                  placeholder="000000"
+                  icon="key-outline"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  error={errors.code}
+                  ltr
+                />
+                <Button label="متابعة" onPress={goToPassword} />
+                <Pressable onPress={sendCode} disabled={loading} style={s.linkBtn}>
+                  <Text style={s.linkText}>إعادة إرسال الرمز</Text>
                 </Pressable>
               </>
             )}
 
-            {step === "newPassword" && (
+            {step === "password" && (
               <>
-                <View style={styles.inputGroup}>
-                  <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
-                  <TextInput
-                textContentType="none"
-                    style={[styles.input, { flex: 1 }]}
-                    placeholder="كلمة المرور الجديدة"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                  />
-                  <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                    <Ionicons
-                      name={showPassword ? "eye-off-outline" : "eye-outline"}
-                      size={20}
-                      color="rgba(255,255,255,0.5)"
-                    />
-                  </Pressable>
-                </View>
-                <View style={styles.inputGroup}>
-                  <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.5)" style={styles.inputIcon} />
-                  <TextInput
-                textContentType="none"
-                    style={styles.input}
-                    placeholder="تأكيد كلمة المرور"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                  />
-                </View>
-                <Pressable
-                  onPress={handleVerifyAndReset}
-                  disabled={loading}
-                  style={({ pressed }) => [
-                    styles.submitBtn,
-                    pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                    loading && { opacity: 0.6 },
-                  ]}
-                >
-                  <View style={styles.submitInner}>
-                    {loading ? (
-                      <ActivityIndicator color={Colors.light.accent} />
-                    ) : (
-                      <Text style={styles.submitText}>تغيير كلمة المرور</Text>
-                    )}
-                  </View>
-                </Pressable>
+                <Field
+                  label="كلمة السر الجديدة"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="••••••••"
+                  icon="lock-closed-outline"
+                  secureTextEntry
+                  error={errors.newPassword}
+                  hint="6 أحرف على الأقل"
+                  ltr
+                />
+                <Field
+                  label="تأكيد كلمة السر"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="••••••••"
+                  icon="lock-closed-outline"
+                  secureTextEntry
+                  error={errors.confirmPassword}
+                  ltr
+                />
+                <Button label="تغيير كلمة السر" onPress={resetPassword} loading={loading} />
               </>
             )}
 
-            {step === "done" && (
-              <Pressable
-                onPress={() => router.replace("/auth")}
-                style={({ pressed }) => [
-                  styles.submitBtn,
-                  pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                ]}
-              >
-                <View style={styles.submitInner}>
-                  <Text style={styles.submitText}>تسجيل الدخول</Text>
-                </View>
-              </Pressable>
-            )}
-
-            {step !== "done" && (
-              <Pressable onPress={() => router.back()} style={styles.switchBtn}>
-                <Text style={styles.switchText}>
-                  العودة لتسجيل الدخول
-                </Text>
-              </Pressable>
+            {isDone && (
+              <Button label="تسجيل الدخول" onPress={() => router.replace("/auth")} />
             )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.background },
   flex: { flex: 1 },
-  gradient: { flex: 1 },
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    justifyContent: "center",
+  content: {
+    paddingHorizontal: Spacing.screen,
+    paddingBottom: Spacing.xxl,
+    gap: Spacing.lg,
   },
-  backBtn: {
-    position: "absolute" as const,
-    top: 0,
-    end: 0,
-    padding: 8,
-  },
-  logoArea: {
-    alignItems: "center",
-    marginBottom: 48,
-  },
-  iconCircle: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+  backBtn: { alignSelf: "flex-start", width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  brand: { alignItems: "center" },
+
+  stepIcon: {
+    alignSelf: "center",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: c.primarySoft,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
   },
-  logoText: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 26,
-    color: "#FFFFFF",
-    marginBottom: 8,
-    writingDirection: "rtl",
-  },
-  tagline: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.6)",
-    writingDirection: "rtl",
+  title: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h2,
+    color: c.navy,
     textAlign: "center",
-    lineHeight: 22,
+    writingDirection: "rtl",
   },
-  form: {
-    gap: 16,
+  subtitle: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "center",
+    writingDirection: "rtl",
+    lineHeight: 23,
   },
-  inputGroup: {
+
+  form: { gap: Spacing.lg },
+  linkBtn: { alignSelf: "center", paddingVertical: Spacing.sm },
+  linkText: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.primary,
+    writingDirection: "rtl",
+  },
+
+  fallbackBox: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.12)",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: 16,
-    height: 56,
+    gap: Spacing.sm,
+    backgroundColor: StatusColors.warning.bg,
+    borderRadius: Radius.card,
+    padding: Spacing.md,
   },
-  inputIcon: {
-    marginStart: 12,
-  },
-  input: {
-    flex: 1,
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 16,
-    color: "#FFFFFF",
-    height: 56,
+  fallbackLabel: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: StatusColors.warning.fg,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  eyeBtn: {
-    padding: 4,
-  },
-  submitBtn: {
-    marginTop: 8,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  submitInner: {
-    height: 56,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-  },
-  submitText: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 17,
-    color: Colors.light.accent,
-    writingDirection: "rtl",
-  },
-  switchBtn: {
-    alignItems: "center",
-    marginTop: 8,
-    padding: 8,
-  },
-  switchText: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.6)",
-    writingDirection: "rtl",
-  },
-  resendBtn: {
-    alignItems: "center",
-    padding: 8,
-  },
-  resendText: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
-    writingDirection: "rtl",
-    textDecorationLine: "underline",
-  },
-  fallbackBox: {
-    backgroundColor: "#FFF4D6",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#B54708",
-  },
-  fallbackText: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 13,
-    color: "#754500",
-    textAlign: "center",
-    writingDirection: "rtl" as const,
-  },
   fallbackCode: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 28,
-    color: "#754500",
-    letterSpacing: 6,
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h2,
+    color: StatusColors.warning.fg,
+    letterSpacing: 4,
+    writingDirection: "ltr",
+    textAlign: "center",
+    marginTop: 4,
   },
 });

@@ -1,235 +1,194 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   Pressable,
-  Alert,
   ActivityIndicator,
+  Alert,
   Platform,
   Modal,
-  Image,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import Colors from "@/constants/colors";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@/lib/auth-context";
 import { queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
+import { translateError } from "@/lib/errors";
+import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
+import { Header, Button, Card, StatusBadge, InfoNote } from "@/components/ui";
 import type { Order, OrderItem, Ticket } from "@shared/schema";
 
-type OrderDetail = Order & { items: OrderItem[]; tickets: Ticket[] };
-import * as Clipboard from "expo-clipboard";
-import { LinearGradient } from "expo-linear-gradient";
+const c = Colors.light;
 
-const SHIPPING_STEPS = [
-  { key: "pending", label: "الطلب مستلم" },
-  { key: "processing", label: "قيد التجهيز" },
-  { key: "shipped", label: "تم الشحن" },
-  { key: "delivered", label: "تم التسليم" },
+type OrderDetail = Order & { items: OrderItem[]; tickets: Ticket[] };
+
+/** مراحل الشحن بالترتيب */
+const SHIPPING_STEPS: { key: string; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: "pending", label: "تم الاستلام", icon: "receipt-outline" },
+  { key: "processing", label: "جاري التجهيز", icon: "construct-outline" },
+  { key: "shipped", label: "تم الشحن", icon: "airplane-outline" },
+  { key: "delivered", label: "تم التسليم", icon: "checkmark-done-outline" },
 ];
 
-const SHIPPING_ORDER = ["pending", "processing", "shipped", "delivered"];
+const PAYMENT_STATE: Record<
+  string,
+  { label: string; kind: "success" | "warning" | "error" | "info" }
+> = {
+  confirmed: { label: "تم تأكيد الدفع", kind: "success" },
+  pending_review: { label: "قيد المراجعة", kind: "warning" },
+  pending_payment: { label: "بانتظار الدفع", kind: "warning" },
+  rejected: { label: "دفع مرفوض", kind: "error" },
+};
 
-function getPaymentStatusConfig(status: string) {
-  switch (status) {
-    case "pending_payment":
-      return {
-        icon: "time" as const,
-        color: Colors.light.warning,
-        bg: "rgba(243, 156, 18, 0.08)",
-        borderColor: "rgba(243, 156, 18, 0.2)",
-        label: "في انتظار الدفع",
-      };
-    case "pending_review":
-      return {
-        icon: "hourglass" as const,
-        color: "#175CD3",
-        bg: "rgba(52, 152, 219, 0.08)",
-        borderColor: "rgba(52, 152, 219, 0.2)",
-        label: "قيد المراجعة",
-      };
-    case "confirmed":
-      return {
-        icon: "checkmark-circle" as const,
-        color: Colors.light.success,
-        bg: "rgba(46, 204, 113, 0.08)",
-        borderColor: "rgba(46, 204, 113, 0.2)",
-        label: "تم التأكيد",
-      };
-    case "rejected":
-      return {
-        icon: "close-circle" as const,
-        color: Colors.light.danger,
-        bg: "rgba(231, 76, 60, 0.08)",
-        borderColor: "rgba(231, 76, 60, 0.2)",
-        label: "مرفوض",
-      };
-    default:
-      return {
-        icon: "help-circle" as const,
-        color: Colors.light.textSecondary,
-        bg: "rgba(90, 107, 130, 0.08)",
-        borderColor: "rgba(90, 107, 130, 0.2)",
-        label: "غير معروف",
-      };
-  }
-}
-
-function formatImageUrl(url: string) {
-  return buildMediaUrl(url) ?? url;
+/** يضغط الصورة على الويب قبل الرفع لتقليل حجم الطلب */
+function compressImageWeb(file: File, maxWidth: number): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new (window as any).Image() as HTMLImageElement;
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+      if (w > maxWidth) {
+        h = Math.round((h * maxWidth) / w);
+        w = maxWidth;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => resolve(blob ? new File([blob], "receipt.jpg", { type: "image/jpeg" }) : file),
+        "image/jpeg",
+        0.82
+      );
+    };
+    img.src = url;
+  });
 }
 
 export default function OrderDetailScreen() {
-  const { id } = useLocalSearchParams<{
-    id: string;
-  }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<any>(null);
-  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
-  const {
-    data: order,
-    isLoading,
-  } = useQuery<OrderDetail>({
+  const { data: order, isLoading } = useQuery<OrderDetail>({
     queryKey: ["/api/orders", id],
     refetchInterval: 10000,
   });
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
-      const baseUrl = getApiUrl();
-      const url = new URL(`/api/orders/${id}/receipt`, baseUrl);
+      const url = new URL(`/api/orders/${id}/receipt`, getApiUrl());
+      const formData = new FormData();
 
       if (Platform.OS === "web") {
         if (!selectedFile) throw new Error("لم يتم اختيار ملف");
-        const formData = new FormData();
         formData.append("receipt", selectedFile);
-        const res = await fetch(url.toString(), {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || "فشل رفع الإيصال");
-        }
-        return res.json();
       } else {
         if (!selectedImage) throw new Error("لم يتم اختيار صورة");
-        const formData = new FormData();
         formData.append("receipt", {
           uri: selectedImage,
           name: "receipt.jpg",
           type: "image/jpeg",
         } as any);
-        const res = await fetch(url.toString(), {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || "فشل رفع الإيصال");
-        }
-        return res.json();
       }
+
+      const res = await fetch(url.toString(), {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error((await res.text()) || "فشل رفع الإيصال");
+      return res.json();
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedImage(null);
       setSelectedFile(null);
       queryClient.invalidateQueries({ queryKey: ["/api/orders", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
     },
     onError: (err: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("خطأ", err.message || "فشل رفع الإيصال");
+      Alert.alert("تعذّر الرفع", translateError(err?.message));
     },
   });
 
-  const compressImageWeb = (file: File, maxWidth: number): Promise<File> => {
-    return new Promise((resolve) => {
-      const img = new (window as any).Image() as HTMLImageElement;
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        let w = img.naturalWidth;
-        let h = img.naturalHeight;
-        if (w > maxWidth) {
-          h = Math.round(h * maxWidth / w);
-          w = maxWidth;
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(new File([blob], "receipt.jpg", { type: "image/jpeg" }));
-          } else {
-            resolve(file);
-          }
-        }, "image/jpeg", 0.82);
-      };
-      img.src = url;
-    });
-  };
-
-  const pickImage = async () => {
+  async function pickImage() {
     if (Platform.OS === "web") {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "image/*";
       input.onchange = async (e: any) => {
         const file = e.target.files?.[0];
-        if (file) {
-          const compressed = await compressImageWeb(file, 1200);
-          setSelectedFile(compressed);
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            setSelectedImage(ev.target?.result as string);
-          };
-          reader.readAsDataURL(compressed);
-        }
+        if (!file) return;
+        const compressed = await compressImageWeb(file, 1200);
+        setSelectedFile(compressed);
+        const reader = new FileReader();
+        reader.onload = (ev) => setSelectedImage(ev.target?.result as string);
+        reader.readAsDataURL(compressed);
       };
       input.click();
-    } else {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.82,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setSelectedImage(result.assets[0].uri);
-      }
+      return;
     }
-  };
 
-  const copyTrackingNumber = async (num: string) => {
-    await Clipboard.setStringAsync(num);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert("تم النسخ", "تم نسخ رقم التتبع");
-  };
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.82,
+    });
+    if (!result.canceled && result.assets[0]) setSelectedImage(result.assets[0].uri);
+  }
 
-  if (isLoading || !order) {
+  if (isLoading) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={Colors.light.accent} />
+      <View style={s.root}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Header title="تفاصيل الطلب" showBack />
+        <View style={s.loading}>
+          <ActivityIndicator size="large" color={c.primary} />
+        </View>
       </View>
     );
   }
 
-  const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
-  const showReceiptUpload = order.paymentStatus === "rejected";
+  if (!order || (user && order.userId !== user.id)) {
+    return (
+      <View style={s.root}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Header title="تفاصيل الطلب" showBack />
+        <View style={s.loading}>
+          <Ionicons name="alert-circle-outline" size={44} color={c.textMuted} />
+          <Text style={s.notFound}>الطلب غير موجود</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const payment = PAYMENT_STATE[order.paymentStatus] ?? {
+    label: order.paymentStatus,
+    kind: "info" as const,
+  };
+  const items = order.items ?? [];
+  const tickets = order.tickets ?? [];
+  const totalPieces = items.reduce((sum, i) => sum + i.quantity, 0);
+  const shippingIndex = SHIPPING_STEPS.findIndex((st) => st.key === order.shippingStatus);
   const isCancelled = order.shippingStatus === "cancelled";
-  const shippingIndex = SHIPPING_ORDER.indexOf(order.shippingStatus);
+  const needsReceipt =
+    order.paymentMethod === "bank_transfer" && order.paymentStatus === "pending_payment";
+  const receiptUrl = buildMediaUrl(order.receiptUrl);
+
   const orderDate = new Date(order.createdAt).toLocaleDateString("ar-EG", {
     year: "numeric",
     month: "long",
@@ -237,887 +196,471 @@ export default function OrderDetailScreen() {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const items = order.items ?? [];
-  const totalPieces = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={["#10224D", "#1B3A7A"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[
-          styles.header,
-          { paddingTop: Platform.OS === "web" ? 67 : insets.top },
-        ]}
-      >
-        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/tickets')} style={styles.backButton}>
-          <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
-        </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>تفاصيل الطلب</Text>
-          <Text style={styles.headerOrderId}>#{order.id.slice(0, 8)}</Text>
-        </View>
-        <View style={{ width: 40 }} />
-      </LinearGradient>
+    <View style={s.root}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <Header title="تفاصيل الطلب" showBack />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          padding: 16,
-          paddingBottom: Platform.OS === "web" ? 50 : Math.max(insets.bottom, 16) + 16,
-        }}
+        contentContainerStyle={[s.content, { paddingBottom: Math.max(insets.bottom, Spacing.lg) + 24 }]}
       >
-        <View
-          style={[
-            styles.statusCard,
-            {
-              backgroundColor: paymentConfig.bg,
-              borderColor: paymentConfig.borderColor,
-            },
-          ]}
-        >
-          <View
-            style={[
-              styles.statusIconCircle,
-              { backgroundColor: paymentConfig.color + "18" },
-            ]}
-          >
-            <Ionicons
-              name={paymentConfig.icon}
-              size={36}
-              color={paymentConfig.color}
-            />
-          </View>
-          <Text style={[styles.statusLabel, { color: paymentConfig.color }]}>
-            {paymentConfig.label}
-          </Text>
-          {order.paymentStatus === "rejected" && order.rejectionReason && (
-            <View style={styles.rejectionBox}>
-              <Ionicons
-                name="information-circle"
-                size={18}
-                color={Colors.light.danger}
-              />
-              <Text style={styles.rejectionText}>{order.rejectionReason}</Text>
-            </View>
-          )}
-        </View>
-
-        {showReceiptUpload && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>رفع إيصال الدفع</Text>
-            {order.paymentStatus === "rejected" && (
-              <Text style={styles.reuploadHint}>يمكنك رفع إيصال جديد</Text>
-            )}
-
-            {!selectedImage ? (
-              <Pressable onPress={pickImage} style={styles.uploadArea}>
-                <Ionicons
-                  name="camera"
-                  size={40}
-                  color={Colors.light.accent}
-                />
-                <Text style={styles.uploadTitle}>رفع إيصال الدفع</Text>
-                <Text style={styles.uploadSubtitle}>
-                  التقط صورة أو اختر من المعرض
-                </Text>
-              </Pressable>
-            ) : (
-              <View style={styles.previewContainer}>
-                <Image
-                  source={{ uri: selectedImage }}
-                  style={styles.previewImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.previewActions}>
-                  <Pressable
-                    onPress={pickImage}
-                    style={styles.previewChangeBtn}
-                  >
-                    <Ionicons
-                      name="refresh"
-                      size={18}
-                      color={Colors.light.textSecondary}
-                    />
-                    <Text style={styles.previewChangeText}>تغيير</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      setSelectedImage(null);
-                      setSelectedFile(null);
-                    }}
-                    style={styles.previewChangeBtn}
-                  >
-                    <Ionicons
-                      name="trash"
-                      size={18}
-                      color={Colors.light.danger}
-                    />
-                  </Pressable>
-                </View>
-              </View>
-            )}
-
-            {selectedImage && (
+        {/* ───── رأس الطلب ───── */}
+        <Card>
+          <View style={s.headRow}>
+            <StatusBadge kind={payment.kind} label={payment.label} />
+            <View style={s.headIds}>
               <Pressable
-                onPress={() => uploadMutation.mutate()}
-                disabled={uploadMutation.isPending}
-                style={({ pressed }) => [
-                  styles.uploadButton,
-                  pressed && { opacity: 0.9 },
-                  uploadMutation.isPending && { opacity: 0.6 },
-                ]}
+                onPress={async () => {
+                  await Clipboard.setStringAsync(order.id);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  Alert.alert("تم النسخ", "رقم الطلب انتسخ");
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="نسخ رقم الطلب"
+                style={s.orderIdBtn}
               >
-                {uploadMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="cloud-upload" size={20} color="#fff" />
-                    <Text style={styles.uploadButtonText}>رفع الإيصال</Text>
-                  </>
-                )}
+                <Ionicons name="copy-outline" size={14} color={c.textMuted} />
+                <Text style={s.orderId}>#{order.id.slice(0, 8)}</Text>
+              </Pressable>
+              <Text style={s.orderDate}>{orderDate}</Text>
+            </View>
+          </View>
+
+          {order.rejectionReason ? (
+            <View style={s.rejectBox}>
+              <Ionicons name="close-circle" size={17} color={StatusColors.error.fg} />
+              <Text style={s.rejectText}>{order.rejectionReason}</Text>
+            </View>
+          ) : null}
+        </Card>
+
+        {/* ───── رفع الإيصال ───── */}
+        {needsReceipt && (
+          <Card title="رفع إيصال الدفع" icon="cloud-upload-outline">
+            <Text style={s.cardBody}>
+              حوّل المبلغ ثم ارفع صورة الإيصال حتى نأكّد طلبك ونمنحك فرصك.
+            </Text>
+
+            {selectedImage ? (
+              <>
+                <Pressable onPress={() => setPreviewOpen(true)} style={s.receiptPreview}>
+                  <Image source={{ uri: selectedImage }} style={s.receiptImage} contentFit="cover" />
+                </Pressable>
+                <View style={s.receiptActions}>
+                  <Button label="تغيير" variant="secondary" small onPress={pickImage} style={s.flex} />
+                  <Button
+                    label="رفع الإيصال"
+                    small
+                    loading={uploadMutation.isPending}
+                    onPress={() => uploadMutation.mutate()}
+                    style={s.flex}
+                  />
+                </View>
+              </>
+            ) : (
+              <Pressable onPress={pickImage} style={s.uploadArea} accessibilityRole="button">
+                <Ionicons name="camera-outline" size={32} color={c.primary} />
+                <Text style={s.uploadTitle}>اختر صورة الإيصال</Text>
+                <Text style={s.uploadHint}>صوّرها أو اخترها من المعرض</Text>
               </Pressable>
             )}
-          </View>
+          </Card>
         )}
 
-        {order.receiptUrl && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>الإيصال المرفوع</Text>
-            <Pressable onPress={() => setReceiptModalVisible(true)}>
-              <Image
-                source={{ uri: formatImageUrl(order.receiptUrl) }}
-                style={styles.receiptImage}
-                resizeMode="cover"
-              />
-              <View style={styles.receiptOverlay}>
-                <Ionicons name="expand" size={22} color="#fff" />
-              </View>
+        {receiptUrl && (
+          <Card title="الإيصال المرفوع" icon="document-attach-outline">
+            <Pressable onPress={() => setPreviewOpen(true)} accessibilityRole="button">
+              <Image source={{ uri: receiptUrl }} style={s.receiptImage} contentFit="cover" />
             </Pressable>
-          </View>
+          </Card>
         )}
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>ملخص الطلب</Text>
-
-          {items.map((item, idx) => (
-            <View key={item.id}>
-              {idx > 0 && <View style={styles.divider} />}
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryValue}>${parseFloat(item.lineTotal).toFixed(2)}</Text>
-                <Text style={styles.summaryLabel} numberOfLines={2}>
-                  {item.productName} × {item.quantity}
-                </Text>
-              </View>
+        {/* ───── حالة الشحن ───── */}
+        <Card title="حالة الشحن" icon="cube-outline">
+          {isCancelled ? (
+            <View style={s.rejectBox}>
+              <Ionicons name="ban-outline" size={17} color={StatusColors.error.fg} />
+              <Text style={s.rejectText}>تم إلغاء هذا الطلب</Text>
             </View>
-          ))}
+          ) : (
+            SHIPPING_STEPS.map((step, i) => {
+              const reached = shippingIndex >= i;
+              const isLast = i === SHIPPING_STEPS.length - 1;
+              return (
+                <View key={step.key} style={s.stepRow}>
+                  <View style={s.stepTextCol}>
+                    <Text style={[s.stepLabel, reached && s.stepLabelActive]}>{step.label}</Text>
+                  </View>
 
-          <View style={styles.divider} />
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryValue}>${parseFloat(order.subtotal).toFixed(2)}</Text>
-            <Text style={styles.summaryLabel}>المجموع الفرعي ({totalPieces} قطعة)</Text>
-          </View>
-
-          {order.discountAmount && parseFloat(order.discountAmount) > 0 && (
-            <>
-              <View style={styles.divider} />
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryValue, { color: Colors.light.success }]}>
-                  -${parseFloat(order.discountAmount).toFixed(2)}
-                </Text>
-                <Text style={styles.summaryLabel}>
-                  الخصم {order.couponCode ? `(${order.couponCode})` : ""}
-                </Text>
-              </View>
-            </>
+                  <View style={s.stepTrack}>
+                    <View style={[s.stepDot, reached && s.stepDotActive]}>
+                      <Ionicons
+                        name={reached ? "checkmark" : step.icon}
+                        size={14}
+                        color={reached ? c.surface : c.textMuted}
+                      />
+                    </View>
+                    {!isLast && <View style={[s.stepLine, shippingIndex > i && s.stepLineActive]} />}
+                  </View>
+                </View>
+              );
+            })
           )}
 
-          {parseFloat(order.walletAmount) > 0 && (
-            <>
-              <View style={styles.divider} />
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryValue, { color: "#067647" }]}>
-                  -${parseFloat(order.walletAmount).toFixed(2)}
-                </Text>
-                <Text style={styles.summaryLabel}>خصم المحفظة</Text>
-              </View>
-            </>
-          )}
+          {order.trackingNumber ? (
+            <View style={s.trackingRow}>
+              <Text style={s.trackingValue}>{order.trackingNumber}</Text>
+              <Text style={s.trackingLabel}>رقم التتبّع</Text>
+            </View>
+          ) : null}
+        </Card>
 
-          <View style={styles.divider} />
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryTotal}>
-              ${parseFloat(order.totalAmount).toFixed(2)}
-            </Text>
-            <Text style={[styles.summaryLabel, { fontFamily: "Tajawal_500Medium" }]}>
-              الإجمالي المستحق
-            </Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryValue}>
-              {order.paymentMethod || "-"}
-            </Text>
-            <Text style={styles.summaryLabel}>طريقة الدفع</Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryValue}>{orderDate}</Text>
-            <Text style={styles.summaryLabel}>تاريخ الطلب</Text>
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>تذاكر السحب</Text>
+        {/* ───── فرص السحب ───── */}
+        <Card title="فرص السحب" icon="ticket-outline">
           {order.paymentStatus !== "confirmed" ? (
-            <View style={styles.ticketsPending}>
-              <Ionicons name="time-outline" size={18} color={Colors.light.warning} />
-              <Text style={styles.ticketsPendingText}>
-                تذاكرك بتنمنح تلقائياً بمجرد ما ينتأكّد دفعك
+            <View style={s.pendingRow}>
+              <Ionicons name="time-outline" size={17} color={StatusColors.warning.fg} />
+              <Text style={[s.pendingText, { color: StatusColors.warning.fg }]}>
+                فرصك بتنمنح تلقائياً بمجرد ما ينتأكّد دفعك
               </Text>
             </View>
           ) : order.ticketsAwarded === 0 ? (
-            <View style={styles.ticketsPending}>
-              <Ionicons name="information-circle-outline" size={18} color={Colors.light.textSecondary} />
-              <Text style={[styles.ticketsPendingText, { color: Colors.light.textSecondary }]}>
-                قيمة هذا الطلب ما وصلت لسعر تذكرة كاملة
-              </Text>
+            <View style={s.pendingRow}>
+              <Ionicons name="information-circle-outline" size={17} color={c.textMuted} />
+              <Text style={s.pendingText}>قيمة هذا الطلب ما وصلت لسعر فرصة كاملة</Text>
             </View>
           ) : (
             <>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryTotal, { color: Colors.light.accentDark }]}>
-                  {order.ticketsAwarded}
-                </Text>
-                <Text style={[styles.summaryLabel, { fontFamily: "Tajawal_500Medium" }]}>
-                  عدد التذاكر
+              <View style={s.chanceCount}>
+                <Text style={s.chanceNum}>{order.ticketsAwarded}</Text>
+                <Text style={s.chanceLabel}>
+                  {order.ticketsAwarded === 1 ? "فرصة" : "فرصة"} من هذا الطلب
                 </Text>
               </View>
-              {(order.tickets ?? []).length > 0 && (
-                <View style={styles.ticketChips}>
-                  {(order.tickets ?? []).slice(0, 15).map((t) => (
-                    <View key={t.id} style={[styles.ticketChip, t.isWinner && styles.ticketChipWinner]}>
+
+              {tickets.length > 0 && (
+                <View style={s.chips}>
+                  {tickets.slice(0, 15).map((t) => (
+                    <View key={t.id} style={[s.chip, t.isWinner && s.chipWinner]}>
                       <Ionicons
                         name={t.isWinner ? "trophy" : "ticket-outline"}
                         size={11}
-                        color={t.isWinner ? "#fff" : "#754500"}
+                        color={t.isWinner ? c.surface : c.goldText}
                       />
-                      <Text style={[styles.ticketChipText, t.isWinner && { color: "#fff" }]}>
+                      <Text style={[s.chipText, t.isWinner && { color: c.surface }]}>
                         {t.ticketNumber}
                       </Text>
                     </View>
                   ))}
-                  {(order.tickets ?? []).length > 15 && (
-                    <Text style={styles.ticketMore}>
-                      +{(order.tickets ?? []).length - 15} أخرى
-                    </Text>
+                  {tickets.length > 15 && (
+                    <Text style={s.chipMore}>+{tickets.length - 15} أخرى</Text>
                   )}
                 </View>
               )}
             </>
           )}
-        </View>
+        </Card>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>حالة الشحن</Text>
-
-          {isCancelled ? (
-            <View style={styles.cancelledBox}>
-              <Ionicons
-                name="close-circle"
-                size={24}
-                color={Colors.light.danger}
-              />
-              <Text style={styles.cancelledText}>تم إلغاء الطلب</Text>
+        {/* ───── ملخص الطلب ───── */}
+        <Card title="ملخص الطلب" icon="receipt-outline">
+          {items.map((item, i) => (
+            <View key={item.id} style={[s.sumRow, i > 0 && s.sumRowDivided]}>
+              <Text style={s.sumValue}>${parseFloat(item.lineTotal).toFixed(2)}</Text>
+              <Text style={s.sumLabel} numberOfLines={2}>
+                {item.productName} × {item.quantity}
+              </Text>
             </View>
-          ) : (
-            <View style={styles.timeline}>
-              {SHIPPING_STEPS.map((step, index) => {
-                const isCompleted = index <= shippingIndex;
-                const isCurrent = index === shippingIndex;
-                const isLast = index === SHIPPING_STEPS.length - 1;
-                const dotColor = isCompleted
-                  ? isCurrent
-                    ? Colors.light.accent
-                    : Colors.light.success
-                  : Colors.light.border;
+          ))}
 
-                return (
-                  <View key={step.key} style={styles.timelineStep}>
-                    <View style={styles.timelineDotCol}>
-                      <View
-                        style={[
-                          styles.timelineDot,
-                          { backgroundColor: dotColor },
-                          isCurrent && styles.timelineDotCurrent,
-                        ]}
-                      >
-                        {isCompleted && (
-                          <Ionicons
-                            name={isCurrent ? "ellipse" : "checkmark"}
-                            size={isCurrent ? 10 : 14}
-                            color="#fff"
-                          />
-                        )}
-                      </View>
-                      {!isLast && (
-                        <View
-                          style={[
-                            styles.timelineLine,
-                            {
-                              backgroundColor: index < shippingIndex
-                                ? Colors.light.success
-                                : Colors.light.border,
-                            },
-                          ]}
-                        />
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.timelineLabel,
-                        isCompleted && {
-                          color: isCurrent
-                            ? Colors.light.accent
-                            : Colors.light.text,
-                          fontFamily: isCurrent
-                            ? "Tajawal_500Medium"
-                            : "Tajawal_500Medium",
-                        },
-                      ]}
-                    >
-                      {step.label}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          )}
+          <View style={s.divider} />
 
-          {order.trackingNumber && (
-            <Pressable
-              onPress={() => copyTrackingNumber(order.trackingNumber!)}
-              style={styles.trackingRow}
-            >
-              <View style={styles.trackingInfo}>
-                <Text style={styles.trackingLabel}>رقم التتبع</Text>
-                <Text style={styles.trackingNumber}>
-                  {order.trackingNumber}
-                </Text>
-              </View>
-              <Ionicons
-                name="copy"
-                size={20}
-                color={Colors.light.accent}
-              />
-            </Pressable>
-          )}
-        </View>
-
-        {(order.shippingFullName || order.shippingAddress) && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>عنوان الشحن</Text>
-
-            {order.shippingFullName && (
-              <View style={styles.addressRow}>
-                <Ionicons
-                  name="person"
-                  size={18}
-                  color={Colors.light.textSecondary}
-                />
-                <Text style={styles.addressText}>
-                  {order.shippingFullName}
-                </Text>
-              </View>
-            )}
-
-            {order.shippingPhone && (
-              <View style={styles.addressRow}>
-                <Ionicons
-                  name="call"
-                  size={18}
-                  color={Colors.light.textSecondary}
-                />
-                <Text style={styles.addressText}>{order.shippingPhone}</Text>
-              </View>
-            )}
-
-            {order.shippingCity && (
-              <View style={styles.addressRow}>
-                <Ionicons
-                  name="location"
-                  size={18}
-                  color={Colors.light.textSecondary}
-                />
-                <Text style={styles.addressText}>{order.shippingCity}</Text>
-              </View>
-            )}
-
-            {order.shippingAddress && (
-              <View style={styles.addressRow}>
-                <Ionicons
-                  name="home"
-                  size={18}
-                  color={Colors.light.textSecondary}
-                />
-                <Text style={styles.addressText}>
-                  {order.shippingAddress}
-                </Text>
-              </View>
-            )}
-
-            {order.shippingCountry && (
-              <View style={styles.addressRow}>
-                <Ionicons
-                  name="flag"
-                  size={18}
-                  color={Colors.light.textSecondary}
-                />
-                <Text style={styles.addressText}>
-                  {order.shippingCountry}
-                </Text>
-              </View>
-            )}
+          <View style={s.sumRow}>
+            <Text style={s.sumValue}>${parseFloat(order.subtotal).toFixed(2)}</Text>
+            <Text style={s.sumLabel}>المجموع الفرعي ({totalPieces} قطعة)</Text>
           </View>
-        )}
+
+          {parseFloat(order.discountAmount) > 0 && (
+            <View style={s.sumRow}>
+              <Text style={[s.sumValue, { color: StatusColors.success.fg }]}>
+                -${parseFloat(order.discountAmount).toFixed(2)}
+              </Text>
+              <Text style={s.sumLabel}>
+                الخصم {order.couponCode ? `(${order.couponCode})` : ""}
+              </Text>
+            </View>
+          )}
+
+          {parseFloat(order.deliveryFee) > 0 && (
+            <View style={s.sumRow}>
+              <Text style={s.sumValue}>${parseFloat(order.deliveryFee).toFixed(2)}</Text>
+              <Text style={s.sumLabel}>التوصيل</Text>
+            </View>
+          )}
+
+          {parseFloat(order.walletAmount) > 0 && (
+            <View style={s.sumRow}>
+              <Text style={[s.sumValue, { color: StatusColors.success.fg }]}>
+                -${parseFloat(order.walletAmount).toFixed(2)}
+              </Text>
+              <Text style={s.sumLabel}>خصم المحفظة</Text>
+            </View>
+          )}
+
+          <View style={s.divider} />
+
+          <View style={s.sumRow}>
+            <Text style={s.grandValue}>${parseFloat(order.totalAmount).toFixed(2)}</Text>
+            <Text style={s.grandLabel}>الإجمالي المستحق</Text>
+          </View>
+
+          <View style={s.sumRow}>
+            <Text style={s.sumValue}>{order.paymentMethod || "—"}</Text>
+            <Text style={s.sumLabel}>طريقة الدفع</Text>
+          </View>
+        </Card>
+
+        {/* ───── عنوان التوصيل ───── */}
+        {order.shippingFullName ? (
+          <Card title="عنوان التوصيل" icon="location-outline">
+            <Text style={s.addressName}>{order.shippingFullName}</Text>
+            <Text style={s.addressLine}>{order.shippingPhone}</Text>
+            <Text style={s.addressLine}>
+              {[order.shippingAddress, order.shippingCity, order.shippingCountry]
+                .filter(Boolean)
+                .join("، ")}
+            </Text>
+          </Card>
+        ) : null}
+
+        <InfoNote>رسوم التوصيل لا تدخل بحساب فرص السحب</InfoNote>
+
+        <Button
+          label="متابعة التسوق"
+          variant="secondary"
+          icon="storefront-outline"
+          onPress={() => router.push("/(tabs)/products" as any)}
+        />
       </ScrollView>
 
-      <Modal
-        visible={receiptModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setReceiptModalVisible(false)}
-      >
-        <View style={modalStyles.overlay}>
-          <Pressable
-            style={modalStyles.closeBtn}
-            onPress={() => setReceiptModalVisible(false)}
-          >
-            <Ionicons name="close" size={28} color="#fff" />
-          </Pressable>
-          {order.receiptUrl && (
-            <Image
-              source={{ uri: formatImageUrl(order.receiptUrl) }}
-              style={modalStyles.fullImage}
-              resizeMode="contain"
-            />
-          )}
-        </View>
+      {/* ───── معاينة الإيصال ───── */}
+      <Modal visible={previewOpen} transparent animationType="fade" onRequestClose={() => setPreviewOpen(false)}>
+        <Pressable style={s.modalOverlay} onPress={() => setPreviewOpen(false)}>
+          <Image
+            source={{ uri: selectedImage ?? receiptUrl ?? "" }}
+            style={s.modalImage}
+            contentFit="contain"
+          />
+          <View style={s.modalClose}>
+            <Ionicons name="close" size={26} color={c.surface} />
+          </View>
+        </Pressable>
       </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  ticketsPending: {
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.background },
+  flex: { flex: 1 },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center", gap: Spacing.md },
+  notFound: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.body,
+    color: c.textSecondary,
+    writingDirection: "rtl",
+  },
+  content: { padding: Spacing.screen, gap: Spacing.md },
+
+  headRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  headIds: { alignItems: "flex-end", gap: 2 },
+  orderIdBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
+  orderId: { fontFamily: Fonts.bold, fontSize: FontSize.h3, color: c.navy, writingDirection: "ltr" },
+  orderDate: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textMuted,
+    writingDirection: "rtl",
+  },
+
+  cardBody: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 22,
+  },
+  rejectBox: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 6,
+    gap: Spacing.sm,
+    backgroundColor: StatusColors.error.bg,
+    borderRadius: Radius.button,
+    padding: Spacing.md,
   },
-  ticketsPendingText: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 13,
-    color: Colors.light.warning,
+  rejectText: {
     flex: 1,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 20,
-  },
-  ticketChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 10,
-    alignItems: "center",
-  },
-  ticketChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#FFF4D6",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#F5A623",
-  },
-  ticketChipWinner: {
-    backgroundColor: "#B54708",
-    borderColor: "#B54708",
-  },
-  ticketChipText: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 10,
-    color: "#754500",
-  },
-  ticketMore: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 11,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  centered: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    shadowColor: "#10224D",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
-  },
-  headerCenter: {
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 18,
-    color: "#FFFFFF",
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  headerOrderId: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 2,
-  },
-  statusCard: {
-    borderRadius: 22,
-    padding: 28,
-    alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 1,
-    shadowColor: "#10224D",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  statusIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  statusLabel: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 20,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  rejectionBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 14,
-    backgroundColor: "rgba(231, 76, 60, 0.06)",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  rejectionText: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 13,
-    color: Colors.light.danger,
-    flex: 1,
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: StatusColors.error.fg,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#10224D",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  cardTitle: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 17,
-    color: Colors.light.text,
-    marginBottom: 16,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  reuploadHint: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 13,
-    color: Colors.light.warning,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginBottom: 12,
-    marginTop: -8,
-  },
+
   uploadArea: {
-    borderWidth: 2,
-    borderColor: Colors.light.accent,
-    borderStyle: "dashed",
-    borderRadius: 14,
-    padding: 32,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.light.inputBg,
+    gap: 6,
+    paddingVertical: Spacing.xl,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: c.border,
+    backgroundColor: c.background,
   },
   uploadTitle: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 16,
-    color: Colors.light.text,
-    marginTop: 12,
-    textAlign: "center",
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.navy,
     writingDirection: "rtl",
   },
-  uploadSubtitle: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    marginTop: 6,
-    textAlign: "center",
+  uploadHint: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textMuted,
     writingDirection: "rtl",
   },
-  previewContainer: {
-    borderRadius: 14,
-    overflow: "hidden",
-    backgroundColor: Colors.light.inputBg,
-  },
-  previewImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 14,
-  },
-  previewActions: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 16,
-    paddingVertical: 10,
-  },
-  previewChangeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  previewChangeText: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl",
-  },
-  uploadButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: Colors.light.accent,
-    borderRadius: 16,
-    paddingVertical: 16,
-    marginTop: 14,
-    shadowColor: Colors.light.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  uploadButtonText: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 16,
-    color: "#FFFFFF",
-    writingDirection: "rtl",
-  },
-  receiptImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 12,
-  },
-  receiptOverlay: {
-    position: "absolute",
-    bottom: 10,
-    start: 10,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 8,
-    padding: 6,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  summaryLabel: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  summaryValue: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 14,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl",
-    maxWidth: "60%",
-  },
-  summaryTotal: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 18,
-    color: Colors.light.accent,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.light.border,
-  },
-  cancelledBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(231, 76, 60, 0.06)",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(231, 76, 60, 0.15)",
-  },
-  cancelledText: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 15,
-    color: Colors.light.danger,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  timeline: {
-    paddingEnd: 4,
-  },
-  timelineStep: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    minHeight: 52,
-  },
-  timelineDotCol: {
-    alignItems: "center",
-    width: 28,
-  },
-  timelineDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  receiptPreview: { borderRadius: Radius.card, overflow: "hidden" },
+  receiptImage: { width: "100%", height: 200, borderRadius: Radius.card, backgroundColor: c.background },
+  receiptActions: { flexDirection: "row", gap: Spacing.md },
+
+  stepRow: { flexDirection: "row", alignItems: "flex-start", gap: Spacing.md },
+  stepTrack: { alignItems: "center", width: 30 },
+  stepDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: c.borderSubtle,
     alignItems: "center",
     justifyContent: "center",
   },
-  timelineDotCurrent: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 3,
-    borderColor: "rgba(124, 58, 237, 0.3)",
-  },
-  timelineLine: {
-    width: 3,
-    flex: 1,
-    minHeight: 24,
-    borderRadius: 2,
-  },
-  timelineLabel: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    marginEnd: 12,
-    paddingTop: 2,
+  stepDotActive: { backgroundColor: c.primary },
+  stepLine: { width: 2, height: 26, backgroundColor: c.borderSubtle },
+  stepLineActive: { backgroundColor: c.primary },
+  stepTextCol: { flex: 1, paddingTop: 5 },
+  stepLabel: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textMuted,
     textAlign: "right",
     writingDirection: "rtl",
   },
+  stepLabelActive: { fontFamily: Fonts.medium, color: c.navy },
+
   trackingRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: Colors.light.inputBg,
-    padding: 16,
-    borderRadius: 14,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  trackingInfo: {
-    flex: 1,
+    backgroundColor: c.primarySoft,
+    borderRadius: Radius.button,
+    padding: Spacing.md,
+    marginTop: Spacing.sm,
   },
   trackingLabel: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginBottom: 2,
-  },
-  trackingNumber: {
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 15,
-    color: Colors.light.text,
-    textAlign: "right",
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.primary,
     writingDirection: "rtl",
   },
-  addressRow: {
+  trackingValue: { fontFamily: Fonts.bold, fontSize: FontSize.caption, color: c.navy, writingDirection: "ltr" },
+
+  pendingRow: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
+  pendingText: {
+    flex: 1,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 21,
+  },
+  chanceCount: { flexDirection: "row", alignItems: "baseline", gap: Spacing.sm, justifyContent: "flex-end" },
+  chanceNum: { fontFamily: Fonts.bold, fontSize: 30, color: c.primary },
+  chanceLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    writingDirection: "rtl",
+  },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6, alignItems: "center" },
+  chip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 8,
+    gap: 4,
+    backgroundColor: c.goldSoft,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.button,
   },
-  addressText: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 14,
-    color: Colors.light.text,
+  chipWinner: { backgroundColor: c.gold },
+  chipText: { fontFamily: Fonts.medium, fontSize: 10, color: c.goldText, writingDirection: "ltr" },
+  chipMore: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.label,
+    color: c.textMuted,
+    writingDirection: "rtl",
+  },
+
+  sumRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: Spacing.md },
+  sumRowDivided: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.borderSubtle,
+    paddingTop: Spacing.md,
+  },
+  sumLabel: {
     flex: 1,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
     textAlign: "right",
     writingDirection: "rtl",
   },
-});
-
-const modalStyles = StyleSheet.create({
-  overlay: {
+  sumValue: { fontFamily: Fonts.medium, fontSize: FontSize.caption, color: c.text },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: c.border },
+  grandLabel: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.92)",
-    justifyContent: "center",
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.body,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  grandValue: { fontFamily: Fonts.bold, fontSize: FontSize.h3, color: c.primary },
+
+  addressName: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  addressLine: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 22,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(16, 34, 77, 0.92)",
     alignItems: "center",
+    justifyContent: "center",
   },
-  closeBtn: {
-    position: "absolute",
-    top: 50,
-    end: 20,
-    zIndex: 10,
-    padding: 8,
-  },
-  fullImage: {
-    width: "90%",
-    height: "75%",
-  },
+  modalImage: { width: "92%", height: "76%" },
+  modalClose: { position: "absolute", top: 54, end: 20 },
 });

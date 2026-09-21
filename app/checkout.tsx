@@ -246,7 +246,7 @@ export default function CheckoutScreen() {
       if (receiptImage && orderId) {
         try {
           await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
-        } catch (_) {
+        } catch {
           setPendingOrderId(orderId);
           return;
         }

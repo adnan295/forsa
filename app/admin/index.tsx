@@ -806,7 +806,7 @@ function OrdersSection() {
                     } else {
                       Alert.alert("تصدير CSV", "التصدير متاح عبر المتصفح فقط حالياً");
                     }
-                  } catch (e) {}
+                  } catch {}
                 }}
                 style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#06764715", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
               >
@@ -1060,7 +1060,7 @@ function UsersSection() {
                 } else {
                   Alert.alert("تصدير CSV", "التصدير متاح عبر المتصفح فقط حالياً");
                 }
-              } catch (e) {}
+              } catch {}
             }}
             style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#06764715", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
           >
@@ -1256,10 +1256,6 @@ function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; tic
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
-  const getStatusAr = (s: string) => {
-    const map: Record<string, string> = { open: "مفتوحة", in_progress: "قيد المعالجة", closed: "مغلقة" };
-    return map[s] || s;
-  };
   const getPriorityAr = (s: string) => {
     const map: Record<string, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية" };
     return map[s] || s;
@@ -2334,17 +2330,6 @@ function ActivitySection() {
   );
 }
 
-function StatCard({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) {
-  return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: color + "18" }]}>
-        <Ionicons name={icon as any} size={20} color={color} />
-      </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
 
 function NotificationsSection() {
   const { data: notifications, isLoading } = useQuery<any[]>({
@@ -2506,23 +2491,6 @@ function LoadingView() {
       <ActivityIndicator size="large" color={Colors.light.accent} />
     </View>
   );
-}
-
-const CATEGORY_OPTIONS: { key: string; label: string }[] = [
-  { key: "electronics", label: "إلكترونيات" },
-  { key: "fashion", label: "أزياء" },
-  { key: "beauty", label: "جمال" },
-  { key: "accessories", label: "إكسسوارات" },
-  { key: "other", label: "أخرى" },
-];
-
-interface ProductVariant {
-  key: string;
-  name: string;
-  nameAr: string;
-  price: string;
-  quantity: string;
-  imageUrl: string;
 }
 
 function CreatePaymentModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
