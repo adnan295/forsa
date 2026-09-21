@@ -1,3 +1,4 @@
+import { Alert } from "@/lib/alert";
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -5,7 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Alert,
+
   ActivityIndicator,
   Platform,
   Modal,

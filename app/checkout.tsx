@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { Alert } from "@/lib/alert";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,14 +7,14 @@ import {
   StyleSheet,
   Pressable,
   TextInput,
-  Alert,
+
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
   Switch,
   Image,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Redirect, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -57,7 +58,7 @@ export default function CheckoutScreen() {
     productId: string;
   }>();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { items: cartItems, clearCart } = useCart();
 
   const submitScale = useSharedValue(1);
@@ -83,11 +84,20 @@ export default function CheckoutScreen() {
   const [shippingPhone, setShippingPhone] = useState(user?.phone || "");
   const [shippingCity, setShippingCity] = useState(user?.city || "");
   const [shippingAddress, setShippingAddress] = useState(user?.address || "");
-  const [shippingCountry, setShippingCountry] = useState(user?.country || "السعودية");
+  const [shippingCountry, setShippingCountry] = useState(user?.country || "سوريا");
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [receiptFile, setReceiptFile] = useState<any>(null);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [pendingReceiptOrders, setPendingReceiptOrders] = useState<string[]>([]);
   const [uploadRetryPending, setUploadRetryPending] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setShippingFullName(value => value || user.fullName || "");
+    setShippingPhone(value => value || user.phone || "");
+    setShippingCity(value => value || user.city || "");
+    setShippingAddress(value => value || user.address || "");
+  }, [user]);
 
   const isProfileComplete = !!(user?.fullName && user?.phone && user?.address && user?.city && user?.country);
 
@@ -107,6 +117,7 @@ export default function CheckoutScreen() {
           resolve(blob ? new File([blob], "receipt.jpg", { type: "image/jpeg" }) : file);
         }, "image/jpeg", 0.82);
       };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
       img.src = url;
     });
   };
@@ -136,8 +147,11 @@ export default function CheckoutScreen() {
     if (!receiptImage) return;
     setUploadRetryPending(true);
     try {
-      await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
+      for (const id of pendingReceiptOrders.length ? pendingReceiptOrders : [orderId]) {
+        await uploadReceiptToOrder(id, receiptImage, receiptFile);
+      }
       setPendingOrderId(null);
+      setPendingReceiptOrders([]);
       router.replace(`/order/${orderId}` as any);
     } catch (e: any) {
       const msg = e.message || "فشل رفع الوصل";
@@ -284,6 +298,7 @@ export default function CheckoutScreen() {
               { text: "حسناً", onPress: () => router.replace("/(tabs)/tickets" as any) },
             ]);
           } catch (_) {
+            setPendingReceiptOrders((data.orders || []).map((order: { id: string }) => order.id));
             setPendingOrderId(firstOrderId);
           }
         } else {
@@ -335,12 +350,23 @@ export default function CheckoutScreen() {
     purchaseMutation.mutate();
   }
 
-  if ((!isCartMode && campaignLoading) || methodsLoading) {
+  if (authLoading || (!isCartMode && campaignLoading) || methodsLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={Colors.light.accent} />
       </View>
     );
+  }
+
+  if (!user && Platform.OS === "web") {
+    const query = new URLSearchParams();
+    if (isCartMode) query.set("fromCart", "true");
+    else {
+      query.set("campaignId", campaignId || "");
+      query.set("quantity", String(qty));
+      if (productId) query.set("productId", productId);
+    }
+    return <Redirect href={{ pathname: "/auth", params: { returnTo: "/checkout?" + query.toString() } }} />;
   }
 
   if (!isCartMode && !campaign) {
@@ -352,7 +378,7 @@ export default function CheckoutScreen() {
     );
   }
 
-  if (isCartMode && cartItems.length === 0) {
+  if (isCartMode && cartItems.length === 0 && !pendingOrderId) {
     return (
       <View style={[styles.container, styles.centered]}>
         <Ionicons name="cart-outline" size={48} color={Colors.light.textSecondary} />
@@ -361,7 +387,7 @@ export default function CheckoutScreen() {
     );
   }
 
-  if (!isProfileComplete) {
+  if (!isProfileComplete && Platform.OS !== "web") {
     return (
       <View style={styles.container}>
         <LinearGradient
@@ -370,7 +396,7 @@ export default function CheckoutScreen() {
           end={{ x: 1, y: 0 }}
           style={[
             styles.header,
-            { paddingTop: Platform.OS === "web" ? 67 : insets.top },
+            { paddingTop: insets.top },
           ]}
         >
           <Pressable onPress={() => router.back()} style={styles.backBtn}>

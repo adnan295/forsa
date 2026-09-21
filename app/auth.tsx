@@ -1,3 +1,4 @@
+import { Alert } from "@/lib/alert";
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -5,14 +6,14 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  Alert,
+
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Image,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -118,6 +119,12 @@ const otpStyles = StyleSheet.create({
 
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  function finishAuth() {
+    if (typeof returnTo === "string" && /^\/checkout(?:\?|$)/.test(returnTo)) router.replace(returnTo as any);
+    else if (router.canGoBack()) router.back();
+    else router.replace("/shop" as any);
+  }
   const { login, register, verifyEmail, resendVerification } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
@@ -158,7 +165,7 @@ export default function AuthScreen() {
       if (isLogin) {
         await login(email.trim(), password);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.back();
+        finishAuth();
       } else {
         const result = await register(username.trim(), email.trim(), password);
         if (result.requiresVerification) {
@@ -191,7 +198,7 @@ export default function AuthScreen() {
     try {
       await verifyEmail(verificationEmail, code);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.back();
+      finishAuth();
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const msg = error?.message || "الرمز غير صحيح";

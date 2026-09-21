@@ -1,3 +1,4 @@
+import { Alert } from "@/lib/alert";
 import React from "react";
 import {
   View,
@@ -7,7 +8,7 @@ import {
   Platform,
   Image,
   FlatList,
-  Alert,
+
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -199,7 +200,7 @@ export default function CartScreen() {
                 onPressIn={() => { checkoutScale.value = withSpring(0.95, { damping: 15, stiffness: 300 }); }}
                 onPressOut={() => { checkoutScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
                 onPress={() => {
-                  if (!user) {
+                  if (!user && Platform.OS !== "web") {
                     router.push("/auth");
                     return;
                   }

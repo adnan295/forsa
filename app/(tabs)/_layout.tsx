@@ -75,9 +75,18 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "الحملات",
+          href: Platform.OS === "web" ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="flame" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="shop"
+        options={{
+          title: "المتجر",
+          href: Platform.OS === "web" ? ("/shop" as any) : null,
+          tabBarIcon: ({ color, size }) => <Ionicons name="storefront-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

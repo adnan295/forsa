@@ -1,3 +1,4 @@
+import { Alert } from "@/lib/alert";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
@@ -6,7 +7,7 @@ import {
   StyleSheet,
   Pressable,
   TextInput,
-  Alert,
+
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,

@@ -1,3 +1,4 @@
+import { Alert } from "@/lib/alert";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -9,7 +10,7 @@ import {
   Platform,
   Share,
   TextInput,
-  Alert,
+
   Image,
   Modal,
   PanResponder,
@@ -842,7 +843,7 @@ export default function CampaignDetailScreen() {
                   onPressIn={() => { buyBtnScale.value = withSpring(0.93, { damping: 15, stiffness: 300 }); }}
                   onPressOut={() => { buyBtnScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
                   onPress={() => {
-                    if (!user) {
+                    if (!user && Platform.OS !== "web") {
                       router.push("/auth");
                       return;
                     }
@@ -871,7 +872,7 @@ export default function CampaignDetailScreen() {
                   onPressIn={() => { cartBtnScale.value = withSpring(0.88, { damping: 15, stiffness: 300 }); }}
                   onPressOut={() => { cartBtnScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
                   onPress={() => {
-                    if (!user) {
+                    if (!user && Platform.OS !== "web") {
                       router.push("/auth");
                       return;
                     }

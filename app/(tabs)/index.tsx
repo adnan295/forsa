@@ -9,7 +9,7 @@ import {
   Platform,
   Pressable,
   Image,
-  Dimensions,
+  useWindowDimensions,
   Linking,
   AppState,
 } from "react-native";
@@ -34,8 +34,10 @@ import { useFavorites } from "@/lib/favorites-context";
 import { getNotificationPermissionStatus } from "@/lib/push-notifications";
 import type { Campaign } from "@shared/schema";
 
-const { width: W } = Dimensions.get("window");
-const CARD_W = (W - 48) / 2;
+function useCardWidth() {
+  const { width } = useWindowDimensions();
+  return (Math.min(width, 1100) - 48) / 2;
+}
 
 // ─── Mini Countdown ──────────────────────────────────────────
 function useTick(endsAt?: string | Date | null) {
@@ -56,6 +58,7 @@ function useTick(endsAt?: string | Date | null) {
 
 // ─── Grid Card ───────────────────────────────────────────────
 function GridCard({ campaign, index, onPress }: { campaign: Campaign; index: number; onPress: () => void }) {
+  const CARD_W = useCardWidth();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
   const ty = useSharedValue(20);
@@ -324,6 +327,7 @@ function NotificationBanner() {
 
 // ─── Main Screen ─────────────────────────────────────────────
 export default function HomeScreen() {
+  const CARD_W = useCardWidth();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { totalItems } = useCart();
@@ -666,7 +670,7 @@ const s = StyleSheet.create({
   sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 17, color: "#1A1A1A", writingDirection: "rtl" },
   sectionPill: { backgroundColor: "#FFD000", paddingHorizontal: 9, paddingVertical: 2, borderRadius: 8 },
   sectionPillText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#1A1A1A" },
-  row: { flexDirection: "row", paddingHorizontal: 16, gap: 16, marginBottom: 16 },
+  row: { flexDirection: "row", justifyContent: "center", paddingHorizontal: 16, gap: 16, marginBottom: 16 },
   empty: { alignItems: "center", gap: 12, paddingVertical: 60, paddingHorizontal: 40 },
   emptyTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: "#1A1A1A", textAlign: "center", writingDirection: "rtl" },
   emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: "#888", textAlign: "center", writingDirection: "rtl" },

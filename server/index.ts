@@ -243,13 +243,15 @@ function configureExpoAndLanding(app: express.Application) {
   });
 
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
+  app.use(express.static(path.resolve(process.cwd(), "web-build"), { index: false }));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
-  const spaIndexPath = path.resolve(process.cwd(), "static-build", "index.html");
+  const spaIndexPath = path.resolve(process.cwd(), "web-build", "index.html");
   if (fs.existsSync(spaIndexPath)) {
     app.use((req: Request, res: Response, next: NextFunction) => {
       // These public pages are registered after the Expo SPA fallback.
       if (
+        !["GET", "HEAD"].includes(req.method) ||
         req.path.startsWith("/api") ||
         req.path.startsWith("/uploads") ||
         req.path.startsWith("/assets") ||
@@ -258,6 +260,7 @@ function configureExpoAndLanding(app: express.Application) {
         return next();
       }
       res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache");
       res.sendFile(spaIndexPath);
     });
   }
