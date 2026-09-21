@@ -13,6 +13,7 @@ interface AuthUser {
   city?: string | null;
   country?: string | null;
   emailVerified?: boolean;
+  createdAt?: string;
 }
 
 interface VerificationResult {

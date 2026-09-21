@@ -1,284 +1,160 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Pressable,
-  Platform,
-} from "react-native";
-import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import React, { useMemo, useState } from "react";
+import { View, ScrollView, StyleSheet, TextInput, Pressable } from "react-native";
+import { router, Stack } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Colors, { Fonts, FontSize, Radius, Sizing, Spacing } from "@/constants/colors";
+import { Header, Button, Accordion, EmptyState } from "@/components/ui";
+import type { CurrentDraw } from "@/components/DrawBanner";
 
-const FAQ_DATA = [
+const c = Colors.light;
+
+/** الأسئلة — {price} بتتبدّل بسعر الفرصة الحالي */
+const FAQ: { q: string; a: string }[] = [
   {
-    question: "ما هو فرصة؟",
-    answer: "فرصة هو متجر إلكتروني يقدم منتجات حقيقية مع فرصة للحصول على هدايا قيمة. عند شراء أي منتج، تحصل على فرصة هدية تلقائياً كمكافأة إضافية.",
+    q: "كيف أحصل على فرصة؟",
+    a: "كل {price}$ من قيمة المنتجات تمنحك فرصة سحب. رسوم التوصيل لا تُحتسب.",
   },
   {
-    question: "كيف تتم عملية الشراء؟",
-    answer: "اختر المنتج الذي تريده، حدد الكمية، ثم أتم عملية الدفع. يمكنك الدفع عن طريق التحويل البنكي. بعد تأكيد الدفع، تحصل على فرصة هدية مع كل منتج.",
+    q: "متى تُؤكَّد قسيمتي؟",
+    a: "بعد ما يتأكّد دفع طلبك من الإدارة مباشرة. القسائم تظهر في «قسائمي» بحالة «مؤكدة».",
   },
   {
-    question: "كيف يتم اختيار الفائز بالهدية؟",
-    answer: "عندما تنفد كمية المنتج بالكامل، يتم اختيار الفائز بالهدية بشكل عشوائي وشفاف من بين جميع المشترين.",
+    q: "كيف أتابع طلبي؟",
+    a: "من «حسابي» ← «طلباتي» تشوف حالة كل طلب: قيد التأكيد، قيد التنفيذ، أو تم التسليم.",
   },
   {
-    question: "هل المنتجات حقيقية؟",
-    answer: "نعم، جميع المنتجات حقيقية وأصلية ويتم شحنها إلى عنوانك. الهدية هي مكافأة إضافية مع كل عملية شراء.",
+    q: "ما شروط السحب؟",
+    a: "السحب يتم لما ينباع كامل عدد فرص الجولة. الفائز يُختار عشوائياً من كل القسائم المؤكدة، ويتم التواصل معه لتسليم الجائزة.",
   },
   {
-    question: "كيف أرفع إيصال الدفع؟",
-    answer: 'بعد إتمام الطلب بالتحويل البنكي، ادخل على صفحة الطلب واضغط على زر "رفع إيصال الدفع" واختر صورة الإيصال من جهازك.',
+    q: "هل تنتهي صلاحية فرصي؟",
+    a: "لا. إذا ما كان في سحب مفتوح وقت الشراء، فرصك تُحفظ وتنضاف تلقائياً لأول سحب يُفتح.",
   },
   {
-    question: "كم يستغرق تأكيد الدفع؟",
-    answer: "عادةً يتم مراجعة الإيصال وتأكيد الدفع خلال ٢٤ ساعة من رفع الإيصال.",
-  },
-  {
-    question: "كيف أتابع حالة طلبي؟",
-    answer: 'يمكنك متابعة حالة طلبك من صفحة "طلباتي" حيث تظهر حالة الدفع والشحن ورقم التتبع.',
-  },
-  {
-    question: "هل يمكنني إلغاء طلبي؟",
-    answer: "يمكنك التواصل معنا لإلغاء الطلب قبل شحنه. بعد الشحن لا يمكن الإلغاء.",
-  },
-  {
-    question: "هل بياناتي آمنة؟",
-    answer: "نعم، نحن نستخدم أحدث تقنيات الأمان لحماية بياناتك الشخصية ومعلومات الدفع.",
-  },
-  {
-    question: "كيف أتواصل مع الدعم؟",
-    answer: 'يمكنك التواصل معنا عبر صفحة "تواصل معنا" في التطبيق أو عبر البريد الإلكتروني.',
+    q: "ماذا لو رُفض دفعي؟",
+    a: "الطلب بيظهر بحالة «دفع مرفوض» مع السبب، وأي رصيد استُخدم من محفظتك بيرجع لك تلقائياً.",
   },
 ];
 
-function FAQItem({
-  item,
-  index,
-  expandedIndex,
-  onToggle,
-}: {
-  item: { question: string; answer: string };
-  index: number;
-  expandedIndex: number | null;
-  onToggle: (index: number) => void;
-}) {
-  const isExpanded = expandedIndex === index;
-
-  return (
-    <View style={styles.faqCard}>
-      <Pressable
-        onPress={() => onToggle(index)}
-        style={({ pressed }) => [
-          styles.questionRow,
-          pressed && { opacity: 0.85 },
-        ]}
-      >
-        <View style={styles.questionContent}>
-          <View style={styles.questionNumberWrap}>
-            <Text style={styles.questionNumber}>{index + 1}</Text>
-          </View>
-          <Text style={styles.questionText}>{item.question}</Text>
-        </View>
-        <Ionicons
-          name={isExpanded ? "chevron-up" : "chevron-down"}
-          size={20}
-          color={Colors.light.accent}
-        />
-      </Pressable>
-      {isExpanded && (
-        <View style={styles.answerContainer}>
-          <View style={styles.answerDivider} />
-          <Text style={styles.answerText}>{item.answer}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-export default function FAQScreen() {
+export default function HelpScreen() {
   const insets = useSafeAreaInsets();
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
 
-  const handleToggle = (index: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setExpandedIndex(expandedIndex === index ? null : index);
-  };
+  const { data: draw } = useQuery<CurrentDraw | null>({
+    queryKey: ["/api/draws/current"],
+    staleTime: 30000,
+  });
+
+  const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
+
+  const items = useMemo(() => {
+    const priceText = ticketPrice > 0 ? ticketPrice.toFixed(0) : "١٠";
+    const resolved = FAQ.map((item) => ({ ...item, a: item.a.replace("{price}", priceText) }));
+    const q = search.trim().toLowerCase();
+    if (!q) return resolved;
+    return resolved.filter(
+      (item) => item.q.toLowerCase().includes(q) || item.a.toLowerCase().includes(q)
+    );
+  }, [search, ticketPrice]);
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={["#10224D", "#155EEF"]}
-        style={[
-          styles.header,
-          { paddingTop: Platform.OS === "web" ? 67 + 12 : insets.top + 12 },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="chevron-forward" size={24} color="#fff" />
-          </Pressable>
-          <Text style={styles.headerTitle}>الأسئلة الشائعة</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.headerIconArea}>
-          <View style={styles.headerIconCircle}>
-            <Ionicons name="help-circle" size={32} color="#fff" />
-          </View>
-        </View>
-        <View style={styles.headerDecor1} />
-        <View style={styles.headerDecor2} />
-      </LinearGradient>
+    <View style={s.root}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <Header title="المساعدة" showBack />
 
       <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: 20,
-          paddingBottom: Platform.OS === "web" ? 84 : 40,
-        }}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={[s.content, { paddingBottom: Math.max(insets.bottom, Spacing.lg) + 90 }]}
+        keyboardShouldPersistTaps="handled"
       >
-        {FAQ_DATA.map((item, index) => (
-          <FAQItem
-            key={index}
-            item={item}
-            index={index}
-            expandedIndex={expandedIndex}
-            onToggle={handleToggle}
+        <View style={s.searchRow}>
+          <Ionicons name="search" size={20} color={c.textMuted} />
+          <TextInput
+            value={search}
+            onChangeText={(t) => {
+              setSearch(t);
+              setOpenIndex(null);
+            }}
+            placeholder="ابحث عن سؤالك"
+            placeholderTextColor={c.textMuted}
+            style={s.searchInput}
+            returnKeyType="search"
+            accessibilityLabel="البحث في الأسئلة"
           />
-        ))}
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch("")} hitSlop={8} accessibilityLabel="مسح البحث">
+              <Ionicons name="close-circle" size={19} color={c.textMuted} />
+            </Pressable>
+          )}
+        </View>
+
+        {items.length === 0 ? (
+          <EmptyState
+            icon="help-circle-outline"
+            title="ما لقينا سؤال مطابق"
+            body="جرّب كلمة تانية، أو تواصل معنا وبنجاوبك"
+          />
+        ) : (
+          items.map((item, i) => (
+            <Accordion
+              key={item.q}
+              question={item.q}
+              answer={item.a}
+              expanded={openIndex === i}
+              onToggle={() => setOpenIndex(openIndex === i ? null : i)}
+            />
+          ))
+        )}
       </ScrollView>
+
+      <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}>
+        <Button
+          label="تواصل مع الدعم"
+          icon="chatbubble-ellipses-outline"
+          onPress={() => router.push({ pathname: "/info", params: { type: "contact" } } as any)}
+        />
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  header: {
-    paddingBottom: 30,
-    paddingHorizontal: 16,
-    overflow: "hidden",
-  },
-  headerRow: {
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.background },
+  content: { padding: Spacing.screen, gap: Spacing.md },
+
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
+    gap: Spacing.sm,
+    backgroundColor: c.surface,
+    borderRadius: Radius.input,
+    paddingHorizontal: Spacing.md,
+    height: Sizing.inputHeight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 20,
-    color: "#FFFFFF",
-    writingDirection: "rtl",
-    textAlign: "center",
-  },
-  headerIconArea: {
-    alignItems: "center",
-    zIndex: 2,
-  },
-  headerIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  headerDecor1: {
-    position: "absolute",
-    top: -30,
-    right: -20,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255,255,255,0.05)",
-  },
-  headerDecor2: {
-    position: "absolute",
-    bottom: -40,
-    left: -30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  faqCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    padding: 20,
-    marginBottom: 12,
-    shadowColor: "#10224D",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  questionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  questionContent: {
+  searchInput: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  questionNumberWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: Colors.light.accent + "15",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  questionNumber: {
-    fontFamily: "Tajawal_700Bold",
-    fontSize: 13,
-    color: Colors.light.accent,
-  },
-  questionText: {
-    flex: 1,
-    fontFamily: "Tajawal_500Medium",
-    fontSize: 15,
-    color: Colors.light.text,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.body,
+    color: c.text,
     textAlign: "right",
     writingDirection: "rtl",
-    lineHeight: 24,
+    padding: 0,
   },
-  answerContainer: {
-    marginTop: 14,
-  },
-  answerDivider: {
-    height: 1,
-    backgroundColor: Colors.light.border,
-    marginBottom: 14,
-  },
-  answerText: {
-    fontFamily: "Tajawal_400Regular",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    lineHeight: 24,
+
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    start: 0,
+    end: 0,
+    backgroundColor: c.surface,
+    paddingHorizontal: Spacing.screen,
+    paddingTop: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
   },
 });

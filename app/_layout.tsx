@@ -191,6 +191,14 @@ function RootLayoutNav() {
         name="referral"
         options={{ headerShown: false, presentation: "card" }}
       />
+      <Stack.Screen
+        name="orders"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
+        name="faq"
+        options={{ headerShown: false, presentation: "card" }}
+      />
     </Stack>
   );
 }

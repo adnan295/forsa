@@ -19,19 +19,14 @@ const c = Colors.light;
 
 /* ────────────────────────── الشعار ────────────────────────── */
 
-/** «فرصة» بالكحلي ورمز الهدية بالذهبي — وعلى الخلفيات الكحلية الكلمة بيضاء */
+/** «فرصة» بالكحلي والتاج بالذهبي — وعلى الخلفيات الكحلية الكلمة بيضاء */
 export function Logo({ onNavy = false, size = 22 }: { onNavy?: boolean; size?: number }) {
   return (
-    <View style={s.logoRow}>
-      <Text
-        style={[
-          s.logoText,
-          { fontSize: size, color: onNavy ? c.surface : c.navy },
-        ]}
-      >
+    <View style={s.logoWrap}>
+      <Ionicons name="ribbon" size={size * 0.58} color={c.gold} style={s.logoCrown} />
+      <Text style={[s.logoText, { fontSize: size, color: onNavy ? c.surface : c.navy }]}>
         فرصة
       </Text>
-      <Ionicons name="gift" size={size * 0.82} color={c.gold} />
     </View>
   );
 }
@@ -309,11 +304,87 @@ export function EmptyState({
   );
 }
 
+/* ────────────────────────── بطاقة إحصاء ────────────────────────── */
+
+/** مربّع رقم + تسمية + أيقونة ملوّنة — يستخدم بالحساب ولوحة الإدارة */
+export function StatTile({
+  icon,
+  value,
+  label,
+  tone = "primary",
+  style,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  value: string | number;
+  label: string;
+  tone?: "primary" | "gold" | "success" | "warning" | "navy";
+  style?: StyleProp<ViewStyle>;
+}) {
+  const tones = {
+    primary: { fg: c.primary, bg: c.primarySoft },
+    gold: { fg: c.goldText, bg: c.goldSoft },
+    success: { fg: StatusColors.success.fg, bg: StatusColors.success.bg },
+    warning: { fg: StatusColors.warning.fg, bg: StatusColors.warning.bg },
+    navy: { fg: c.navy, bg: c.primarySoft },
+  } as const;
+  const { fg, bg } = tones[tone];
+
+  return (
+    <View style={[s.statTile, style]}>
+      <View style={[s.statIcon, { backgroundColor: bg }]}>
+        <Ionicons name={icon} size={20} color={fg} />
+      </View>
+      <View style={s.statText}>
+        <Text style={s.statValue}>{value}</Text>
+        <Text style={s.statLabel}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
+/* ────────────────────────── سؤال قابل للطيّ ────────────────────────── */
+
+export function Accordion({
+  question,
+  answer,
+  expanded,
+  onToggle,
+}: {
+  question: string;
+  answer: string;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <View style={[s.accordion, expanded && s.accordionOpen]}>
+      <Pressable
+        onPress={() => {
+          Haptics.selectionAsync();
+          onToggle();
+        }}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        style={s.accordionHead}
+      >
+        <Ionicons
+          name={expanded ? "chevron-up" : "chevron-down"}
+          size={18}
+          color={expanded ? c.primary : c.textMuted}
+        />
+        <Text style={[s.accordionQ, expanded && { color: c.primary }]}>{question}</Text>
+      </Pressable>
+
+      {expanded && <Text style={s.accordionA}>{answer}</Text>}
+    </View>
+  );
+}
+
 /* ────────────────────────── الأنماط ────────────────────────── */
 
 const s = StyleSheet.create({
-  logoRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  logoText: { fontFamily: Fonts.bold, writingDirection: "rtl" },
+  logoWrap: { alignItems: "center" },
+  logoCrown: { marginBottom: -3 },
+  logoText: { fontFamily: Fonts.bold, writingDirection: "rtl", lineHeight: undefined },
 
   header: {
     flexDirection: "row",
@@ -455,6 +526,61 @@ const s = StyleSheet.create({
     backgroundColor: c.primarySoft,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  statTile: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.button,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statText: { flex: 1, alignItems: "flex-end", gap: 1 },
+  statValue: { fontFamily: Fonts.bold, fontSize: FontSize.h2, color: c.navy },
+  statLabel: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textSecondary,
+    writingDirection: "rtl",
+  },
+
+  accordion: {
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
+  },
+  accordionOpen: { backgroundColor: c.primarySoft, borderColor: c.primarySoft },
+  accordionHead: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
+  accordionQ: {
+    flex: 1,
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  accordionA: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 23,
+    marginTop: Spacing.md,
   },
 
   empty: { alignItems: "center", gap: Spacing.md, paddingVertical: 56, paddingHorizontal: Spacing.xxl },

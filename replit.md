@@ -55,10 +55,14 @@ scheduled → active → ready_to_draw → completed
 **قواعد ثابتة:**
 - لا نص أبيض فوق الخلفية الذهبية — النص بني داكن `#754500`
 - أرقام القسائم `writingDirection: "ltr"` حتى ما تنعكس ضمن النص العربي
-- الشعار: «فرصة» كحلي والهدية ذهبية؛ وعلى الخلفيات الكحلية الكلمة بيضاء
+- الشعار: «فرصة» كحلي والتاج ذهبي فوقه؛ وعلى الخلفيات الكحلية الكلمة بيضاء
 
 **المكوّنات المشتركة** (`components/ui.tsx`): `Header` · `Logo` · `Button` ·
-`StatusBadge` · `ChanceNote` · `InfoNote` · `DrawProgress` · `NavRow` · `EmptyState`
+`StatusBadge` · `ChanceNote` · `InfoNote` · `DrawProgress` · `NavRow` ·
+`EmptyState` · `StatTile` · `Accordion`
+
+**لوحة الإدارة**: قائمة جانبية كحلية على الشاشات ≥ 900px، وشريط تبويبات أفقي
+على الجوال — نفس الأقسام بالحالتين.
 
 ## Tech Stack
 - **Frontend**: Expo (React Native) + expo-router
@@ -74,6 +78,9 @@ app/
   _layout.tsx           الجذر مع المزوّدات
   auth.tsx              تسجيل دخول/حساب جديد
   draw.tsx              السحوبات والفائزون — تبويبا «السحب الحالي» و«السابقة»
+  orders.tsx            طلباتي — تبويبات الكل/قيد التنفيذ/المكتملة
+  faq.tsx               المساعدة — بحث وأسئلة قابلة للطيّ وزر الدعم
+  referral.tsx          دعوة الأصدقاء — الكود والمشاركة وسجل الدعوات
   cart.tsx              السلة (AsyncStorage) مع معاينة التذاكر المتوقعة
   checkout.tsx          الدفع — طلب واحد متعدد المنتجات
   favorites.tsx         المفضلة
@@ -82,9 +89,9 @@ app/
   notifications.tsx     إشعارات المستخدم
   (tabs)/            التبويبات (يمين ← يسار): الرئيسية · قسائمي · المنتجات · حسابي
     index.tsx           الرئيسية — بطاقة الجائزة + شريط الفرص + منتجات مميزة
-    tickets.tsx         قسائمي — فرصي وطلباتي
+    tickets.tsx         قسائمي — فرص السحب فقط (الطلبات بشاشة مستقلة)
     products.tsx        المتجر — بحث وتصنيفات وشبكة منتجات
-    profile.tsx         الملف الشخصي
+    profile.tsx         حسابي — البطاقة الشخصية وإحصاءتان وقائمة الروابط
     client.tsx          طلبات الشراكة التجارية (مخفي من الشريط)
   product/[id].tsx      صفحة المنتج (كم تذكرة بيعطي)
   order/[id].tsx        تتبّع الطلب + سطوره + تذاكره

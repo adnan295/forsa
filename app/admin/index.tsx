@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Pressable,
   Platform,
+  useWindowDimensions,
   ActivityIndicator,
   Alert,
   TextInput,
@@ -18,17 +19,11 @@ import { router } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import Colors from "@/constants/colors";
+import { Logo, StatTile, StatusBadge } from "@/components/ui";
 import { parseProductSpecs } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
@@ -53,24 +48,13 @@ export default function AdminPanel() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
-  const tabOpacity = useSharedValue(1);
-  const tabTranslateY = useSharedValue(0);
-
-  const tabContentStyle = useAnimatedStyle(() => ({
-    opacity: tabOpacity.value,
-    transform: [{ translateY: tabTranslateY.value }],
-  }));
+  const { width } = useWindowDimensions();
+  /** القائمة الجانبية على الشاشات العريضة، وشريط أفقي على الجوال */
+  const wideLayout = width >= 900;
 
   const switchTab = (tab: AdminTab) => {
-    tabOpacity.value = withTiming(0, { duration: 120, easing: Easing.in(Easing.ease) }, () => {
-      tabTranslateY.value = 8;
-    });
-    setTimeout(() => {
-      setActiveTab(tab);
-      tabOpacity.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) });
-      tabTranslateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) });
-    }, 130);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setActiveTab(tab);
   };
 
   if (!user || user.role !== "admin") {
@@ -84,32 +68,94 @@ export default function AdminPanel() {
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <LinearGradient colors={["#10224D", "#1B3A7A", "#155EEF"]} style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} style={styles.headerBackBtn}>
-            <Ionicons name="arrow-forward" size={24} color="#fff" />
-          </Pressable>
-          <Text style={styles.headerTitle}>لوحة التحكم</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRow}>
-          {TABS.map((tab) => (
+  const activeLabel = TABS.find((t) => t.key === activeTab)?.label ?? "";
+
+  const Sidebar = (
+    <View style={[shell.sidebar, { paddingTop: Platform.OS === "web" ? 24 : insets.top + 16 }]}>
+      <View style={shell.sidebarBrand}>
+        <Logo onNavy size={26} />
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={shell.sidebarNav}>
+        {TABS.map((tab) => {
+          const active = activeTab === tab.key;
+          return (
             <Pressable
               key={tab.key}
               onPress={() => switchTab(tab.key)}
-              style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              style={[shell.sideItem, active && shell.sideItemActive]}
             >
-              <Ionicons name={tab.icon as any} size={18} color={activeTab === tab.key ? Colors.light.accent : "rgba(255,255,255,0.5)"} />
-              <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+              <Ionicons
+                name={tab.icon as any}
+                size={20}
+                color={active ? "#FFFFFF" : "rgba(255,255,255,0.65)"}
+              />
+              <Text style={[shell.sideLabel, active && shell.sideLabelActive]}>{tab.label}</Text>
             </Pressable>
-          ))}
-        </ScrollView>
-      </LinearGradient>
+          );
+        })}
+      </ScrollView>
 
-      <Animated.View style={[styles.content, tabContentStyle]}>
-        {activeTab === "dashboard" && <DashboardSection />}
+      <Pressable onPress={() => router.back()} style={shell.sideExit}>
+        <Ionicons name="exit-outline" size={19} color="rgba(255,255,255,0.65)" />
+        <Text style={shell.sideLabel}>رجوع للتطبيق</Text>
+      </Pressable>
+    </View>
+  );
+
+  const Body = (
+    <View style={shell.main}>
+      {!wideLayout && (
+        <View style={[shell.mobileBar, { paddingTop: Platform.OS === "web" ? 20 : insets.top + 8 }]}>
+          <View style={shell.mobileBarTop}>
+            <Pressable onPress={() => router.back()} hitSlop={8} style={shell.mobileBack}>
+              <Ionicons name="chevron-back" size={24} color={Colors.light.navy} />
+            </Pressable>
+            <Text style={shell.mobileTitle}>لوحة الإدارة</Text>
+            <Logo />
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={shell.mobileTabs}
+          >
+            {TABS.map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <Pressable
+                  key={tab.key}
+                  onPress={() => switchTab(tab.key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  style={[shell.mobileTab, active && shell.mobileTabActive]}
+                >
+                  <Ionicons
+                    name={tab.icon as any}
+                    size={17}
+                    color={active ? "#FFFFFF" : Colors.light.textSecondary}
+                  />
+                  <Text style={[shell.mobileTabText, active && shell.mobileTabTextActive]}>
+                    {tab.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {wideLayout && (
+        <View style={shell.desktopHead}>
+          <Text style={shell.desktopTitle}>{activeLabel}</Text>
+          <Text style={shell.desktopSub}>إدارة المنصة ومتابعة الأداء في فرصة</Text>
+        </View>
+      )}
+
+      <View style={styles.content}>
+        {activeTab === "dashboard" && <DashboardSection wide={wideLayout} onNavigate={switchTab} />}
         {activeTab === "notifications" && <NotificationsSection />}
         {activeTab === "orders" && <OrdersSection />}
         {activeTab === "users" && <UsersSection />}
@@ -120,10 +166,120 @@ export default function AdminPanel() {
         {activeTab === "support" && <SupportTicketsSection />}
         {activeTab === "activity" && <ActivitySection />}
         {activeTab === "settings" && <AccountSettingsSection />}
-      </Animated.View>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={[styles.container, wideLayout && shell.wideRow]}>
+      {wideLayout && Sidebar}
+      {Body}
     </View>
   );
 }
+
+const shell = StyleSheet.create({
+  wideRow: { flexDirection: "row" },
+
+  sidebar: {
+    width: 232,
+    backgroundColor: Colors.light.navy,
+    paddingHorizontal: 12,
+    paddingBottom: 16,
+  },
+  sidebarBrand: { alignItems: "center", paddingVertical: 20 },
+  sidebarNav: { gap: 4, paddingBottom: 16 },
+  sideItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
+  },
+  sideItemActive: { backgroundColor: Colors.light.primary },
+  sideLabel: {
+    flex: 1,
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 15,
+    color: "rgba(255,255,255,0.65)",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  sideLabelActive: { color: "#FFFFFF", fontFamily: "Tajawal_700Bold" },
+  sideExit: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.15)",
+  },
+
+  main: { flex: 1, backgroundColor: Colors.light.background },
+
+  mobileBar: {
+    backgroundColor: "#FFFFFF",
+    paddingBottom: 12,
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.light.border,
+  },
+  mobileBarTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+  },
+  mobileBack: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
+  mobileTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 17,
+    color: Colors.light.navy,
+    writingDirection: "rtl",
+  },
+  mobileTabs: { paddingHorizontal: 16, gap: 8 },
+  mobileTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: Colors.light.background,
+  },
+  mobileTabActive: { backgroundColor: Colors.light.primary },
+  mobileTabText: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+  mobileTabTextActive: { color: "#FFFFFF" },
+
+  desktopHead: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 4,
+    gap: 2,
+  },
+  desktopTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 24,
+    color: Colors.light.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  desktopSub: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+});
 
 function SalesChart() {
   const { data: chartData } = useQuery<{ date: string; total: string; count: number }[]>({
@@ -194,59 +350,200 @@ function SalesChart() {
   );
 }
 
-function DashboardSection() {
+/** حالة الطلب كما تظهر في جدول لوحة الإدارة */
+function orderRowState(order: any): { label: string; kind: "success" | "warning" | "error" | "info" } {
+  if (order.paymentStatus === "rejected") return { label: "مرفوض", kind: "error" };
+  if (order.paymentStatus !== "confirmed") return { label: "قيد التأكيد", kind: "warning" };
+  if (order.shippingStatus === "delivered") return { label: "مكتمل", kind: "success" };
+  if (order.shippingStatus === "cancelled") return { label: "ملغي", kind: "error" };
+  return { label: "قيد التنفيذ", kind: "info" };
+}
+
+function DashboardSection({
+  wide,
+  onNavigate,
+}: {
+  wide: boolean;
+  onNavigate: (tab: AdminTab) => void;
+}) {
   const { data: stats, isLoading } = useQuery<any>({
     queryKey: ["/api/admin/dashboard"],
     refetchInterval: 10000,
   });
 
+  const { data: orders } = useQuery<any[]>({
+    queryKey: ["/api/admin/orders"],
+    refetchInterval: 15000,
+  });
+
   if (isLoading) return <LoadingView />;
 
-  return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sectionPadding}>
-      <Text style={styles.sectionTitle}>نظرة عامة</Text>
-      <View style={styles.statsGrid}>
-        <StatCard icon="cash" label="إجمالي الإيرادات" value={`${stats?.totalRevenue || "0"} $`} color="#1B3A7A" />
-        <StatCard icon="receipt" label="إجمالي الطلبات" value={stats?.totalOrders?.toString() || "0"} color="#175CD3" />
-        <StatCard icon="people" label="المستخدمين" value={stats?.totalUsers?.toString() || "0"} color="#067647" />
-        <StatCard icon="cube" label="منتجات معروضة" value={stats?.activeProducts?.toString() || "0"} color={Colors.light.accentDark} />
-        <StatCard icon="today" label="طلبات اليوم" value={stats?.ordersToday?.toString() || "0"} color="#B42318" />
-        <StatCard icon="person-add" label="مستخدمين جدد (أسبوع)" value={stats?.newUsersThisWeek?.toString() || "0"} color="#067647" />
-        <StatCard icon="trending-up" label="معدل التحويل" value={`${stats?.conversionRate || "0"}%`} color="#B54708" />
-        <StatCard icon="cart" label="متوسط قيمة الطلب" value={`${stats?.averageOrderValue || "0"} $`} color="#10224D" />
-        <StatCard icon="hourglass" label="طلبات بانتظار المراجعة" value={stats?.pendingReviewOrders?.toString() || "0"} color="#B54708" />
-        <StatCard icon="ticket" label="تذاكر الجولة الحالية" value={stats?.ticketsInActiveDraw?.toString() || "0"} color="#1B3A7A" />
-      </View>
+  const draw = stats?.activeDraw ?? null;
+  const soldTickets = draw?.soldTickets ?? 0;
+  const targetTickets = draw?.targetTickets ?? 0;
+  const remaining = Math.max(0, targetTickets - soldTickets);
+  const progress = targetTickets > 0 ? Math.min(soldTickets / targetTickets, 1) : 0;
+  const recentOrders = (orders ?? []).slice(0, 5);
 
-      {stats?.activeDraw && (
-        <View style={styles.activeDrawCard}>
-          <View style={styles.activeDrawHead}>
-            <Ionicons name="gift" size={18} color={Colors.light.accentDark} />
-            <Text style={styles.activeDrawTitle}>الجولة الحالية: {stats.activeDraw.prizeName}</Text>
+  return (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={dash.content}>
+      {!wide && (
+        <View style={dash.mobileHead}>
+          <View style={dash.demoBadge}>
+            <Ionicons name="server-outline" size={13} color={Colors.light.textSecondary} />
+            <Text style={dash.demoText}>بيانات مباشرة</Text>
           </View>
-          <Text style={styles.activeDrawSub}>
-            {stats.activeDraw.soldTickets} / {stats.activeDraw.targetTickets} تذكرة ·{" "}
-            {DRAW_STATUS_AR[stats.activeDraw.status] || stats.activeDraw.status}
-          </Text>
-          <View style={styles.campaignProgressBg}>
-            <View
-              style={[
-                styles.campaignProgressFill,
-                {
-                  width: `${Math.min((stats.activeDraw.soldTickets / Math.max(stats.activeDraw.targetTickets, 1)) * 100, 100)}%`,
-                  backgroundColor: Colors.light.accent,
-                },
-              ]}
-            />
+          <View style={{ flex: 1 }}>
+            <Text style={dash.mobileTitle}>لوحة الإدارة</Text>
+            <Text style={dash.mobileSub}>إدارة المنصة ومتابعة الأداء في فرصة</Text>
           </View>
         </View>
       )}
 
+      {/* ───── بطاقات الأرقام ───── */}
+      <View style={dash.statsGrid}>
+        <StatTile
+          icon="bar-chart"
+          tone="primary"
+          value={`$${stats?.totalRevenue ?? "0"}`}
+          label="المبيعات"
+          style={wide ? dash.statWide : dash.statNarrow}
+        />
+        <StatTile
+          icon="ticket"
+          tone="success"
+          value={soldTickets}
+          label="الفرص المؤكدة"
+          style={wide ? dash.statWide : dash.statNarrow}
+        />
+        <StatTile
+          icon="trophy"
+          tone="navy"
+          value={remaining}
+          label="المتبقي للسحب"
+          style={wide ? dash.statWide : dash.statNarrow}
+        />
+        <StatTile
+          icon="cart"
+          tone="warning"
+          value={stats?.pendingReviewOrders ?? 0}
+          label="طلبات بانتظار التأكيد"
+          style={wide ? dash.statWide : dash.statNarrow}
+        />
+      </View>
+
+      <View style={[dash.panels, wide && dash.panelsWide]}>
+        {/* ───── أحدث الطلبات ───── */}
+        <View style={[dash.panel, wide && dash.panelGrow]}>
+          <View style={dash.panelHead}>
+            <Pressable onPress={() => onNavigate("orders")} hitSlop={8} accessibilityRole="button">
+              <Text style={dash.panelLink}>عرض الكل ‹</Text>
+            </Pressable>
+            <Text style={dash.panelTitle}>أحدث الطلبات</Text>
+          </View>
+
+          <View style={dash.tableHead}>
+            <Text style={[dash.th, dash.colDate]}>التاريخ</Text>
+            <Text style={[dash.th, dash.colState]}>الحالة</Text>
+            {wide && <Text style={[dash.th, dash.colPay]}>الدفع</Text>}
+            <Text style={[dash.th, dash.colAmount]}>القيمة</Text>
+            <Text style={[dash.th, dash.colId]}>الطلب</Text>
+          </View>
+
+          {recentOrders.length === 0 ? (
+            <Text style={dash.emptyRow}>ما في طلبات بعد</Text>
+          ) : (
+            recentOrders.map((o) => {
+              const state = orderRowState(o);
+              return (
+                <View key={o.id} style={dash.tr}>
+                  <Text style={[dash.td, dash.colDate]}>
+                    {new Date(o.createdAt).toLocaleDateString("en-GB")}
+                  </Text>
+                  <View style={dash.colState}>
+                    <StatusBadge kind={state.kind} label={state.label} />
+                  </View>
+                  {wide && (
+                    <Text style={[dash.td, dash.colPay]} numberOfLines={1}>
+                      {o.paymentMethod || "—"}
+                    </Text>
+                  )}
+                  <Text style={[dash.td, dash.colAmount, dash.tdStrong]}>
+                    ${parseFloat(o.totalAmount).toFixed(0)}
+                  </Text>
+                  <Text style={[dash.td, dash.colId, dash.tdStrong]}>#{o.id.slice(0, 6)}</Text>
+                </View>
+              );
+            })
+          )}
+        </View>
+
+        {/* ───── السحب الحالي ───── */}
+        <View style={[dash.panel, wide && dash.panelSide]}>
+          <View style={dash.panelHead}>
+            <Ionicons name="ellipsis-horizontal" size={18} color={Colors.light.textMuted} />
+            <Text style={dash.panelTitle}>السحب الحالي</Text>
+          </View>
+
+          {draw ? (
+            <>
+              <View style={dash.drawRow}>
+                <View style={dash.drawImage}>
+                  {draw.prizeImageUrl ? (
+                    <Image
+                      source={{ uri: buildMediaUrl(draw.prizeImageUrl)! }}
+                      style={{ width: "100%", height: "100%" }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Ionicons name="trophy" size={28} color={Colors.light.gold} />
+                  )}
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={dash.drawTitle}>{draw.title}</Text>
+                  <Text style={dash.drawPrize}>الجائزة: {draw.prizeName}</Text>
+                </View>
+              </View>
+
+              <View style={dash.progressRow}>
+                <Text style={dash.progressPercent}>{(progress * 100).toFixed(1)}%</Text>
+                <View style={dash.progressTrack}>
+                  <View style={[dash.progressFill, { width: `${Math.max(progress * 100, 2)}%` }]} />
+                </View>
+              </View>
+
+              <Text style={dash.drawCount}>
+                {soldTickets} من {targetTickets} فرصة
+              </Text>
+
+              <Pressable
+                onPress={() => onNavigate("draws")}
+                accessibilityRole="button"
+                style={dash.drawBtn}
+              >
+                <Ionicons name="settings-outline" size={17} color="#FFFFFF" />
+                <Text style={dash.drawBtnText}>إدارة السحب</Text>
+              </Pressable>
+            </>
+          ) : (
+            <View style={dash.noDraw}>
+              <Ionicons name="gift-outline" size={34} color={Colors.light.border} />
+              <Text style={dash.noDrawText}>ما في سحب مفتوح</Text>
+              <Pressable onPress={() => onNavigate("draws")} style={dash.drawBtn}>
+                <Ionicons name="add" size={17} color="#FFFFFF" />
+                <Text style={dash.drawBtnText}>إنشاء جولة</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </View>
+
       <SalesChart />
 
       {stats?.topProducts && stats.topProducts.length > 0 && (
-        <>
-          <Text style={[styles.sectionTitle, { marginTop: 24 }]}>أفضل المنتجات مبيعاً</Text>
+        <View style={dash.panel}>
+          <Text style={dash.panelTitle}>أفضل المنتجات مبيعاً</Text>
           {stats.topProducts.map((p: any, i: number) => (
             <View key={i} style={styles.topCampaignItem}>
               <View style={styles.topCampaignRank}>
@@ -258,11 +555,181 @@ function DashboardSection() {
               </View>
             </View>
           ))}
-        </>
+        </View>
       )}
     </ScrollView>
   );
 }
+
+const dash = StyleSheet.create({
+  content: { padding: 16, gap: 16 },
+
+  mobileHead: { flexDirection: "row", alignItems: "center", gap: 12 },
+  mobileTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 20,
+    color: Colors.light.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  mobileSub: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  demoBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.light.border,
+  },
+  demoText: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 11,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  statWide: { minWidth: 210 },
+  statNarrow: { minWidth: "45%" },
+
+  panels: { gap: 16 },
+  panelsWide: { flexDirection: "row", alignItems: "flex-start" },
+  panel: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.light.border,
+  },
+  panelGrow: { flex: 2 },
+  panelSide: { flex: 1, minWidth: 280 },
+  panelHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  panelTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 16,
+    color: Colors.light.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  panelLink: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 13,
+    color: Colors.light.primary,
+    writingDirection: "rtl",
+  },
+
+  tableHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.light.border,
+  },
+  th: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 12,
+    color: Colors.light.textMuted,
+    writingDirection: "rtl",
+  },
+  tr: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.light.borderSubtle,
+  },
+  td: { fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary },
+  tdStrong: { fontFamily: "Tajawal_700Bold", color: Colors.light.navy },
+  colDate: { width: 86, textAlign: "left", writingDirection: "ltr" },
+  colState: { width: 104, alignItems: "flex-start" },
+  colPay: { flex: 1, textAlign: "right", writingDirection: "rtl" },
+  colAmount: { width: 62, textAlign: "right" },
+  colId: { width: 66, textAlign: "right", writingDirection: "ltr" },
+  emptyRow: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 13,
+    color: Colors.light.textMuted,
+    textAlign: "center",
+    writingDirection: "rtl",
+    paddingVertical: 20,
+  },
+
+  drawRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  drawImage: {
+    width: 62,
+    height: 78,
+    borderRadius: 12,
+    backgroundColor: Colors.light.background,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  drawTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 17,
+    color: Colors.light.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  drawPrize: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  progressRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  progressPercent: { fontFamily: "Tajawal_700Bold", fontSize: 13, color: Colors.light.primary },
+  progressTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: Colors.light.borderSubtle,
+    overflow: "hidden",
+  },
+  progressFill: { height: "100%", borderRadius: 999, backgroundColor: Colors.light.primary },
+  drawCount: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  drawBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: Colors.light.primary,
+  },
+  drawBtnText: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 15,
+    color: "#FFFFFF",
+    writingDirection: "rtl",
+  },
+  noDraw: { alignItems: "center", gap: 12, paddingVertical: 20 },
+  noDrawText: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+});
 
 function OrdersSection() {
   const { data: orders, isLoading } = useQuery<any[]>({
