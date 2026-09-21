@@ -32,7 +32,7 @@ import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
 
-type AdminTab = "dashboard" | "orders" | "users" | "campaigns" | "payments" | "coupons" | "notifications" | "activity" | "support" | "settings";
+type AdminTab = "dashboard" | "orders" | "users" | "products" | "draws" | "payments" | "coupons" | "notifications" | "activity" | "support" | "settings";
 
 const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "dashboard", label: "الرئيسية", icon: "grid" },
@@ -40,7 +40,8 @@ const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "orders", label: "الطلبات", icon: "receipt" },
   { key: "support", label: "تذاكر الدعم", icon: "chatbubbles" },
   { key: "users", label: "المستخدمين", icon: "people" },
-  { key: "campaigns", label: "الحملات", icon: "megaphone" },
+  { key: "products", label: "المنتجات", icon: "cube" },
+  { key: "draws", label: "جولات السحب", icon: "gift" },
   { key: "payments", label: "الدفع", icon: "card" },
   { key: "coupons", label: "الكوبونات", icon: "pricetag" },
   { key: "activity", label: "السجل", icon: "time" },
@@ -111,7 +112,8 @@ export default function AdminPanel() {
         {activeTab === "notifications" && <NotificationsSection />}
         {activeTab === "orders" && <OrdersSection />}
         {activeTab === "users" && <UsersSection />}
-        {activeTab === "campaigns" && <CampaignsSection />}
+        {activeTab === "products" && <ProductsSection />}
+        {activeTab === "draws" && <DrawsSection />}
         {activeTab === "payments" && <PaymentsSection />}
         {activeTab === "coupons" && <CouponsSection />}
         {activeTab === "support" && <SupportTicketsSection />}
@@ -206,26 +208,52 @@ function DashboardSection() {
         <StatCard icon="cash" label="إجمالي الإيرادات" value={`${stats?.totalRevenue || "0"} $`} color="#9B59B6" />
         <StatCard icon="receipt" label="إجمالي الطلبات" value={stats?.totalOrders?.toString() || "0"} color="#3498DB" />
         <StatCard icon="people" label="المستخدمين" value={stats?.totalUsers?.toString() || "0"} color="#2ECC71" />
-        <StatCard icon="flame" label="حملات نشطة" value={stats?.activeCampaigns?.toString() || "0"} color={Colors.light.accent} />
+        <StatCard icon="cube" label="منتجات معروضة" value={stats?.activeProducts?.toString() || "0"} color={Colors.light.accentDark} />
         <StatCard icon="today" label="طلبات اليوم" value={stats?.ordersToday?.toString() || "0"} color="#E74C3C" />
         <StatCard icon="person-add" label="مستخدمين جدد (أسبوع)" value={stats?.newUsersThisWeek?.toString() || "0"} color="#1ABC9C" />
         <StatCard icon="trending-up" label="معدل التحويل" value={`${stats?.conversionRate || "0"}%`} color="#E67E22" />
         <StatCard icon="cart" label="متوسط قيمة الطلب" value={`${stats?.averageOrderValue || "0"} $`} color="#8E44AD" />
+        <StatCard icon="hourglass" label="طلبات بانتظار المراجعة" value={stats?.pendingReviewOrders?.toString() || "0"} color="#F39C12" />
+        <StatCard icon="ticket" label="تذاكر الجولة الحالية" value={stats?.ticketsInActiveDraw?.toString() || "0"} color="#9B59B6" />
       </View>
+
+      {stats?.activeDraw && (
+        <View style={styles.activeDrawCard}>
+          <View style={styles.activeDrawHead}>
+            <Ionicons name="gift" size={18} color={Colors.light.accentDark} />
+            <Text style={styles.activeDrawTitle}>الجولة الحالية: {stats.activeDraw.prizeName}</Text>
+          </View>
+          <Text style={styles.activeDrawSub}>
+            {stats.activeDraw.soldTickets} / {stats.activeDraw.targetTickets} تذكرة ·{" "}
+            {DRAW_STATUS_AR[stats.activeDraw.status] || stats.activeDraw.status}
+          </Text>
+          <View style={styles.campaignProgressBg}>
+            <View
+              style={[
+                styles.campaignProgressFill,
+                {
+                  width: `${Math.min((stats.activeDraw.soldTickets / Math.max(stats.activeDraw.targetTickets, 1)) * 100, 100)}%`,
+                  backgroundColor: Colors.light.accent,
+                },
+              ]}
+            />
+          </View>
+        </View>
+      )}
 
       <SalesChart />
 
-      {stats?.topCampaigns && stats.topCampaigns.length > 0 && (
+      {stats?.topProducts && stats.topProducts.length > 0 && (
         <>
-          <Text style={[styles.sectionTitle, { marginTop: 24 }]}>أفضل الحملات مبيعاً</Text>
-          {stats.topCampaigns.map((c: any, i: number) => (
+          <Text style={[styles.sectionTitle, { marginTop: 24 }]}>أفضل المنتجات مبيعاً</Text>
+          {stats.topProducts.map((p: any, i: number) => (
             <View key={i} style={styles.topCampaignItem}>
               <View style={styles.topCampaignRank}>
                 <Text style={styles.topCampaignRankText}>{i + 1}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.topCampaignTitle}>{c.title}</Text>
-                <Text style={styles.topCampaignSub}>{c.soldQuantity} مبيعات</Text>
+                <Text style={styles.topCampaignTitle}>{p.name}</Text>
+                <Text style={styles.topCampaignSub}>{p.soldCount} مبيعات</Text>
               </View>
             </View>
           ))}
@@ -335,7 +363,7 @@ function OrdersSection() {
             </View>
             <View style={styles.orderRow}>
               <Ionicons name="megaphone" size={14} color={Colors.light.textSecondary} />
-              <Text style={styles.orderDetailText}>{item.campaignTitle || "حملة"}</Text>
+              <Text style={styles.orderDetailText} numberOfLines={2}>{item.summary || "—"}</Text>
             </View>
             <View style={styles.orderFooter}>
               <Text style={styles.orderAmount}>{item.totalAmount} $</Text>
@@ -837,57 +865,110 @@ function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; tic
   );
 }
 
-function CampaignsSection() {
-  const { data: campaigns, isLoading } = useQuery<any[]>({ queryKey: ["/api/campaigns"] });
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingCampaign, setEditingCampaign] = useState<any>(null);
+/** رفع صورة للسيرفر — مشترك بين نماذج المنتجات والجولات */
+async function uploadAdminImage(imageUri: string | null, imageFile: any): Promise<string | undefined> {
+  if (!imageUri && !imageFile) return undefined;
+  try {
+    const url = new URL("/api/admin/products/upload-image", getApiUrl());
+    const formData = new FormData();
 
-  const drawMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", `/api/admin/draw/${id}`);
+    if (Platform.OS === "web" && imageFile) {
+      formData.append("image", imageFile);
+    } else if (imageUri) {
+      const base64 = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: "base64" as any,
+      });
+      const byteChars = atob(base64);
+      const byteNumbers = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([new Uint8Array(byteNumbers)], { type: "image/jpeg" });
+      formData.append("image", blob, "image.jpg");
+    } else {
+      return undefined;
+    }
+
+    const res = await fetch(url.toString(), { method: "POST", body: formData, credentials: "include" });
+    if (!res.ok) throw new Error("فشل رفع الصورة");
+    const data = await res.json();
+    return data.imageUrl;
+  } catch (err) {
+    console.error("Image upload error:", err);
+    return undefined;
+  }
+}
+
+/** منتقي صورة مشترك */
+async function pickAdminImage(
+  setImageUri: (v: string | null) => void,
+  setImageFile: (v: any) => void
+) {
+  if (Platform.OS === "web") {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (ev) => setImageUri(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  } else {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) setImageUri(result.assets[0].uri);
+  }
+}
+
+const PRODUCT_CATEGORIES = [
+  { key: "electronics", label: "إلكترونيات" },
+  { key: "fashion", label: "أزياء" },
+  { key: "beauty", label: "جمال" },
+  { key: "accessories", label: "إكسسوارات" },
+  { key: "home", label: "منزل" },
+  { key: "other", label: "أخرى" },
+];
+
+function ProductsSection() {
+  const { data: products, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/products"] });
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const res = await apiRequest("PUT", `/api/admin/products/${id}`, { isActive });
       return res.json();
     },
-    onSuccess: (data) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("تم اختيار الفائز!", `الفائز: ${data.winner.username}\nالتذكرة: ${data.ticket.ticketNumber}`);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+    onSuccess: () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiRequest("DELETE", `/api/admin/campaigns/${id}`);
+      const res = await apiRequest("DELETE", `/api/admin/products/${id}`);
       return res.json();
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
-  const handleDraw = (c: any) => {
-    Alert.alert("اختيار الفائز", `هل أنت متأكد من اختيار الفائز لحملة "${c.title}"؟`, [
+  const handleDelete = (p: any) => {
+    Alert.alert("حذف المنتج", `حذف "${p.name}" نهائياً؟ إذا عليه طلبات سابقة عطّله بدل ما تحذفه.`, [
       { text: "إلغاء", style: "cancel" },
-      { text: "اختيار", style: "destructive", onPress: () => drawMutation.mutate(c.id) },
+      { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(p.id) },
     ]);
-  };
-
-  const handleDelete = (c: any) => {
-    Alert.alert("حذف الحملة", `هل أنت متأكد من حذف "${c.title}"؟`, [
-      { text: "إلغاء", style: "cancel" },
-      { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(c.id) },
-    ]);
-  };
-
-  const getStatusAr = (s: string) => {
-    const map: Record<string, string> = { active: "نشط", sold_out: "نفذت الكمية", drawing: "جاري الاختيار", completed: "مكتمل" };
-    return map[s] || s;
-  };
-  const getStatusColor = (s: string) => {
-    const map: Record<string, string> = { active: "#2ECC71", sold_out: "#F39C12", drawing: "#9B59B6", completed: "#3498DB" };
-    return map[s] || "#666";
   };
 
   if (isLoading) return <LoadingView />;
@@ -895,274 +976,612 @@ function CampaignsSection() {
   return (
     <>
       <FlatList
-        data={campaigns || []}
+        data={products || []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.sectionPadding}
         ListHeaderComponent={
-          <View>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>الحملات ({campaigns?.length || 0})</Text>
-              <Pressable onPress={() => setShowCreateModal(true)} style={styles.addBtn}>
-                <Ionicons name="add" size={20} color="#fff" />
-                <Text style={styles.addBtnText}>جديد</Text>
-              </Pressable>
-            </View>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>المنتجات ({products?.length || 0})</Text>
+            <Pressable
+              onPress={() => { setEditing(null); setShowForm(true); }}
+              style={styles.addBtn}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+              <Text style={styles.addBtnText}>منتج جديد</Text>
+            </Pressable>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={styles.campaignCard}>
-            <View style={styles.campaignHeader}>
-              <Text style={styles.campaignTitle} numberOfLines={1}>{item.title}</Text>
-              <View style={[styles.statusPill, { backgroundColor: getStatusColor(item.status) + "20" }]}>
-                <Text style={[styles.statusPillText, { color: getStatusColor(item.status) }]}>{getStatusAr(item.status)}</Text>
-              </View>
-            </View>
-            <View style={styles.campaignInfo}>
-              <Text style={styles.campaignInfoText}>الجائزة: {item.prizeName}</Text>
-              <Text style={styles.campaignInfoText}>السعر: {item.productPrice} $</Text>
-              <Text style={styles.campaignInfoText}>المباع: {item.soldQuantity}/{item.totalQuantity}</Text>
-              {item.products && item.products.length > 0 && (
-                <View>
-                  <Text style={[styles.campaignInfoText, { color: Colors.light.accent }]}>
-                    الموديلات: {item.products.length}
-                  </Text>
-                  {item.products.map((p: any) => (
-                    <Text key={p.id} style={[styles.campaignInfoText, { fontSize: 11, color: Colors.light.textLight, paddingStart: 8 }]}>
-                      • {p.nameAr || p.name}: {p.soldQuantity}/{p.quantity} ({p.price} $)
-                    </Text>
-                  ))}
-                </View>
-              )}
-            </View>
-            <View style={styles.campaignProgressWrap}>
-              <View style={styles.campaignProgressBg}>
-                <View style={[styles.campaignProgressFill, { width: `${Math.min((item.soldQuantity / item.totalQuantity) * 100, 100)}%`, backgroundColor: getStatusColor(item.status) }]} />
-              </View>
-            </View>
-            <View style={styles.campaignActions}>
-              <Pressable onPress={() => setEditingCampaign(item)} style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}>
-                <Ionicons name="create" size={16} color="#fff" />
-                <Text style={styles.actionBtnText}>الموديلات</Text>
-              </Pressable>
-              {(item.status === "sold_out" || item.status === "drawing") && (
-                <Pressable onPress={() => handleDraw(item)} style={[styles.actionBtn, { backgroundColor: "#9B59B6" }]}>
-                  <Ionicons name="dice" size={16} color="#fff" />
-                  <Text style={styles.actionBtnText}>اختيار</Text>
-                </Pressable>
-              )}
-              {item.soldQuantity === 0 && (
-                <Pressable onPress={() => handleDelete(item)} style={[styles.actionBtn, { backgroundColor: "#E74C3C" }]}>
-                  <Ionicons name="trash" size={16} color="#fff" />
-                  <Text style={styles.actionBtnText}>حذف</Text>
-                </Pressable>
-              )}
-            </View>
-            {item.winnerId && (
-              <View style={styles.winnerBanner}>
-                <Ionicons name="trophy" size={16} color="#FFD700" />
-                <Text style={styles.winnerText}>الفائز: تذكرة {item.winnerTicketId}</Text>
-              </View>
-            )}
+        ListEmptyComponent={
+          <View style={{ alignItems: "center", paddingVertical: 50, gap: 10 }}>
+            <Ionicons name="cube-outline" size={44} color={Colors.light.border} />
+            <Text style={styles.campaignInfoText}>ما في منتجات بعد — ضيف أول منتج</Text>
           </View>
-        )}
+        }
+        renderItem={({ item }) => {
+          const outOfStock = item.stock !== null && item.stock <= 0;
+          return (
+            <View style={[styles.campaignCard, !item.isActive && { opacity: 0.6 }]}>
+              <View style={styles.campaignHeader}>
+                <Text style={styles.campaignTitle} numberOfLines={1}>{item.name}</Text>
+                <View
+                  style={[
+                    styles.statusPill,
+                    { backgroundColor: (item.isActive ? "#2ECC71" : "#95A5A6") + "20" },
+                  ]}
+                >
+                  <Text
+                    style={[styles.statusPillText, { color: item.isActive ? "#2ECC71" : "#95A5A6" }]}
+                  >
+                    {item.isActive ? "ظاهر" : "مخفي"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.campaignInfo}>
+                <Text style={styles.campaignInfoText}>السعر: {parseFloat(item.price).toFixed(2)} $</Text>
+                <Text style={[styles.campaignInfoText, outOfStock && { color: "#E74C3C" }]}>
+                  المخزون: {item.stock === null ? "غير محدود" : item.stock}
+                </Text>
+                <Text style={styles.campaignInfoText}>المباع: {item.soldCount}</Text>
+                <Text style={styles.campaignInfoText}>
+                  التصنيف: {PRODUCT_CATEGORIES.find((c) => c.key === item.category)?.label || item.category}
+                </Text>
+              </View>
+
+              <View style={styles.campaignActions}>
+                <Pressable
+                  onPress={() => { setEditing(item); setShowForm(true); }}
+                  style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}
+                >
+                  <Ionicons name="create" size={16} color="#1A1A1A" />
+                  <Text style={[styles.actionBtnText, { color: "#1A1A1A" }]}>تعديل</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => toggleMutation.mutate({ id: item.id, isActive: !item.isActive })}
+                  style={[styles.actionBtn, { backgroundColor: item.isActive ? "#95A5A6" : "#2ECC71" }]}
+                >
+                  <Ionicons name={item.isActive ? "eye-off" : "eye"} size={16} color="#fff" />
+                  <Text style={styles.actionBtnText}>{item.isActive ? "إخفاء" : "إظهار"}</Text>
+                </Pressable>
+                {item.soldCount === 0 && (
+                  <Pressable
+                    onPress={() => handleDelete(item)}
+                    style={[styles.actionBtn, { backgroundColor: "#E74C3C" }]}
+                  >
+                    <Ionicons name="trash" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>حذف</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          );
+        }}
       />
-      <CreateCampaignModal visible={showCreateModal} onClose={() => setShowCreateModal(false)} />
-      {editingCampaign && (
-        <EditCampaignProductsModal campaign={editingCampaign} onClose={() => setEditingCampaign(null)} />
+      {showForm && (
+        <ProductFormModal
+          product={editing}
+          onClose={() => { setShowForm(false); setEditing(null); }}
+        />
       )}
     </>
   );
 }
 
-function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClose: () => void }) {
-  const existingProducts: any[] = campaign.products || [];
-  const [products, setProducts] = useState<ProductVariant[]>(
-    existingProducts.map((p: any) => ({
-      key: p.id,
-      name: p.name || "",
-      nameAr: p.nameAr || "",
-      price: String(p.price),
-      quantity: String(p.quantity),
-      imageUrl: p.imageUrl || "",
-    }))
-  );
-  const [newProducts, setNewProducts] = useState<ProductVariant[]>([]);
-  const [productError, setProductError] = useState<string | null>(null);
+function ProductFormModal({ product, onClose }: { product: any | null; onClose: () => void }) {
+  const isEdit = !!product;
+  const [name, setName] = useState(product?.name || "");
+  const [description, setDescription] = useState(product?.description || "");
+  const [price, setPrice] = useState(product ? String(product.price) : "");
+  const [unlimitedStock, setUnlimitedStock] = useState(product ? product.stock === null : false);
+  const [stock, setStock] = useState(product?.stock != null ? String(product.stock) : "");
+  const [category, setCategory] = useState(product?.category || "other");
+  const [imageUri, setImageUri] = useState<string | null>(product?.imageUrl || null);
+  const [imageFile, setImageFile] = useState<any>(null);
+  const [imageChanged, setImageChanged] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addNewProduct = () => {
-    setNewProducts((prev) => [
-      ...prev,
-      { key: Date.now().toString(), name: "", nameAr: "", price: "", quantity: "", imageUrl: "" },
-    ]);
-  };
-
-  const updateProduct = (key: string, field: keyof ProductVariant, value: string) => {
-    setProducts((prev) => prev.map((v) => (v.key === key ? { ...v, [field]: value } : v)));
-  };
-
-  const updateNewProduct = (key: string, field: keyof ProductVariant, value: string) => {
-    setNewProducts((prev) => prev.map((v) => (v.key === key ? { ...v, [field]: value } : v)));
-  };
-
-  const removeNewProduct = (key: string) => {
-    setNewProducts((prev) => prev.filter((v) => v.key !== key));
-  };
-
-  const deleteMutation = useMutation({
-    mutationFn: async (productId: string) => {
-      const res = await apiRequest("DELETE", `/api/admin/campaign-products/${productId}`);
-      return res.json();
-    },
-    onSuccess: (_data: any, productId: string) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setProducts((prev) => prev.filter((v) => v.key !== productId));
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
-    },
-    onError: (err: any) => {
-      const msg = (err as any)?.message || "حدث خطأ أثناء حذف المنتج";
-      setProductError(msg);
-    },
-  });
-
-  const handleDeleteProduct = (p: ProductVariant) => {
-    Alert.alert("حذف الموديل", `هل تريد حذف "${p.nameAr || p.name}"؟`, [
-      { text: "إلغاء", style: "cancel" },
-      {
-        text: "حذف", style: "destructive", onPress: () => {
-          setProductError(null);
-          deleteMutation.mutate(p.key);
-        },
-      },
-    ]);
-  };
-
-  const handleSave = () => {
-    const totalCount = products.length + newProducts.filter(p => p.name && p.price && p.quantity).length;
-    if (totalCount < 2) {
-      setProductError("يجب الإبقاء على منتجين (موديلين) على الأقل في الحملة");
-      return;
-    }
-    setProductError(null);
-    saveMutation.mutate();
-  };
-
-  const saveMutation = useMutation({
+  const mutation = useMutation({
     mutationFn: async () => {
-      for (const p of products) {
-        const orig = existingProducts.find((ep: any) => ep.id === p.key);
-        if (orig && (orig.name !== p.name || orig.nameAr !== p.nameAr || String(orig.price) !== p.price || String(orig.quantity) !== p.quantity || (orig.imageUrl || "") !== p.imageUrl)) {
-          await apiRequest("PUT", `/api/admin/campaign-products/${p.key}`, {
-            name: p.name,
-            nameAr: p.nameAr,
-            price: p.price,
-            quantity: parseInt(p.quantity),
-            imageUrl: p.imageUrl || undefined,
-          });
-        }
+      setUploading(true);
+      let imageUrl = product?.imageUrl;
+      if (imageChanged) {
+        imageUrl = (await uploadAdminImage(imageUri, imageFile)) ?? null;
       }
-      for (const p of newProducts) {
-        if (!p.name || !p.price || !p.quantity) continue;
-        await apiRequest("POST", `/api/admin/campaigns/${campaign.id}/products`, {
-          name: p.name,
-          nameAr: p.nameAr || p.name,
-          price: p.price,
-          quantity: parseInt(p.quantity),
-          imageUrl: p.imageUrl || undefined,
-        });
-      }
+      setUploading(false);
+
+      const payload = {
+        name: name.trim(),
+        description: description.trim(),
+        price: price.trim(),
+        stock: unlimitedStock ? null : parseInt(stock, 10) || 0,
+        category,
+        imageUrl,
+      };
+
+      const res = isEdit
+        ? await apiRequest("PUT", `/api/admin/products/${product.id}`, payload)
+        : await apiRequest("POST", "/api/admin/products", payload);
+      return res.json();
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       onClose();
+    },
+    onError: (err: any) => {
+      setUploading(false);
+      const msg = err.message || "فشلت العملية";
+      setError(msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
+    },
+  });
+
+  function submit() {
+    setError(null);
+    if (name.trim().length < 2) return setError("اسم المنتج مطلوب");
+    const priceNum = parseFloat(price);
+    if (!priceNum || priceNum <= 0) return setError("السعر لازم يكون أكبر من صفر");
+    if (!unlimitedStock && (!stock.trim() || parseInt(stock, 10) < 0)) {
+      return setError("حدّد المخزون أو فعّل المخزون غير المحدود");
+    }
+    mutation.mutate();
+  }
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.container}>
+          <View style={modalStyles.header}>
+            <Text style={modalStyles.title}>{isEdit ? "تعديل منتج" : "منتج جديد"}</Text>
+            <Pressable onPress={onClose} hitSlop={8}>
+              <Ionicons name="close" size={24} color={Colors.light.text} />
+            </Pressable>
+          </View>
+
+          <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ padding: 16, gap: 4 }}>
+            <ModalInput label="اسم المنتج" value={name} onChangeText={setName} placeholder="مثال: سماعات لاسلكية" />
+            <ModalInput
+              label="الوصف"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="وصف مختصر للمنتج"
+              multiline
+            />
+            <ModalInput label="السعر ($)" value={price} onChangeText={setPrice} placeholder="50" keyboardType="numeric" />
+
+            <Text style={modalStyles.inputLabel}>المخزون</Text>
+            <View style={modalStyles.switchRow}>
+              <Switch
+                value={unlimitedStock}
+                onValueChange={setUnlimitedStock}
+                trackColor={{ true: Colors.light.accent }}
+              />
+              <Text style={modalStyles.switchLabel}>مخزون غير محدود</Text>
+            </View>
+            {!unlimitedStock && (
+              <ModalInput label="" value={stock} onChangeText={setStock} placeholder="عدد القطع المتوفرة" keyboardType="numeric" />
+            )}
+
+            <Text style={modalStyles.inputLabel}>التصنيف</Text>
+            <View style={modalStyles.chipRow}>
+              {PRODUCT_CATEGORIES.map((c) => (
+                <Pressable
+                  key={c.key}
+                  onPress={() => setCategory(c.key)}
+                  style={[modalStyles.chip, category === c.key && modalStyles.chipActive]}
+                >
+                  <Text style={[modalStyles.chipText, category === c.key && modalStyles.chipTextActive]}>
+                    {c.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={modalStyles.inputLabel}>صورة المنتج</Text>
+            <Pressable
+              onPress={() => { setImageChanged(true); pickAdminImage(setImageUri, setImageFile); }}
+              style={modalStyles.imagePicker}
+            >
+              {imageUri ? (
+                <Image source={{ uri: buildMediaUrl(imageUri)! }} style={modalStyles.imagePreview} resizeMode="cover" />
+              ) : (
+                <>
+                  <Ionicons name="image-outline" size={30} color={Colors.light.accent} />
+                  <Text style={modalStyles.imagePickerText}>اختر صورة</Text>
+                </>
+              )}
+            </Pressable>
+
+            {error && (
+              <View style={modalStyles.errorBox}>
+                <Ionicons name="alert-circle" size={16} color={Colors.light.danger} />
+                <Text style={modalStyles.errorText}>{error}</Text>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={modalStyles.footerRow}>
+            <Pressable onPress={onClose} style={modalStyles.cancelButton}>
+              <Text style={modalStyles.cancelButtonText}>إلغاء</Text>
+            </Pressable>
+            <Pressable
+              onPress={submit}
+              disabled={mutation.isPending || uploading}
+              style={[modalStyles.submitButton, (mutation.isPending || uploading) && { opacity: 0.5 }]}
+            >
+              {mutation.isPending || uploading ? (
+                <ActivityIndicator color="#1A1A1A" size="small" />
+              ) : (
+                <Text style={modalStyles.submitButtonText}>{isEdit ? "حفظ" : "إضافة"}</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const DRAW_STATUS_AR: Record<string, string> = {
+  scheduled: "مجدولة",
+  active: "نشطة",
+  ready_to_draw: "جاهزة للسحب",
+  completed: "تم السحب",
+  cancelled: "ملغاة",
+};
+const DRAW_STATUS_COLOR: Record<string, string> = {
+  scheduled: "#95A5A6",
+  active: "#2ECC71",
+  ready_to_draw: "#F39C12",
+  completed: "#3498DB",
+  cancelled: "#E74C3C",
+};
+
+function DrawsSection() {
+  const { data: draws, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/draws"] });
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+
+  const drawMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", `/api/admin/draws/${id}/draw-winner`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        "تم اختيار الفائز! 🏆",
+        `الفائز: ${data.winner.username}\nالتذكرة: ${data.ticket.ticketNumber}` +
+          (data.nextDraw ? `\n\nتم تفعيل الجولة التالية: ${data.nextDraw.title}` : "\n\nما في جولة تالية مجدولة"),
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/draws"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
+  const activateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", `/api/admin/draws/${id}/activate`);
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/draws"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
+    },
+    onError: (err: any) => Alert.alert("خطأ", err.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/draws/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/draws"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
+    },
+    onError: (err: any) => Alert.alert("خطأ", err.message),
+  });
+
+  function handleDraw(d: any) {
+    const shortfall = d.targetTickets - d.soldTickets;
+    Alert.alert(
+      "اختيار الفائز",
+      shortfall > 0
+        ? `الجولة لسا ما اكتملت (باقي ${shortfall} تذكرة). متأكد بدك تسحب هلق؟`
+        : `اختيار الفائز بجولة "${d.title}"؟ العملية ما بترجع.`,
+      [
+        { text: "إلغاء", style: "cancel" },
+        { text: "اسحب", style: "destructive", onPress: () => drawMutation.mutate(d.id) },
+      ]
+    );
+  }
+
+  function handleDelete(d: any) {
+    Alert.alert(
+      "حذف الجولة",
+      d.soldTickets > 0
+        ? `الجولة فيها ${d.soldTickets} تذكرة — رح ترجع معلّقة وتنضاف لجولة لاحقة. متأكد؟`
+        : `حذف "${d.title}"؟`,
+      [
+        { text: "إلغاء", style: "cancel" },
+        { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(d.id) },
+      ]
+    );
+  }
+
+  if (isLoading) return <LoadingView />;
+
   return (
-    <Modal visible={true} animationType="slide" transparent>
+    <>
+      <FlatList
+        data={draws || []}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.sectionPadding}
+        ListHeaderComponent={
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>جولات السحب ({draws?.length || 0})</Text>
+            <Pressable
+              onPress={() => { setEditing(null); setShowForm(true); }}
+              style={styles.addBtn}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+              <Text style={styles.addBtnText}>جولة جديدة</Text>
+            </Pressable>
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={{ alignItems: "center", paddingVertical: 50, gap: 10 }}>
+            <Ionicons name="gift-outline" size={44} color={Colors.light.border} />
+            <Text style={styles.campaignInfoText}>ما في جولات — أنشئ أول جولة سحب</Text>
+          </View>
+        }
+        renderItem={({ item }) => {
+          const progress = item.targetTickets > 0
+            ? Math.min(item.soldTickets / item.targetTickets, 1)
+            : 0;
+          const color = DRAW_STATUS_COLOR[item.status] || "#666";
+          return (
+            <View style={styles.campaignCard}>
+              <View style={styles.campaignHeader}>
+                <Text style={styles.campaignTitle} numberOfLines={1}>{item.title}</Text>
+                <View style={[styles.statusPill, { backgroundColor: color + "20" }]}>
+                  <Text style={[styles.statusPillText, { color }]}>
+                    {DRAW_STATUS_AR[item.status] || item.status}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.campaignInfo}>
+                <Text style={styles.campaignInfoText}>الجائزة: {item.prizeName}</Text>
+                <Text style={styles.campaignInfoText}>
+                  سعر التذكرة: {parseFloat(item.ticketPrice).toFixed(2)} $
+                </Text>
+                <Text style={styles.campaignInfoText}>
+                  التذاكر: {item.soldTickets} / {item.targetTickets}
+                </Text>
+                <Text style={styles.campaignInfoText}>المشاركون: {item.participants ?? 0}</Text>
+              </View>
+
+              <View style={styles.campaignProgressWrap}>
+                <View style={styles.campaignProgressBg}>
+                  <View
+                    style={[
+                      styles.campaignProgressFill,
+                      { width: `${progress * 100}%`, backgroundColor: color },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.campaignActions}>
+                {item.status !== "completed" && (
+                  <Pressable
+                    onPress={() => { setEditing(item); setShowForm(true); }}
+                    style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}
+                  >
+                    <Ionicons name="create" size={16} color="#1A1A1A" />
+                    <Text style={[styles.actionBtnText, { color: "#1A1A1A" }]}>تعديل</Text>
+                  </Pressable>
+                )}
+                {item.status === "scheduled" && (
+                  <Pressable
+                    onPress={() => activateMutation.mutate(item.id)}
+                    style={[styles.actionBtn, { backgroundColor: "#2ECC71" }]}
+                  >
+                    <Ionicons name="play" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>تفعيل</Text>
+                  </Pressable>
+                )}
+                {(item.status === "active" || item.status === "ready_to_draw") && item.soldTickets > 0 && (
+                  <Pressable
+                    onPress={() => handleDraw(item)}
+                    style={[
+                      styles.actionBtn,
+                      { backgroundColor: item.status === "ready_to_draw" ? "#F39C12" : "#9B59B6" },
+                    ]}
+                  >
+                    <Ionicons name="dice" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>اسحب</Text>
+                  </Pressable>
+                )}
+                {item.status !== "completed" && (
+                  <Pressable
+                    onPress={() => handleDelete(item)}
+                    style={[styles.actionBtn, { backgroundColor: "#E74C3C" }]}
+                  >
+                    <Ionicons name="trash" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>حذف</Text>
+                  </Pressable>
+                )}
+              </View>
+
+              {item.status === "completed" && (
+                <View style={styles.winnerBanner}>
+                  <Ionicons name="trophy" size={16} color="#FFD700" />
+                  <Text style={styles.winnerText}>
+                    الفائز: {item.winnerUsername || "—"} · تذكرة {item.winnerTicketNumber}
+                  </Text>
+                </View>
+              )}
+            </View>
+          );
+        }}
+      />
+      {showForm && (
+        <DrawFormModal
+          draw={editing}
+          onClose={() => { setShowForm(false); setEditing(null); }}
+        />
+      )}
+    </>
+  );
+}
+
+function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => void }) {
+  const isEdit = !!draw;
+  const [title, setTitle] = useState(draw?.title || "");
+  const [prizeName, setPrizeName] = useState(draw?.prizeName || "");
+  const [prizeDescription, setPrizeDescription] = useState(draw?.prizeDescription || "");
+  const [ticketPrice, setTicketPrice] = useState(draw ? String(draw.ticketPrice) : "10");
+  const [targetTickets, setTargetTickets] = useState(draw ? String(draw.targetTickets) : "1000");
+  const [imageUri, setImageUri] = useState<string | null>(draw?.prizeImageUrl || null);
+  const [imageFile, setImageFile] = useState<any>(null);
+  const [imageChanged, setImageChanged] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      setUploading(true);
+      let prizeImageUrl = draw?.prizeImageUrl;
+      if (imageChanged) {
+        prizeImageUrl = (await uploadAdminImage(imageUri, imageFile)) ?? null;
+      }
+      setUploading(false);
+
+      const payload = {
+        title: title.trim(),
+        prizeName: prizeName.trim(),
+        prizeDescription: prizeDescription.trim() || null,
+        prizeImageUrl,
+        ticketPrice: ticketPrice.trim(),
+        targetTickets: parseInt(targetTickets, 10),
+      };
+
+      const res = isEdit
+        ? await apiRequest("PUT", `/api/admin/draws/${draw.id}`, payload)
+        : await apiRequest("POST", "/api/admin/draws", payload);
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/draws"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
+      onClose();
+    },
+    onError: (err: any) => {
+      setUploading(false);
+      const msg = err.message || "فشلت العملية";
+      setError(msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
+    },
+  });
+
+  function submit() {
+    setError(null);
+    if (title.trim().length < 2) return setError("عنوان الجولة مطلوب");
+    if (prizeName.trim().length < 2) return setError("اسم الجائزة مطلوب");
+    const priceNum = parseFloat(ticketPrice);
+    if (!priceNum || priceNum <= 0) return setError("سعر التذكرة لازم يكون أكبر من صفر");
+    const targetNum = parseInt(targetTickets, 10);
+    if (!targetNum || targetNum < 1) return setError("عدد التذاكر المستهدف مطلوب");
+    mutation.mutate();
+  }
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={modalStyles.overlay}>
         <View style={modalStyles.container}>
           <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>موديلات: {campaign.title}</Text>
-            <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
-          </View>
-          <ScrollView style={modalStyles.body} showsVerticalScrollIndicator={false}>
-            {products.length > 0 && (
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" as const, marginBottom: 8 }}>الموديلات الحالية ({products.length})</Text>
-            )}
-            {products.map((v, idx) => (
-              <View key={v.key} style={{ backgroundColor: "#F9FAFB", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: Colors.light.border }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.accent }}>موديل {idx + 1}</Text>
-                  <Pressable onPress={() => handleDeleteProduct(v)}>
-                    <Ionicons name="trash-outline" size={20} color={Colors.light.danger} />
-                  </Pressable>
-                </View>
-                <ModalInput label="الاسم (إنجليزي)" value={v.name} onChangeText={(t) => updateProduct(v.key, "name", t)} placeholder="256GB Black" />
-                <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateProduct(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <ModalInput label="السعر ($)" value={v.price} onChangeText={(t) => updateProduct(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ModalInput label="الكمية" value={v.quantity} onChangeText={(t) => updateProduct(v.key, "quantity", t)} placeholder="1000" keyboardType="number-pad" />
-                  </View>
-                </View>
-                <ModalInput label="رابط الصورة" value={v.imageUrl} onChangeText={(t) => updateProduct(v.key, "imageUrl", t)} placeholder="https://example.com/image.jpg" />
-              </View>
-            ))}
-
-            {newProducts.length > 0 && (
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#2ECC71", textAlign: "right", writingDirection: "rtl" as const, marginBottom: 8, marginTop: 4 }}>موديلات جديدة ({newProducts.length})</Text>
-            )}
-            {newProducts.map((v, idx) => (
-              <View key={v.key} style={{ backgroundColor: "#F0FFF4", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#2ECC7140" }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#2ECC71" }}>جديد {idx + 1}</Text>
-                  <Pressable onPress={() => removeNewProduct(v.key)}>
-                    <Ionicons name="close-circle" size={22} color={Colors.light.danger} />
-                  </Pressable>
-                </View>
-                <ModalInput label="الاسم (إنجليزي) *" value={v.name} onChangeText={(t) => updateNewProduct(v.key, "name", t)} placeholder="256GB Black" />
-                <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateNewProduct(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <ModalInput label="السعر ($) *" value={v.price} onChangeText={(t) => updateNewProduct(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ModalInput label="الكمية *" value={v.quantity} onChangeText={(t) => updateNewProduct(v.key, "quantity", t)} placeholder="1000" keyboardType="number-pad" />
-                  </View>
-                </View>
-                <ModalInput label="رابط الصورة" value={v.imageUrl} onChangeText={(t) => updateNewProduct(v.key, "imageUrl", t)} placeholder="https://example.com/image.jpg" />
-              </View>
-            ))}
-
-            <Pressable onPress={addNewProduct} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed", marginBottom: 16 }}>
-              <Ionicons name="add-circle" size={20} color={Colors.light.accent} />
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.accent }}>إضافة موديل جديد</Text>
+            <Text style={modalStyles.title}>{isEdit ? "تعديل الجولة" : "جولة سحب جديدة"}</Text>
+            <Pressable onPress={onClose} hitSlop={8}>
+              <Ionicons name="close" size={24} color={Colors.light.text} />
             </Pressable>
+          </View>
+
+          <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ padding: 16, gap: 4 }}>
+            <ModalInput label="عنوان الجولة" value={title} onChangeText={setTitle} placeholder="مثال: جولة يناير" />
+            <ModalInput label="اسم الجائزة" value={prizeName} onChangeText={setPrizeName} placeholder="مثال: iPhone 16 Pro" />
+            <ModalInput
+              label="وصف الجائزة"
+              value={prizeDescription}
+              onChangeText={setPrizeDescription}
+              placeholder="تفاصيل إضافية عن الجائزة"
+              multiline
+            />
+            <ModalInput
+              label="سعر التذكرة ($)"
+              value={ticketPrice}
+              onChangeText={setTicketPrice}
+              placeholder="10"
+              keyboardType="numeric"
+            />
+            <ModalInput
+              label="عدد التذاكر المستهدف"
+              value={targetTickets}
+              onChangeText={setTargetTickets}
+              placeholder="1000"
+              keyboardType="numeric"
+            />
+
+            <View style={modalStyles.hintBox}>
+              <Ionicons name="information-circle" size={16} color={Colors.light.accentDark} />
+              <Text style={modalStyles.hintText}>
+                كل {parseFloat(ticketPrice) || 0}$ من مشتريات العميل = تذكرة وحدة. لما تنباع{" "}
+                {parseInt(targetTickets, 10) || 0} تذكرة بتصير الجولة جاهزة للسحب.
+              </Text>
+            </View>
+
+            <Text style={modalStyles.inputLabel}>صورة الجائزة</Text>
+            <Pressable
+              onPress={() => { setImageChanged(true); pickAdminImage(setImageUri, setImageFile); }}
+              style={modalStyles.imagePicker}
+            >
+              {imageUri ? (
+                <Image source={{ uri: buildMediaUrl(imageUri)! }} style={modalStyles.imagePreview} resizeMode="cover" />
+              ) : (
+                <>
+                  <Ionicons name="image-outline" size={30} color={Colors.light.accent} />
+                  <Text style={modalStyles.imagePickerText}>اختر صورة</Text>
+                </>
+              )}
+            </Pressable>
+
+            {error && (
+              <View style={modalStyles.errorBox}>
+                <Ionicons name="alert-circle" size={16} color={Colors.light.danger} />
+                <Text style={modalStyles.errorText}>{error}</Text>
+              </View>
+            )}
           </ScrollView>
 
-          {productError && (
-            <View style={{ marginHorizontal: 16, marginBottom: 8, backgroundColor: "#FEE2E2", borderRadius: 10, padding: 10 }}>
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#991B1B", textAlign: "right", writingDirection: "rtl" as const }}>{productError}</Text>
-            </View>
-          )}
-
-          <View style={modalStyles.footer}>
-            <Pressable onPress={onClose} style={modalStyles.cancelBtn}>
-              <Text style={modalStyles.cancelText}>إلغاء</Text>
+          <View style={modalStyles.footerRow}>
+            <Pressable onPress={onClose} style={modalStyles.cancelButton}>
+              <Text style={modalStyles.cancelButtonText}>إلغاء</Text>
             </Pressable>
             <Pressable
-              onPress={handleSave}
-              style={[modalStyles.submitBtn, saveMutation.isPending && { opacity: 0.6 }]}
-              disabled={saveMutation.isPending}
+              onPress={submit}
+              disabled={mutation.isPending || uploading}
+              style={[modalStyles.submitButton, (mutation.isPending || uploading) && { opacity: 0.5 }]}
             >
-              {saveMutation.isPending ? (
-                <ActivityIndicator size="small" color="#fff" />
+              {mutation.isPending || uploading ? (
+                <ActivityIndicator color="#1A1A1A" size="small" />
               ) : (
-                <Text style={modalStyles.submitText}>حفظ التغييرات</Text>
+                <Text style={modalStyles.submitButtonText}>{isEdit ? "حفظ" : "إنشاء"}</Text>
               )}
             </Pressable>
           </View>
@@ -1601,327 +2020,6 @@ interface ProductVariant {
   imageUrl: string;
 }
 
-function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState("");
-  const [prizeName, setPrizeName] = useState("");
-  const [prizeDesc, setPrizeDesc] = useState("");
-  const [category, setCategory] = useState("other");
-  const [endsAtText, setEndsAtText] = useState("");
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<any>(null);
-  const [uploading, setUploading] = useState(false);
-  const [hasVariants, setHasVariants] = useState(false);
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [isFlashSale, setIsFlashSale] = useState(false);
-  const [originalPriceText, setOriginalPriceText] = useState("");
-  const [flashSaleEndsAtText, setFlashSaleEndsAtText] = useState("");
-
-  const pickCampaignImage = async () => {
-    if (Platform.OS === "web") {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = (e: any) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          setImageFile(file);
-          const reader = new FileReader();
-          reader.onload = (ev) => setImageUri(ev.target?.result as string);
-          reader.readAsDataURL(file);
-        }
-      };
-      input.click();
-    } else {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
-      }
-    }
-  };
-
-  const uploadImage = async (): Promise<string | undefined> => {
-    if (!imageUri && !imageFile) return undefined;
-    setUploading(true);
-    try {
-      const baseUrl = getApiUrl();
-      const url = new URL("/api/admin/campaigns/upload-image", baseUrl);
-
-      if (Platform.OS === "web" && imageFile) {
-        const formData = new FormData();
-        formData.append("image", imageFile);
-        const res = await fetch(url.toString(), {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("فشل رفع الصورة");
-        const data = await res.json();
-        return data.imageUrl;
-      } else if (imageUri) {
-        const base64 = await FileSystem.readAsStringAsync(imageUri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        const byteChars = atob(base64);
-        const byteNumbers = new Array(byteChars.length);
-        for (let i = 0; i < byteChars.length; i++) {
-          byteNumbers[i] = byteChars.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "image/jpeg" });
-        const formData = new FormData();
-        formData.append("image", blob, "campaign.jpg");
-        const res = await fetch(url.toString(), {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("فشل رفع الصورة");
-        const data = await res.json();
-        return data.imageUrl;
-      }
-      return undefined;
-    } catch (err) {
-      console.error("Image upload error:", err);
-      return undefined;
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const mutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/campaigns", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
-      onClose();
-      setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc(""); setCategory("other"); setEndsAtText(""); setImageUri(null); setImageFile(null); setHasVariants(false); setVariants([]); setIsFlashSale(false); setOriginalPriceText(""); setFlashSaleEndsAtText("");
-    },
-    onError: (err: any) => setCreateError(err.message || "حدث خطأ أثناء إنشاء الحملة"),
-  });
-
-  const addVariant = () => {
-    setVariants((prev) => [
-      ...prev,
-      { key: Date.now().toString(), name: "", nameAr: "", price: "", quantity: "", imageUrl: "" },
-    ]);
-  };
-
-  const removeVariant = (key: string) => {
-    setVariants((prev) => prev.filter((v) => v.key !== key));
-  };
-
-  const updateVariant = (key: string, field: keyof ProductVariant, value: string) => {
-    setVariants((prev) =>
-      prev.map((v) => (v.key === key ? { ...v, [field]: value } : v))
-    );
-  };
-
-  const handleCreate = async () => {
-    setCreateError(null);
-
-    if (!title || !description || !prizeName) {
-      setCreateError("يرجى ملء جميع الحقول المطلوبة (العنوان، الوصف، الجائزة)");
-      return;
-    }
-
-    if (!hasVariants) {
-      setCreateError("يجب تفعيل 'موديلات متعددة' وإضافة منتجين على الأقل لإنشاء الحملة");
-      return;
-    }
-
-    if (variants.length < 2) {
-      setCreateError("يجب إضافة منتجين (موديلين) على الأقل لإنشاء الحملة");
-      return;
-    }
-    for (const v of variants) {
-      if (!v.name || !v.price || !v.quantity) {
-        setCreateError("يرجى ملء جميع حقول الموديلات (الاسم، السعر، الكمية)");
-        return;
-      }
-    }
-
-    let imageUrl: string | undefined;
-    if (imageUri || imageFile) {
-      imageUrl = await uploadImage();
-    }
-
-    const campaignData: any = {
-      title,
-      description,
-      prizeName,
-      prizeDescription: prizeDesc || undefined,
-      category,
-      endsAt: endsAtText && !isNaN(new Date(endsAtText).getTime()) ? new Date(endsAtText).toISOString() : undefined,
-      imageUrl,
-      isFlashSale,
-      originalPrice: isFlashSale && originalPriceText ? originalPriceText : undefined,
-      flashSaleEndsAt: isFlashSale && flashSaleEndsAtText && !isNaN(new Date(flashSaleEndsAtText).getTime()) ? new Date(flashSaleEndsAtText).toISOString() : undefined,
-    };
-
-    if (hasVariants) {
-      campaignData.productPrice = variants[0].price;
-      campaignData.totalQuantity = variants.reduce((s, v) => s + parseInt(v.quantity || "0"), 0);
-      campaignData.products = variants.map((v) => ({
-        name: v.name,
-        nameAr: v.nameAr || v.name,
-        price: v.price,
-        quantity: v.quantity,
-        imageUrl: v.imageUrl || undefined,
-      }));
-    } else {
-      campaignData.productPrice = price;
-      campaignData.totalQuantity = parseInt(quantity);
-    }
-
-    mutation.mutate(campaignData);
-  };
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={modalStyles.overlay}>
-        <View style={modalStyles.container}>
-          <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>حملة جديدة</Text>
-            <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
-          </View>
-          <ScrollView contentContainerStyle={modalStyles.scrollContent}>
-            <View style={{ alignItems: "center", marginBottom: 16 }}>
-              <Pressable onPress={pickCampaignImage} style={{ width: "100%", height: 160, borderRadius: 16, backgroundColor: Colors.light.background, borderWidth: 2, borderColor: Colors.light.accent + "30", borderStyle: "dashed", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                {imageUri ? (
-                  <Image source={{ uri: imageUri }} style={{ width: "100%", height: "100%", borderRadius: 14 }} resizeMode="cover" />
-                ) : (
-                  <View style={{ alignItems: "center", gap: 8 }}>
-                    <Ionicons name="image-outline" size={36} color={Colors.light.accent} />
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" }}>اضغط لرفع صورة المنتج</Text>
-                  </View>
-                )}
-              </Pressable>
-              {imageUri && (
-                <Pressable onPress={() => { setImageUri(null); setImageFile(null); }} style={{ marginTop: 8 }}>
-                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: "#EF4444" }}>إزالة الصورة</Text>
-                </Pressable>
-              )}
-            </View>
-            <ModalInput label="العنوان *" value={title} onChangeText={setTitle} placeholder="اسم الحملة" />
-            <ModalInput label="الوصف *" value={description} onChangeText={setDescription} placeholder="وصف المنتج" multiline />
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, backgroundColor: "#F3F4F6", borderRadius: 12, padding: 14 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="color-palette-outline" size={20} color={Colors.light.accent} />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>موديلات متعددة</Text>
-              </View>
-              <Switch
-                value={hasVariants}
-                onValueChange={(v) => {
-                  setHasVariants(v);
-                  if (v && variants.length === 0) addVariant();
-                }}
-                trackColor={{ true: Colors.light.accent }}
-              />
-            </View>
-
-            {!hasVariants ? (
-              <>
-                <ModalInput label="السعر ($) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
-                <ModalInput label="الكمية الإجمالية *" value={quantity} onChangeText={setQuantity} placeholder="4000" keyboardType="number-pad" />
-              </>
-            ) : (
-              <View style={{ marginBottom: 12 }}>
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 8 }}>الموديلات ({variants.length})</Text>
-                {variants.map((v, idx) => (
-                  <View key={v.key} style={{ backgroundColor: "#F9FAFB", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: Colors.light.border }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.accent }}>موديل {idx + 1}</Text>
-                      <Pressable onPress={() => removeVariant(v.key)}>
-                        <Ionicons name="close-circle" size={22} color={Colors.light.danger} />
-                      </Pressable>
-                    </View>
-                    <ModalInput label="الاسم (إنجليزي) *" value={v.name} onChangeText={(t) => updateVariant(v.key, "name", t)} placeholder="256GB Black" />
-                    <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateVariant(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      <View style={{ flex: 1 }}>
-                        <ModalInput label="السعر ($) *" value={v.price} onChangeText={(t) => updateVariant(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <ModalInput label="الكمية *" value={v.quantity} onChangeText={(t) => updateVariant(v.key, "quantity", t)} placeholder="1000" keyboardType="number-pad" />
-                      </View>
-                    </View>
-                    <ModalInput label="رابط الصورة (اختياري)" value={v.imageUrl} onChangeText={(t) => updateVariant(v.key, "imageUrl", t)} placeholder="https://example.com/image.jpg" />
-                  </View>
-                ))}
-                <Pressable onPress={addVariant} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed" }}>
-                  <Ionicons name="add-circle" size={20} color={Colors.light.accent} />
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.accent }}>إضافة موديل</Text>
-                </Pressable>
-              </View>
-            )}
-
-            <ModalInput label="اسم الجائزة *" value={prizeName} onChangeText={setPrizeName} placeholder="iPhone 16 Pro Max" />
-            <ModalInput label="وصف الجائزة" value={prizeDesc} onChangeText={setPrizeDesc} placeholder="تفاصيل إضافية" multiline />
-            <View style={modalStyles.inputGroup}>
-              <Text style={modalStyles.inputLabel}>التصنيف</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {CATEGORY_OPTIONS.map((cat) => (
-                  <Pressable
-                    key={cat.key}
-                    onPress={() => setCategory(cat.key)}
-                    style={[styles.statusOption, category === cat.key && styles.statusOptionActive]}
-                  >
-                    <Text style={[styles.statusOptionText, category === cat.key && styles.statusOptionTextActive]}>{cat.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-            <ModalInput label="تاريخ الانتهاء (اختياري)" value={endsAtText} onChangeText={setEndsAtText} placeholder="2025-12-31T23:59" />
-
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, backgroundColor: "#FFF1F1", borderRadius: 12, padding: 14 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text style={{ fontSize: 18 }}>🔥</Text>
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>عرض محدود (Flash Sale)</Text>
-              </View>
-              <Switch
-                value={isFlashSale}
-                onValueChange={setIsFlashSale}
-                trackColor={{ true: "#EF4444" }}
-              />
-            </View>
-
-            {isFlashSale && (
-              <View style={{ backgroundColor: "#FFF5F5", borderRadius: 12, padding: 12, marginBottom: 12, gap: 8 }}>
-                <ModalInput label="السعر الأصلي قبل الخصم ($)" value={originalPriceText} onChangeText={setOriginalPriceText} placeholder="49.99" keyboardType="decimal-pad" />
-                <ModalInput label="ينتهي العرض في" value={flashSaleEndsAtText} onChangeText={setFlashSaleEndsAtText} placeholder="2025-06-30T23:59" />
-              </View>
-            )}
-
-            {createError && (
-              <View style={{ backgroundColor: "#FEE2E2", borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#991B1B", textAlign: "right", writingDirection: "rtl" as const }}>{createError}</Text>
-              </View>
-            )}
-
-            <Pressable
-              onPress={handleCreate}
-              disabled={mutation.isPending || uploading}
-              style={[modalStyles.createBtn, (mutation.isPending || uploading) && { opacity: 0.6 }]}
-            >
-              {(mutation.isPending || uploading) ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>إنشاء الحملة</Text>}
-            </Pressable>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
 function CreatePaymentModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [name, setName] = useState("");
   const [nameAr, setNameAr] = useState("");
@@ -2235,6 +2333,31 @@ const settingsStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  activeDrawCard: {
+    backgroundColor: "#FFFBE6",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#FFE566",
+  },
+  activeDrawHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  activeDrawTitle: {
+    flex: 1,
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  activeDrawSub: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    color: "#8A7500",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   container: { flex: 1, backgroundColor: Colors.light.background },
   centered: { alignItems: "center", justifyContent: "center" },
   errorText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: Colors.light.danger, marginBottom: 16, writingDirection: "rtl" },
@@ -2352,7 +2475,32 @@ const modalStyles = StyleSheet.create({
   inputLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.textSecondary, marginBottom: 6, textAlign: "right", writingDirection: "rtl" },
   input: { backgroundColor: "#fff", borderRadius: 12, padding: 14, fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl" },
   createBtn: { backgroundColor: Colors.light.accent, borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center", marginTop: 8 },
-  createBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#fff", writingDirection: "rtl" },
+  createBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#1A1A1A", writingDirection: "rtl" },
+
+  switchRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12, justifyContent: "flex-end" },
+  switchLabel: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" },
+
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14, justifyContent: "flex-end" },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.light.border },
+  chipActive: { backgroundColor: Colors.light.accent, borderColor: Colors.light.accent },
+  chipText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  chipTextActive: { fontFamily: "Inter_700Bold", color: "#1A1A1A" },
+
+  hintBox: { flexDirection: "row", gap: 8, backgroundColor: "#FFFBE6", borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: "#FFE566" },
+  hintText: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 12, color: "#8A7500", textAlign: "right", writingDirection: "rtl", lineHeight: 19 },
+
+  imagePicker: { height: 130, borderRadius: 14, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.light.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 14, overflow: "hidden" },
+  imagePreview: { width: "100%", height: "100%" },
+  imagePickerText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
+
+  errorBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(239,68,68,0.08)", borderRadius: 10, padding: 12, marginBottom: 8 },
+  errorText: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.danger, textAlign: "right", writingDirection: "rtl" },
+
+  footerRow: { flexDirection: "row", gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: Colors.light.border },
+  cancelButton: { flex: 1, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: Colors.light.inputBg },
+  cancelButtonText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  submitButton: { flex: 2, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: Colors.light.accent },
+  submitButtonText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1A1A1A", writingDirection: "rtl" },
 });
 
 const orderMgmtStyles = StyleSheet.create({

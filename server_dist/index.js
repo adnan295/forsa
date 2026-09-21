@@ -13,26 +13,32 @@ var schema_exports = {};
 __export(schema_exports, {
   activityLog: () => activityLog,
   adminNotifications: () => adminNotifications,
-  campaignProducts: () => campaignProducts,
-  campaignProductsRelations: () => campaignProductsRelations,
-  campaignStatusEnum: () => campaignStatusEnum,
-  campaigns: () => campaigns,
-  campaignsRelations: () => campaignsRelations,
+  campaignClientRequests: () => campaignClientRequests,
+  checkoutSchema: () => checkoutSchema,
   coupons: () => coupons,
+  drawStatusEnum: () => drawStatusEnum,
+  draws: () => draws,
+  drawsRelations: () => drawsRelations,
   emailVerificationTokens: () => emailVerificationTokens,
-  insertCampaignSchema: () => insertCampaignSchema,
+  insertCampaignClientRequestSchema: () => insertCampaignClientRequestSchema,
   insertCouponSchema: () => insertCouponSchema,
+  insertDrawSchema: () => insertDrawSchema,
   insertPaymentMethodSchema: () => insertPaymentMethodSchema,
+  insertProductSchema: () => insertProductSchema,
   insertReviewSchema: () => insertReviewSchema,
   insertSupportTicketSchema: () => insertSupportTicketSchema,
   insertUserSchema: () => insertUserSchema,
   loginSchema: () => loginSchema,
+  orderItems: () => orderItems,
+  orderItemsRelations: () => orderItemsRelations,
   orderStatusEnum: () => orderStatusEnum,
   orders: () => orders,
   ordersRelations: () => ordersRelations,
   passwordResetTokens: () => passwordResetTokens,
   paymentMethods: () => paymentMethods,
   paymentStatusEnum: () => paymentStatusEnum,
+  products: () => products,
+  productsRelations: () => productsRelations,
   reviews: () => reviews,
   reviewsRelations: () => reviewsRelations,
   roleEnum: () => roleEnum,
@@ -59,17 +65,17 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var roleEnum, campaignStatusEnum, orderStatusEnum, paymentStatusEnum, shippingStatusEnum, users, campaigns, orders, tickets, paymentMethods, coupons, activityLog, reviews, adminNotifications, userNotifications, emailVerificationTokens, passwordResetTokens, supportTickets, walletTransactions, insertSupportTicketSchema, usersRelations, campaignProducts, campaignsRelations, campaignProductsRelations, reviewsRelations, ordersRelations, ticketsRelations, insertUserSchema, loginSchema, insertCampaignSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema;
+var roleEnum, drawStatusEnum, orderStatusEnum, paymentStatusEnum, shippingStatusEnum, users, products, draws, orders, orderItems, tickets, paymentMethods, coupons, activityLog, reviews, adminNotifications, userNotifications, emailVerificationTokens, passwordResetTokens, supportTickets, walletTransactions, campaignClientRequests, usersRelations, productsRelations, drawsRelations, ordersRelations, orderItemsRelations, ticketsRelations, reviewsRelations, insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, checkoutSchema;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
     roleEnum = pgEnum("user_role", ["user", "admin"]);
-    campaignStatusEnum = pgEnum("campaign_status", [
+    drawStatusEnum = pgEnum("draw_status", [
+      "scheduled",
       "active",
-      "paused",
-      "sold_out",
-      "drawing",
-      "completed"
+      "ready_to_draw",
+      "completed",
+      "cancelled"
     ]);
     orderStatusEnum = pgEnum("order_status", [
       "pending",
@@ -105,39 +111,57 @@ var init_schema = __esm({
       referralCode: text("referral_code").unique(),
       referredBy: varchar("referred_by"),
       pushToken: text("push_token"),
+      fcmToken: text("fcm_token"),
+      apnToken: text("apn_token"),
       walletBalance: decimal("wallet_balance", { precision: 10, scale: 2 }).notNull().default("0"),
       isSuspended: boolean("is_suspended").notNull().default(false),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
-    campaigns = pgTable("campaigns", {
+    products = pgTable("products", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      name: text("name").notNull(),
+      description: text("description").notNull().default(""),
+      imageUrl: text("image_url"),
+      imagesJson: text("images_json"),
+      price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+      /** null = مخزون غير محدود */
+      stock: integer("stock"),
+      soldCount: integer("sold_count").notNull().default(0),
+      category: text("category").notNull().default("other"),
+      isActive: boolean("is_active").notNull().default(true),
+      sortOrder: integer("sort_order").notNull().default(0),
+      createdAt: timestamp("created_at").defaultNow().notNull()
+    });
+    draws = pgTable("draws", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
       title: text("title").notNull(),
-      description: text("description").notNull(),
-      imageUrl: text("image_url"),
-      productPrice: decimal("product_price", { precision: 10, scale: 2 }).notNull(),
-      totalQuantity: integer("total_quantity").notNull(),
-      soldQuantity: integer("sold_quantity").notNull().default(0),
       prizeName: text("prize_name").notNull(),
       prizeDescription: text("prize_description"),
       prizeImageUrl: text("prize_image_url"),
-      category: text("category").default("other"),
-      status: campaignStatusEnum("status").notNull().default("active"),
+      /** قيمة المشتريات اللي بتعطي تذكرة وحدة */
+      ticketPrice: decimal("ticket_price", { precision: 10, scale: 2 }).notNull().default("10"),
+      targetTickets: integer("target_tickets").notNull(),
+      soldTickets: integer("sold_tickets").notNull().default(0),
+      status: drawStatusEnum("status").notNull().default("scheduled"),
+      sortOrder: integer("sort_order").notNull().default(0),
       winnerId: varchar("winner_id"),
       winnerTicketId: varchar("winner_ticket_id"),
-      isFlashSale: boolean("is_flash_sale").notNull().default(false),
-      flashSaleEndsAt: timestamp("flash_sale_ends_at"),
-      originalPrice: decimal("original_price", { precision: 10, scale: 2 }),
-      createdAt: timestamp("created_at").defaultNow().notNull(),
-      drawAt: timestamp("draw_at"),
-      endsAt: timestamp("ends_at")
+      winnerTicketNumber: text("winner_ticket_number"),
+      startedAt: timestamp("started_at"),
+      drawnAt: timestamp("drawn_at"),
+      createdAt: timestamp("created_at").defaultNow().notNull()
     });
     orders = pgTable("orders", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
       userId: varchar("user_id").notNull().references(() => users.id),
-      campaignId: varchar("campaign_id").notNull().references(() => campaigns.id),
-      productId: varchar("product_id"),
-      quantity: integer("quantity").notNull().default(1),
+      subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+      discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+      walletAmount: decimal("wallet_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+      /** المبلغ المستحق فعلياً بعد الخصم والمحفظة */
       totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+      /** المبلغ المعتمد لاحتساب التذاكر (بعد الخصم، قبل المحفظة) */
+      ticketEligibleAmount: decimal("ticket_eligible_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+      ticketsAwarded: integer("tickets_awarded").notNull().default(0),
       status: orderStatusEnum("status").notNull().default("pending"),
       paymentMethod: text("payment_method"),
       paymentStatus: paymentStatusEnum("payment_status").notNull().default("pending_payment"),
@@ -151,16 +175,26 @@ var init_schema = __esm({
       shippingCountry: text("shipping_country"),
       trackingNumber: text("tracking_number"),
       couponCode: text("coupon_code"),
-      discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }),
       createdAt: timestamp("created_at").defaultNow().notNull()
+    });
+    orderItems = pgTable("order_items", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      orderId: varchar("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+      productId: varchar("product_id").notNull(),
+      /** نسخة من بيانات المنتج وقت الشراء حتى لو انحذف لاحقاً */
+      productName: text("product_name").notNull(),
+      productImageUrl: text("product_image_url"),
+      unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+      quantity: integer("quantity").notNull(),
+      lineTotal: decimal("line_total", { precision: 10, scale: 2 }).notNull()
     });
     tickets = pgTable("tickets", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
       ticketNumber: text("ticket_number").notNull().unique(),
       userId: varchar("user_id").notNull().references(() => users.id),
-      campaignId: varchar("campaign_id").notNull().references(() => campaigns.id),
       orderId: varchar("order_id").notNull().references(() => orders.id),
-      productId: varchar("product_id"),
+      /** null = تذكرة بانتظار فتح جولة جديدة */
+      drawId: varchar("draw_id"),
       isWinner: boolean("is_winner").notNull().default(false),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
@@ -174,6 +208,7 @@ var init_schema = __esm({
       bankName: text("bank_name"),
       accountName: text("account_name"),
       iban: text("iban"),
+      imageUrl: text("image_url"),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
     coupons = pgTable("coupons", {
@@ -198,7 +233,7 @@ var init_schema = __esm({
     reviews = pgTable("reviews", {
       id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
       userId: varchar("user_id").notNull(),
-      campaignId: varchar("campaign_id").notNull(),
+      productId: varchar("product_id").notNull(),
       rating: integer("rating").notNull(),
       comment: text("comment"),
       createdAt: timestamp("created_at").defaultNow().notNull()
@@ -219,7 +254,8 @@ var init_schema = __esm({
       title: text("title").notNull(),
       body: text("body").notNull(),
       isRead: boolean("is_read").notNull().default(false),
-      campaignId: varchar("campaign_id"),
+      drawId: varchar("draw_id"),
+      productId: varchar("product_id"),
       metadata: text("metadata"),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
@@ -261,52 +297,33 @@ var init_schema = __esm({
       referenceId: varchar("reference_id"),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
-    insertSupportTicketSchema = z.object({
-      subject: z.string().min(3, "\u0627\u0644\u0645\u0648\u0636\u0648\u0639 \u0645\u0637\u0644\u0648\u0628"),
-      message: z.string().min(10, "\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0642\u0635\u064A\u0631\u0629 \u062C\u062F\u0627\u064B"),
-      priority: z.enum(["low", "medium", "high"]).default("medium")
+    campaignClientRequests = pgTable("campaign_client_requests", {
+      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+      businessName: text("business_name").notNull(),
+      contactName: text("contact_name").notNull(),
+      phone: text("phone").notNull(),
+      email: text("email"),
+      productName: text("product_name").notNull(),
+      productValue: decimal("product_value", { precision: 10, scale: 2 }),
+      description: text("description"),
+      status: text("status").notNull().default("pending"),
+      adminNotes: text("admin_notes"),
+      createdAt: timestamp("created_at").defaultNow().notNull()
     });
     usersRelations = relations(users, ({ many }) => ({
       orders: many(orders),
       tickets: many(tickets),
       reviews: many(reviews)
     }));
-    campaignProducts = pgTable("campaign_products", {
-      id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-      campaignId: varchar("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
-      name: text("name").notNull(),
-      nameAr: text("name_ar"),
-      imageUrl: text("image_url"),
-      price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-      quantity: integer("quantity").notNull(),
-      soldQuantity: integer("sold_quantity").notNull().default(0),
-      sortOrder: integer("sort_order").notNull().default(0),
-      createdAt: timestamp("created_at").defaultNow().notNull()
-    });
-    campaignsRelations = relations(campaigns, ({ many, one }) => ({
-      orders: many(orders),
+    productsRelations = relations(products, ({ many }) => ({
+      orderItems: many(orderItems),
+      reviews: many(reviews)
+    }));
+    drawsRelations = relations(draws, ({ many, one }) => ({
       tickets: many(tickets),
-      reviews: many(reviews),
-      products: many(campaignProducts),
       winner: one(users, {
-        fields: [campaigns.winnerId],
+        fields: [draws.winnerId],
         references: [users.id]
-      })
-    }));
-    campaignProductsRelations = relations(campaignProducts, ({ one }) => ({
-      campaign: one(campaigns, {
-        fields: [campaignProducts.campaignId],
-        references: [campaigns.id]
-      })
-    }));
-    reviewsRelations = relations(reviews, ({ one }) => ({
-      user: one(users, {
-        fields: [reviews.userId],
-        references: [users.id]
-      }),
-      campaign: one(campaigns, {
-        fields: [reviews.campaignId],
-        references: [campaigns.id]
       })
     }));
     ordersRelations = relations(orders, ({ one, many }) => ({
@@ -314,24 +331,41 @@ var init_schema = __esm({
         fields: [orders.userId],
         references: [users.id]
       }),
-      campaign: one(campaigns, {
-        fields: [orders.campaignId],
-        references: [campaigns.id]
-      }),
+      items: many(orderItems),
       tickets: many(tickets)
+    }));
+    orderItemsRelations = relations(orderItems, ({ one }) => ({
+      order: one(orders, {
+        fields: [orderItems.orderId],
+        references: [orders.id]
+      }),
+      product: one(products, {
+        fields: [orderItems.productId],
+        references: [products.id]
+      })
     }));
     ticketsRelations = relations(tickets, ({ one }) => ({
       user: one(users, {
         fields: [tickets.userId],
         references: [users.id]
       }),
-      campaign: one(campaigns, {
-        fields: [tickets.campaignId],
-        references: [campaigns.id]
-      }),
       order: one(orders, {
         fields: [tickets.orderId],
         references: [orders.id]
+      }),
+      draw: one(draws, {
+        fields: [tickets.drawId],
+        references: [draws.id]
+      })
+    }));
+    reviewsRelations = relations(reviews, ({ one }) => ({
+      user: one(users, {
+        fields: [reviews.userId],
+        references: [users.id]
+      }),
+      product: one(products, {
+        fields: [reviews.productId],
+        references: [products.id]
       })
     }));
     insertUserSchema = createInsertSchema(users).pick({
@@ -343,20 +377,24 @@ var init_schema = __esm({
       username: z.string().min(1),
       password: z.string().min(1)
     });
-    insertCampaignSchema = createInsertSchema(campaigns).pick({
-      title: true,
-      description: true,
-      imageUrl: true,
-      productPrice: true,
-      totalQuantity: true,
-      prizeName: true,
-      prizeDescription: true,
-      prizeImageUrl: true,
-      category: true,
-      endsAt: true,
-      isFlashSale: true,
-      flashSaleEndsAt: true,
-      originalPrice: true
+    insertProductSchema = z.object({
+      name: z.string().min(2, "\u0627\u0633\u0645 \u0627\u0644\u0645\u0646\u062A\u062C \u0645\u0637\u0644\u0648\u0628"),
+      description: z.string().optional().default(""),
+      imageUrl: z.string().optional().nullable(),
+      imagesJson: z.string().optional().nullable(),
+      price: z.union([z.string(), z.number()]).transform((v) => String(v)),
+      stock: z.union([z.number(), z.null()]).optional(),
+      category: z.string().optional().default("other"),
+      isActive: z.boolean().optional().default(true),
+      sortOrder: z.number().optional().default(0)
+    });
+    insertDrawSchema = z.object({
+      title: z.string().min(2, "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u062C\u0648\u0644\u0629 \u0645\u0637\u0644\u0648\u0628"),
+      prizeName: z.string().min(2, "\u0627\u0633\u0645 \u0627\u0644\u062C\u0627\u0626\u0632\u0629 \u0645\u0637\u0644\u0648\u0628"),
+      prizeDescription: z.string().optional().nullable(),
+      prizeImageUrl: z.string().optional().nullable(),
+      ticketPrice: z.union([z.string(), z.number()]).transform((v) => String(v)).refine((v) => parseFloat(v) > 0, "\u0633\u0639\u0631 \u0627\u0644\u062A\u0630\u0643\u0631\u0629 \u0644\u0627\u0632\u0645 \u064A\u0643\u0648\u0646 \u0623\u0643\u0628\u0631 \u0645\u0646 \u0635\u0641\u0631"),
+      targetTickets: z.number().int().min(1, "\u0639\u062F\u062F \u0627\u0644\u062A\u0630\u0627\u0643\u0631 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641 \u0645\u0637\u0644\u0648\u0628")
     });
     insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick({
       name: true,
@@ -366,13 +404,15 @@ var init_schema = __esm({
       description: true,
       bankName: true,
       accountName: true,
-      iban: true
+      iban: true,
+      imageUrl: true
     });
     insertCouponSchema = createInsertSchema(coupons).pick({
       code: true,
       discountPercent: true,
       maxUses: true,
-      expiresAt: true
+      expiresAt: true,
+      enabled: true
     });
     updateProfileSchema = z.object({
       fullName: z.string().min(2, "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644 \u0645\u0637\u0644\u0648\u0628"),
@@ -382,9 +422,39 @@ var init_schema = __esm({
       country: z.string().min(2, "\u0627\u0644\u062F\u0648\u0644\u0629 \u0645\u0637\u0644\u0648\u0628\u0629")
     });
     insertReviewSchema = z.object({
-      campaignId: z.string().min(1),
+      productId: z.string().min(1),
       rating: z.number().min(1).max(5),
       comment: z.string().optional()
+    });
+    insertSupportTicketSchema = z.object({
+      subject: z.string().min(3, "\u0627\u0644\u0645\u0648\u0636\u0648\u0639 \u0645\u0637\u0644\u0648\u0628"),
+      message: z.string().min(10, "\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0642\u0635\u064A\u0631\u0629 \u062C\u062F\u0627\u064B"),
+      priority: z.enum(["low", "medium", "high"]).default("medium")
+    });
+    insertCampaignClientRequestSchema = z.object({
+      businessName: z.string().min(2, "\u0627\u0633\u0645 \u0627\u0644\u0646\u0634\u0627\u0637 \u0627\u0644\u062A\u062C\u0627\u0631\u064A \u0645\u0637\u0644\u0648\u0628"),
+      contactName: z.string().min(2, "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644 \u0645\u0637\u0644\u0648\u0628"),
+      phone: z.string().min(7, "\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D"),
+      email: z.string().email("\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D").optional().or(z.literal("")),
+      productName: z.string().min(2, "\u0627\u0633\u0645 \u0627\u0644\u0645\u0646\u062A\u062C \u0645\u0637\u0644\u0648\u0628"),
+      productValue: z.string().optional(),
+      description: z.string().optional()
+    });
+    checkoutSchema = z.object({
+      items: z.array(
+        z.object({
+          productId: z.string().min(1),
+          quantity: z.number().int().min(1).max(50)
+        })
+      ).min(1, "\u0627\u0644\u0633\u0644\u0629 \u0641\u0627\u0631\u063A\u0629"),
+      paymentMethod: z.string().min(1),
+      shippingFullName: z.string().optional(),
+      shippingPhone: z.string().optional(),
+      shippingCity: z.string().optional(),
+      shippingAddress: z.string().optional(),
+      shippingCountry: z.string().optional(),
+      couponCode: z.string().optional().nullable(),
+      useWallet: z.boolean().optional().default(false)
     });
   }
 });
@@ -416,23 +486,25 @@ var init_db = __esm({
 // server/storage.ts
 var storage_exports = {};
 __export(storage_exports, {
+  DEFAULT_TICKET_PRICE: () => DEFAULT_TICKET_PRICE,
   DatabaseStorage: () => DatabaseStorage,
   storage: () => storage
 });
-import { eq, desc, and, sql as sql2, count, sum, gte, inArray } from "drizzle-orm";
-import { randomBytes } from "crypto";
+import { eq, asc, desc, and, sql as sql2, count, sum, gte, inArray, isNull } from "drizzle-orm";
+import { randomBytes, randomInt } from "crypto";
 function generateTicketNumber() {
-  const prefix = "LD";
+  const prefix = "FT";
   const timestamp2 = Date.now().toString(36).toUpperCase();
   const random = randomBytes(4).toString("hex").toUpperCase();
   return `${prefix}-${timestamp2}-${random}`;
 }
-var DatabaseStorage, storage;
+var DEFAULT_TICKET_PRICE, DatabaseStorage, storage;
 var init_storage = __esm({
   "server/storage.ts"() {
     "use strict";
     init_schema();
     init_db();
+    DEFAULT_TICKET_PRICE = 10;
     DatabaseStorage = class {
       async getUser(id) {
         const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -446,231 +518,362 @@ var init_storage = __esm({
         const [user] = await db.insert(users).values(insertUser).returning();
         return user;
       }
-      async getCampaigns() {
-        return db.select().from(campaigns).orderBy(desc(campaigns.createdAt));
+      /* ============================ المنتجات (الكتالوج) ============================ */
+      async getProducts(includeInactive = false) {
+        const query = db.select().from(products);
+        const rows = includeInactive ? await query.orderBy(asc(products.sortOrder), desc(products.createdAt)) : await query.where(eq(products.isActive, true)).orderBy(asc(products.sortOrder), desc(products.createdAt));
+        return rows;
       }
-      async getCampaign(id) {
-        const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, id));
-        return campaign || void 0;
-      }
-      async createCampaign(campaign) {
-        const [created] = await db.insert(campaigns).values(campaign).returning();
-        return created;
-      }
-      async updateCampaign(id, data) {
-        const [updated] = await db.update(campaigns).set(data).where(eq(campaigns.id, id)).returning();
-        return updated || void 0;
-      }
-      async deleteCampaign(id) {
-        const existingOrders = await db.select().from(orders).where(eq(orders.campaignId, id)).limit(1);
-        if (existingOrders.length > 0) {
-          throw new Error("Cannot delete campaign with existing orders");
-        }
-        const [deleted] = await db.delete(campaigns).where(eq(campaigns.id, id)).returning();
-        return !!deleted;
-      }
-      async getCampaignProducts(campaignId) {
-        return db.select().from(campaignProducts).where(eq(campaignProducts.campaignId, campaignId)).orderBy(campaignProducts.sortOrder);
-      }
-      async getCampaignProduct(id) {
-        const [product] = await db.select().from(campaignProducts).where(eq(campaignProducts.id, id));
+      async getProduct(id) {
+        const [product] = await db.select().from(products).where(eq(products.id, id));
         return product || void 0;
       }
-      async createCampaignProduct(data) {
-        const [product] = await db.insert(campaignProducts).values({
-          campaignId: data.campaignId,
+      async createProduct(data) {
+        const [product] = await db.insert(products).values({
           name: data.name,
-          nameAr: data.nameAr,
-          imageUrl: data.imageUrl,
+          description: data.description ?? "",
+          imageUrl: data.imageUrl ?? null,
+          imagesJson: data.imagesJson ?? null,
           price: data.price,
-          quantity: data.quantity,
-          sortOrder: data.sortOrder || 0
+          stock: data.stock ?? null,
+          category: data.category ?? "other",
+          isActive: data.isActive ?? true,
+          sortOrder: data.sortOrder ?? 0
         }).returning();
         return product;
       }
-      async updateCampaignProduct(id, data) {
-        const [updated] = await db.update(campaignProducts).set(data).where(eq(campaignProducts.id, id)).returning();
+      async updateProduct(id, data) {
+        const [updated] = await db.update(products).set(data).where(eq(products.id, id)).returning();
         return updated || void 0;
       }
-      async deleteCampaignProduct(id) {
-        const [deleted] = await db.delete(campaignProducts).where(eq(campaignProducts.id, id)).returning();
+      async deleteProduct(id) {
+        const [deleted] = await db.delete(products).where(eq(products.id, id)).returning();
         return !!deleted;
       }
-      async syncCampaignAggregates(campaignId) {
-        const products = await this.getCampaignProducts(campaignId);
-        if (products.length === 0) {
-          await this.updateCampaign(campaignId, {
-            totalQuantity: 0,
-            soldQuantity: 0,
-            productPrice: "0.00"
-          });
-          return;
-        }
-        const totalQty = products.reduce((s, p) => s + p.quantity, 0);
-        const soldQty = products.reduce((s, p) => s + p.soldQuantity, 0);
-        const minPrice = Math.min(...products.map((p) => parseFloat(p.price)));
-        const allSoldOut = products.every((p) => p.soldQuantity >= p.quantity);
-        const updateData = {
-          totalQuantity: totalQty,
-          soldQuantity: soldQty,
-          productPrice: minPrice.toFixed(2)
-        };
-        if (allSoldOut && soldQty >= totalQty) {
-          updateData.status = "sold_out";
-        }
-        await this.updateCampaign(campaignId, updateData);
+      /* ============================== جولات السحب ============================== */
+      async getDraws() {
+        return db.select().from(draws).orderBy(asc(draws.sortOrder), desc(draws.createdAt));
       }
-      async createOrder(data) {
-        const [order] = await db.insert(orders).values({
-          userId: data.userId,
-          campaignId: data.campaignId,
-          productId: data.productId,
-          quantity: data.quantity,
-          totalAmount: data.totalAmount,
-          paymentMethod: data.paymentMethod || "stripe",
-          status: data.status || "pending",
-          paymentStatus: data.paymentStatus || "pending_payment",
-          shippingAddress: data.shippingAddress,
-          shippingFullName: data.shippingFullName,
-          shippingPhone: data.shippingPhone,
-          shippingCity: data.shippingCity,
-          shippingCountry: data.shippingCountry,
-          couponCode: data.couponCode,
-          discountAmount: data.discountAmount
+      async getDraw(id) {
+        const [draw] = await db.select().from(draws).where(eq(draws.id, id));
+        return draw || void 0;
+      }
+      /** الجولة اللي التذاكر الجديدة بتروح إلها */
+      async getActiveDraw() {
+        const [draw] = await db.select().from(draws).where(eq(draws.status, "active")).orderBy(asc(draws.sortOrder), asc(draws.createdAt)).limit(1);
+        return draw || void 0;
+      }
+      async getCompletedDraws() {
+        return db.select().from(draws).where(eq(draws.status, "completed")).orderBy(desc(draws.drawnAt));
+      }
+      /**
+       * أول جولة نشطة أو مجدولة — بتُستخدم لعرض "الجولة الحالية" للمستخدم
+       * حتى لو الجولة النشطة وصلت للعدد وصارت ready_to_draw.
+       */
+      async getCurrentDraw() {
+        const [draw] = await db.select().from(draws).where(inArray(draws.status, ["active", "ready_to_draw"])).orderBy(asc(draws.sortOrder), asc(draws.createdAt)).limit(1);
+        if (draw) return draw;
+        const [scheduled] = await db.select().from(draws).where(eq(draws.status, "scheduled")).orderBy(asc(draws.sortOrder), asc(draws.createdAt)).limit(1);
+        return scheduled || void 0;
+      }
+      /**
+       * بتنشئ جولة جديدة. إذا ما في ولا جولة نشطة بتصير هي النشطة فوراً
+       * وبتستلم أي تذاكر معلّقة (drawId = null) من طلبات سابقة.
+       */
+      async createDraw(data) {
+        const existingActive = await this.getActiveDraw();
+        const [maxRow] = await db.select({ maxOrder: sql2`coalesce(max(${draws.sortOrder}), 0)` }).from(draws);
+        const [draw] = await db.insert(draws).values({
+          title: data.title,
+          prizeName: data.prizeName,
+          prizeDescription: data.prizeDescription ?? null,
+          prizeImageUrl: data.prizeImageUrl ?? null,
+          ticketPrice: data.ticketPrice,
+          targetTickets: data.targetTickets,
+          sortOrder: (maxRow?.maxOrder ?? 0) + 1,
+          status: existingActive ? "scheduled" : "active",
+          startedAt: existingActive ? null : /* @__PURE__ */ new Date()
         }).returning();
-        return order;
+        if (!existingActive) {
+          await this.assignPendingTicketsToDraw(draw.id);
+          return await this.getDraw(draw.id) ?? draw;
+        }
+        return draw;
       }
+      async updateDraw(id, data) {
+        const [updated] = await db.update(draws).set(data).where(eq(draws.id, id)).returning();
+        return updated || void 0;
+      }
+      async deleteDraw(id) {
+        const draw = await this.getDraw(id);
+        if (!draw) return false;
+        if (draw.status === "completed") {
+          throw new Error("\u0645\u0627 \u0628\u064A\u0646\u0641\u0639 \u062A\u062D\u0630\u0641 \u062C\u0648\u0644\u0629 \u062A\u0645 \u0627\u0644\u0633\u062D\u0628 \u0639\u0644\u064A\u0647\u0627");
+        }
+        await db.update(tickets).set({ drawId: null }).where(eq(tickets.drawId, id));
+        const [deleted] = await db.delete(draws).where(eq(draws.id, id)).returning();
+        return !!deleted;
+      }
+      /**
+       * بتفعّل الجولة المجدولة التالية وبتسلّمها التذاكر المعلّقة.
+       * بترجّع الجولة النشطة الجديدة أو undefined إذا ما في جولات مجدولة.
+       */
+      async activateNextScheduledDraw() {
+        const [next] = await db.select().from(draws).where(eq(draws.status, "scheduled")).orderBy(asc(draws.sortOrder), asc(draws.createdAt)).limit(1);
+        if (!next) return void 0;
+        await db.update(draws).set({ status: "active", startedAt: /* @__PURE__ */ new Date() }).where(eq(draws.id, next.id));
+        await this.assignPendingTicketsToDraw(next.id);
+        return await this.getDraw(next.id) ?? void 0;
+      }
+      /**
+       * بتسلّم التذاكر المعلّقة (drawId = null) لجولة، بحدود سعتها.
+       * إذا امتلأت الجولة بتصير ready_to_draw.
+       */
+      async assignPendingTicketsToDraw(drawId) {
+        const draw = await this.getDraw(drawId);
+        if (!draw) return 0;
+        const capacity = draw.targetTickets - draw.soldTickets;
+        if (capacity <= 0) {
+          if (draw.status === "active") {
+            await this.updateDraw(drawId, { status: "ready_to_draw" });
+          }
+          return 0;
+        }
+        const pending = await db.select({ id: tickets.id }).from(tickets).where(isNull(tickets.drawId)).orderBy(asc(tickets.createdAt)).limit(capacity);
+        if (pending.length === 0) return 0;
+        await db.update(tickets).set({ drawId }).where(inArray(tickets.id, pending.map((t) => t.id)));
+        const newSold = draw.soldTickets + pending.length;
+        await this.updateDraw(drawId, {
+          soldTickets: newSold,
+          ...newSold >= draw.targetTickets ? { status: "ready_to_draw" } : {}
+        });
+        return pending.length;
+      }
+      async getTicketsByDraw(drawId) {
+        return db.select().from(tickets).where(eq(tickets.drawId, drawId)).orderBy(desc(tickets.createdAt));
+      }
+      /** عدد المشاركين الفريدين بجولة */
+      async getDrawParticipantCount(drawId) {
+        const [row] = await db.select({ total: sql2`count(distinct ${tickets.userId})` }).from(tickets).where(eq(tickets.drawId, drawId));
+        return Number(row?.total ?? 0);
+      }
+      /** تذاكر مستخدم معيّن بجولة معيّنة */
+      async getUserTicketCountForDraw(userId, drawId) {
+        const [row] = await db.select({ total: count() }).from(tickets).where(and(eq(tickets.userId, userId), eq(tickets.drawId, drawId)));
+        return Number(row?.total ?? 0);
+      }
+      /** السحب: اختيار تذكرة عشوائية من تذاكر الجولة */
+      async drawWinner(drawId) {
+        const draw = await this.getDraw(drawId);
+        if (!draw) throw new Error("\u0627\u0644\u062C\u0648\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");
+        if (draw.status === "completed") throw new Error("\u062A\u0645 \u0627\u0644\u0633\u062D\u0628 \u0639\u0644\u0649 \u0647\u0630\u0647 \u0627\u0644\u062C\u0648\u0644\u0629 \u0645\u0633\u0628\u0642\u0627\u064B");
+        const drawTickets = await this.getTicketsByDraw(drawId);
+        if (drawTickets.length === 0) {
+          throw new Error("\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0630\u0627\u0643\u0631 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u062C\u0648\u0644\u0629 \u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0633\u062D\u0628");
+        }
+        const winningTicket = drawTickets[randomInt(0, drawTickets.length)];
+        await db.update(tickets).set({ isWinner: true }).where(eq(tickets.id, winningTicket.id));
+        const winner = await this.getUser(winningTicket.userId);
+        if (!winner) throw new Error("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0641\u0627\u0626\u0632");
+        const [updatedDraw] = await db.update(draws).set({
+          status: "completed",
+          winnerId: winner.id,
+          winnerTicketId: winningTicket.id,
+          winnerTicketNumber: winningTicket.ticketNumber,
+          drawnAt: /* @__PURE__ */ new Date()
+        }).where(eq(draws.id, drawId)).returning();
+        const stillActive = await this.getActiveDraw();
+        if (!stillActive) {
+          await this.activateNextScheduledDraw();
+        }
+        return { winner, ticket: { ...winningTicket, isWinner: true }, draw: updatedDraw };
+      }
+      /* ================================ الشراء ================================ */
+      /**
+       * عملية الشراء كاملة داخل transaction واحد:
+       * التحقق من المخزون، حساب السعر من السيرفر (مو من العميل)، الكوبون،
+       * المحفظة، إنشاء الطلب وسطوره، وخصم المخزون.
+       *
+       * التذاكر ما بتنمنح هون — بتنمنح لما الأدمن يأكّد الدفع
+       * (شوف awardTicketsForOrder).
+       */
+      async checkout(userId, payload) {
+        return db.transaction(async (tx) => {
+          const wanted = /* @__PURE__ */ new Map();
+          for (const item of payload.items) {
+            wanted.set(item.productId, (wanted.get(item.productId) ?? 0) + item.quantity);
+          }
+          const productIds = [...wanted.keys()];
+          const rows = await tx.select().from(products).where(inArray(products.id, productIds)).for("update");
+          const byId = new Map(rows.map((p) => [p.id, p]));
+          let subtotal = 0;
+          const lines = [];
+          for (const [productId, quantity] of wanted) {
+            const product = byId.get(productId);
+            if (!product) throw new Error("\u0623\u062D\u062F \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A \u0644\u0645 \u064A\u0639\u062F \u0645\u062A\u0648\u0641\u0631\u0627\u064B");
+            if (!product.isActive) throw new Error(`\u0627\u0644\u0645\u0646\u062A\u062C "${product.name}" \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B`);
+            if (product.stock !== null && product.stock < quantity) {
+              throw new Error(`\u0645\u062A\u0628\u0642\u064A ${product.stock} \u0642\u0637\u0639\u0629 \u0641\u0642\u0637 \u0645\u0646 "${product.name}"`);
+            }
+            const unitPrice = parseFloat(product.price);
+            const lineTotal = unitPrice * quantity;
+            subtotal += lineTotal;
+            lines.push({
+              productId: product.id,
+              productName: product.name,
+              productImageUrl: product.imageUrl,
+              unitPrice: unitPrice.toFixed(2),
+              quantity,
+              lineTotal: lineTotal.toFixed(2)
+            });
+          }
+          let discountAmount = 0;
+          let appliedCouponCode = null;
+          if (payload.couponCode) {
+            const [coupon] = await tx.select().from(coupons).where(eq(coupons.code, payload.couponCode.trim().toUpperCase())).for("update");
+            if (!coupon) throw new Error("\u0643\u0648\u062F \u0627\u0644\u062E\u0635\u0645 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D");
+            if (!coupon.enabled) throw new Error("\u0643\u0648\u062F \u0627\u0644\u062E\u0635\u0645 \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644");
+            if (coupon.usedCount >= coupon.maxUses) throw new Error("\u062A\u0645 \u0627\u0633\u062A\u0646\u0641\u0627\u062F \u0643\u0648\u062F \u0627\u0644\u062E\u0635\u0645");
+            if (coupon.expiresAt && new Date(coupon.expiresAt) < /* @__PURE__ */ new Date()) {
+              throw new Error("\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0643\u0648\u062F \u0627\u0644\u062E\u0635\u0645");
+            }
+            discountAmount = subtotal * coupon.discountPercent / 100;
+            appliedCouponCode = coupon.code;
+            await tx.update(coupons).set({ usedCount: coupon.usedCount + 1 }).where(eq(coupons.id, coupon.id));
+          }
+          const afterDiscount = Math.max(0, subtotal - discountAmount);
+          let walletAmount = 0;
+          if (payload.useWallet) {
+            const [user] = await tx.select({ walletBalance: users.walletBalance }).from(users).where(eq(users.id, userId)).for("update");
+            const balance = parseFloat(user?.walletBalance ?? "0");
+            walletAmount = Math.min(balance, afterDiscount);
+            if (walletAmount > 0) {
+              await tx.update(users).set({ walletBalance: sql2`${users.walletBalance} - ${walletAmount.toFixed(2)}` }).where(eq(users.id, userId));
+            }
+          }
+          const totalDue = Math.max(0, afterDiscount - walletAmount);
+          const isBankTransfer = payload.paymentMethod === "bank_transfer";
+          const [order] = await tx.insert(orders).values({
+            userId,
+            subtotal: subtotal.toFixed(2),
+            discountAmount: discountAmount.toFixed(2),
+            walletAmount: walletAmount.toFixed(2),
+            totalAmount: totalDue.toFixed(2),
+            // التذاكر بتنحسب على قيمة البضاعة بعد الخصم، قبل خصم المحفظة
+            ticketEligibleAmount: afterDiscount.toFixed(2),
+            status: "pending",
+            paymentMethod: payload.paymentMethod,
+            paymentStatus: isBankTransfer ? "pending_payment" : "pending_review",
+            shippingFullName: payload.shippingFullName,
+            shippingPhone: payload.shippingPhone,
+            shippingCity: payload.shippingCity,
+            shippingAddress: payload.shippingAddress,
+            shippingCountry: payload.shippingCountry,
+            couponCode: appliedCouponCode
+          }).returning();
+          const insertedItems = await tx.insert(orderItems).values(lines.map((l) => ({ ...l, orderId: order.id }))).returning();
+          for (const [productId, quantity] of wanted) {
+            const product = byId.get(productId);
+            await tx.update(products).set({
+              soldCount: product.soldCount + quantity,
+              ...product.stock !== null ? { stock: product.stock - quantity } : {}
+            }).where(eq(products.id, productId));
+          }
+          if (walletAmount > 0) {
+            await tx.insert(walletTransactions).values({
+              userId,
+              amount: (-walletAmount).toFixed(2),
+              type: "debit",
+              description: `\u062E\u0635\u0645 \u0645\u062D\u0641\u0638\u0629 \u2014 \u0637\u0644\u0628 ${order.id.slice(0, 8)}`,
+              referenceId: order.id
+            });
+          }
+          return { ...order, items: insertedItems };
+        });
+      }
+      /**
+       * بتمنح تذاكر لطلب بعد تأكيد الدفع. idempotent — نداءها مرتين ما بيضاعف.
+       * عدد التذاكر = floor(قيمة البضاعة بعد الخصم ÷ سعر التذكرة).
+       * إذا امتلأت الجولة النشطة، الزيادة بتروح للجولة التالية،
+       * وإذا ما في جولة تالية بتضلّ معلّقة لحدّ ما الأدمن يفتح جولة جديدة.
+       */
+      async awardTicketsForOrder(orderId) {
+        const order = await this.getOrder(orderId);
+        if (!order) throw new Error("\u0627\u0644\u0637\u0644\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");
+        if (order.ticketsAwarded > 0) return { created: 0, drawIds: [] };
+        if (order.paymentStatus !== "confirmed") return { created: 0, drawIds: [] };
+        const eligible = parseFloat(order.ticketEligibleAmount);
+        let activeDraw = await this.getActiveDraw();
+        const ticketPrice = activeDraw ? parseFloat(activeDraw.ticketPrice) : DEFAULT_TICKET_PRICE;
+        const totalTickets = ticketPrice > 0 ? Math.floor(eligible / ticketPrice) : 0;
+        if (totalTickets <= 0) {
+          await this.updateOrder(orderId, { ticketsAwarded: 0 });
+          return { created: 0, drawIds: [] };
+        }
+        const drawIds = [];
+        let remaining = totalTickets;
+        let guard = 0;
+        while (remaining > 0 && guard++ < 100) {
+          if (!activeDraw) {
+            await this.createTickets(order.userId, order.id, null, remaining);
+            remaining = 0;
+            break;
+          }
+          const capacity = activeDraw.targetTickets - activeDraw.soldTickets;
+          if (capacity <= 0) {
+            await this.updateDraw(activeDraw.id, { status: "ready_to_draw" });
+            activeDraw = await this.activateNextScheduledDraw();
+            continue;
+          }
+          const take = Math.min(capacity, remaining);
+          await this.createTickets(order.userId, order.id, activeDraw.id, take);
+          const newSold = activeDraw.soldTickets + take;
+          await this.updateDraw(activeDraw.id, {
+            soldTickets: newSold,
+            ...newSold >= activeDraw.targetTickets ? { status: "ready_to_draw" } : {}
+          });
+          if (!drawIds.includes(activeDraw.id)) drawIds.push(activeDraw.id);
+          remaining -= take;
+          if (newSold >= activeDraw.targetTickets) {
+            activeDraw = await this.activateNextScheduledDraw();
+          }
+        }
+        await this.updateOrder(orderId, { ticketsAwarded: totalTickets });
+        return { created: totalTickets, drawIds };
+      }
+      async createTickets(userId, orderId, drawId, quantity) {
+        if (quantity <= 0) return [];
+        const values = Array.from({ length: quantity }, () => ({
+          ticketNumber: generateTicketNumber(),
+          userId,
+          orderId,
+          drawId
+        }));
+        return db.insert(tickets).values(values).returning();
+      }
+      /* ================================ الطلبات ================================ */
       async getOrdersByUser(userId) {
         return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+      }
+      async getOrderItems(orderId) {
+        return db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+      }
+      async getOrderWithItems(orderId) {
+        const order = await this.getOrder(orderId);
+        if (!order) return void 0;
+        const items = await this.getOrderItems(orderId);
+        return { ...order, items };
       }
       async updateOrder(id, data) {
         const [updated] = await db.update(orders).set(data).where(eq(orders.id, id)).returning();
         return updated || void 0;
       }
-      async createTicket(data) {
-        const ticketNumber = generateTicketNumber();
-        const [ticket] = await db.insert(tickets).values({
-          ticketNumber,
-          userId: data.userId,
-          campaignId: data.campaignId,
-          orderId: data.orderId,
-          productId: data.productId || null
-        }).returning();
-        return ticket;
-      }
       async getTicketsByUser(userId) {
         return db.select().from(tickets).where(eq(tickets.userId, userId)).orderBy(desc(tickets.createdAt));
-      }
-      async getTicketsByCampaign(campaignId) {
-        return db.select().from(tickets).where(eq(tickets.campaignId, campaignId)).orderBy(desc(tickets.createdAt));
       }
       async getTicket(id) {
         const [ticket] = await db.select().from(tickets).where(eq(tickets.id, id));
         return ticket || void 0;
-      }
-      async markTicketWinner(id) {
-        const [ticket] = await db.update(tickets).set({ isWinner: true }).where(eq(tickets.id, id)).returning();
-        return ticket || void 0;
-      }
-      async purchaseProduct(userId, campaignId, quantity, paymentMethod, shippingData, couponCode, productId) {
-        const campaign = await this.getCampaign(campaignId);
-        if (!campaign) throw new Error("Campaign not found");
-        if (campaign.status !== "active") throw new Error("Campaign is not active");
-        const products = await this.getCampaignProducts(campaignId);
-        let unitPrice;
-        let selectedProduct;
-        if (products.length > 0) {
-          if (!productId) throw new Error("Product variant must be selected");
-          selectedProduct = products.find((p) => p.id === productId);
-          if (!selectedProduct) throw new Error("Product variant not found");
-          const productRemaining = selectedProduct.quantity - selectedProduct.soldQuantity;
-          if (quantity > productRemaining)
-            throw new Error(`\u0641\u0642\u0637 ${productRemaining} \u0642\u0637\u0639\u0629 \u0645\u062A\u0628\u0642\u064A\u0629 \u0645\u0646 \u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u062F\u064A\u0644`);
-          unitPrice = parseFloat(selectedProduct.price);
-        } else {
-          const remaining = campaign.totalQuantity - campaign.soldQuantity;
-          if (quantity > remaining)
-            throw new Error(`Only ${remaining} items remaining`);
-          unitPrice = parseFloat(campaign.productPrice);
-        }
-        let totalAmount = unitPrice * quantity;
-        let discountAmount;
-        let appliedCouponCode;
-        if (couponCode) {
-          const coupon = await this.validateCoupon(couponCode);
-          const discount = totalAmount * coupon.discountPercent / 100;
-          discountAmount = discount.toFixed(2);
-          totalAmount = totalAmount - discount;
-          appliedCouponCode = coupon.code;
-          await this.updateCoupon(coupon.id, { usedCount: coupon.usedCount + 1 });
-        }
-        const isBankTransfer = paymentMethod === "bank_transfer";
-        const orderStatus = isBankTransfer ? "pending" : "paid";
-        const orderPaymentStatus = isBankTransfer ? "pending_payment" : "confirmed";
-        const order = await this.createOrder({
-          userId,
-          campaignId,
-          productId: productId || void 0,
-          quantity,
-          totalAmount: totalAmount.toFixed(2),
-          paymentMethod,
-          status: orderStatus,
-          paymentStatus: orderPaymentStatus,
-          shippingAddress: shippingData?.address,
-          shippingFullName: shippingData?.fullName,
-          shippingPhone: shippingData?.phone,
-          shippingCity: shippingData?.city,
-          shippingCountry: shippingData?.country,
-          couponCode: appliedCouponCode,
-          discountAmount
-        });
-        const createdTickets = [];
-        for (let i = 0; i < quantity; i++) {
-          const ticket = await this.createTicket({
-            userId,
-            campaignId,
-            orderId: order.id,
-            productId: productId || void 0
-          });
-          createdTickets.push(ticket);
-        }
-        if (selectedProduct && productId) {
-          await this.updateCampaignProduct(productId, {
-            soldQuantity: selectedProduct.soldQuantity + quantity
-          });
-          await this.syncCampaignAggregates(campaignId);
-        } else {
-          const newSoldQty = campaign.soldQuantity + quantity;
-          const updateData = { soldQuantity: newSoldQty };
-          if (newSoldQty >= campaign.totalQuantity) {
-            updateData.status = "sold_out";
-          }
-          await this.updateCampaign(campaignId, updateData);
-        }
-        return { order, tickets: createdTickets };
-      }
-      async drawWinner(campaignId) {
-        const campaign = await this.getCampaign(campaignId);
-        if (!campaign) throw new Error("Campaign not found");
-        const campaignTickets = await this.getTicketsByCampaign(campaignId);
-        if (campaignTickets.length === 0) {
-          throw new Error("\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0630\u0627\u0643\u0631 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u062D\u0645\u0644\u0629 \u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0633\u062D\u0628");
-        }
-        await this.updateCampaign(campaignId, { status: "drawing" });
-        const randomIndex = Math.floor(
-          parseInt(randomBytes(4).toString("hex"), 16) / 4294967295 * campaignTickets.length
-        );
-        const winningTicket = campaignTickets[randomIndex];
-        await this.markTicketWinner(winningTicket.id);
-        const winner = await this.getUser(winningTicket.userId);
-        if (!winner) throw new Error("Winner user not found");
-        await this.updateCampaign(campaignId, {
-          status: "completed",
-          winnerId: winner.id,
-          winnerTicketId: winningTicket.ticketNumber,
-          drawAt: /* @__PURE__ */ new Date()
-        });
-        return { winner, ticket: winningTicket };
       }
       async getAllUsers() {
         return db.select().from(users).orderBy(desc(users.createdAt));
@@ -685,35 +888,29 @@ var init_storage = __esm({
         };
       }
       async getAllOrders() {
-        const result = await db.select({
-          id: orders.id,
-          userId: orders.userId,
-          campaignId: orders.campaignId,
-          quantity: orders.quantity,
-          totalAmount: orders.totalAmount,
-          status: orders.status,
-          paymentMethod: orders.paymentMethod,
-          paymentStatus: orders.paymentStatus,
-          receiptUrl: orders.receiptUrl,
-          rejectionReason: orders.rejectionReason,
-          shippingStatus: orders.shippingStatus,
-          shippingAddress: orders.shippingAddress,
-          shippingFullName: orders.shippingFullName,
-          shippingPhone: orders.shippingPhone,
-          shippingCity: orders.shippingCity,
-          shippingCountry: orders.shippingCountry,
-          trackingNumber: orders.trackingNumber,
-          couponCode: orders.couponCode,
-          discountAmount: orders.discountAmount,
-          createdAt: orders.createdAt,
-          username: users.username,
-          campaignTitle: campaigns.title
-        }).from(orders).leftJoin(users, eq(orders.userId, users.id)).leftJoin(campaigns, eq(orders.campaignId, campaigns.id)).orderBy(desc(orders.createdAt));
-        return result.map((row) => ({
-          ...row,
-          username: row.username || "Unknown",
-          campaignTitle: row.campaignTitle || "Unknown"
-        }));
+        const rows = await db.select({
+          order: orders,
+          username: users.username
+        }).from(orders).leftJoin(users, eq(orders.userId, users.id)).orderBy(desc(orders.createdAt));
+        if (rows.length === 0) return [];
+        const items = await db.select().from(orderItems).where(inArray(orderItems.orderId, rows.map((r) => r.order.id)));
+        const itemsByOrder = /* @__PURE__ */ new Map();
+        for (const item of items) {
+          const list = itemsByOrder.get(item.orderId) ?? [];
+          list.push(item);
+          itemsByOrder.set(item.orderId, list);
+        }
+        return rows.map(({ order, username }) => {
+          const orderItemList = itemsByOrder.get(order.id) ?? [];
+          const itemCount = orderItemList.reduce((s, i) => s + i.quantity, 0);
+          const names = orderItemList.map((i) => `${i.productName} \xD7${i.quantity}`);
+          return {
+            ...order,
+            username: username || "Unknown",
+            itemCount,
+            summary: names.length > 0 ? names.join("\u060C ") : "\u2014"
+          };
+        });
       }
       async getOrder(id) {
         const [order] = await db.select().from(orders).where(eq(orders.id, id));
@@ -787,17 +984,19 @@ var init_storage = __esm({
         return entry;
       }
       async getAdminDashboardStats() {
-        const [revenueResult] = await db.select({ total: sum(orders.totalAmount) }).from(orders).where(eq(orders.status, "paid"));
+        const [revenueResult] = await db.select({ total: sum(orders.totalAmount) }).from(orders).where(eq(orders.paymentStatus, "confirmed"));
         const [ordersResult] = await db.select({ total: count() }).from(orders);
         const [usersResult] = await db.select({ total: count() }).from(users);
-        const [activeCampaignsResult] = await db.select({ total: count() }).from(campaigns).where(eq(campaigns.status, "active"));
+        const [activeProductsResult] = await db.select({ total: count() }).from(products).where(eq(products.isActive, true));
+        const [pendingResult] = await db.select({ total: count() }).from(orders).where(eq(orders.paymentStatus, "pending_review"));
         const today = /* @__PURE__ */ new Date();
         today.setHours(0, 0, 0, 0);
         const [ordersTodayResult] = await db.select({ total: count() }).from(orders).where(gte(orders.createdAt, today));
         const weekAgo = /* @__PURE__ */ new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
         const [newUsersResult] = await db.select({ total: count() }).from(users).where(gte(users.createdAt, weekAgo));
-        const topCampaigns = await db.select({ title: campaigns.title, soldQuantity: campaigns.soldQuantity }).from(campaigns).orderBy(desc(campaigns.soldQuantity)).limit(5);
+        const topProducts = await db.select({ name: products.name, soldCount: products.soldCount }).from(products).orderBy(desc(products.soldCount)).limit(5);
+        const activeDraw = await this.getCurrentDraw() ?? null;
         const totalOrdersCount = ordersResult?.total || 0;
         const totalUsersCount = usersResult?.total || 0;
         const totalRevenueNum = parseFloat(revenueResult?.total || "0");
@@ -807,12 +1006,15 @@ var init_storage = __esm({
           totalRevenue: revenueResult?.total || "0.00",
           totalOrders: totalOrdersCount,
           totalUsers: totalUsersCount,
-          activeCampaigns: activeCampaignsResult?.total || 0,
+          activeProducts: activeProductsResult?.total || 0,
           ordersToday: ordersTodayResult?.total || 0,
           newUsersThisWeek: newUsersResult?.total || 0,
           conversionRate,
           averageOrderValue,
-          topCampaigns
+          pendingReviewOrders: pendingResult?.total || 0,
+          ticketsInActiveDraw: activeDraw?.soldTickets ?? 0,
+          activeDraw,
+          topProducts
         };
       }
       async updateUserProfile(userId, data) {
@@ -825,29 +1027,28 @@ var init_storage = __esm({
         }).where(eq(users.id, userId)).returning();
         return user || void 0;
       }
-      async getReviewsByCampaign(campaignId) {
-        const result = await db.select({
+      async getReviewsByProduct(productId) {
+        return db.select({
           id: reviews.id,
           userId: reviews.userId,
-          campaignId: reviews.campaignId,
+          productId: reviews.productId,
           rating: reviews.rating,
           comment: reviews.comment,
           createdAt: reviews.createdAt,
           username: users.username
-        }).from(reviews).innerJoin(users, eq(reviews.userId, users.id)).where(eq(reviews.campaignId, campaignId)).orderBy(desc(reviews.createdAt));
-        return result;
+        }).from(reviews).innerJoin(users, eq(reviews.userId, users.id)).where(eq(reviews.productId, productId)).orderBy(desc(reviews.createdAt));
       }
       async createReview(userId, data) {
         const [review] = await db.insert(reviews).values({
           userId,
-          campaignId: data.campaignId,
+          productId: data.productId,
           rating: data.rating,
           comment: data.comment || null
         }).returning();
         return review;
       }
-      async getUserReviewForCampaign(userId, campaignId) {
-        const [review] = await db.select().from(reviews).where(and(eq(reviews.userId, userId), eq(reviews.campaignId, campaignId)));
+      async getUserReviewForProduct(userId, productId) {
+        const [review] = await db.select().from(reviews).where(and(eq(reviews.userId, userId), eq(reviews.productId, productId)));
         return review || void 0;
       }
       async getAdminNotifications(limit = 50) {
@@ -951,25 +1152,25 @@ var init_storage = __esm({
       async updateUserEmail(userId, email) {
         await db.update(users).set({ email }).where(eq(users.id, userId));
       }
-      async createUserNotification(userId, type, title, body, campaignId, metadata) {
+      async createUserNotification(userId, type, title, body, drawId, metadata) {
         const [notification] = await db.insert(userNotifications).values({
           userId,
           type,
           title,
           body,
-          campaignId: campaignId || null,
+          drawId: drawId || null,
           metadata: metadata || null
         }).returning();
         return notification;
       }
-      async createBulkUserNotifications(userIds, type, title, body, campaignId, metadata) {
+      async createBulkUserNotifications(userIds, type, title, body, drawId, metadata) {
         if (userIds.length === 0) return;
         const values = userIds.map((userId) => ({
           userId,
           type,
           title,
           body,
-          campaignId: campaignId || null,
+          drawId: drawId || null,
           metadata: metadata || null
         }));
         await db.insert(userNotifications).values(values);
@@ -999,6 +1200,22 @@ var init_storage = __esm({
         if (userIds.length === 0) return [];
         const result = await db.select({ pushToken: users.pushToken }).from(users).where(inArray(users.id, userIds));
         return result.map((r) => r.pushToken).filter((t) => !!t);
+      }
+      async getUserApnTokensByIds(userIds) {
+        if (userIds.length === 0) return [];
+        const result = await db.select({ apnToken: users.apnToken }).from(users).where(inArray(users.id, userIds));
+        return result.map((r) => r.apnToken).filter((t) => !!t && t.length > 20);
+      }
+      async updateUserDeviceTokens(userId, tokens) {
+        const update = {};
+        if (tokens.fcmToken !== void 0) update.fcmToken = tokens.fcmToken;
+        if (tokens.apnToken !== void 0) update.apnToken = tokens.apnToken;
+        if (Object.keys(update).length === 0) return;
+        await db.update(users).set(update).where(eq(users.id, userId));
+      }
+      async getAllUsersWithFcmTokens() {
+        const result = await db.select({ id: users.id, fcmToken: users.fcmToken, apnToken: users.apnToken }).from(users).where(eq(users.isSuspended, false));
+        return result;
       }
       async getWalletBalance(userId) {
         const [u] = await db.select({ walletBalance: users.walletBalance }).from(users).where(eq(users.id, userId));
@@ -1044,14 +1261,14 @@ var init_storage = __esm({
         await db.update(users).set({ emailVerified: true }).where(eq(users.id, userId));
       }
       async getRecentPurchases(limit = 5) {
-        const recentOrders = await db.select({
-          campaignTitle: campaigns.title,
+        const rows = await db.select({
+          productName: orderItems.productName,
           createdAt: orders.createdAt
-        }).from(orders).innerJoin(campaigns, eq(orders.campaignId, campaigns.id)).where(eq(orders.paymentStatus, "confirmed")).orderBy(desc(orders.createdAt)).limit(limit);
-        return recentOrders.map((o) => {
-          const minutesAgo = Math.max(1, Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 6e4));
-          return { campaignTitle: o.campaignTitle, minutesAgo };
-        });
+        }).from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id)).where(eq(orders.paymentStatus, "confirmed")).orderBy(desc(orders.createdAt)).limit(limit);
+        return rows.map((o) => ({
+          productName: o.productName,
+          minutesAgo: Math.max(1, Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 6e4))
+        }));
       }
       async deleteUser(userId) {
         await db.delete(supportTickets).where(eq(supportTickets.userId, userId));
@@ -1060,6 +1277,10 @@ var init_storage = __esm({
         await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
         await db.delete(reviews).where(eq(reviews.userId, userId));
         await db.delete(tickets).where(eq(tickets.userId, userId));
+        const userOrders = await db.select({ id: orders.id }).from(orders).where(eq(orders.userId, userId));
+        if (userOrders.length > 0) {
+          await db.delete(orderItems).where(inArray(orderItems.orderId, userOrders.map((o) => o.id)));
+        }
         await db.delete(orders).where(eq(orders.userId, userId));
         const result = await db.delete(users).where(eq(users.id, userId));
         return (result?.rowCount ?? 0) > 0;
@@ -1126,7 +1347,273 @@ import { createServer } from "node:http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
-import { sum as sum2, count as count2, and as and2, gte as gte2, sql as sql3, eq as eq2, desc as desc2 } from "drizzle-orm";
+
+// server/firebase.ts
+import admin from "firebase-admin";
+var initialized = false;
+function initFirebase() {
+  if (initialized || admin.apps.length > 0) return;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  if (!projectId || !clientEmail || !privateKey) {
+    console.warn("[Firebase] Missing credentials \u2014 FCM disabled. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY.");
+    return;
+  }
+  admin.initializeApp({
+    credential: admin.credential.cert({ projectId, clientEmail, privateKey })
+  });
+  initialized = true;
+  console.log("[Firebase] Admin SDK initialized for project:", projectId);
+}
+initFirebase();
+async function sendFcmNotification(tokens, title, body, data) {
+  const result = { success: 0, failure: 0, errors: [] };
+  if (!initialized && admin.apps.length === 0) {
+    result.errors.push("Firebase not initialized");
+    result.failure = tokens.length;
+    return result;
+  }
+  const validTokens = tokens.filter((t) => typeof t === "string" && t.length > 10);
+  if (validTokens.length === 0) return result;
+  const CHUNK = 500;
+  for (let i = 0; i < validTokens.length; i += CHUNK) {
+    const chunk = validTokens.slice(i, i + CHUNK);
+    try {
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens: chunk,
+        notification: { title, body },
+        data: data || {},
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "default",
+            sound: "default",
+            icon: "notification_icon",
+            color: "#FFD000"
+          }
+        },
+        apns: {
+          payload: { aps: { sound: "default", badge: 1 } },
+          headers: { "apns-priority": "10" }
+        }
+      });
+      result.success += response.successCount;
+      result.failure += response.failureCount;
+      response.responses.forEach((r, idx) => {
+        if (!r.success && r.error) {
+          result.errors.push(`Token[${i + idx}]: ${r.error.message}`);
+        }
+      });
+    } catch (err) {
+      result.failure += chunk.length;
+      result.errors.push(err.message || "Unknown error");
+    }
+  }
+  return result;
+}
+async function sendFcmToUser(userId, fcmToken, title, body, data) {
+  const tokens = [fcmToken].filter((t) => !!t && t.length > 10);
+  return sendFcmNotification(tokens, title, body, data);
+}
+
+// server/apns.ts
+import http2 from "http2";
+import jwt from "jsonwebtoken";
+var APN_HOST = "api.push.apple.com";
+var BUNDLE_ID = process.env.APN_BUNDLE_ID || "app.replit.forsa";
+var REQUEST_TIMEOUT_MS = 1e4;
+var CONNECT_TIMEOUT_MS = 8e3;
+var cachedToken = null;
+var tokenGeneratedAt = 0;
+function parseKey(raw) {
+  let key = raw.replace(/\\n/g, "\n").replace(/\\r/g, "").trim();
+  const beginMatch = key.match(/-----BEGIN [A-Z ]+-----/);
+  const endMatch = key.match(/-----END [A-Z ]+-----/);
+  if (!beginMatch || !endMatch) return key;
+  const beginIdx = key.indexOf(beginMatch[0]) + beginMatch[0].length;
+  const endIdx = key.indexOf(endMatch[0]);
+  const body = key.slice(beginIdx, endIdx).replace(/[\s\n\r]+/g, "");
+  const wrapped = body.match(/.{1,64}/g)?.join("\n") || body;
+  return `${beginMatch[0]}
+${wrapped}
+${endMatch[0]}
+`;
+}
+function getJWT() {
+  const now = Date.now();
+  if (cachedToken && now - tokenGeneratedAt < 45 * 60 * 1e3) {
+    return cachedToken;
+  }
+  const rawKey = process.env.APN_KEY;
+  const keyId = process.env.APN_KEY_ID?.trim();
+  const teamId = process.env.APPLE_TEAM_ID?.trim();
+  if (!rawKey || !keyId || !teamId) {
+    throw new Error("[APNs] Missing credentials: APN_KEY, APN_KEY_ID, APPLE_TEAM_ID must be set");
+  }
+  const key = parseKey(rawKey);
+  if (!key.includes("-----BEGIN") || !key.includes("-----END")) {
+    throw new Error("[APNs] APN_KEY does not look like a valid PEM key \u2014 make sure the full .p8 file content is stored including the BEGIN/END lines");
+  }
+  cachedToken = jwt.sign({}, key, {
+    algorithm: "ES256",
+    keyid: keyId,
+    issuer: teamId,
+    expiresIn: "1h"
+  });
+  tokenGeneratedAt = now;
+  console.log(`[APNs] JWT generated for team=${teamId} keyId=${keyId}`);
+  return cachedToken;
+}
+function isApnsConfigured() {
+  return !!(process.env.APN_KEY && process.env.APN_KEY_ID && process.env.APPLE_TEAM_ID);
+}
+async function sendApnsNotifications(deviceTokens, title, body, data) {
+  const result = { success: 0, failure: 0, invalidTokens: [] };
+  const validTokens = [...new Set(deviceTokens.filter((t) => typeof t === "string" && t.length > 20))];
+  if (validTokens.length === 0) return result;
+  let token;
+  try {
+    token = getJWT();
+  } catch (err) {
+    console.error("[APNs]", err.message);
+    result.failure = validTokens.length;
+    return result;
+  }
+  const expirationTimestamp = Math.floor(Date.now() / 1e3) + 86400;
+  const payload = JSON.stringify({
+    aps: {
+      alert: { title, body },
+      sound: "default",
+      badge: 1
+    },
+    ...data || {}
+  });
+  return new Promise((resolve2) => {
+    let client = null;
+    let pending = validTokens.length;
+    let resolved = false;
+    const overallTimer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        console.error(`[APNs] Overall timeout reached \u2014 ${pending} requests incomplete`);
+        result.failure += pending;
+        try {
+          client?.destroy();
+        } catch {
+        }
+        resolve2(result);
+      }
+    }, CONNECT_TIMEOUT_MS + REQUEST_TIMEOUT_MS * validTokens.length + 2e3);
+    function finish() {
+      if (pending > 0) pending--;
+      if (pending === 0 && !resolved) {
+        resolved = true;
+        clearTimeout(overallTimer);
+        try {
+          client?.close();
+        } catch {
+        }
+        resolve2(result);
+      }
+    }
+    function abortAll(reason) {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(overallTimer);
+        console.error(`[APNs] Aborting all ${pending} pending requests: ${reason}`);
+        result.failure += pending;
+        pending = 0;
+        try {
+          client?.destroy();
+        } catch {
+        }
+        resolve2(result);
+      }
+    }
+    const connectTimer = setTimeout(() => {
+      abortAll("Connection timed out");
+    }, CONNECT_TIMEOUT_MS);
+    try {
+      client = http2.connect(`https://${APN_HOST}`, {}, () => {
+        clearTimeout(connectTimer);
+      });
+      client.on("error", (err) => {
+        clearTimeout(connectTimer);
+        abortAll(`Connection error: ${err.message}`);
+      });
+      client.on("connect", () => {
+        clearTimeout(connectTimer);
+      });
+      for (const deviceToken of validTokens) {
+        if (resolved) break;
+        try {
+          const req = client.request({
+            ":method": "POST",
+            ":path": `/3/device/${deviceToken}`,
+            "authorization": `bearer ${token}`,
+            "apns-topic": BUNDLE_ID,
+            "apns-push-type": "alert",
+            "apns-priority": "10",
+            "apns-expiration": String(expirationTimestamp),
+            "content-type": "application/json",
+            "content-length": String(Buffer.byteLength(payload))
+          });
+          let statusCode = 0;
+          let responseBody = "";
+          const reqTimer = setTimeout(() => {
+            console.error(`[APNs] Request timeout for token ${deviceToken.slice(0, 8)}...`);
+            result.failure++;
+            req.destroy();
+            finish();
+          }, REQUEST_TIMEOUT_MS);
+          req.on("response", (headers) => {
+            statusCode = headers[":status"];
+          });
+          req.on("data", (chunk) => {
+            responseBody += chunk;
+          });
+          req.on("end", () => {
+            clearTimeout(reqTimer);
+            if (statusCode === 200) {
+              result.success++;
+            } else {
+              let parsedReason = "unknown";
+              try {
+                const parsed = JSON.parse(responseBody);
+                parsedReason = parsed.reason || "unknown";
+              } catch {
+              }
+              console.error(`[APNs] status=${statusCode} reason=${parsedReason} token=${deviceToken.slice(0, 8)}...`);
+              if (parsedReason === "BadDeviceToken" || parsedReason === "Unregistered" || parsedReason === "DeviceTokenNotForTopic") {
+                result.invalidTokens.push(deviceToken);
+              }
+              result.failure++;
+            }
+            finish();
+          });
+          req.on("error", (err) => {
+            clearTimeout(reqTimer);
+            console.error(`[APNs] Request error for token ${deviceToken.slice(0, 8)}...: ${err.message}`);
+            result.failure++;
+            finish();
+          });
+          req.end(payload);
+        } catch (reqErr) {
+          console.error("[APNs] Failed to create request:", reqErr.message);
+          result.failure++;
+          finish();
+        }
+      }
+    } catch (connErr) {
+      clearTimeout(connectTimer);
+      abortAll(`Failed to connect: ${connErr.message}`);
+    }
+  });
+}
+
+// server/routes.ts
+import { sum as sum2, count as count2, and as and2, gte as gte2, sql as sql3, eq as eq2, desc as desc2, inArray as inArray2 } from "drizzle-orm";
 
 // server/email.ts
 import { Resend } from "resend";
@@ -1213,28 +1700,29 @@ async function sendEmail(to, subject, html) {
   }
 }
 async function sendOrderConfirmation(to, data) {
-  const ticketsHtml = data.ticketNumbers.map((t) => `<span class="badge badge-info" style="margin: 2px;">${t}</span>`).join(" ");
+  const itemsHtml = data.items.map(
+    (i) => `<div class="info-row"><span class="info-label">${i.name} \xD7${i.quantity}</span><span class="info-value">${i.lineTotal} $</span></div>`
+  ).join("");
   const html = baseTemplate(`
     <div class="body">
-      <h2>\u062A\u0645 \u062A\u0623\u0643\u064A\u062F \u0637\u0644\u0628\u0643 \u0628\u0646\u062C\u0627\u062D!</h2>
-      <p>\u0634\u0643\u0631\u0627\u064B \u0644\u0643! \u062A\u0645 \u0627\u0633\u062A\u0644\u0627\u0645 \u0637\u0644\u0628\u0643 \u0648\u0633\u064A\u062A\u0645 \u0645\u0639\u0627\u0644\u062C\u062A\u0647 \u0641\u064A \u0623\u0642\u0631\u0628 \u0648\u0642\u062A.</p>
+      <h2>\u062A\u0645 \u0627\u0633\u062A\u0644\u0627\u0645 \u0637\u0644\u0628\u0643!</h2>
+      <p>\u0634\u0643\u0631\u0627\u064B \u0644\u0643! \u0637\u0644\u0628\u0643 \u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 \u0648\u0633\u064A\u062A\u0645 \u062A\u0623\u0643\u064A\u062F\u0647 \u0642\u0631\u064A\u0628\u0627\u064B.</p>
       <div class="info-box">
         <div class="info-row"><span class="info-label">\u0631\u0642\u0645 \u0627\u0644\u0637\u0644\u0628</span><span class="info-value">#${data.orderId.slice(0, 8)}</span></div>
-        <div class="info-row"><span class="info-label">\u0627\u0644\u0645\u0646\u062A\u062C</span><span class="info-value">${data.campaignTitle}</span></div>
-        <div class="info-row"><span class="info-label">\u0627\u0644\u0643\u0645\u064A\u0629</span><span class="info-value">${data.quantity}</span></div>
-        <div class="info-row"><span class="info-label">\u0627\u0644\u0645\u0628\u0644\u063A</span><span class="info-value">${data.totalAmount} $</span></div>
+        ${itemsHtml}
+        <div class="info-row"><span class="info-label">\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0633\u062A\u062D\u0642</span><span class="info-value">${data.totalAmount} $</span></div>
         <div class="info-row"><span class="info-label">\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062F\u0641\u0639</span><span class="info-value">${data.paymentMethod}</span></div>
       </div>
-      <p><strong>\u062A\u0630\u0627\u0643\u0631\u0643:</strong></p>
-      <div style="margin: 12px 0;">${ticketsHtml}</div>
+      <p><strong>\u062A\u0630\u0627\u0643\u0631 \u0627\u0644\u0633\u062D\u0628:</strong> \u0631\u062D \u062A\u062D\u0635\u0644 \u0639\u0644\u0649 <span class="badge badge-info">${data.expectedTickets} \u062A\u0630\u0643\u0631\u0629</span> \u0628\u0645\u062C\u0631\u062F \u062A\u0623\u0643\u064A\u062F \u062F\u0641\u0639\u062A\u0643.</p>
       <p>\u0628\u0627\u0644\u062A\u0648\u0641\u064A\u0642!</p>
     </div>
   `);
   await sendEmail(to, `\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0637\u0644\u0628 #${data.orderId.slice(0, 8)} - ${APP_NAME}`, html);
 }
 async function sendPaymentStatusUpdate(to, data) {
+  const ticketLine = data.awardedTickets && data.awardedTickets > 0 ? ` \u0648\u062D\u0635\u0644\u062A \u0639\u0644\u0649 ${data.awardedTickets} \u062A\u0630\u0643\u0631\u0629 \u0644\u0644\u0633\u062D\u0628!` : "";
   const statusMap = {
-    confirmed: { label: "\u062A\u0645 \u0627\u0644\u062A\u0623\u0643\u064A\u062F", badge: "badge-success", message: "\u062A\u0645 \u062A\u0623\u0643\u064A\u062F \u062F\u0641\u0639\u062A\u0643 \u0628\u0646\u062C\u0627\u062D! \u0633\u064A\u062A\u0645 \u0634\u062D\u0646 \u0637\u0644\u0628\u0643 \u0642\u0631\u064A\u0628\u0627\u064B." },
+    confirmed: { label: "\u062A\u0645 \u0627\u0644\u062A\u0623\u0643\u064A\u062F", badge: "badge-success", message: `\u062A\u0645 \u062A\u0623\u0643\u064A\u062F \u062F\u0641\u0639\u062A\u0643 \u0628\u0646\u062C\u0627\u062D!${ticketLine} \u0633\u064A\u062A\u0645 \u0634\u062D\u0646 \u0637\u0644\u0628\u0643 \u0642\u0631\u064A\u0628\u0627\u064B.` },
     rejected: { label: "\u0645\u0631\u0641\u0648\u0636", badge: "badge-error", message: `\u062A\u0645 \u0631\u0641\u0636 \u0625\u064A\u0635\u0627\u0644 \u0627\u0644\u062F\u0641\u0639. ${data.rejectionReason ? `\u0627\u0644\u0633\u0628\u0628: ${data.rejectionReason}` : "\u064A\u0631\u062C\u0649 \u0631\u0641\u0639 \u0625\u064A\u0635\u0627\u0644 \u0635\u062D\u064A\u062D."}` },
     pending_review: { label: "\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629", badge: "badge-warning", message: "\u062A\u0645 \u0627\u0633\u062A\u0644\u0627\u0645 \u0625\u064A\u0635\u0627\u0644 \u0627\u0644\u062F\u0641\u0639 \u0648\u062C\u0627\u0631\u064A \u0645\u0631\u0627\u062C\u0639\u062A\u0647." }
   };
@@ -1245,7 +1733,6 @@ async function sendPaymentStatusUpdate(to, data) {
       <p>\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u062F\u0641\u0639 \u0644\u0637\u0644\u0628\u0643:</p>
       <div class="info-box">
         <div class="info-row"><span class="info-label">\u0631\u0642\u0645 \u0627\u0644\u0637\u0644\u0628</span><span class="info-value">#${data.orderId.slice(0, 8)}</span></div>
-        <div class="info-row"><span class="info-label">\u0627\u0644\u0645\u0646\u062A\u062C</span><span class="info-value">${data.campaignTitle}</span></div>
         <div class="info-row"><span class="info-label">\u0627\u0644\u062D\u0627\u0644\u0629</span><span class="info-value"><span class="${statusInfo.badge} badge">${statusInfo.label}</span></span></div>
       </div>
       <p>${statusInfo.message}</p>
@@ -1261,7 +1748,7 @@ async function sendWinnerNotification(to, data) {
         <p>\u0644\u0642\u062F \u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631\u0643 \u0643\u0641\u0627\u0626\u0632 \u0628\u0627\u0644\u0647\u062F\u064A\u0629</p>
       </div>
       <div class="info-box">
-        <div class="info-row"><span class="info-label">\u0627\u0644\u062D\u0645\u0644\u0629</span><span class="info-value">${data.campaignTitle}</span></div>
+        <div class="info-row"><span class="info-label">\u0627\u0644\u062C\u0648\u0644\u0629</span><span class="info-value">${data.drawTitle}</span></div>
         <div class="info-row"><span class="info-label">\u0627\u0644\u062C\u0627\u0626\u0632\u0629</span><span class="info-value">${data.prizeName}</span></div>
         <div class="info-row"><span class="info-label">\u062A\u0630\u0643\u0631\u0629 \u0627\u0644\u0641\u0648\u0632</span><span class="info-value">${data.ticketNumber}</span></div>
       </div>
@@ -1269,7 +1756,7 @@ async function sendWinnerNotification(to, data) {
       <p>\u0623\u0644\u0641 \u0645\u0628\u0631\u0648\u0643!</p>
     </div>
   `);
-  await sendEmail(to, `\u0645\u0628\u0631\u0648\u0643! \u0623\u0646\u062A \u0627\u0644\u0641\u0627\u0626\u0632 - ${data.campaignTitle} - ${APP_NAME}`, html);
+  await sendEmail(to, `\u0645\u0628\u0631\u0648\u0643! \u0623\u0646\u062A \u0627\u0644\u0641\u0627\u0626\u0632 - ${data.drawTitle} - ${APP_NAME}`, html);
 }
 async function sendEmailVerificationCode(to, data) {
   if (!isResendConfigured()) {
@@ -1318,7 +1805,7 @@ async function sendShippingUpdate(to, data) {
       <h2>${statusInfo.emoji} \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0634\u062D\u0646</h2>
       <div class="info-box">
         <div class="info-row"><span class="info-label">\u0631\u0642\u0645 \u0627\u0644\u0637\u0644\u0628</span><span class="info-value">#${data.orderId.slice(0, 8)}</span></div>
-        <div class="info-row"><span class="info-label">\u0627\u0644\u0645\u0646\u062A\u062C</span><span class="info-value">${data.campaignTitle}</span></div>
+        <div class="info-row"><span class="info-label">\u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A</span><span class="info-value">${data.itemsSummary}</span></div>
         <div class="info-row"><span class="info-label">\u062D\u0627\u0644\u0629 \u0627\u0644\u0634\u062D\u0646</span><span class="info-value">${statusInfo.label}</span></div>
         ${data.trackingNumber ? `<div class="info-row"><span class="info-label">\u0631\u0642\u0645 \u0627\u0644\u062A\u062A\u0628\u0639</span><span class="info-value">${data.trackingNumber}</span></div>` : ""}
       </div>
@@ -1332,51 +1819,70 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import multer from "multer";
 import path from "path";
-import { mkdirSync } from "fs";
-mkdirSync("uploads/receipts", { recursive: true });
-mkdirSync("uploads/campaigns", { recursive: true });
 async function sendPushNotifications(userIds, title, body, data) {
   try {
-    const rawTokens = await storage.getUserPushTokensByIds(userIds);
-    const tokens = [...new Set(rawTokens)];
-    if (tokens.length === 0) return;
-    const messages = tokens.map((token) => ({
-      to: token,
-      sound: "default",
-      title,
-      body,
-      data: data || {}
-    }));
-    const chunks = [];
-    for (let i = 0; i < messages.length; i += 100) {
-      chunks.push(messages.slice(i, i + 100));
+    const [expoTokens, apnTokens] = await Promise.all([
+      storage.getUserPushTokensByIds(userIds),
+      isApnsConfigured() ? storage.getUserApnTokensByIds(userIds) : Promise.resolve([])
+    ]);
+    const uniqueExpoTokens = [...new Set(expoTokens)].filter((t) => typeof t === "string" && t.length > 10);
+    const uniqueApnTokens = [...new Set(apnTokens)].filter((t) => typeof t === "string" && t.length > 20);
+    const promises = [];
+    if (uniqueExpoTokens.length > 0) {
+      const messages = uniqueExpoTokens.map((token) => ({
+        to: token,
+        sound: "default",
+        title,
+        body,
+        data: data || {},
+        priority: "high",
+        channelId: "default",
+        _contentAvailable: true
+      }));
+      const chunks = [];
+      for (let i = 0; i < messages.length; i += 100) {
+        chunks.push(messages.slice(i, i + 100));
+      }
+      for (const chunk of chunks) {
+        promises.push(
+          fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: {
+              "Accept": "application/json",
+              "Accept-Encoding": "gzip, deflate",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(chunk)
+          }).then((res) => res.json()).then((json) => {
+            if (json.data) {
+              json.data.forEach((item, idx) => {
+                if (item.status === "error") {
+                  console.error(`[Push/Expo] Error for token[${idx}]:`, item.message, item.details);
+                }
+              });
+            }
+          }).catch((err) => console.error("[Push/Expo] Chunk failed:", err))
+        );
+      }
     }
-    for (const chunk of chunks) {
-      await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(chunk)
-      }).catch(() => {
-      });
+    if (uniqueApnTokens.length > 0) {
+      promises.push(
+        sendApnsNotifications(uniqueApnTokens, title, body, data).then(async (apnsResult) => {
+          console.log(`[Push/APNs] Sent: ${apnsResult.success} success, ${apnsResult.failure} failure`);
+          if (apnsResult.invalidTokens.length > 0) {
+            console.warn(`[Push/APNs] Clearing ${apnsResult.invalidTokens.length} invalid APN token(s)`);
+            await db.update(users).set({ apnToken: null }).where(inArray2(users.apnToken, apnsResult.invalidTokens)).catch((err) => console.error("[Push/APNs] Failed to clear invalid tokens:", err));
+          }
+        })
+      );
     }
+    await Promise.all(promises);
   } catch (e) {
-    console.error("Push notification error:", e);
+    console.error("[Push] sendPushNotifications error:", e);
   }
 }
-var receiptStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, "uploads/receipts/");
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
 var uploadReceipt = multer({
-  storage: receiptStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp|pdf/;
@@ -1389,17 +1895,23 @@ var uploadReceipt = multer({
     }
   }
 });
-var campaignStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, "uploads/campaigns/");
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+var imageMemoryStorage = multer.memoryStorage();
+var uploadPaymentMethodImage = multer({
+  storage: imageMemoryStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
   }
 });
 var uploadCampaignImage = multer({
-  storage: campaignStorage,
+  storage: imageMemoryStorage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -1715,6 +2227,18 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
+  app2.put("/api/auth/device-tokens", requireAuth, async (req, res) => {
+    try {
+      const { fcmToken, apnToken } = req.body;
+      await storage.updateUserDeviceTokens(req.session.userId, {
+        ...fcmToken !== void 0 && { fcmToken: fcmToken || null },
+        ...apnToken !== void 0 && { apnToken: apnToken || null }
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   app2.get("/api/user/stats", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId;
@@ -1735,159 +2259,236 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Server error" });
     }
   });
-  app2.get("/api/campaigns", async (_req, res) => {
+  app2.get("/api/products", async (_req, res) => {
     try {
-      const allCampaigns = await storage.getCampaigns();
-      const campaignsWithProducts = await Promise.all(
-        allCampaigns.map(async (c) => {
-          const products = await storage.getCampaignProducts(c.id);
-          return { ...c, products };
+      res.json(await storage.getProducts());
+    } catch (error) {
+      console.error("Get products error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  app2.get("/api/products/:id", async (req, res) => {
+    try {
+      const product = await storage.getProduct(req.params.id);
+      if (!product) return res.status(404).json({ message: "\u0627\u0644\u0645\u0646\u062A\u062C \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+      res.json(product);
+    } catch (error) {
+      console.error("Get product error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  app2.get("/api/draws/current", async (req, res) => {
+    try {
+      const draw = await storage.getCurrentDraw();
+      if (!draw) return res.json(null);
+      const participants = await storage.getDrawParticipantCount(draw.id);
+      const myTickets = req.session?.userId ? await storage.getUserTicketCountForDraw(req.session.userId, draw.id) : 0;
+      res.json({ ...draw, participants, myTickets });
+    } catch (error) {
+      console.error("Get current draw error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  app2.get("/api/draws/completed", async (_req, res) => {
+    try {
+      const completed = await storage.getCompletedDraws();
+      const withWinners = await Promise.all(
+        completed.map(async (d) => {
+          const winner = d.winnerId ? await storage.getUser(d.winnerId) : void 0;
+          return { ...d, winnerUsername: winner?.username ?? null };
         })
       );
-      res.json(campaignsWithProducts);
+      res.json(withWinners);
     } catch (error) {
-      console.error("Get campaigns error:", error);
+      console.error("Get completed draws error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  app2.get("/api/campaigns/:id", async (req, res) => {
+  app2.get("/api/draws/:id", async (req, res) => {
     try {
-      const campaign = await storage.getCampaign(req.params.id);
-      if (!campaign) {
-        return res.status(404).json({ message: "Campaign not found" });
-      }
-      const products = await storage.getCampaignProducts(campaign.id);
-      res.json({ ...campaign, products });
+      const draw = await storage.getDraw(req.params.id);
+      if (!draw) return res.status(404).json({ message: "\u0627\u0644\u062C\u0648\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629" });
+      const participants = await storage.getDrawParticipantCount(draw.id);
+      const winner = draw.winnerId ? await storage.getUser(draw.winnerId) : void 0;
+      res.json({ ...draw, participants, winnerUsername: winner?.username ?? null });
     } catch (error) {
-      console.error("Get campaign error:", error);
+      console.error("Get draw error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  app2.post("/api/campaigns", requireAdmin, async (req, res) => {
+  app2.get("/api/admin/products", requireAdmin, async (_req, res) => {
     try {
-      const { products: productsData, ...campaignData } = req.body;
-      const parsed = insertCampaignSchema.safeParse(campaignData);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
-      }
-      const campaign = await storage.createCampaign(parsed.data);
-      if (productsData && Array.isArray(productsData) && productsData.length > 0) {
-        for (let i = 0; i < productsData.length; i++) {
-          const p = productsData[i];
-          const qty = parseInt(p.quantity);
-          const prc = parseFloat(p.price);
-          if (!p.name || isNaN(qty) || qty <= 0 || isNaN(prc) || prc <= 0) {
-            return res.status(400).json({ message: `Invalid variant data at index ${i}` });
-          }
-          await storage.createCampaignProduct({
-            campaignId: campaign.id,
-            name: p.name,
-            nameAr: p.nameAr || p.name,
-            imageUrl: p.imageUrl,
-            price: prc.toFixed(2),
-            quantity: qty,
-            sortOrder: i
-          });
-        }
-        await storage.syncCampaignAggregates(campaign.id);
-      }
-      try {
-        const allUsers = await storage.getAllUsers();
-        const userIds = allUsers.filter((u) => u.role !== "admin").map((u) => u.id);
-        if (userIds.length > 0) {
-          await storage.createBulkUserNotifications(
-            userIds,
-            "new_campaign",
-            "\u0645\u0646\u062A\u062C \u062C\u062F\u064A\u062F \u{1F389}",
-            `\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0645\u0646\u062A\u062C \u062C\u062F\u064A\u062F: ${campaign.title}`,
-            campaign.id
-          );
-          sendPushNotifications(userIds, "\u0645\u0646\u062A\u062C \u062C\u062F\u064A\u062F \u{1F389}", `\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0645\u0646\u062A\u062C \u062C\u062F\u064A\u062F: ${campaign.title}`, { campaignId: campaign.id });
-        }
-      } catch (e) {
-        console.error("Notification error:", e);
-      }
-      const products = await storage.getCampaignProducts(campaign.id);
-      const updatedCampaign = await storage.getCampaign(campaign.id);
-      res.json({ ...updatedCampaign, products });
+      res.json(await storage.getProducts(true));
     } catch (error) {
-      console.error("Create campaign error:", error);
+      console.error("Admin get products error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  app2.put("/api/campaigns/:id", requireAdmin, async (req, res) => {
+  app2.post("/api/admin/products", requireAdmin, async (req, res) => {
     try {
-      const campaign = await storage.updateCampaign(req.params.id, req.body);
-      if (!campaign) {
-        return res.status(404).json({ message: "Campaign not found" });
-      }
-      const products = await storage.getCampaignProducts(campaign.id);
-      res.json({ ...campaign, products });
-    } catch (error) {
-      console.error("Update campaign error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-  app2.post("/api/admin/campaigns/:id/products", requireAdmin, async (req, res) => {
-    try {
-      const campaignId = req.params.id;
-      const campaign = await storage.getCampaign(campaignId);
-      if (!campaign) return res.status(404).json({ message: "Campaign not found" });
-      const { name, nameAr, imageUrl, price, quantity, sortOrder } = req.body;
-      if (!name || !price || !quantity) {
-        return res.status(400).json({ message: "Name, price and quantity are required" });
-      }
-      const product = await storage.createCampaignProduct({
-        campaignId,
-        name,
-        nameAr,
-        imageUrl,
-        price: String(price),
-        quantity: parseInt(quantity),
-        sortOrder: sortOrder || 0
+      const parsed = insertProductSchema.safeParse({
+        ...req.body,
+        stock: req.body.stock === "" || req.body.stock === void 0 || req.body.stock === null ? null : Number(req.body.stock),
+        sortOrder: req.body.sortOrder === void 0 ? 0 : Number(req.body.sortOrder)
       });
-      await storage.syncCampaignAggregates(campaignId);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
+      }
+      const product = await storage.createProduct(parsed.data);
+      await storage.logActivity(
+        "product_created",
+        "\u0645\u0646\u062A\u062C \u062C\u062F\u064A\u062F",
+        `\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0646\u062A\u062C ${product.name}`,
+        req.session.userId,
+        JSON.stringify({ productId: product.id })
+      );
       res.json(product);
     } catch (error) {
-      console.error("Add product error:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error("Create product error:", error);
+      res.status(400).json({ message: error.message || "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u062C" });
     }
   });
-  app2.put("/api/admin/campaign-products/:id", requireAdmin, async (req, res) => {
+  app2.put("/api/admin/products/:id", requireAdmin, async (req, res) => {
     try {
-      const { price, quantity, ...rest } = req.body;
-      const updateData = { ...rest };
-      if (price !== void 0) {
-        const prc = parseFloat(price);
-        if (isNaN(prc) || prc <= 0) return res.status(400).json({ message: "Invalid price" });
-        updateData.price = prc.toFixed(2);
-      }
-      if (quantity !== void 0) {
-        const qty = parseInt(quantity);
-        if (isNaN(qty) || qty <= 0) return res.status(400).json({ message: "Invalid quantity" });
-        updateData.quantity = qty;
-      }
-      const product = await storage.updateCampaignProduct(req.params.id, updateData);
-      if (!product) return res.status(404).json({ message: "Product not found" });
-      await storage.syncCampaignAggregates(product.campaignId);
-      res.json(product);
+      const data = {};
+      const b = req.body;
+      if (b.name !== void 0) data.name = b.name;
+      if (b.description !== void 0) data.description = b.description;
+      if (b.imageUrl !== void 0) data.imageUrl = b.imageUrl;
+      if (b.imagesJson !== void 0) data.imagesJson = b.imagesJson;
+      if (b.price !== void 0) data.price = String(b.price);
+      if (b.stock !== void 0) data.stock = b.stock === null || b.stock === "" ? null : Number(b.stock);
+      if (b.category !== void 0) data.category = b.category;
+      if (b.isActive !== void 0) data.isActive = !!b.isActive;
+      if (b.sortOrder !== void 0) data.sortOrder = Number(b.sortOrder);
+      const updated = await storage.updateProduct(req.params.id, data);
+      if (!updated) return res.status(404).json({ message: "\u0627\u0644\u0645\u0646\u062A\u062C \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+      res.json(updated);
     } catch (error) {
       console.error("Update product error:", error);
+      res.status(400).json({ message: error.message || "\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0646\u062A\u062C" });
+    }
+  });
+  app2.delete("/api/admin/products/:id", requireAdmin, async (req, res) => {
+    try {
+      const ok = await storage.deleteProduct(req.params.id);
+      if (!ok) return res.status(404).json({ message: "\u0627\u0644\u0645\u0646\u062A\u062C \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete product error:", error);
+      res.status(400).json({ message: "\u0645\u0627 \u0628\u064A\u0646\u0641\u0639 \u062A\u062D\u0630\u0641 \u0645\u0646\u062A\u062C \u0645\u0631\u062A\u0628\u0637 \u0628\u0637\u0644\u0628\u0627\u062A \u2014 \u0639\u0637\u0651\u0644\u0647 \u0628\u062F\u0644 \u0645\u0627 \u062A\u062D\u0630\u0641\u0647" });
+    }
+  });
+  app2.get("/api/admin/draws", requireAdmin, async (_req, res) => {
+    try {
+      const all = await storage.getDraws();
+      const enriched = await Promise.all(
+        all.map(async (d) => {
+          const participants = await storage.getDrawParticipantCount(d.id);
+          const winner = d.winnerId ? await storage.getUser(d.winnerId) : void 0;
+          return { ...d, participants, winnerUsername: winner?.username ?? null };
+        })
+      );
+      res.json(enriched);
+    } catch (error) {
+      console.error("Admin get draws error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  app2.delete("/api/admin/campaign-products/:id", requireAdmin, async (req, res) => {
+  app2.post("/api/admin/draws", requireAdmin, async (req, res) => {
     try {
-      const product = await storage.getCampaignProduct(req.params.id);
-      if (!product) return res.status(404).json({ message: "Product not found" });
-      const deleted = await storage.deleteCampaignProduct(req.params.id);
-      if (deleted) {
-        await storage.syncCampaignAggregates(product.campaignId);
+      const parsed = insertDrawSchema.safeParse({
+        ...req.body,
+        targetTickets: Number(req.body.targetTickets)
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
       }
-      res.json({ success: deleted });
+      const draw = await storage.createDraw(parsed.data);
+      await storage.logActivity(
+        "draw_created",
+        "\u062C\u0648\u0644\u0629 \u0633\u062D\u0628 \u062C\u062F\u064A\u062F\u0629",
+        `\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062C\u0648\u0644\u0629 ${draw.title} \u2014 \u0627\u0644\u062C\u0627\u0626\u0632\u0629 ${draw.prizeName}`,
+        req.session.userId,
+        JSON.stringify({ drawId: draw.id })
+      );
+      if (draw.status === "active") {
+        try {
+          const allUsers = await storage.getAllUsers();
+          const ids = allUsers.filter((u) => u.role !== "admin").map((u) => u.id);
+          if (ids.length > 0) {
+            const title = "\u062C\u0648\u0644\u0629 \u0633\u062D\u0628 \u062C\u062F\u064A\u062F\u0629! \u{1F381}";
+            const body = `\u0627\u0644\u062C\u0627\u0626\u0632\u0629: ${draw.prizeName} \u2014 \u0643\u0644 ${parseFloat(draw.ticketPrice)}$ \u0645\u0646 \u0645\u0634\u062A\u0631\u064A\u0627\u062A\u0643 = \u062A\u0630\u0643\u0631\u0629`;
+            await storage.createBulkUserNotifications(ids, "new_draw", title, body, draw.id);
+            sendPushNotifications(ids, title, body, { drawId: draw.id });
+          }
+        } catch (e) {
+          console.error("New draw notification error:", e);
+        }
+      }
+      res.json(draw);
     } catch (error) {
-      console.error("Delete product error:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error("Create draw error:", error);
+      res.status(400).json({ message: error.message || "\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062C\u0648\u0644\u0629" });
+    }
+  });
+  app2.put("/api/admin/draws/:id", requireAdmin, async (req, res) => {
+    try {
+      const existing = await storage.getDraw(req.params.id);
+      if (!existing) return res.status(404).json({ message: "\u0627\u0644\u062C\u0648\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629" });
+      if (existing.status === "completed") {
+        return res.status(400).json({ message: "\u0645\u0627 \u0628\u064A\u0646\u0641\u0639 \u062A\u0639\u062F\u0651\u0644 \u062C\u0648\u0644\u0629 \u062A\u0645 \u0627\u0644\u0633\u062D\u0628 \u0639\u0644\u064A\u0647\u0627" });
+      }
+      const data = {};
+      const b = req.body;
+      if (b.title !== void 0) data.title = b.title;
+      if (b.prizeName !== void 0) data.prizeName = b.prizeName;
+      if (b.prizeDescription !== void 0) data.prizeDescription = b.prizeDescription;
+      if (b.prizeImageUrl !== void 0) data.prizeImageUrl = b.prizeImageUrl;
+      if (b.ticketPrice !== void 0) data.ticketPrice = String(b.ticketPrice);
+      if (b.targetTickets !== void 0) {
+        const target = Number(b.targetTickets);
+        if (target < existing.soldTickets) {
+          return res.status(400).json({
+            message: `\u0627\u0644\u0639\u062F\u062F \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641 \u0645\u0627 \u0628\u064A\u0646\u0641\u0639 \u064A\u0643\u0648\u0646 \u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u062A\u0630\u0627\u0643\u0631 \u0627\u0644\u0645\u0628\u0627\u0639\u0629 (${existing.soldTickets})`
+          });
+        }
+        data.targetTickets = target;
+      }
+      const updated = await storage.updateDraw(req.params.id, data);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update draw error:", error);
+      res.status(400).json({ message: error.message || "\u0641\u0634\u0644 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u062C\u0648\u0644\u0629" });
+    }
+  });
+  app2.delete("/api/admin/draws/:id", requireAdmin, async (req, res) => {
+    try {
+      const ok = await storage.deleteDraw(req.params.id);
+      if (!ok) return res.status(404).json({ message: "\u0627\u0644\u062C\u0648\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629" });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete draw error:", error);
+      res.status(400).json({ message: error.message || "\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u062C\u0648\u0644\u0629" });
+    }
+  });
+  app2.post("/api/admin/draws/:id/activate", requireAdmin, async (req, res) => {
+    try {
+      const draw = await storage.getDraw(req.params.id);
+      if (!draw) return res.status(404).json({ message: "\u0627\u0644\u062C\u0648\u0644\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629" });
+      if (draw.status !== "scheduled") {
+        return res.status(400).json({ message: "\u0627\u0644\u062C\u0648\u0644\u0629 \u0644\u0627\u0632\u0645 \u062A\u0643\u0648\u0646 \u0645\u062C\u062F\u0648\u0644\u0629 \u062D\u062A\u0649 \u062A\u062A\u0641\u0639\u0651\u0644" });
+      }
+      const current = await storage.getActiveDraw();
+      if (current) {
+        return res.status(400).json({ message: `\u0641\u064A \u062C\u0648\u0644\u0629 \u0646\u0634\u0637\u0629 \u062D\u0627\u0644\u064A\u0627\u064B (${current.title}) \u2014 \u0644\u0627\u0632\u0645 \u062A\u062E\u0644\u0635 \u0623\u0648\u0644\u0627\u064B` });
+      }
+      await storage.updateDraw(draw.id, { status: "active", startedAt: /* @__PURE__ */ new Date() });
+      await storage.assignPendingTicketsToDraw(draw.id);
+      res.json(await storage.getDraw(draw.id));
+    } catch (error) {
+      console.error("Activate draw error:", error);
+      res.status(400).json({ message: error.message || "\u0641\u0634\u0644 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062C\u0648\u0644\u0629" });
     }
   });
   app2.get("/api/payment-methods", async (_req, res) => {
@@ -1915,222 +2516,47 @@ async function registerRoutes(app2) {
       res.status(400).json({ valid: false, message: error.message || "Invalid coupon" });
     }
   });
-  app2.post("/api/purchase", requireAuth, async (req, res) => {
+  app2.post("/api/checkout", requireAuth, async (req, res) => {
     try {
-      const {
-        campaignId,
-        quantity = 1,
-        paymentMethod = "card",
-        productId,
-        shippingFullName,
-        shippingPhone,
-        shippingCity,
-        shippingAddress,
-        shippingCountry,
-        couponCode,
-        useWallet = false,
-        walletAmount = 0
-      } = req.body;
-      if (!campaignId) {
-        return res.status(400).json({ message: "Campaign ID required" });
+      const parsed = checkoutSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0637\u0644\u0628 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
       }
-      const shippingData = shippingFullName ? {
-        fullName: shippingFullName,
-        phone: shippingPhone || "",
-        city: shippingCity || "",
-        address: shippingAddress || "",
-        country: shippingCountry
-      } : void 0;
-      const result = await storage.purchaseProduct(
-        req.session.userId,
-        campaignId,
-        quantity,
-        paymentMethod,
-        shippingData,
-        couponCode,
-        productId
-      );
-      if (useWallet && walletAmount > 0) {
-        await storage.deductWalletBalance(
-          req.session.userId,
-          walletAmount,
-          `\u062E\u0635\u0645 \u0645\u062D\u0641\u0638\u0629 - \u0637\u0644\u0628 ${result.order.id}`,
-          result.order.id
-        );
-      }
+      const order = await storage.checkout(req.session.userId, parsed.data);
+      const buyer = await storage.getUser(req.session.userId);
       await storage.logActivity(
         "purchase",
-        "New purchase",
-        `User purchased ${result.tickets.length} ticket(s) for order ${result.order.id}`,
+        "\u0637\u0644\u0628 \u062C\u062F\u064A\u062F",
+        `\u0637\u0644\u0628 ${order.id} \u0628\u0642\u064A\u0645\u0629 ${order.totalAmount}$`,
         req.session.userId,
-        JSON.stringify({ orderId: result.order.id, campaignId, quantity, paymentMethod })
+        JSON.stringify({ orderId: order.id, itemCount: order.items.length })
       );
       await storage.createAdminNotification(
         "new_order",
         "\u0637\u0644\u0628 \u062C\u062F\u064A\u062F",
-        `\u0637\u0644\u0628 \u062C\u062F\u064A\u062F \u0645\u0646 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0628\u0642\u064A\u0645\u0629 ${result.order.totalAmount}`,
-        JSON.stringify({ orderId: result.order.id, userId: req.session.userId })
+        `\u0637\u0644\u0628 \u062C\u062F\u064A\u062F \u0628\u0642\u064A\u0645\u0629 ${order.totalAmount}$ \u2014 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062F\u0641\u0639`,
+        JSON.stringify({ orderId: order.id, userId: req.session.userId })
       );
-      const buyer = await storage.getUser(req.session.userId);
-      const campaign = await storage.getCampaign(campaignId);
-      if (buyer && campaign) {
+      const activeDraw = await storage.getActiveDraw();
+      const ticketPrice = activeDraw ? parseFloat(activeDraw.ticketPrice) : DEFAULT_TICKET_PRICE;
+      const expectedTickets = Math.floor(parseFloat(order.ticketEligibleAmount) / ticketPrice);
+      if (buyer) {
         sendOrderConfirmation(buyer.email, {
-          orderId: result.order.id,
-          campaignTitle: campaign.title,
-          quantity: result.tickets.length,
-          totalAmount: result.order.totalAmount,
-          ticketNumbers: result.tickets.map((t) => t.ticketNumber),
-          paymentMethod
+          orderId: order.id,
+          totalAmount: order.totalAmount,
+          items: order.items.map((i) => ({ name: i.productName, quantity: i.quantity, lineTotal: i.lineTotal })),
+          paymentMethod: parsed.data.paymentMethod,
+          expectedTickets
         });
-        try {
-          const remaining = campaign.totalQuantity - campaign.soldQuantity;
-          const threshold = Math.ceil(campaign.totalQuantity * 0.1);
-          if (remaining <= threshold && remaining > 0) {
-            const campaignTickets = await storage.getTicketsByCampaign(campaignId);
-            const participantIds = [...new Set(campaignTickets.map((t) => t.userId))];
-            if (participantIds.length > 0) {
-              await storage.createBulkUserNotifications(
-                participantIds,
-                "low_stock",
-                "\u0627\u0644\u0643\u0645\u064A\u0629 \u0642\u0627\u0631\u0628\u062A \u0639\u0644\u0649 \u0627\u0644\u0646\u0641\u0627\u062F \u26A1",
-                `\u0628\u0642\u064A ${remaining} \u0642\u0637\u0639\u0629 \u0641\u0642\u0637 \u0645\u0646 ${campaign.title}! \u0633\u0627\u0631\u0639 \u0628\u0627\u0644\u0634\u0631\u0627\u0621`,
-                campaignId
-              );
-              sendPushNotifications(participantIds, "\u0627\u0644\u0643\u0645\u064A\u0629 \u0642\u0627\u0631\u0628\u062A \u0639\u0644\u0649 \u0627\u0644\u0646\u0641\u0627\u062F \u26A1", `\u0628\u0642\u064A ${remaining} \u0642\u0637\u0639\u0629 \u0641\u0642\u0637 \u0645\u0646 ${campaign.title}! \u0633\u0627\u0631\u0639 \u0628\u0627\u0644\u0634\u0631\u0627\u0621`, { campaignId });
-            }
-          }
-          if (remaining <= 0) {
-            const campaignTickets = await storage.getTicketsByCampaign(campaignId);
-            const participantIds = [...new Set(campaignTickets.map((t) => t.userId))];
-            if (participantIds.length > 0) {
-              await storage.createBulkUserNotifications(
-                participantIds,
-                "sold_out",
-                "\u0646\u0641\u062F\u062A \u0627\u0644\u0643\u0645\u064A\u0629! \u{1F525}",
-                `\u062A\u0645 \u0628\u064A\u0639 \u0643\u0627\u0645\u0644 \u0643\u0645\u064A\u0629 ${campaign.title}! \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u0642\u0631\u064A\u0628\u0627\u064B`,
-                campaignId
-              );
-              sendPushNotifications(participantIds, "\u0646\u0641\u062F\u062A \u0627\u0644\u0643\u0645\u064A\u0629! \u{1F525}", `\u062A\u0645 \u0628\u064A\u0639 \u0643\u0627\u0645\u0644 \u0643\u0645\u064A\u0629 ${campaign.title}! \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u0642\u0631\u064A\u0628\u0627\u064B`, { campaignId });
-            }
-          }
-        } catch (e) {
-          console.error("Notification error:", e);
-        }
       }
       res.json({
-        order: result.order,
-        tickets: result.tickets,
-        message: `Purchase successful! You received ${result.tickets.length} ticket(s).`
+        order,
+        expectedTickets,
+        message: `\u062A\u0645 \u0627\u0633\u062A\u0644\u0627\u0645 \u0637\u0644\u0628\u0643. \u0631\u062D \u062A\u0627\u062E\u062F ${expectedTickets} \u062A\u0630\u0643\u0631\u0629 \u0628\u0639\u062F \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062F\u0641\u0639.`
       });
     } catch (error) {
-      console.error("Purchase error:", error);
-      res.status(400).json({ message: error.message || "Purchase failed" });
-    }
-  });
-  app2.post("/api/cart-purchase", requireAuth, async (req, res) => {
-    try {
-      const {
-        items,
-        paymentMethod = "card",
-        shippingFullName,
-        shippingPhone,
-        shippingCity,
-        shippingAddress,
-        shippingCountry,
-        couponCode,
-        useWallet = false,
-        walletAmount = 0
-      } = req.body;
-      if (!items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ message: "Cart items required" });
-      }
-      const shippingData = shippingFullName ? {
-        fullName: shippingFullName,
-        phone: shippingPhone || "",
-        city: shippingCity || "",
-        address: shippingAddress || "",
-        country: shippingCountry
-      } : void 0;
-      const allOrders = [];
-      const allTickets = [];
-      for (const item of items) {
-        const { campaignId, quantity, productId } = item;
-        if (!campaignId || !quantity) continue;
-        const result = await storage.purchaseProduct(
-          req.session.userId,
-          campaignId,
-          quantity,
-          paymentMethod,
-          shippingData,
-          couponCode,
-          productId
-        );
-        allOrders.push(result.order);
-        allTickets.push(...result.tickets);
-        await storage.logActivity(
-          "purchase",
-          "New purchase",
-          `User purchased ${result.tickets.length} ticket(s) for order ${result.order.id}`,
-          req.session.userId,
-          JSON.stringify({ orderId: result.order.id, campaignId, quantity, paymentMethod })
-        );
-        await storage.createAdminNotification(
-          "new_order",
-          "\u0637\u0644\u0628 \u062C\u062F\u064A\u062F",
-          `\u0637\u0644\u0628 \u062C\u062F\u064A\u062F \u0645\u0646 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0628\u0642\u064A\u0645\u0629 ${result.order.totalAmount}`,
-          JSON.stringify({ orderId: result.order.id, userId: req.session.userId })
-        );
-        const buyer = await storage.getUser(req.session.userId);
-        const campaign = await storage.getCampaign(campaignId);
-        if (buyer && campaign) {
-          sendOrderConfirmation(buyer.email, {
-            orderId: result.order.id,
-            campaignTitle: campaign.title,
-            quantity: result.tickets.length,
-            totalAmount: result.order.totalAmount,
-            ticketNumbers: result.tickets.map((t) => t.ticketNumber),
-            paymentMethod
-          });
-          try {
-            const remaining = campaign.totalQuantity - campaign.soldQuantity;
-            const threshold = Math.ceil(campaign.totalQuantity * 0.1);
-            if (remaining <= threshold && remaining > 0) {
-              const cTickets = await storage.getTicketsByCampaign(campaignId);
-              const pIds = [...new Set(cTickets.map((t) => t.userId))];
-              if (pIds.length > 0) {
-                await storage.createBulkUserNotifications(pIds, "low_stock", "\u0627\u0644\u0643\u0645\u064A\u0629 \u0642\u0627\u0631\u0628\u062A \u0639\u0644\u0649 \u0627\u0644\u0646\u0641\u0627\u062F \u26A1", `\u0628\u0642\u064A ${remaining} \u0642\u0637\u0639\u0629 \u0641\u0642\u0637 \u0645\u0646 ${campaign.title}! \u0633\u0627\u0631\u0639 \u0628\u0627\u0644\u0634\u0631\u0627\u0621`, campaignId);
-                sendPushNotifications(pIds, "\u0627\u0644\u0643\u0645\u064A\u0629 \u0642\u0627\u0631\u0628\u062A \u0639\u0644\u0649 \u0627\u0644\u0646\u0641\u0627\u062F \u26A1", `\u0628\u0642\u064A ${remaining} \u0642\u0637\u0639\u0629 \u0641\u0642\u0637 \u0645\u0646 ${campaign.title}! \u0633\u0627\u0631\u0639 \u0628\u0627\u0644\u0634\u0631\u0627\u0621`, { campaignId });
-              }
-            }
-            if (remaining <= 0) {
-              const cTickets = await storage.getTicketsByCampaign(campaignId);
-              const pIds = [...new Set(cTickets.map((t) => t.userId))];
-              if (pIds.length > 0) {
-                await storage.createBulkUserNotifications(pIds, "sold_out", "\u0646\u0641\u062F\u062A \u0627\u0644\u0643\u0645\u064A\u0629! \u{1F525}", `\u062A\u0645 \u0628\u064A\u0639 \u0643\u0627\u0645\u0644 \u0643\u0645\u064A\u0629 ${campaign.title}! \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u0642\u0631\u064A\u0628\u0627\u064B`, campaignId);
-                sendPushNotifications(pIds, "\u0646\u0641\u062F\u062A \u0627\u0644\u0643\u0645\u064A\u0629! \u{1F525}", `\u062A\u0645 \u0628\u064A\u0639 \u0643\u0627\u0645\u0644 \u0643\u0645\u064A\u0629 ${campaign.title}! \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u0642\u0631\u064A\u0628\u0627\u064B`, { campaignId });
-              }
-            }
-          } catch (e) {
-            console.error("Notification error:", e);
-          }
-        }
-      }
-      if (useWallet && walletAmount > 0) {
-        await storage.deductWalletBalance(
-          req.session.userId,
-          walletAmount,
-          `\u062E\u0635\u0645 \u0645\u062D\u0641\u0638\u0629 - \u0637\u0644\u0628 \u0633\u0644\u0629 (${allOrders.length} \u0637\u0644\u0628)`,
-          allOrders[0]?.id
-        );
-      }
-      res.json({
-        orders: allOrders,
-        tickets: allTickets,
-        message: `Purchase successful! You received ${allTickets.length} ticket(s) across ${allOrders.length} order(s).`
-      });
-    } catch (error) {
-      console.error("Cart purchase error:", error);
-      res.status(400).json({ message: error.message || "Cart purchase failed" });
+      console.error("Checkout error:", error);
+      res.status(400).json({ message: error.message || "\u0641\u0634\u0644 \u0625\u062A\u0645\u0627\u0645 \u0627\u0644\u0637\u0644\u0628" });
     }
   });
   app2.get("/api/user/wallet", requireAuth, async (req, res) => {
@@ -2152,19 +2578,13 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Server error" });
     }
   });
-  app2.get("/api/tickets/campaign/:campaignId", async (req, res) => {
-    try {
-      const campaignTickets = await storage.getTicketsByCampaign(req.params.campaignId);
-      res.json(campaignTickets);
-    } catch (error) {
-      console.error("Get campaign tickets error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
   app2.get("/api/orders", requireAuth, async (req, res) => {
     try {
       const userOrders = await storage.getOrdersByUser(req.session.userId);
-      res.json(userOrders);
+      const withItems = await Promise.all(
+        userOrders.map(async (o) => ({ ...o, items: await storage.getOrderItems(o.id) }))
+      );
+      res.json(withItems);
     } catch (error) {
       console.error("Get orders error:", error);
       res.status(500).json({ message: "Server error" });
@@ -2172,14 +2592,17 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/orders/:id", requireAuth, async (req, res) => {
     try {
-      const order = await storage.getOrder(req.params.id);
+      const order = await storage.getOrderWithItems(req.params.id);
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
       if (order.userId !== req.session.userId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      res.json(order);
+      const orderTickets = (await storage.getTicketsByUser(order.userId)).filter(
+        (t) => t.orderId === order.id
+      );
+      res.json({ ...order, tickets: orderTickets });
     } catch (error) {
       console.error("Get order error:", error);
       res.status(500).json({ message: "Server error" });
@@ -2197,7 +2620,7 @@ async function registerRoutes(app2) {
       if (!req.file) {
         return res.status(400).json({ message: "Receipt file is required" });
       }
-      const receiptUrl = `/uploads/receipts/${req.file.filename}`;
+      const receiptUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
       const updated = await storage.updateOrderPayment(order.id, {
         paymentStatus: "pending_review",
         receiptUrl
@@ -2221,90 +2644,72 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message || "Server error" });
     }
   });
-  app2.post("/api/admin/draw/:campaignId", requireAdmin, async (req, res) => {
+  app2.post("/api/admin/draws/:id/draw-winner", requireAdmin, async (req, res) => {
     try {
-      const result = await storage.drawWinner(req.params.campaignId);
-      if (!result) {
-        return res.status(400).json({ message: "No tickets found for this campaign" });
-      }
+      const result = await storage.drawWinner(req.params.id);
+      const { winner, ticket, draw } = result;
       await storage.logActivity(
         "draw",
-        "Winner drawn",
-        `Winner ${result.winner.username} drawn for campaign with ticket ${result.ticket.ticketNumber}`,
+        "\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632",
+        `\u0627\u0644\u0641\u0627\u0626\u0632 ${winner.username} \u0628\u062C\u0648\u0644\u0629 ${draw.title} \u0628\u0627\u0644\u062A\u0630\u0643\u0631\u0629 ${ticket.ticketNumber}`,
         req.session.userId,
-        JSON.stringify({ campaignId: req.params.campaignId, winnerId: result.winner.id, ticketNumber: result.ticket.ticketNumber })
+        JSON.stringify({ drawId: draw.id, winnerId: winner.id, ticketNumber: ticket.ticketNumber })
       );
-      const drawnCampaign = await storage.getCampaign(req.params.campaignId);
-      if (drawnCampaign) {
-        sendWinnerNotification(result.winner.email, {
-          campaignTitle: drawnCampaign.title,
-          prizeName: drawnCampaign.prizeName,
-          ticketNumber: result.ticket.ticketNumber
-        });
-        try {
-          await storage.createUserNotification(
-            result.winner.id,
-            "you_won",
-            "\u0645\u0628\u0631\u0648\u0643 \u0623\u0646\u062A \u0627\u0644\u0641\u0627\u0626\u0632! \u{1F3C6}\u{1F389}",
-            `\u0644\u0642\u062F \u0641\u0632\u062A \u0628\u062C\u0627\u0626\u0632\u0629 ${drawnCampaign.prizeName} \u0641\u064A \u062D\u0645\u0644\u0629 ${drawnCampaign.title} \u0628\u0627\u0644\u062A\u0630\u0643\u0631\u0629 ${result.ticket.ticketNumber}!`,
-            req.params.campaignId
-          );
-          sendPushNotifications([result.winner.id], "\u0645\u0628\u0631\u0648\u0643 \u0623\u0646\u062A \u0627\u0644\u0641\u0627\u0626\u0632! \u{1F3C6}\u{1F389}", `\u0644\u0642\u062F \u0641\u0632\u062A \u0628\u062C\u0627\u0626\u0632\u0629 ${drawnCampaign.prizeName} \u0641\u064A \u062D\u0645\u0644\u0629 ${drawnCampaign.title}!`, { campaignId: req.params.campaignId });
-          const campaignTickets = await storage.getTicketsByCampaign(req.params.campaignId);
-          const participantIds = [...new Set(campaignTickets.map((t) => t.userId))].filter((id) => id !== result.winner.id);
-          if (participantIds.length > 0) {
-            await storage.createBulkUserNotifications(
-              participantIds,
-              "draw_completed",
-              "\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u{1F381}",
-              `\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u0628\u0627\u0644\u0647\u062F\u064A\u0629 \u0641\u064A \u062D\u0645\u0644\u0629 ${drawnCampaign.title}! \u062D\u0638\u0627\u064B \u0623\u0648\u0641\u0631 \u0641\u064A \u0627\u0644\u0645\u0631\u0629 \u0627\u0644\u0642\u0627\u062F\u0645\u0629`,
-              req.params.campaignId
-            );
-            sendPushNotifications(participantIds, "\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u{1F381}", `\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u0628\u0627\u0644\u0647\u062F\u064A\u0629 \u0641\u064A \u062D\u0645\u0644\u0629 ${drawnCampaign.title}! \u062D\u0638\u0627\u064B \u0623\u0648\u0641\u0631 \u0641\u064A \u0627\u0644\u0645\u0631\u0629 \u0627\u0644\u0642\u0627\u062F\u0645\u0629`, { campaignId: req.params.campaignId });
-          }
-          const allUsers = await storage.getAllUsers();
-          const nonParticipantIds = allUsers.filter((u) => u.role !== "admin" && u.id !== result.winner.id && !participantIds.includes(u.id)).map((u) => u.id);
-          if (nonParticipantIds.length > 0) {
-            await storage.createBulkUserNotifications(
-              nonParticipantIds,
-              "winner_announced",
-              "\u0641\u0627\u0626\u0632 \u062C\u062F\u064A\u062F! \u{1F38A}",
-              `\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u0641\u064A \u062D\u0645\u0644\u0629 ${drawnCampaign.title}!`,
-              req.params.campaignId
-            );
-            sendPushNotifications(nonParticipantIds, "\u0641\u0627\u0626\u0632 \u062C\u062F\u064A\u062F! \u{1F38A}", `\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u0641\u064A \u062D\u0645\u0644\u0629 ${drawnCampaign.title}!`, { campaignId: req.params.campaignId });
-          }
-        } catch (e) {
-          console.error("Notification error:", e);
+      sendWinnerNotification(winner.email, {
+        drawTitle: draw.title,
+        prizeName: draw.prizeName,
+        ticketNumber: ticket.ticketNumber
+      });
+      try {
+        const winTitle = "\u0645\u0628\u0631\u0648\u0643 \u0623\u0646\u062A \u0627\u0644\u0641\u0627\u0626\u0632! \u{1F3C6}\u{1F389}";
+        const winBody = `\u0641\u0632\u062A \u0628\u0640${draw.prizeName} \u0641\u064A \u062C\u0648\u0644\u0629 ${draw.title} \u0628\u0627\u0644\u062A\u0630\u0643\u0631\u0629 ${ticket.ticketNumber}!`;
+        await storage.createUserNotification(winner.id, "you_won", winTitle, winBody, draw.id);
+        sendPushNotifications([winner.id], winTitle, winBody, { drawId: draw.id });
+        sendFcmToUser(winner.id, winner.fcmToken ?? null, winTitle, winBody, { drawId: draw.id }).then((r) => console.log(`[FCM] Winner \u2014 success: ${r.success}, failure: ${r.failure}`)).catch((e) => console.error("[FCM] Winner notification error:", e));
+        const drawTickets = await storage.getTicketsByDraw(draw.id);
+        const participantIds = [...new Set(drawTickets.map((t) => t.userId))].filter(
+          (id) => id !== winner.id
+        );
+        if (participantIds.length > 0) {
+          const t = "\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u{1F381}";
+          const b = `\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u0628\u0640${draw.prizeName} \u0641\u064A \u062C\u0648\u0644\u0629 ${draw.title}! \u062D\u0638\u0627\u064B \u0623\u0648\u0641\u0631 \u0627\u0644\u0645\u0631\u0629 \u0627\u0644\u062C\u0627\u064A\u0629`;
+          await storage.createBulkUserNotifications(participantIds, "draw_completed", t, b, draw.id);
+          sendPushNotifications(participantIds, t, b, { drawId: draw.id });
         }
+        const allUsers = await storage.getAllUsers();
+        const others = allUsers.filter((u) => u.role !== "admin" && u.id !== winner.id && !participantIds.includes(u.id)).map((u) => u.id);
+        if (others.length > 0) {
+          const t = "\u0641\u0627\u0626\u0632 \u062C\u062F\u064A\u062F! \u{1F38A}";
+          const b = `\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0641\u0627\u0626\u0632 \u0628\u0640${draw.prizeName} \u0641\u064A \u062C\u0648\u0644\u0629 ${draw.title}!`;
+          await storage.createBulkUserNotifications(others, "winner_announced", t, b, draw.id);
+          sendPushNotifications(others, t, b, { drawId: draw.id });
+        }
+      } catch (e) {
+        console.error("Draw notification error:", e);
       }
+      const nextDraw = await storage.getActiveDraw();
       res.json({
-        winner: {
-          id: result.winner.id,
-          username: result.winner.username
-        },
-        ticket: result.ticket,
-        message: `Winner drawn! ${result.winner.username} with ticket ${result.ticket.ticketNumber}`
+        winner: { id: winner.id, username: winner.username },
+        ticket,
+        draw,
+        nextDraw: nextDraw ?? null,
+        message: `\u0627\u0644\u0641\u0627\u0626\u0632 ${winner.username} \u0628\u0627\u0644\u062A\u0630\u0643\u0631\u0629 ${ticket.ticketNumber}`
       });
     } catch (error) {
       console.error("Draw error:", error);
-      res.status(400).json({ message: error.message || "Draw failed" });
+      res.status(400).json({ message: error.message || "\u0641\u0634\u0644 \u0627\u0644\u0633\u062D\u0628" });
     }
   });
   app2.get("/api/admin/stats", requireAdmin, async (_req, res) => {
     try {
-      const allCampaigns = await storage.getCampaigns();
-      const totalCampaigns = allCampaigns.length;
-      const activeCampaigns = allCampaigns.filter((c) => c.status === "active").length;
-      const completedCampaigns = allCampaigns.filter((c) => c.status === "completed").length;
-      const totalRevenue = allCampaigns.reduce((sum3, c) => {
-        return sum3 + parseFloat(c.productPrice) * c.soldQuantity;
-      }, 0);
+      const allProducts = await storage.getProducts(true);
+      const allDraws = await storage.getDraws();
       res.json({
-        totalCampaigns,
-        activeCampaigns,
-        completedCampaigns,
-        totalRevenue: totalRevenue.toFixed(2)
+        totalProducts: allProducts.length,
+        activeProducts: allProducts.filter((p) => p.isActive).length,
+        totalDraws: allDraws.length,
+        completedDraws: allDraws.filter((d) => d.status === "completed").length,
+        activeDraw: allDraws.find((d) => d.status === "active") ?? null
       });
     } catch (error) {
       console.error("Stats error:", error);
@@ -2344,11 +2749,12 @@ async function registerRoutes(app2) {
         const shippingOrder = await storage.getOrder(req.params.id);
         if (shippingOrder) {
           const shippingUser = await storage.getUser(shippingOrder.userId);
-          const shippingCampaign = await storage.getCampaign(shippingOrder.campaignId);
-          if (shippingUser && shippingCampaign) {
+          const shippingItems = await storage.getOrderItems(shippingOrder.id);
+          const shippingSummary = shippingItems.map((i) => i.productName).join("\u060C ") || "\u0637\u0644\u0628\u0643";
+          if (shippingUser) {
             sendShippingUpdate(shippingUser.email, {
               orderId: shippingOrder.id,
-              campaignTitle: shippingCampaign.title,
+              itemsSummary: shippingSummary,
               status: shippingStatus,
               trackingNumber
             });
@@ -2357,10 +2763,9 @@ async function registerRoutes(app2) {
               shippingOrder.userId,
               "shipping_update",
               `\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0634\u062D\u0646: ${statusText} \u{1F4E6}`,
-              `\u0637\u0644\u0628\u0643 \u0645\u0646 ${shippingCampaign.title} \u2014 ${statusText}`,
-              shippingOrder.campaignId
+              `\u0637\u0644\u0628\u0643 (${shippingSummary}) \u2014 ${statusText}`
             );
-            sendPushNotifications([shippingOrder.userId], `\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0634\u062D\u0646: ${statusText} \u{1F4E6}`, `\u0637\u0644\u0628\u0643 \u0645\u0646 ${shippingCampaign.title} \u2014 ${statusText}`, { orderId: shippingOrder.id });
+            sendPushNotifications([shippingOrder.userId], `\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0634\u062D\u0646: ${statusText} \u{1F4E6}`, `\u0637\u0644\u0628\u0643 (${shippingSummary}) \u2014 ${statusText}`, { orderId: shippingOrder.id });
           }
         }
       }
@@ -2374,47 +2779,88 @@ async function registerRoutes(app2) {
     try {
       const { paymentStatus, rejectionReason } = req.body;
       if (!paymentStatus || !["confirmed", "rejected"].includes(paymentStatus)) {
-        return res.status(400).json({ message: "Invalid payment status. Must be 'confirmed' or 'rejected'" });
+        return res.status(400).json({ message: "\u062D\u0627\u0644\u0629 \u0627\u0644\u062F\u0641\u0639 \u0644\u0627\u0632\u0645 \u062A\u0643\u0648\u0646 confirmed \u0623\u0648 rejected" });
       }
       const order = await storage.getOrder(req.params.id);
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
+      let awardedTickets = 0;
       if (paymentStatus === "confirmed") {
         await storage.updateOrder(order.id, { status: "paid" });
         await storage.updateOrderPayment(order.id, { paymentStatus: "confirmed" });
+        const award = await storage.awardTicketsForOrder(order.id);
+        awardedTickets = award.created;
         await storage.logActivity(
           "payment_confirmed",
-          "Payment confirmed",
-          `Admin confirmed payment for order ${order.id}`,
+          "\u062A\u0645 \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062F\u0641\u0639",
+          `\u062A\u0623\u0643\u064A\u062F \u062F\u0641\u0639 \u0627\u0644\u0637\u0644\u0628 ${order.id} \u2014 ${awardedTickets} \u062A\u0630\u0643\u0631\u0629`,
           req.session.userId,
-          JSON.stringify({ orderId: order.id })
+          JSON.stringify({ orderId: order.id, awardedTickets })
         );
+        try {
+          if (awardedTickets > 0) {
+            const t = "\u062A\u0630\u0627\u0643\u0631\u0643 \u062C\u0627\u0647\u0632\u0629! \u{1F39F}\uFE0F";
+            const b = `\u062A\u0645 \u062A\u0623\u0643\u064A\u062F \u062F\u0641\u0639\u0643 \u0648\u062D\u0635\u0644\u062A \u0639\u0644\u0649 ${awardedTickets} \u062A\u0630\u0643\u0631\u0629 \u0644\u0644\u0633\u062D\u0628. \u0628\u0627\u0644\u062A\u0648\u0641\u064A\u0642!`;
+            await storage.createUserNotification(order.userId, "tickets_awarded", t, b, award.drawIds[0]);
+            sendPushNotifications([order.userId], t, b, { orderId: order.id });
+          }
+          for (const drawId of award.drawIds) {
+            const d = await storage.getDraw(drawId);
+            if (d && d.status === "ready_to_draw") {
+              await storage.createAdminNotification(
+                "draw_ready",
+                "\u062C\u0648\u0644\u0629 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0633\u062D\u0628 \u{1F3AF}",
+                `\u062C\u0648\u0644\u0629 "${d.title}" \u0648\u0635\u0644\u062A ${d.soldTickets}/${d.targetTickets} \u062A\u0630\u0643\u0631\u0629 \u2014 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0633\u062D\u0628`,
+                JSON.stringify({ drawId: d.id })
+              );
+              const drawTickets = await storage.getTicketsByDraw(d.id);
+              const participantIds = [...new Set(drawTickets.map((x) => x.userId))];
+              if (participantIds.length > 0) {
+                const t = "\u0627\u0643\u062A\u0645\u0644 \u0627\u0644\u0639\u062F\u062F! \u{1F525}";
+                const b = `\u062C\u0648\u0644\u0629 ${d.title} \u0648\u0635\u0644\u062A \u0644\u0644\u0639\u062F\u062F \u0627\u0644\u0645\u0637\u0644\u0648\u0628 \u2014 \u0627\u0644\u0633\u062D\u0628 \u0639\u0644\u0649 ${d.prizeName} \u0642\u0631\u064A\u0628\u0627\u064B`;
+                await storage.createBulkUserNotifications(participantIds, "draw_full", t, b, d.id);
+                sendPushNotifications(participantIds, t, b, { drawId: d.id });
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Ticket award notification error:", e);
+        }
       } else {
         await storage.updateOrderPayment(order.id, {
           paymentStatus: "rejected",
           rejectionReason: rejectionReason || ""
         });
+        const walletUsed = parseFloat(order.walletAmount);
+        if (walletUsed > 0) {
+          await storage.addWalletCredit(
+            order.userId,
+            walletUsed,
+            "refund",
+            `\u0625\u0631\u062C\u0627\u0639 \u0631\u0635\u064A\u062F \u2014 \u0637\u0644\u0628 \u0645\u0631\u0641\u0648\u0636 ${order.id.slice(0, 8)}`,
+            order.id
+          );
+        }
         await storage.logActivity(
           "payment_rejected",
-          "Payment rejected",
-          `Admin rejected payment for order ${order.id}: ${rejectionReason || "No reason provided"}`,
+          "\u062A\u0645 \u0631\u0641\u0636 \u0627\u0644\u062F\u0641\u0639",
+          `\u0631\u0641\u0636 \u062F\u0641\u0639 \u0627\u0644\u0637\u0644\u0628 ${order.id}: ${rejectionReason || "\u0628\u062F\u0648\u0646 \u0633\u0628\u0628"}`,
           req.session.userId,
           JSON.stringify({ orderId: order.id, rejectionReason })
         );
       }
       const updated = await storage.getOrder(order.id);
       const orderUser = await storage.getUser(order.userId);
-      const orderCampaign = await storage.getCampaign(order.campaignId);
-      if (orderUser && orderCampaign) {
+      if (orderUser) {
         sendPaymentStatusUpdate(orderUser.email, {
           orderId: order.id,
           status: paymentStatus,
-          campaignTitle: orderCampaign.title,
-          rejectionReason
+          rejectionReason,
+          awardedTickets
         });
       }
-      res.json(updated);
+      res.json({ ...updated, awardedTickets });
     } catch (error) {
       console.error("Update payment error:", error);
       res.status(500).json({ message: "Server error" });
@@ -2439,6 +2885,8 @@ async function registerRoutes(app2) {
             referredBy: user.referredBy,
             isSuspended: user.isSuspended,
             createdAt: user.createdAt,
+            fcmToken: user.fcmToken ?? null,
+            apnToken: user.apnToken ?? null,
             ...stats
           };
         })
@@ -2606,76 +3054,41 @@ async function registerRoutes(app2) {
   app2.get("/api/admin/users/:id/orders", requireAdmin, async (req, res) => {
     try {
       const userOrders = await storage.getOrdersByUser(req.params.id);
-      const withCampaign = await Promise.all(userOrders.map(async (o) => {
-        const campaign = await storage.getCampaign(o.campaignId);
-        return { ...o, campaignTitle: campaign?.title || "\u2014" };
+      const withItems = await Promise.all(userOrders.map(async (o) => {
+        const items = await storage.getOrderItems(o.id);
+        return { ...o, items, summary: items.map((i) => `${i.productName} \xD7${i.quantity}`).join("\u060C ") || "\u2014" };
       }));
-      res.json(withCampaign);
+      res.json(withItems);
     } catch (error) {
       console.error("Get user orders error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  app2.get("/api/admin/campaigns/:id/orders", requireAdmin, async (req, res) => {
+  app2.get("/api/admin/winners", requireAdmin, async (_req, res) => {
     try {
-      const campaignTickets = await storage.getTicketsByCampaign(req.params.id);
-      const enriched = await Promise.all(campaignTickets.map(async (t) => {
-        const u = await storage.getUser(t.userId);
-        const order = t.orderId ? await storage.getOrder(t.orderId) : void 0;
-        return {
-          ticketNumber: t.ticketNumber,
-          userId: t.userId,
-          username: u?.username || "\u2014",
-          fullName: u?.fullName || "\u2014",
-          phone: u?.phone || "\u2014",
-          isWinner: t.isWinner,
-          paymentStatus: order?.paymentStatus || "\u2014",
-          totalAmount: order?.totalAmount || "\u2014",
-          createdAt: t.createdAt
-        };
-      }));
-      res.json(enriched);
+      const completed = await storage.getCompletedDraws();
+      const winners = await Promise.all(
+        completed.map(async (d) => {
+          const winner = d.winnerId ? await storage.getUser(d.winnerId) : void 0;
+          return {
+            drawId: d.id,
+            drawTitle: d.title,
+            prizeName: d.prizeName,
+            ticketNumber: d.winnerTicketNumber,
+            drawnAt: d.drawnAt,
+            totalTickets: d.soldTickets,
+            username: winner?.username ?? null,
+            email: winner?.email ?? null,
+            phone: winner?.phone ?? null,
+            fullName: winner?.fullName ?? null,
+            city: winner?.city ?? null,
+            address: winner?.address ?? null
+          };
+        })
+      );
+      res.json(winners);
     } catch (error) {
-      console.error("Get campaign orders error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-  app2.get("/api/admin/winners", requireAdmin, async (req, res) => {
-    try {
-      const allCampaigns = await storage.getCampaigns();
-      const completed = allCampaigns.filter((c) => c.status === "completed" && c.winnerId);
-      const results = await Promise.all(completed.map(async (campaign) => {
-        const winnerUser = campaign.winnerId ? await storage.getUser(campaign.winnerId) : null;
-        const winnerInfo = winnerUser ? {
-          winnerUsername: winnerUser.username,
-          winnerFullName: winnerUser.fullName || "\u2014",
-          winnerPhone: winnerUser.phone || "",
-          winnerEmail: winnerUser.email
-        } : {
-          winnerUsername: "\u2014",
-          winnerFullName: "\u2014",
-          winnerPhone: "",
-          winnerEmail: ""
-        };
-        const campaignTickets = await storage.getTicketsByCampaign(campaign.id);
-        const winningTicket = campaignTickets.find((t) => t.isWinner);
-        const winnerOrder = winningTicket?.orderId ? await storage.getOrder(winningTicket.orderId) : void 0;
-        return {
-          campaignId: campaign.id,
-          campaignTitle: campaign.title,
-          prizeName: campaign.prizeName,
-          imageUrl: campaign.imageUrl,
-          drawnAt: campaign.drawAt || campaign.createdAt,
-          winningTicketNumber: winningTicket?.ticketNumber || "\u2014",
-          winnerOrderId: winnerOrder?.id || null,
-          winnerOrderShipping: winnerOrder?.shippingStatus || "pending",
-          winnerId: campaign.winnerId,
-          ...winnerInfo
-        };
-      }));
-      res.json(results);
-    } catch (error) {
-      console.error("Get admin winners error:", error);
+      console.error("Get winners error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -2685,11 +3098,11 @@ async function registerRoutes(app2) {
       const allReviews = await db.select().from(reviewsTable).orderBy(desc2(reviewsTable.createdAt));
       const enriched = await Promise.all(allReviews.map(async (r) => {
         const u = await storage.getUser(r.userId);
-        const c = await storage.getCampaign(r.campaignId);
+        const prod = await storage.getProduct(r.productId);
         return {
           ...r,
           username: u?.username || "\u2014",
-          campaignTitle: c?.title || "\u2014"
+          productName: prod?.name || "\u2014"
         };
       }));
       res.json(enriched);
@@ -2716,42 +3129,6 @@ async function registerRoutes(app2) {
     } catch (error) {
       console.error("Pending orders count error:", error);
       res.status(500).json({ message: "Server error" });
-    }
-  });
-  app2.put("/api/admin/campaigns/:id", requireAdmin, async (req, res) => {
-    try {
-      const { title, description, price, productPrice, totalQuantity, imageUrl, endsAt, isFlashSale, originalPrice, flashSaleEndsAt, status, prizeName } = req.body;
-      const updateData = {};
-      if (title !== void 0) updateData.title = title;
-      if (description !== void 0) updateData.description = description;
-      if (prizeName !== void 0) updateData.prizeName = prizeName;
-      const effectivePrice = productPrice ?? price;
-      if (effectivePrice !== void 0) updateData.productPrice = String(effectivePrice);
-      if (totalQuantity !== void 0) updateData.totalQuantity = Number(totalQuantity);
-      if (imageUrl !== void 0) updateData.imageUrl = imageUrl ?? null;
-      if (endsAt !== void 0) updateData.endsAt = endsAt ? new Date(endsAt) : null;
-      if (isFlashSale !== void 0) updateData.isFlashSale = Boolean(isFlashSale);
-      if (originalPrice !== void 0) updateData.originalPrice = originalPrice ? String(originalPrice) : null;
-      if (flashSaleEndsAt !== void 0) updateData.flashSaleEndsAt = flashSaleEndsAt ? new Date(flashSaleEndsAt) : null;
-      if (status !== void 0) updateData.status = status;
-      const updated = await storage.updateCampaign(req.params.id, updateData);
-      if (!updated) return res.status(404).json({ message: "Campaign not found" });
-      res.json(updated);
-    } catch (error) {
-      console.error("Update campaign error:", error);
-      res.status(400).json({ message: error.message || "Failed to update campaign" });
-    }
-  });
-  app2.delete("/api/admin/campaigns/:id", requireAdmin, async (req, res) => {
-    try {
-      const deleted = await storage.deleteCampaign(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Campaign not found" });
-      }
-      res.json({ message: "Campaign deleted" });
-    } catch (error) {
-      console.error("Delete campaign error:", error);
-      res.status(400).json({ message: error.message || "Failed to delete campaign" });
     }
   });
   app2.get("/api/admin/payment-methods", requireAdmin, async (_req, res) => {
@@ -2902,10 +3279,9 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Server error" });
     }
   });
-  app2.get("/api/reviews/:campaignId", async (req, res) => {
+  app2.get("/api/reviews/:productId", async (req, res) => {
     try {
-      const campaignReviews = await storage.getReviewsByCampaign(req.params.campaignId);
-      res.json(campaignReviews);
+      res.json(await storage.getReviewsByProduct(req.params.productId));
     } catch (error) {
       console.error("Get reviews error:", error);
       res.status(500).json({ message: "Server error" });
@@ -2915,17 +3291,16 @@ async function registerRoutes(app2) {
     try {
       const parsed = insertReviewSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: "\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629", errors: parsed.error.flatten() });
+        return res.status(400).json({ message: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u0642\u064A\u064A\u0645 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
       }
-      const existing = await storage.getUserReviewForCampaign(req.session.userId, parsed.data.campaignId);
+      const existing = await storage.getUserReviewForProduct(req.session.userId, parsed.data.productId);
       if (existing) {
-        return res.status(400).json({ message: "\u0644\u0642\u062F \u0642\u0645\u062A \u0628\u062A\u0642\u064A\u064A\u0645 \u0647\u0630\u0627 \u0627\u0644\u0645\u0646\u062A\u062C \u0645\u0633\u0628\u0642\u0627\u064B" });
+        return res.status(400).json({ message: "\u0642\u064A\u0651\u0645\u062A \u0647\u0630\u0627 \u0627\u0644\u0645\u0646\u062A\u062C \u0645\u0646 \u0642\u0628\u0644" });
       }
-      const review = await storage.createReview(req.session.userId, parsed.data);
-      res.json(review);
+      res.json(await storage.createReview(req.session.userId, parsed.data));
     } catch (error) {
       console.error("Create review error:", error);
-      res.status(500).json({ message: error.message || "Server error" });
+      res.status(500).json({ message: "Server error" });
     }
   });
   app2.get("/api/admin/notifications", requireAdmin, async (req, res) => {
@@ -2998,16 +3373,69 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Server error" });
     }
   });
-  app2.post("/api/admin/campaigns/upload-image", requireAdmin, uploadCampaignImage.single("image"), async (req, res) => {
+  app2.post("/api/admin/send-fcm", requireAdmin, async (req, res) => {
+    try {
+      const { title, body, targetUserId } = req.body;
+      if (!title || !body) return res.status(400).json({ message: "\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628\u0627\u0646" });
+      if (targetUserId) {
+        const user = await storage.getUser(targetUserId);
+        if (!user) return res.status(404).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+        const tokens2 = [user.fcmToken].filter((t) => !!t && t.length > 10);
+        if (tokens2.length === 0) return res.status(400).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0644\u0627 \u064A\u0645\u0644\u0643 \u062A\u0648\u0643\u0646 FCM \u0645\u0633\u062C\u0651\u0644" });
+        const result2 = await sendFcmNotification(tokens2, title, body);
+        return res.json({ success: true, result: result2, target: user.username });
+      }
+      const allUserTokens = await storage.getAllUsersWithFcmTokens();
+      const tokens = allUserTokens.map((u) => u.fcmToken).filter((t) => !!t && t.length > 10);
+      if (tokens.length === 0) return res.status(400).json({ message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0633\u062A\u062E\u062F\u0645\u0648\u0646 \u0628\u062A\u0648\u0643\u0646\u0627\u062A FCM \u0645\u0633\u062C\u0651\u0644\u0629" });
+      const result = await sendFcmNotification([...new Set(tokens)], title, body);
+      await storage.logActivity("broadcast_notification", "\u0625\u0634\u0639\u0627\u0631 FCM \u062C\u0645\u0627\u0639\u064A", `${title} \u2014 ${result.success} \u0646\u0627\u062C\u062D / ${result.failure} \u0641\u0634\u0644`, req.session.userId);
+      res.json({ success: true, result, target: "all" });
+    } catch (error) {
+      console.error("FCM send error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+  app2.post("/api/admin/send-fcm/:userId", requireAdmin, async (req, res) => {
+    try {
+      const { title, body } = req.body;
+      if (!title || !body) return res.status(400).json({ message: "\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0645\u0637\u0644\u0648\u0628\u0627\u0646" });
+      const user = await storage.getUser(req.params.userId);
+      if (!user) return res.status(404).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+      const tokens = [user.fcmToken].filter((t) => !!t && t.length > 10);
+      if (tokens.length === 0) return res.status(400).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0644\u0627 \u064A\u0645\u0644\u0643 \u062A\u0648\u0643\u0646 FCM \u0645\u0633\u062C\u0651\u0644" });
+      const result = await sendFcmNotification(tokens, title, body);
+      res.json({ success: true, result, username: user.username });
+    } catch (error) {
+      console.error("FCM send to user error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+  app2.post("/api/admin/payment-methods/upload-image", requireAdmin, uploadPaymentMethodImage.single("image"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "Image file is required" });
       }
-      const imageUrl = `/uploads/campaigns/${req.file.filename}`;
+      const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      if (req.body.methodId) {
+        await storage.updatePaymentMethod(req.body.methodId, { imageUrl });
+      }
       res.json({ imageUrl });
     } catch (error) {
-      console.error("Upload campaign image error:", error);
+      console.error("Upload payment method image error:", error);
       res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+  app2.post("/api/admin/products/upload-image", requireAdmin, uploadCampaignImage.single("image"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "\u0644\u0645 \u064A\u062A\u0645 \u0631\u0641\u0639 \u0623\u064A \u0635\u0648\u0631\u0629" });
+      }
+      const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      res.json({ imageUrl: base64 });
+    } catch (error) {
+      console.error("Upload product image error:", error);
+      res.status(500).json({ message: "\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629" });
     }
   });
   app2.post("/api/admin/seed-payment-methods", requireAdmin, async (_req, res) => {
@@ -3037,9 +3465,9 @@ async function registerRoutes(app2) {
         const sanitized = /^[=+\-@]/.test(str) ? "'" + str : str;
         return '"' + sanitized.replace(/"/g, '""') + '"';
       };
-      const csvHeader = "Order ID,Username,Campaign,Quantity,Total,Payment Method,Payment Status,Shipping Status,Tracking Number,Date\n";
+      const csvHeader = "Order ID,Username,Items,Item Count,Total,Tickets,Payment Method,Payment Status,Shipping Status,Tracking Number,Date\n";
       const csvRows = allOrders.map(
-        (o) => [o.id, o.username, o.campaignTitle, o.quantity, o.totalAmount, o.paymentMethod, o.paymentStatus, o.shippingStatus, o.trackingNumber, o.createdAt].map((v) => escapeCsv(v)).join(",")
+        (o) => [o.id, o.username, o.summary, o.itemCount, o.totalAmount, o.ticketsAwarded, o.paymentMethod, o.paymentStatus, o.shippingStatus, o.trackingNumber, o.createdAt].map((v) => escapeCsv(v)).join(",")
       ).join("\n");
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", "attachment; filename=orders.csv");
@@ -3133,26 +3561,25 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/winners", async (_req, res) => {
     try {
-      const allCampaigns = await storage.getCampaigns();
-      const completed = allCampaigns.filter((c) => c.status === "completed" && c.winnerId);
-      const results = await Promise.all(
-        completed.map(async (campaign) => {
-          let winnerUsername = "";
-          if (campaign.winnerId) {
-            const winner = await storage.getUser(campaign.winnerId);
-            if (winner) {
-              winnerUsername = winner.username;
-            }
-          }
+      const completed = await storage.getCompletedDraws();
+      const winners = await Promise.all(
+        completed.map(async (d) => {
+          const winner = d.winnerId ? await storage.getUser(d.winnerId) : void 0;
           return {
-            ...campaign,
-            winnerUsername
+            drawId: d.id,
+            drawTitle: d.title,
+            prizeName: d.prizeName,
+            prizeImageUrl: d.prizeImageUrl,
+            ticketNumber: d.winnerTicketNumber,
+            drawnAt: d.drawnAt,
+            totalTickets: d.soldTickets,
+            winnerUsername: winner?.username ?? null
           };
         })
       );
-      res.json(results);
+      res.json(winners);
     } catch (error) {
-      console.error("Get winners error:", error);
+      console.error("Get public winners error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -3540,9 +3967,9 @@ async function registerRoutes(app2) {
     try {
       const { email, currentPassword, newPassword } = req.body;
       const adminId = req.session.userId;
-      const admin = await storage.getUserById(adminId);
-      if (!admin) return res.status(404).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
-      if (email && email !== admin.email) {
+      const admin2 = await storage.getUserById(adminId);
+      if (!admin2) return res.status(404).json({ message: "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" });
+      if (email && email !== admin2.email) {
         const existing = await storage.getUserByEmail(email);
         if (existing && existing.id !== adminId) {
           return res.status(409).json({ message: "\u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0645\u0633\u062A\u062E\u062F\u0645 \u0628\u0627\u0644\u0641\u0639\u0644" });
@@ -3551,7 +3978,7 @@ async function registerRoutes(app2) {
       }
       if (newPassword) {
         if (!currentPassword) return res.status(400).json({ message: "\u064A\u062C\u0628 \u0625\u062F\u062E\u0627\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0633\u0631 \u0627\u0644\u062D\u0627\u0644\u064A\u0629" });
-        const valid = await bcrypt.compare(currentPassword, admin.password);
+        const valid = await bcrypt.compare(currentPassword, admin2.password);
         if (!valid) return res.status(401).json({ message: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0633\u0631 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
         const hashed = await bcrypt.hash(newPassword, 10);
         await storage.updateUserPassword(adminId, hashed);
@@ -3606,6 +4033,46 @@ async function registerRoutes(app2) {
       return res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0643\u0644\u0645\u0629 \u0627\u0644\u0633\u0631" });
     }
   });
+  app2.post("/api/campaign-requests", async (req, res) => {
+    try {
+      const parsed = insertCampaignClientRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0].message });
+      }
+      const [request] = await db.insert(campaignClientRequests).values({
+        businessName: parsed.data.businessName,
+        contactName: parsed.data.contactName,
+        phone: parsed.data.phone,
+        email: parsed.data.email || null,
+        productName: parsed.data.productName,
+        productValue: parsed.data.productValue || null,
+        description: parsed.data.description || null
+      }).returning();
+      res.json({ message: "\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628\u0643 \u0628\u0646\u062C\u0627\u062D! \u0633\u0646\u062A\u0648\u0627\u0635\u0644 \u0645\u0639\u0643 \u0642\u0631\u064A\u0628\u0627\u064B.", id: request.id });
+    } catch (error) {
+      console.error("Campaign request error:", error);
+      res.status(500).json({ message: "\u062D\u062F\u062B \u062E\u0637\u0623\u060C \u062D\u0627\u0648\u0644 \u0645\u062C\u062F\u062F\u0627\u064B" });
+    }
+  });
+  app2.get("/api/campaign-requests", requireAdmin, async (req, res) => {
+    try {
+      const requests = await db.select().from(campaignClientRequests).orderBy(desc2(campaignClientRequests.createdAt));
+      res.json(requests);
+    } catch (error) {
+      console.error("Get campaign requests error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  app2.patch("/api/campaign-requests/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const { status, adminNotes } = req.body;
+      await db.update(campaignClientRequests).set({ status, adminNotes: adminNotes || null }).where(eq2(campaignClientRequests.id, req.params.id));
+      res.json({ message: "\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B" });
+    } catch (error) {
+      console.error("Update campaign request error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
   const httpServer = createServer(app2);
   return httpServer;
 }
@@ -3647,12 +4114,13 @@ function setupCors(app2) {
 function setupBodyParsing(app2) {
   app2.use(
     express.json({
+      limit: "50mb",
       verify: (req, _res, buf) => {
         req.rawBody = buf;
       }
     })
   );
-  app2.use(express.urlencoded({ extended: false }));
+  app2.use(express.urlencoded({ extended: false, limit: "50mb" }));
 }
 function setupRequestLogging(app2) {
   app2.use((req, res, next) => {
@@ -3750,10 +4218,12 @@ function configureExpoAndLanding(app2) {
   const adminIndexHtml = fs.readFileSync(adminIndexPath, "utf-8");
   app2.get("/admin/login", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.status(200).send(adminLoginHtml);
   });
   app2.get("/admin", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.status(200).send(adminIndexHtml);
   });
   log("Serving static Expo files with dynamic manifest routing");
@@ -3780,6 +4250,16 @@ function configureExpoAndLanding(app2) {
   });
   app2.use("/assets", express.static(path2.resolve(process.cwd(), "assets")));
   app2.use(express.static(path2.resolve(process.cwd(), "static-build")));
+  const spaIndexPath = path2.resolve(process.cwd(), "static-build", "index.html");
+  if (fs.existsSync(spaIndexPath)) {
+    app2.use((req, res, next) => {
+      if (req.path.startsWith("/api") || req.path.startsWith("/uploads") || req.path.startsWith("/assets")) {
+        return next();
+      }
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.sendFile(spaIndexPath);
+    });
+  }
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }
 function setupErrorHandler(app2) {
@@ -3798,9 +4278,6 @@ function setupErrorHandler(app2) {
   setupCors(app);
   setupBodyParsing(app);
   setupRequestLogging(app);
-  const { mkdirSync: mkdirSync2 } = await import("fs");
-  mkdirSync2("uploads/receipts", { recursive: true });
-  app.use("/uploads", express.static("uploads"));
   configureExpoAndLanding(app);
   const server = await registerRoutes(app);
   try {

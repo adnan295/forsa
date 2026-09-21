@@ -25,7 +25,8 @@ type UserNotification = {
   title: string;
   body: string;
   isRead: boolean;
-  campaignId: string | null;
+  drawId: string | null;
+  productId: string | null;
   metadata: string | null;
   createdAt: string;
 };
@@ -93,8 +94,8 @@ export default function NotificationsScreen() {
     if (!notification.isRead) {
       markReadMutation.mutate(notification.id);
     }
-    if (notification.campaignId) {
-      router.push(`/campaign/${notification.campaignId}` as any);
+    if (notification.drawId) {
+      router.push("/draw" as any);
     }
   }, []);
 

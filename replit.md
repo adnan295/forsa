@@ -1,103 +1,123 @@
-# Forsa (فرصة) - E-Commerce Gifts Platform
+# Forsa (فرصة) - Product Catalog + Draw Rounds
 
 ## Overview
-Mobile-first e-commerce application with an automated gift/prize system. Products are sold in limited quantities with real-time inventory tracking via progress bars. When a campaign sells out, the system triggers a random selection to choose a gift winner from all buyers. Full Arabic UI with RTL support.
+متجر إلكتروني عربي بالكامل (RTL) مربوط بنظام سحب على جوائز. المتجر والسحب
+**مفكوكين تماماً**: العميل بيشتري أي منتج من الكتالوج، وحسب قيمة مشترياته
+بياخد تذاكر لجولة السحب النشطة. لما تنباع كل تذاكر الجولة بيتم السحب على
+جائزتها، وبتفتح الجولة التالية.
+
+### آلية التذاكر
+```
+عدد التذاكر = floor( (قيمة المشتريات − الخصم) ÷ سعر التذكرة )
+```
+- سعر التذكرة يُحدَّد لكل جولة (افتراضي 10$)
+- التذاكر **تُمنح بعد تأكيد الأدمن للدفع فقط** — لا عند إنشاء الطلب
+- الزيادة عن سعة الجولة تنتقل للجولة التالية تلقائياً
+- إذا ما في جولة مفتوحة، التذاكر تبقى معلّقة (drawId = null) وتُسلَّم لأول جولة تُفتح
+
+### دورة حياة الجولة
+```
+scheduled → active → ready_to_draw → completed
+```
 
 ## Tech Stack
-- **Frontend**: Expo (React Native) with expo-router file-based routing
-- **Backend**: Express.js with TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Email**: Resend (via Replit integration)
-- **Auth**: Session-based (express-session + connect-pg-simple)
-- **State**: React Query (@tanstack/react-query) + React Context
+- **Frontend**: Expo (React Native) + expo-router
+- **Backend**: Express.js + TypeScript
+- **Database**: PostgreSQL + Drizzle ORM
+- **Email**: nodemailer / Resend
+- **Auth**: جلسات (express-session + connect-pg-simple)
+- **State**: React Query + React Context
 
 ## Project Structure
 ```
-app/                    # Expo Router screens
-  _layout.tsx           # Root layout with providers
-  auth.tsx              # Login/Register screen
-  cart.tsx              # Shopping cart page (view/edit cart items, proceed to checkout)
-  checkout.tsx          # Checkout page (supports single-item and cart-based purchase)
-  favorites.tsx         # Favorites page (saved campaigns)
-  winners.tsx           # Winners page (completed campaigns with winner info)
-  referral.tsx          # Referral program page (code, share, stats)
-  info.tsx              # Info pages (about, terms, privacy, contact) via ?type= param
+app/
+  _layout.tsx           الجذر مع المزوّدات
+  auth.tsx              تسجيل دخول/حساب جديد
+  draw.tsx              صفحة الجولة الحالية + تذاكر المستخدم + شرح الآلية
+  cart.tsx              السلة (AsyncStorage) مع معاينة التذاكر المتوقعة
+  checkout.tsx          الدفع — طلب واحد متعدد المنتجات
+  favorites.tsx         المفضلة
+  winners.tsx           الفائزون (جولات مكتملة)
+  referral.tsx          برنامج الإحالة
+  notifications.tsx     إشعارات المستخدم
   (tabs)/
-    _layout.tsx         # Tab navigation (Campaigns, My Orders, Profile)
-    index.tsx           # Home - campaign list with search, filter, category tabs, progress bars
-    tickets.tsx         # My Orders & Tickets (dual sub-tabs, enhanced empty states)
-    profile.tsx         # Profile with stats, activity menu, settings, admin entry
-  campaign/
-    [id].tsx            # Campaign detail with countdown timer → navigates to checkout
-  order/
-    [id].tsx            # Order tracking (payment status, receipt upload, shipping timeline)
-  admin/
-    index.tsx           # Comprehensive admin panel (8 tabs) with sales charts
+    index.tsx           المتجر — كتالوج + بحث + تصنيفات + بانر الجولة
+    tickets.tsx         طلباتي وتذاكري
+    client.tsx          طلبات الشراكة التجارية
+    profile.tsx         الملف الشخصي
+  product/[id].tsx      صفحة المنتج (كم تذكرة بيعطي)
+  order/[id].tsx        تتبّع الطلب + سطوره + تذاكره
+  admin/index.tsx       لوحة الإدارة (11 قسم)
 components/
-  CampaignCard.tsx      # Campaign card with progress bar, countdown timer, favorite heart
-  ErrorBoundary.tsx     # Error boundary wrapper
-constants/
-  colors.ts             # Design tokens (purple/pink gradient theme)
+  ProductCard.tsx       بطاقة منتج
+  DrawBanner.tsx        بانر الجولة (الجائزة + التقدّم + تذاكر المستخدم)
 lib/
-  auth-context.tsx      # Auth provider (login/register/logout)
-  favorites-context.tsx # Favorites provider (AsyncStorage-based)
-  cart-context.tsx       # Cart provider (AsyncStorage-based)
-  query-client.ts       # React Query config + API helpers
-  push-notifications.ts # Expo push notifications (register token, handle taps)
+  cart-context.tsx      السلة على مستوى المنتجات
+  favorites-context.tsx المفضلة
 server/
-  index.ts              # Express server entry
-  routes.ts             # API routes (auth, campaigns, purchases, admin, receipts)
-  storage.ts            # Database storage layer (full CRUD for all entities)
-  db.ts                 # Database connection
-  uploads/              # Receipt image uploads directory
-  templates/
-    landing-page.html   # Static landing page
+  routes.ts             مسارات الـ API
+  storage.ts            طبقة قاعدة البيانات (checkout / awardTicketsForOrder / drawWinner)
 shared/
-  schema.ts             # Drizzle schema (users, campaigns, campaign_products, orders, tickets, payment_methods, coupons, activity_log)
+  schema.ts             مخطط Drizzle
 ```
 
-## Key Features
-- **Referral Rewards**: 10 SAR wallet credit to referrer + 5 SAR welcome bonus to new user on referral
-- **Flash Sales**: Fire badge, discounted price with original price struck through, live countdown on cards and detail page
-- **Wallet System**: wallet_balance on users, wallet_transactions table, wallet toggle at checkout for partial payment
-- Campaign listing with real-time progress bars
-- Full checkout flow with payment method selection, bank transfer details, coupon codes, shipping address
-- Receipt upload for bank transfer payments (expo-image-picker for mobile, file input for web)
-- Payment verification workflow: pending_payment → pending_review → confirmed/rejected
-- Order tracking page with payment status, receipt preview, shipping timeline
-- My Orders tab with payment/shipping status pills and order navigation
-- Unique ticket numbers (LD-{timestamp}-{random})
-- Cryptographically secure random winner selection
-- Session-based authentication
-- Push notifications via Expo Push API (new campaigns, low stock, sold out, winner announcements, support replies, admin broadcasts)
+## Database Tables
+`users`, `products`, `draws`, `orders`, `order_items`, `tickets`,
+`payment_methods`, `coupons`, `activity_log`, `reviews`,
+`admin_notifications`, `user_notifications`, `support_tickets`,
+`wallet_transactions`, `email_verification_tokens`,
+`password_reset_tokens`, `campaign_client_requests`
+
+## API — المسارات الأساسية
+```
+GET    /api/products              كتالوج المنتجات المعروضة
+GET    /api/products/:id
+GET    /api/draws/current         الجولة الحالية + تقدّمها + تذاكر المستخدم
+GET    /api/draws/completed       الجولات المنتهية
+POST   /api/checkout              إنشاء الطلب (transaction واحد)
+GET    /api/orders                طلباتي مع سطورها
+GET    /api/orders/:id            تفاصيل الطلب + تذاكره
+GET    /api/tickets               كل تذاكري
+GET    /api/winners               الفائزون (عام)
+
+# إدارة
+GET/POST/PUT/DELETE  /api/admin/products
+GET/POST/PUT/DELETE  /api/admin/draws
+POST   /api/admin/draws/:id/activate
+POST   /api/admin/draws/:id/draw-winner
+PUT    /api/admin/orders/:id/payment     تأكيد الدفع → منح التذاكر
+PUT    /api/admin/orders/:id/shipping
+```
 
 ## Admin Panel (app/admin/index.tsx)
-Comprehensive admin dashboard with 7 sections:
-1. **Dashboard (الرئيسية)** - Revenue, orders, users, active campaigns stats, top campaigns
-2. **Orders (الطلبات)** - All orders with shipping status management (pending/processing/shipped/delivered/cancelled), tracking numbers
-3. **Users (المستخدمين)** - User list with order count, ticket count, total spent
-4. **Campaigns (الحملات)** - Create/delete campaigns, draw winners, progress tracking
-5. **Payment Methods (الدفع)** - CRUD with enable/disable toggle
-6. **Coupons (الكوبونات)** - Create/delete discount coupons with usage tracking
-7. **Activity Log (السجل)** - Audit trail of user registrations, purchases, draws
+الرئيسية · الإشعارات · الطلبات · تذاكر الدعم · المستخدمين ·
+**المنتجات** · **جولات السحب** · الدفع · الكوبونات · السجل · الإعدادات
 
-## Admin API Endpoints
-- GET /api/admin/dashboard - comprehensive stats
-- GET/PUT /api/admin/orders - order management with shipping
-- GET /api/admin/users - user management with stats
-- DELETE /api/admin/campaigns/:id - campaign deletion
-- GET/POST/PUT/DELETE /api/admin/payment-methods - payment methods CRUD
-- GET/POST/PUT/DELETE /api/admin/coupons - coupons CRUD
-- GET /api/admin/activity-log - audit trail
+## Key Features
+- كتالوج منتجات مع مخزون (أو غير محدود)، تصنيفات، بحث
+- جولات سحب متتالية بجوائز وأعداد تذاكر يحدّدها الأدمن
+- الدفع يدوي: تحويل بنكي برفع إيصال، أو دفع عند الاستلام — الأدمن يؤكّد
+- محفظة رصيد تخصم فعلياً من المستحق وتُسترجع عند رفض الدفع
+- كوبونات خصم (%) تُطبَّق مرة واحدة على الطلب
+- إحالات: 10$ للمُحيل + 5$ ترحيبية
+- إشعارات: Expo Push + FCM + APNs + إشعارات داخل التطبيق + إيميلات
+- تذاكر دعم داخل التطبيق
+- RTL كامل عبر I18nManager.forceRTL
 
-## Database Tables
-- users (with fullName, phone, address, city, country, emailVerified, referralCode, referredBy), campaigns (with category, endsAt), campaign_products (name, nameAr, imageUrl, price, quantity, soldQuantity, sortOrder — variants for multi-model campaigns), orders (with shipping_status, tracking_number, shipping_address, productId), tickets, payment_methods, coupons, activity_log, reviews, admin_notifications, user_notifications, support_tickets, email_verification_tokens, password_reset_tokens
+## سلامة البيانات
+- `checkout()` كامل داخل transaction مع `FOR UPDATE` على صفوف المنتجات والكوبون
+  والمستخدم — يمنع البيع الزائد وتكرار استخدام الكوبون
+- الأسعار تُحسب في السيرفر من قاعدة البيانات، لا تُؤخذ من العميل
+- `awardTicketsForOrder()` idempotent — استدعاؤه مرتين لا يضاعف التذاكر
+- اختيار الفائز عبر `crypto.randomInt` (بدون انحياز)
 
-## Design
-- Luxury theme: Purple (#7C3AED) + Pink (#EC4899) gradient
-- Inter font family
-- Tab-based navigation with 3 tabs
-- Full Arabic UI with RTL support
+## Admin Credentials
+- Username: admin
+- Password: من متغيّر البيئة ADMIN_PASSWORD (الافتراضي admin123)
+
+## Ports
+- Frontend (Expo): 8081
+- Backend (Express): 5000
 
 ## Recent Changes
 - User notifications system: user_notifications table, bell icon with badge in home header, notifications page (app/notifications.tsx), auto-notifications for: new campaigns → all users, low stock (10%) → campaign participants, sold out → participants, draw completed → participants, winner announced → all users, you won → winner. API: GET/PUT /api/notifications, GET /api/notifications/unread-count, PUT /api/notifications/read-all

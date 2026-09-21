@@ -149,7 +149,11 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
-        name="campaign/[id]"
+        name="product/[id]"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
+        name="draw"
         options={{ headerShown: false, presentation: "card" }}
       />
       <Stack.Screen

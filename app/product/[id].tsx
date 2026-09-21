@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
-  Platform,
   Dimensions,
   Alert,
 } from "react-native";

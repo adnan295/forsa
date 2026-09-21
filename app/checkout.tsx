@@ -13,7 +13,7 @@ import {
   Switch,
   Image,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,7 +27,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { useCart, CartItem } from "@/lib/cart-context";
+import { useCart } from "@/lib/cart-context";
 import { apiRequest, queryClient, buildMediaUrl, getApiUrl } from "@/lib/query-client";
 import type { PaymentMethod } from "@shared/schema";
 import type { CurrentDraw } from "@/components/DrawBanner";
@@ -816,7 +816,7 @@ export default function CheckoutScreen() {
                 </Text>
               </View>
               <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 12 }}>
-                يرجى تغيير الصورة إن لزم ثم اضغط "إعادة رفع الوصل"
+                يرجى تغيير الصورة إن لزم ثم اضغط «إعادة رفع الوصل»
               </Text>
               <Pressable
                 onPress={() => handleRetryUpload(pendingOrderId)}
