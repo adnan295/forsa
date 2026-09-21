@@ -248,7 +248,13 @@ function configureExpoAndLanding(app: express.Application) {
   const spaIndexPath = path.resolve(process.cwd(), "static-build", "index.html");
   if (fs.existsSync(spaIndexPath)) {
     app.use((req: Request, res: Response, next: NextFunction) => {
-      if (req.path.startsWith("/api") || req.path.startsWith("/uploads") || req.path.startsWith("/assets")) {
+      // These public pages are registered after the Expo SPA fallback.
+      if (
+        req.path.startsWith("/api") ||
+        req.path.startsWith("/uploads") ||
+        req.path.startsWith("/assets") ||
+        ["/privacy-policy", "/terms", "/support"].includes(req.path)
+      ) {
         return next();
       }
       res.setHeader("Content-Type", "text/html; charset=utf-8");
