@@ -5,8 +5,8 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Alert,
 } from "react-native";
+import { Alert } from "@/lib/alert";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -121,7 +121,8 @@ export default function CartScreen() {
 
   function handleConfirm() {
     if (!user) {
-      router.push("/auth");
+      // على الويب منرجّع المستخدم للدفع بعد الدخول بدل ما يضيع
+      router.push({ pathname: "/auth", params: { returnTo: "/checkout" } } as any);
       return;
     }
     if (!isProfileComplete) {

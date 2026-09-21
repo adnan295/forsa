@@ -38,7 +38,7 @@ export default function ReferralScreen() {
 
   const code = data?.referralCode ?? "";
   const inviteLink = code ? `${getApiUrl().replace(/\/$/, "")}/?ref=${code}` : "";
-  const shareMessage = `جرّب «فرصة» معي — كل مشترياتك بتعطيك فرص للسحب على جوائز.\nكود الدعوة: ${code}\n${inviteLink}`;
+  const shareMessage = `جرّب NAYVO معي — كل مشترياتك بتعطيك فرص للسحب على جوائز.\nكود الدعوة: ${code}\n${inviteLink}`;
 
   async function copy(value: string, which: "code" | "link") {
     if (!value) return;
@@ -110,8 +110,8 @@ export default function ReferralScreen() {
             </View>
           </View>
 
-          <Text style={s.heroTitle}>شارك فرصة مع أصحابك</Text>
-          <Text style={s.heroSub}>ادعُ أصدقائك ليستمتعوا بتجربة فرصة</Text>
+          <Text style={s.heroTitle}>شارك NAYVO مع أصحابك</Text>
+          <Text style={s.heroSub}>ادعُ أصدقائك ليستمتعوا بتجربة NAYVO</Text>
         </View>
 
         {/* ───── الكود ───── */}

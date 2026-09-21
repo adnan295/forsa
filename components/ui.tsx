@@ -20,14 +20,14 @@ const c = Colors.light;
 
 /* ────────────────────────── الشعار ────────────────────────── */
 
-/** «فرصة» بالكحلي والتاج بالذهبي — وعلى الخلفيات الكحلية الكلمة بيضاء */
+/** «NAYVO» بالكحلي والنجمة بالذهبي — وعلى الخلفيات الكحلية الكلمة بيضاء */
 export function Logo({ onNavy = false, size = 22 }: { onNavy?: boolean; size?: number }) {
   return (
     <View style={s.logoWrap}>
-      <Ionicons name="ribbon" size={size * 0.58} color={c.gold} style={s.logoCrown} />
       <Text style={[s.logoText, { fontSize: size, color: onNavy ? c.surface : c.navy }]}>
-        فرصة
+        NAYVO
       </Text>
+      <Ionicons name="sparkles" size={size * 0.44} color={c.gold} style={s.logoSpark} />
     </View>
   );
 }
@@ -519,9 +519,10 @@ export function Accordion({
 /* ────────────────────────── الأنماط ────────────────────────── */
 
 const s = StyleSheet.create({
-  logoWrap: { alignItems: "center" },
-  logoCrown: { marginBottom: -3 },
-  logoText: { fontFamily: Fonts.bold, writingDirection: "rtl", lineHeight: undefined },
+  logoWrap: { flexDirection: "row", alignItems: "flex-start" },
+  /** النجمة ترتفع فوق الحرف الأخير كما في شعار العلامة */
+  logoSpark: { marginStart: 1, marginTop: -2 },
+  logoText: { fontFamily: Fonts.bold, writingDirection: "ltr", letterSpacing: 0.5 },
 
   header: {
     flexDirection: "row",

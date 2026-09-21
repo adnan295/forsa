@@ -7,26 +7,26 @@
 
 const palette = {
   /** الأزرار والروابط والعنصر المحدد */
-  primary: "#155EEF",
+  primary: "#1267E8",
   /** ضغط الزر الأساسي */
-  primaryPressed: "#1249BF",
+  primaryPressed: "#0E52C4",
   /** خلفية الاختيار والأزرار الثانوية */
-  primarySoft: "#EFF4FF",
+  primarySoft: "#E8F0FD",
 
   /** الشعار والعناوين الرئيسية وبطاقات الجائزة */
-  navy: "#10224D",
+  navy: "#0B2142",
   /** نهاية تدرّج البطاقات الكحلية */
-  navySoft: "#1B3A7A",
+  navySoft: "#164A9E",
 
   /** الجائزة وأيقونة الهدية */
-  gold: "#F5A623",
+  gold: "#F5B731",
   /** خلفية رسائل فرص السحب */
   goldSoft: "#FFF4D6",
   /** النص فوق الخلفية الذهبية */
   goldText: "#754500",
 
   /** خلفية التطبيق */
-  background: "#F6F8FC",
+  background: "#F7F9FC",
   /** البطاقات وحقول الإدخال وشريط التنقل */
   surface: "#FFFFFF",
 
@@ -133,28 +133,28 @@ const Colors = {
     info: StatusColors.info.fg,
     infoBg: StatusColors.info.bg,
 
-    overlay: "rgba(16, 34, 77, 0.55)",
+    overlay: "rgba(11, 33, 66, 0.55)",
   },
   dark: {
     ...palette,
-    background: "#0B1633",
-    surface: "#14254F",
+    background: "#071429",
+    surface: "#0F2447",
     text: "#F2F5FA",
     textSecondary: "#B8C4DB",
     textMuted: "#8A9AB8",
-    border: "#263C6B",
-    borderSubtle: "#1D3159",
+    border: "#22406E",
+    borderSubtle: "#16305C",
 
-    accent: "#4C86FF",
+    accent: "#4D92F5",
     accentDark: palette.primary,
-    accentLight: "#1D3159",
-    tint: "#4C86FF",
-    card: "#14254F",
-    inputBg: "#14254F",
-    progressBg: "#1D3159",
-    progressFill: "#4C86FF",
+    accentLight: "#16305C",
+    tint: "#4D92F5",
+    card: "#0F2447",
+    inputBg: "#0F2447",
+    progressBg: "#16305C",
+    progressFill: "#4D92F5",
     tabIconDefault: "#8A9AB8",
-    tabIconSelected: "#4C86FF",
+    tabIconSelected: "#4D92F5",
 
     success: "#75E0A7",
     successBg: "#053321",

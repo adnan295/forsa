@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
-const APP_NAME = "فرصة - Forsa";
-const FROM_EMAIL = "noreply@forsa.today";
+const APP_NAME = "NAYVO";
+const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@nayvo.store";
 
 function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -189,7 +189,7 @@ export async function sendEmailVerificationCode(
     <div class="body">
       <h2>تحقق من بريدك الإلكتروني</h2>
       <p>مرحباً ${data.username}،</p>
-      <p>شكراً لتسجيلك في فرصة! استخدم الرمز التالي لتفعيل حسابك:</p>
+      <p>شكراً لتسجيلك في NAYVO! استخدم الرمز التالي لتفعيل حسابك:</p>
       <div class="code-box">${data.code}</div>
       <p>هذا الرمز صالح لمدة <strong>15 دقيقة</strong> فقط.</p>
       <p>إذا لم تقم بالتسجيل، يرجى تجاهل هذا البريد.</p>

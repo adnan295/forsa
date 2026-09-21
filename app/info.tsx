@@ -6,10 +6,10 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Alert } from "@/lib/alert";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -42,8 +42,8 @@ const CONTENT: Record<Exclude<PageType, "contact">, Section[]> = {
   about: [
     {
       kind: "text",
-      title: "ما هو فرصة؟",
-      body: "فرصة متجر إلكتروني بيقدّم منتجات مميزة بأسعار مناسبة، ومع كل عملية شراء بتحصل على فرص لدخول سحب على جوائز قيّمة. تجربة تسوّق آمنة وشفافة، ونظام سحب عادل بيضمن فرص متساوية لكل المشترين.",
+      title: "ما هو NAYVO؟",
+      body: "NAYVO متجر إلكتروني بيقدّم منتجات مميزة بأسعار مناسبة، ومع كل عملية شراء بتحصل على فرص لدخول سحب على جوائز قيّمة. تجربة تسوّق آمنة وشفافة، ونظام سحب عادل بيضمن فرص متساوية لكل المشترين.",
     },
     {
       kind: "bullets",
@@ -74,7 +74,7 @@ const CONTENT: Record<Exclude<PageType, "contact">, Section[]> = {
     {
       kind: "text",
       title: "١. القبول بالشروط",
-      body: "باستخدامك لتطبيق فرصة، أنت بتوافق على الالتزام بهذه الشروط والأحكام. إذا ما كنت موافق على أي جزء منها، يُرجى عدم استخدام التطبيق.",
+      body: "باستخدامك لتطبيق NAYVO، أنت بتوافق على الالتزام بهذه الشروط والأحكام. إذا ما كنت موافق على أي جزء منها، يُرجى عدم استخدام التطبيق.",
     },
     {
       kind: "text",
@@ -382,7 +382,7 @@ export default function InfoScreen() {
               ))}
 
               {pageType === "about" && (
-                <Text style={s.version}>فرصة · الإصدار 1.0.2</Text>
+                <Text style={s.version}>NAYVO · الإصدار 1.1.0</Text>
               )}
             </>
           )}

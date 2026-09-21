@@ -1646,8 +1646,8 @@ import { sum as sum2, count as count2, and as and2, gte as gte2, sql as sql3, eq
 
 // server/email.ts
 import { Resend } from "resend";
-var APP_NAME = "\u0641\u0631\u0635\u0629 - Forsa";
-var FROM_EMAIL = "noreply@forsa.today";
+var APP_NAME = "NAYVO";
+var FROM_EMAIL = process.env.FROM_EMAIL || "noreply@nayvo.store";
 function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -1796,7 +1796,7 @@ async function sendEmailVerificationCode(to, data) {
     <div class="body">
       <h2>\u062A\u062D\u0642\u0642 \u0645\u0646 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A</h2>
       <p>\u0645\u0631\u062D\u0628\u0627\u064B ${data.username}\u060C</p>
-      <p>\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0633\u062C\u064A\u0644\u0643 \u0641\u064A \u0641\u0631\u0635\u0629! \u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u062A\u0627\u0644\u064A \u0644\u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643:</p>
+      <p>\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0633\u062C\u064A\u0644\u0643 \u0641\u064A NAYVO! \u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u062A\u0627\u0644\u064A \u0644\u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628\u0643:</p>
       <div class="code-box">${data.code}</div>
       <p>\u0647\u0630\u0627 \u0627\u0644\u0631\u0645\u0632 \u0635\u0627\u0644\u062D \u0644\u0645\u062F\u0629 <strong>15 \u062F\u0642\u064A\u0642\u0629</strong> \u0641\u0642\u0637.</p>
       <p>\u0625\u0630\u0627 \u0644\u0645 \u062A\u0642\u0645 \u0628\u0627\u0644\u062A\u0633\u062C\u064A\u0644\u060C \u064A\u0631\u062C\u0649 \u062A\u062C\u0627\u0647\u0644 \u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064A\u062F.</p>
@@ -1992,19 +1992,23 @@ async function requireAdmin(req, res, next) {
   next();
 }
 async function registerRoutes(app2) {
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret && process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET must be set in production");
+  }
   app2.use(
     session({
       store: new PgSession({
         pool,
         createTableIfMissing: true
       }),
-      secret: process.env.SESSION_SECRET || "forsa-secret-key",
+      secret: sessionSecret || "development-only-session-secret",
       resave: false,
       saveUninitialized: false,
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1e3,
         httpOnly: true,
-        secure: false,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "lax"
       }
     })
@@ -3733,7 +3737,7 @@ async function registerRoutes(app2) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>\u0633\u064A\u0627\u0633\u0629 \u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629 - \u0641\u0631\u0635\u0629</title>
+  <title>\u0633\u064A\u0627\u0633\u0629 \u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629 - NAYVO</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
@@ -3752,7 +3756,7 @@ async function registerRoutes(app2) {
 <body>
   <div class="header">
     <h1>\u0633\u064A\u0627\u0633\u0629 \u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629</h1>
-    <p>\u0641\u0631\u0635\u0629 - Forsa</p>
+    <p>NAYVO</p>
   </div>
   <div class="container">
     <div class="card">
@@ -3793,7 +3797,7 @@ async function registerRoutes(app2) {
     </div>
   </div>
   <div class="footer">
-    <p>\u0641\u0631\u0635\u0629 - Forsa &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}</p>
+    <p>NAYVO &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}</p>
     <p>\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B: ${(/* @__PURE__ */ new Date()).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</p>
   </div>
 </body>
@@ -3805,7 +3809,7 @@ async function registerRoutes(app2) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>\u0627\u0644\u0634\u0631\u0648\u0637 \u0648\u0627\u0644\u0623\u062D\u0643\u0627\u0645 - \u0641\u0631\u0635\u0629</title>
+  <title>\u0627\u0644\u0634\u0631\u0648\u0637 \u0648\u0627\u0644\u0623\u062D\u0643\u0627\u0645 - NAYVO</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
@@ -3822,12 +3826,12 @@ async function registerRoutes(app2) {
 <body>
   <div class="header">
     <h1>\u0627\u0644\u0634\u0631\u0648\u0637 \u0648\u0627\u0644\u0623\u062D\u0643\u0627\u0645</h1>
-    <p>\u0641\u0631\u0635\u0629 - Forsa</p>
+    <p>NAYVO</p>
   </div>
   <div class="container">
     <div class="card">
       <h2>\u0661. \u0627\u0644\u0642\u0628\u0648\u0644 \u0628\u0627\u0644\u0634\u0631\u0648\u0637</h2>
-      <p>\u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0643 \u0644\u062A\u0637\u0628\u064A\u0642 \u0641\u0631\u0635\u0629\u060C \u0641\u0625\u0646\u0643 \u062A\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0627\u0644\u0627\u0644\u062A\u0632\u0627\u0645 \u0628\u0647\u0630\u0647 \u0627\u0644\u0634\u0631\u0648\u0637 \u0648\u0627\u0644\u0623\u062D\u0643\u0627\u0645. \u0625\u0630\u0627 \u0643\u0646\u062A \u0644\u0627 \u062A\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0623\u064A \u062C\u0632\u0621 \u0645\u0646\u0647\u0627\u060C \u064A\u064F\u0631\u062C\u0649 \u0639\u062F\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u062A\u0637\u0628\u064A\u0642.</p>
+      <p>\u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645\u0643 \u0644\u062A\u0637\u0628\u064A\u0642 NAYVO\u060C \u0641\u0625\u0646\u0643 \u062A\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0627\u0644\u0627\u0644\u062A\u0632\u0627\u0645 \u0628\u0647\u0630\u0647 \u0627\u0644\u0634\u0631\u0648\u0637 \u0648\u0627\u0644\u0623\u062D\u0643\u0627\u0645. \u0625\u0630\u0627 \u0643\u0646\u062A \u0644\u0627 \u062A\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0623\u064A \u062C\u0632\u0621 \u0645\u0646\u0647\u0627\u060C \u064A\u064F\u0631\u062C\u0649 \u0639\u062F\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u062A\u0637\u0628\u064A\u0642.</p>
     </div>
     <div class="card">
       <h2>\u0662. \u0627\u0644\u0623\u0647\u0644\u064A\u0629</h2>
@@ -3851,7 +3855,7 @@ async function registerRoutes(app2) {
     </div>
   </div>
   <div class="footer">
-    <p>\u0641\u0631\u0635\u0629 - Forsa &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}</p>
+    <p>NAYVO &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}</p>
     <p>\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B: ${(/* @__PURE__ */ new Date()).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</p>
   </div>
 </body>
@@ -3863,7 +3867,7 @@ async function registerRoutes(app2) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>\u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0641\u0646\u064A - \u0641\u0631\u0635\u0629</title>
+  <title>\u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0641\u0646\u064A - NAYVO</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
@@ -3884,12 +3888,12 @@ async function registerRoutes(app2) {
 <body>
   <div class="header">
     <h1>\u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0641\u0646\u064A</h1>
-    <p>\u0641\u0631\u0635\u0629 - Forsa</p>
+    <p>NAYVO</p>
   </div>
   <div class="container">
     <div class="card">
       <h2>\u0643\u064A\u0641 \u064A\u0645\u0643\u0646\u0646\u0627 \u0645\u0633\u0627\u0639\u062F\u062A\u0643\u061F</h2>
-      <p>\u0641\u0631\u064A\u0642 \u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0641\u0646\u064A \u0641\u064A \u0641\u0631\u0635\u0629 \u062C\u0627\u0647\u0632 \u0644\u0645\u0633\u0627\u0639\u062F\u062A\u0643 \u0641\u064A \u0623\u064A \u0627\u0633\u062A\u0641\u0633\u0627\u0631 \u0623\u0648 \u0645\u0634\u0643\u0644\u0629 \u062A\u0648\u0627\u062C\u0647\u0643.</p>
+      <p>\u0641\u0631\u064A\u0642 \u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0641\u0646\u064A \u0641\u064A NAYVO \u062C\u0627\u0647\u0632 \u0644\u0645\u0633\u0627\u0639\u062F\u062A\u0643 \u0641\u064A \u0623\u064A \u0627\u0633\u062A\u0641\u0633\u0627\u0631 \u0623\u0648 \u0645\u0634\u0643\u0644\u0629 \u062A\u0648\u0627\u062C\u0647\u0643.</p>
     </div>
     <div class="card">
       <h2>\u0627\u0644\u062F\u0639\u0645 \u0645\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u062A\u0637\u0628\u064A\u0642</h2>
@@ -3903,7 +3907,7 @@ async function registerRoutes(app2) {
     <div class="card">
       <h2>\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A</h2>
       <p>\u064A\u0645\u0643\u0646\u0643 \u0623\u064A\u0636\u0627\u064B \u0627\u0644\u062A\u0648\u0627\u0635\u0644 \u0645\u0639\u0646\u0627 \u0639\u0628\u0631 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A:</p>
-      <p><a href="mailto:support@forsa.today" class="email-link">support@forsa.today</a></p>
+      <p><a href="mailto:support@nayvo.store" class="email-link">support@nayvo.store</a></p>
     </div>
     <div class="card">
       <h2>\u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0634\u0627\u0626\u0639\u0629</h2>
@@ -3921,7 +3925,7 @@ async function registerRoutes(app2) {
     </div>
   </div>
   <div class="footer">
-    <p>\u0641\u0631\u0635\u0629 - Forsa &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}</p>
+    <p>NAYVO &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}</p>
   </div>
 </body>
 </html>`);
@@ -4116,6 +4120,12 @@ var log = console.log;
 function setupCors(app2) {
   app2.use((req, res, next) => {
     const origins = /* @__PURE__ */ new Set();
+    if (process.env.APP_ORIGINS) {
+      process.env.APP_ORIGINS.split(",").forEach((origin2) => {
+        const normalized = origin2.trim().replace(/\/$/, "");
+        if (normalized) origins.add(normalized);
+      });
+    }
     if (process.env.REPLIT_DEV_DOMAIN) {
       origins.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
     }
@@ -4126,7 +4136,8 @@ function setupCors(app2) {
     }
     const origin = req.header("origin");
     const isLocalhost = origin?.startsWith("http://localhost:") || origin?.startsWith("http://127.0.0.1:");
-    if (origin && (origins.has(origin) || isLocalhost)) {
+    const normalizedOrigin = origin?.replace(/\/$/, "");
+    if (origin && (origins.has(normalizedOrigin || origin) || isLocalhost)) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header(
         "Access-Control-Allow-Methods",
@@ -4279,14 +4290,16 @@ function configureExpoAndLanding(app2) {
     next();
   });
   app2.use("/assets", express.static(path2.resolve(process.cwd(), "assets")));
+  app2.use(express.static(path2.resolve(process.cwd(), "web-build"), { index: false }));
   app2.use(express.static(path2.resolve(process.cwd(), "static-build")));
-  const spaIndexPath = path2.resolve(process.cwd(), "static-build", "index.html");
+  const spaIndexPath = path2.resolve(process.cwd(), "web-build", "index.html");
   if (fs.existsSync(spaIndexPath)) {
     app2.use((req, res, next) => {
-      if (req.path.startsWith("/api") || req.path.startsWith("/uploads") || req.path.startsWith("/assets")) {
+      if (!["GET", "HEAD"].includes(req.method) || req.path.startsWith("/api") || req.path.startsWith("/uploads") || req.path.startsWith("/assets") || ["/privacy-policy", "/terms", "/support"].includes(req.path)) {
         return next();
       }
       res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache");
       res.sendFile(spaIndexPath);
     });
   }
@@ -4310,6 +4323,15 @@ function setupErrorHandler(app2) {
   setupRequestLogging(app);
   configureExpoAndLanding(app);
   const server = await registerRoutes(app);
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const { pool: pool2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      await pool2.query("select 1");
+      res.status(200).json({ status: "ok" });
+    } catch {
+      res.status(503).json({ status: "unavailable" });
+    }
+  });
   try {
     const { storage: storage2 } = await Promise.resolve().then(() => (init_storage(), storage_exports));
     const bcryptSeed = await import("bcryptjs");
@@ -4321,11 +4343,14 @@ function setupErrorHandler(app2) {
     }
     const existingAdmin = await storage2.getUserByUsername("admin");
     if (!existingAdmin) {
-      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      if (!adminPassword) {
+        throw new Error("ADMIN_PASSWORD must be set before creating the admin user");
+      }
       const hashedPassword = await bcryptSeed.hash(adminPassword, 10);
       await storage2.createUser({
         username: "admin",
-        email: "admin@forsa.app",
+        email: "admin@nayvo.store",
         password: hashedPassword
       });
       const adminUser = await storage2.getUserByUsername("admin");

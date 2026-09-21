@@ -6,13 +6,13 @@ import {
   StyleSheet,
   Pressable,
   TextInput,
-  Alert,
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
   Switch,
   Image,
 } from "react-native";
+import { Alert } from "@/lib/alert";
 import { router } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -312,7 +312,7 @@ export default function CheckoutScreen() {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={["#10224D", "#1B3A7A"]}
+          colors={["#0B2142", "#164A9E"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
@@ -359,7 +359,7 @@ export default function CheckoutScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#10224D", "#1B3A7A"]}
+        colors={["#0B2142", "#164A9E"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[
@@ -417,7 +417,7 @@ export default function CheckoutScreen() {
           {draw && (
             <View style={styles.ticketCard}>
               <View style={styles.ticketIconWrap}>
-                <Ionicons name="ticket" size={20} color="#10224D" />
+                <Ionicons name="ticket" size={20} color="#0B2142" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.ticketCardTitle}>
@@ -881,20 +881,20 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#F5A623",
+    borderColor: "#F5B731",
   },
   ticketIconWrap: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#155EEF",
+    backgroundColor: "#1267E8",
     alignItems: "center",
     justifyContent: "center",
   },
   ticketCardTitle: {
     fontFamily: "Tajawal_700Bold",
     fontSize: 14,
-    color: "#10224D",
+    color: "#0B2142",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    shadowColor: "#10224D",
+    shadowColor: "#0B2142",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -958,7 +958,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 22,
     padding: 20,
-    shadowColor: "#10224D",
+    shadowColor: "#0B2142",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 16,

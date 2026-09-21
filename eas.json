@@ -7,7 +7,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "forsa.today"
+        "EXPO_PUBLIC_DOMAIN": "nayvo.store"
       }
     },
     "preview": {
@@ -17,7 +17,7 @@
         "credentialsSource": "local"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "forsa.today"
+        "EXPO_PUBLIC_DOMAIN": "nayvo.store"
       }
     },
     "production": {
@@ -26,7 +26,7 @@
         "credentialsSource": "local"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "forsa.today"
+        "EXPO_PUBLIC_DOMAIN": "nayvo.store"
       }
     }
   },

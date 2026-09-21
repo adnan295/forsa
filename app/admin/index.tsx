@@ -8,13 +8,13 @@ import {
   Platform,
   useWindowDimensions,
   ActivityIndicator,
-  Alert,
   TextInput,
   Modal,
   FlatList,
   Switch,
   Image,
 } from "react-native";
+import { Alert } from "@/lib/alert";
 import { router } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -150,7 +150,7 @@ export default function AdminPanel() {
       {wideLayout && (
         <View style={shell.desktopHead}>
           <Text style={shell.desktopTitle}>{activeLabel}</Text>
-          <Text style={shell.desktopSub}>إدارة المنصة ومتابعة الأداء في فرصة</Text>
+          <Text style={shell.desktopSub}>إدارة المنصة ومتابعة الأداء في NAYVO</Text>
         </View>
       )}
 
@@ -395,7 +395,7 @@ function DashboardSection({
           </View>
           <View style={{ flex: 1 }}>
             <Text style={dash.mobileTitle}>لوحة الإدارة</Text>
-            <Text style={dash.mobileSub}>إدارة المنصة ومتابعة الأداء في فرصة</Text>
+            <Text style={dash.mobileSub}>إدارة المنصة ومتابعة الأداء في NAYVO</Text>
           </View>
         </View>
       )}
@@ -771,7 +771,7 @@ function OrdersSection() {
     return map[s] || s;
   };
   const getShippingColor = (s: string) => {
-    const map: Record<string, string> = { pending: "#B54708", processing: "#175CD3", shipped: "#1B3A7A", delivered: "#067647", cancelled: "#B42318" };
+    const map: Record<string, string> = { pending: "#B54708", processing: "#175CD3", shipped: "#164A9E", delivered: "#067647", cancelled: "#B42318" };
     return map[s] || "#475467";
   };
   const getOrderStatusAr = (s: string) => {
@@ -1497,8 +1497,8 @@ function ProductsSection() {
                   onPress={() => { setEditing(item); setShowForm(true); }}
                   style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}
                 >
-                  <Ionicons name="create" size={16} color="#10224D" />
-                  <Text style={[styles.actionBtnText, { color: "#10224D" }]}>تعديل</Text>
+                  <Ionicons name="create" size={16} color="#0B2142" />
+                  <Text style={[styles.actionBtnText, { color: "#0B2142" }]}>تعديل</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => toggleMutation.mutate({ id: item.id, isActive: !item.isActive })}
@@ -1712,7 +1712,7 @@ function ProductFormModal({ product, onClose }: { product: any | null; onClose: 
               style={[modalStyles.submitButton, (mutation.isPending || uploading) && { opacity: 0.5 }]}
             >
               {mutation.isPending || uploading ? (
-                <ActivityIndicator color="#10224D" size="small" />
+                <ActivityIndicator color="#0B2142" size="small" />
               ) : (
                 <Text style={modalStyles.submitButtonText}>{isEdit ? "حفظ" : "إضافة"}</Text>
               )}
@@ -1885,8 +1885,8 @@ function DrawsSection() {
                     onPress={() => { setEditing(item); setShowForm(true); }}
                     style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}
                   >
-                    <Ionicons name="create" size={16} color="#10224D" />
-                    <Text style={[styles.actionBtnText, { color: "#10224D" }]}>تعديل</Text>
+                    <Ionicons name="create" size={16} color="#0B2142" />
+                    <Text style={[styles.actionBtnText, { color: "#0B2142" }]}>تعديل</Text>
                   </Pressable>
                 )}
                 {item.status === "scheduled" && (
@@ -1903,7 +1903,7 @@ function DrawsSection() {
                     onPress={() => handleDraw(item)}
                     style={[
                       styles.actionBtn,
-                      { backgroundColor: item.status === "ready_to_draw" ? "#B54708" : "#1B3A7A" },
+                      { backgroundColor: item.status === "ready_to_draw" ? "#B54708" : "#164A9E" },
                     ]}
                   >
                     <Ionicons name="dice" size={16} color="#fff" />
@@ -1923,7 +1923,7 @@ function DrawsSection() {
 
               {item.status === "completed" && (
                 <View style={styles.winnerBanner}>
-                  <Ionicons name="trophy" size={16} color="#F5A623" />
+                  <Ionicons name="trophy" size={16} color="#F5B731" />
                   <Text style={styles.winnerText}>
                     الفائز: {item.winnerUsername || "—"} · تذكرة {item.winnerTicketNumber}
                   </Text>
@@ -2080,7 +2080,7 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
               style={[modalStyles.submitButton, (mutation.isPending || uploading) && { opacity: 0.5 }]}
             >
               {mutation.isPending || uploading ? (
-                <ActivityIndicator color="#10224D" size="small" />
+                <ActivityIndicator color="#0B2142" size="small" />
               ) : (
                 <Text style={modalStyles.submitButtonText}>{isEdit ? "حفظ" : "إنشاء"}</Text>
               )}
@@ -2301,7 +2301,7 @@ function ActivitySection() {
     return map[type] || "time";
   };
   const getTypeColor = (type: string) => {
-    const map: Record<string, string> = { user_register: "#067647", purchase: "#175CD3", draw: "#F5A623", campaign_create: "#1B3A7A", shipping_update: "#B54708" };
+    const map: Record<string, string> = { user_register: "#067647", purchase: "#175CD3", draw: "#F5B731", campaign_create: "#164A9E", shipping_update: "#B54708" };
     return map[type] || Colors.light.textSecondary;
   };
 
@@ -2364,7 +2364,7 @@ function NotificationsSection() {
     return "notifications";
   };
   const getNotifColor = (type: string) => {
-    if (type === "new_order") return "#10224D";
+    if (type === "new_order") return "#0B2142";
     if (type === "receipt_uploaded") return "#175CD3";
     if (type === "new_user") return "#067647";
     if (type === "broadcast") return "#B54708";
@@ -2406,7 +2406,7 @@ function NotificationsSection() {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => { if (!item.isRead) markReadMutation.mutate(item.id); }}
-            style={[styles.orderCard, { borderEndWidth: 3, borderEndColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#F6F8FC" }]}
+            style={[styles.orderCard, { borderEndWidth: 3, borderEndColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#F7F9FC" }]}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: getNotifColor(item.type) + "15", alignItems: "center", justifyContent: "center" }}>
@@ -2813,7 +2813,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: "#F5A623",
+    borderColor: "#F5B731",
   },
   activeDrawHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   activeDrawTitle: {
@@ -2887,8 +2887,8 @@ const styles = StyleSheet.create({
   userNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   userName: { fontFamily: "Tajawal_500Medium", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
   userEmail: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
-  adminPill: { backgroundColor: "#F5A62320", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  adminPillText: { fontFamily: "Tajawal_500Medium", fontSize: 10, color: "#F5A623", writingDirection: "rtl" as const },
+  adminPill: { backgroundColor: "#F5B73120", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  adminPillText: { fontFamily: "Tajawal_500Medium", fontSize: 10, color: "#F5B731", writingDirection: "rtl" as const },
   verifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#06764718", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   verifiedPillText: { fontFamily: "Tajawal_500Medium", fontSize: 10, color: "#067647", writingDirection: "rtl" as const },
   unverifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#B4231818", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
@@ -2908,7 +2908,7 @@ const styles = StyleSheet.create({
   campaignActions: { flexDirection: "row", gap: 8 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
   actionBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: "#fff", writingDirection: "rtl" },
-  winnerBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F5A62312", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 10 },
+  winnerBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F5B73112", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 10 },
   winnerText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: "#754500", writingDirection: "rtl" },
 
   paymentCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
@@ -2948,7 +2948,7 @@ const modalStyles = StyleSheet.create({
   inputLabel: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, marginBottom: 6, textAlign: "right", writingDirection: "rtl" },
   input: { backgroundColor: "#fff", borderRadius: 12, padding: 14, fontFamily: "Tajawal_400Regular", fontSize: 15, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl" },
   createBtn: { backgroundColor: Colors.light.accent, borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center", marginTop: 8 },
-  createBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 16, color: "#10224D", writingDirection: "rtl" },
+  createBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 16, color: "#0B2142", writingDirection: "rtl" },
 
   specRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
   specRemove: { width: 28, alignItems: "center", justifyContent: "center" },
@@ -2964,9 +2964,9 @@ const modalStyles = StyleSheet.create({
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.light.border },
   chipActive: { backgroundColor: Colors.light.accent, borderColor: Colors.light.accent },
   chipText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
-  chipTextActive: { fontFamily: "Tajawal_700Bold", color: "#10224D" },
+  chipTextActive: { fontFamily: "Tajawal_700Bold", color: "#0B2142" },
 
-  hintBox: { flexDirection: "row", gap: 8, backgroundColor: "#FFF4D6", borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: "#F5A623" },
+  hintBox: { flexDirection: "row", gap: 8, backgroundColor: "#FFF4D6", borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: "#F5B731" },
   hintText: { flex: 1, fontFamily: "Tajawal_400Regular", fontSize: 12, color: "#754500", textAlign: "right", writingDirection: "rtl", lineHeight: 19 },
 
   imagePicker: { height: 130, borderRadius: 14, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.light.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 14, overflow: "hidden" },
@@ -2980,7 +2980,7 @@ const modalStyles = StyleSheet.create({
   cancelButton: { flex: 1, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: Colors.light.inputBg },
   cancelButtonText: { fontFamily: "Tajawal_500Medium", fontSize: 15, color: Colors.light.textSecondary, writingDirection: "rtl" },
   submitButton: { flex: 2, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: Colors.light.accent },
-  submitButtonText: { fontFamily: "Tajawal_700Bold", fontSize: 16, color: "#10224D", writingDirection: "rtl" },
+  submitButtonText: { fontFamily: "Tajawal_700Bold", fontSize: 16, color: "#0B2142", writingDirection: "rtl" },
 });
 
 const orderMgmtStyles = StyleSheet.create({

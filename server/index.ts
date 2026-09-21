@@ -18,6 +18,13 @@ function setupCors(app: express.Application) {
   app.use((req, res, next) => {
     const origins = new Set<string>();
 
+    if (process.env.APP_ORIGINS) {
+      process.env.APP_ORIGINS.split(",").forEach((origin: string) => {
+        const normalized = origin.trim().replace(/\/$/, "");
+        if (normalized) origins.add(normalized);
+      });
+    }
+
     if (process.env.REPLIT_DEV_DOMAIN) {
       origins.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
     }
@@ -35,7 +42,9 @@ function setupCors(app: express.Application) {
       origin?.startsWith("http://localhost:") ||
       origin?.startsWith("http://127.0.0.1:");
 
-    if (origin && (origins.has(origin) || isLocalhost)) {
+    const normalizedOrigin = origin?.replace(/\/$/, "");
+
+    if (origin && (origins.has(normalizedOrigin || origin) || isLocalhost)) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header(
         "Access-Control-Allow-Methods",
@@ -234,15 +243,24 @@ function configureExpoAndLanding(app: express.Application) {
   });
 
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
+  app.use(express.static(path.resolve(process.cwd(), "web-build"), { index: false }));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
-  const spaIndexPath = path.resolve(process.cwd(), "static-build", "index.html");
+  const spaIndexPath = path.resolve(process.cwd(), "web-build", "index.html");
   if (fs.existsSync(spaIndexPath)) {
     app.use((req: Request, res: Response, next: NextFunction) => {
-      if (req.path.startsWith("/api") || req.path.startsWith("/uploads") || req.path.startsWith("/assets")) {
+      // These public pages are registered after the Expo SPA fallback.
+      if (
+        !["GET", "HEAD"].includes(req.method) ||
+        req.path.startsWith("/api") ||
+        req.path.startsWith("/uploads") ||
+        req.path.startsWith("/assets") ||
+        ["/privacy-policy", "/terms", "/support"].includes(req.path)
+      ) {
         return next();
       }
       res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-cache");
       res.sendFile(spaIndexPath);
     });
   }
@@ -281,6 +299,16 @@ function setupErrorHandler(app: express.Application) {
 
   const server = await registerRoutes(app);
 
+  app.get("/api/health", async (_req: Request, res: Response) => {
+    try {
+      const { pool } = await import("./db");
+      await pool.query("select 1");
+      res.status(200).json({ status: "ok" });
+    } catch {
+      res.status(503).json({ status: "unavailable" });
+    }
+  });
+
   try {
     const { storage } = await import("./storage");
     const bcryptSeed = await import("bcryptjs");
@@ -293,11 +321,14 @@ function setupErrorHandler(app: express.Application) {
 
     const existingAdmin = await storage.getUserByUsername("admin");
     if (!existingAdmin) {
-      const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      if (!adminPassword) {
+        throw new Error("ADMIN_PASSWORD must be set before creating the admin user");
+      }
       const hashedPassword = await bcryptSeed.hash(adminPassword, 10);
       await storage.createUser({
         username: "admin",
-        email: "admin@forsa.app",
+        email: "admin@nayvo.store",
         password: hashedPassword,
       });
       const adminUser = await storage.getUserByUsername("admin");

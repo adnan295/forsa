@@ -57,7 +57,7 @@ export default function WinnersScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#10224D", "#1B3A7A"]}
+        colors={["#0B2142", "#164A9E"]}
         style={[
           styles.header,
           { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 },
@@ -113,7 +113,7 @@ function WinnerCard({ winner }: { winner: DrawWinner }) {
           <Image source={{ uri: imageUri }} style={styles.cardImage} resizeMode="cover" />
         ) : (
           <LinearGradient
-            colors={["#10224D", "#1B3A7A", "#1B3A7A"]}
+            colors={["#0B2142", "#164A9E", "#164A9E"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.cardImagePlaceholder}
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: "hidden",
     marginBottom: 16,
-    shadowColor: "#10224D",
+    shadowColor: "#0B2142",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,

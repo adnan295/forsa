@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>فرصة — لوحة الإدارة</title>
+<title>NAYVO — لوحة الإدارة</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -193,7 +193,7 @@ input:checked+.slider:before{transform:translateX(-18px)}
 
 <!-- SIDEBAR -->
 <nav class="sidebar" id="sidebar">
-  <div class="sidebar-brand"><div class="brand-logo">فرصة <span>Admin</span></div></div>
+  <div class="sidebar-brand"><div class="brand-logo">NAYVO <span>Admin</span></div></div>
   <div class="sidebar-user">
     <div class="user-avatar" id="sidebarAvatar">أ</div>
     <div class="user-info">
@@ -537,7 +537,7 @@ input:checked+.slider:before{transform:translateX(-18px)}
             <div class="form-group"><label class="form-label">اسم المستخدم</label><input class="form-input" id="newAdminUser" placeholder="admin2"/></div>
             <div class="form-group"><label class="form-label">كلمة المرور</label><input class="form-input" id="newAdminPass" type="password" placeholder="••••••"/></div>
           </div>
-          <div class="form-group"><label class="form-label">البريد</label><input class="form-input" id="newAdminEmail" placeholder="admin@forsa.today" type="email"/></div>
+          <div class="form-group"><label class="form-label">البريد</label><input class="form-input" id="newAdminEmail" placeholder="admin@nayvo.store" type="email"/></div>
           <button class="btn btn-primary" onclick="createAdmin()" style="width:100%">إنشاء أدمن</button>
         </div>
       </div>
@@ -1515,7 +1515,7 @@ async function saveWallet(){
 }
 
 async function sendNotifToUser(userId,username){
-  const title=prompt('عنوان الإشعار:','رسالة من فرصة');
+  const title=prompt('عنوان الإشعار:','رسالة من NAYVO');
   if(!title)return;
   const msg=prompt('نص الإشعار:');
   if(!msg)return;
@@ -1831,9 +1831,9 @@ async function sendFcmDirect(){
   try{const r=await api('POST',`/api/admin/send-fcm/${userId}`,{title,body});showFcmResult(r,null);toast(`تم الإرسال إلى ${r.username} ✅`,'success');}catch(e){showFcmResult(null,e.message);toast(e.message,'error');}
 }
 async function quickFcmToUser(userId,username){
-  const title=prompt(`عنوان إشعار FCM إلى ${username}`,'مرحباً من فرصة!');
+  const title=prompt(`عنوان إشعار FCM إلى ${username}`,'مرحباً من NAYVO!');
   if(!title)return;
-  const body=prompt('نص الإشعار','لديك رسالة جديدة من فرصة');
+  const body=prompt('نص الإشعار','لديك رسالة جديدة من NAYVO');
   if(!body)return;
   try{const r=await api('POST',`/api/admin/send-fcm/${userId}`,{title,body});toast(`تم الإرسال ✅ نجاح:${r.result?.success||0}`,'success');}catch(e){toast(e.message,'error');}
 }

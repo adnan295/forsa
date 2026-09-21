@@ -5,9 +5,9 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Alert,
   Platform,
 } from "react-native";
+import { Alert } from "@/lib/alert";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -165,7 +165,7 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <Text style={s.version}>فرصة · الإصدار 1.0.2</Text>
+        <Text style={s.version}>NAYVO · الإصدار 1.1.0</Text>
       </ScrollView>
     </View>
   );

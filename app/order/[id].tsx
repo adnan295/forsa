@@ -6,10 +6,10 @@ import {
   StyleSheet,
   Pressable,
   ActivityIndicator,
-  Alert,
   Platform,
   Modal,
 } from "react-native";
+import { Alert } from "@/lib/alert";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -657,7 +657,7 @@ const s = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(16, 34, 77, 0.92)",
+    backgroundColor: "rgba(11, 33, 66, 0.92)",
     alignItems: "center",
     justifyContent: "center",
   },

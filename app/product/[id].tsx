@@ -7,8 +7,8 @@ import {
   Pressable,
   ActivityIndicator,
   Dimensions,
-  Alert,
 } from "react-native";
+import { Alert } from "@/lib/alert";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

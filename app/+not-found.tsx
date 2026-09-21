@@ -34,6 +34,6 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
-    color: "#155EEF",
+    color: "#1267E8",
   },
 });
