@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600">
+  <g transform="translate(400 210) scale(.78)">
+    <path d="M292 724V300c0-39 48-57 74-28l366 426V300" fill="none" stroke="#0A2B63" stroke-width="112" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M784 142l14 42 42 14-42 14-14 42-14-42-42-14 42-14 14-42z" fill="#F5A900"/>
+  </g>
+  <text x="800" y="1120" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="220" font-weight="900" letter-spacing="18" fill="#0A2B63">NAYVO</text>
+</svg>

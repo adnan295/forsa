@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -300,7 +301,7 @@ export default function AuthScreen() {
   }
 
   return (
-    <LinearGradient colors={["#7C3AED", "#A855F7", "#EC4899"]} style={styles.gradient}>
+    <LinearGradient colors={["#071D49", "#0A3B87", "#1267E8"]} style={styles.gradient}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -321,9 +322,9 @@ export default function AuthScreen() {
 
           <View style={styles.logoArea}>
             <View style={styles.iconCircle}>
-              <Ionicons name="diamond" size={36} color="#fff" />
+              <Image source={require("../assets/images/icon.png")} style={styles.brandIcon} />
             </View>
-            <Text style={styles.logoText}>فرصة</Text>
+            <Text style={styles.logoText}>NAYVO</Text>
             <Text style={styles.tagline}>
               {isLogin ? "أهلاً بعودتك" : "أنشئ حسابك"}
             </Text>
@@ -462,7 +463,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
+    overflow: "hidden",
   },
+  brandIcon: { width: 76, height: 76 },
   logoText: {
     fontFamily: "Inter_700Bold",
     fontSize: 32,

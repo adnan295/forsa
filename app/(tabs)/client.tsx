@@ -141,7 +141,7 @@ export default function ClientScreen() {
           <View style={st.heroBadge}>
             <Text style={st.heroBadgeText}>شراكة تجارية</Text>
           </View>
-          <Text style={st.heroTitle}>اعرض منتجك{"\n"}على فرصة</Text>
+          <Text style={st.heroTitle}>اعرض منتجك{"\n"}على NAYVO</Text>
           <Text style={st.heroSub}>
             حوّل منتجك إلى حملة إثارة يتنافس عليها الآلاف — وسوّقه بتكلفة صفر
           </Text>
@@ -156,7 +156,7 @@ export default function ClientScreen() {
 
         {/* Benefits */}
         <View style={st.section}>
-          <Text style={st.sectionTitle}>لماذا فرصة؟</Text>
+          <Text style={st.sectionTitle}>لماذا NAYVO؟</Text>
           <View style={st.benefitsGrid}>
             <BenefitCard icon="megaphone" title="تسويق مجاني" sub="حملتك تصل لآلاف المشترين بدون تكلفة إعلانية" />
             <BenefitCard icon="flash" title="مبيعات فورية" sub="التذاكر تُباع بسرعة كبيرة عبر مجتمعنا النشط" />

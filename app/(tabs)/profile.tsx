@@ -508,7 +508,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.versionArea}>
-        <Text style={[styles.versionText, { color: colors.textSecondary }]}>فرصة v1.0.0</Text>
+        <Text style={[styles.versionText, { color: colors.textSecondary }]}>NAYVO v1.0.2</Text>
         <Text style={[styles.versionSub, { color: isDark ? colors.border : "#D1D5DB" }]}>صُنع بحب</Text>
       </View>
     </ScrollView>

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Forsa",
+    "name": "NAYVO",
     "slug": "forsa",
     "version": "1.0.2",
     "orientation": "portrait",
@@ -11,13 +11,13 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#7C3AED"
+      "backgroundColor": "#F7FAFF"
     },
     "notification": {
       "icon": "./assets/images/notification-icon.png",
-      "color": "#FFD000",
+      "color": "#1267E8",
       "androidMode": "default",
-      "androidCollapsedTitle": "فرصة"
+      "androidCollapsedTitle": "NAYVO"
     },
     "ios": {
       "supportsTablet": false,
@@ -44,7 +44,7 @@
         "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#7C3AED",
+        "backgroundColor": "#1267E8",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -66,7 +66,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
-          "color": "#FFD000",
+          "color": "#1267E8",
           "defaultChannel": "default",
           "mode": "production"
         }

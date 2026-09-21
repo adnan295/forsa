@@ -2348,7 +2348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>سياسة الخصوصية - فرصة</title>
+  <title>سياسة الخصوصية - NAYVO</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
@@ -2367,7 +2367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <body>
   <div class="header">
     <h1>سياسة الخصوصية</h1>
-    <p>فرصة - Forsa</p>
+    <p>NAYVO</p>
   </div>
   <div class="container">
     <div class="card">
@@ -2408,7 +2408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     </div>
   </div>
   <div class="footer">
-    <p>فرصة - Forsa &copy; ${new Date().getFullYear()}</p>
+    <p>NAYVO &copy; ${new Date().getFullYear()}</p>
     <p>آخر تحديث: ${new Date().toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</p>
   </div>
 </body>
@@ -2421,7 +2421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>الشروط والأحكام - فرصة</title>
+  <title>الشروط والأحكام - NAYVO</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
@@ -2438,12 +2438,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <body>
   <div class="header">
     <h1>الشروط والأحكام</h1>
-    <p>فرصة - Forsa</p>
+    <p>NAYVO</p>
   </div>
   <div class="container">
     <div class="card">
       <h2>١. القبول بالشروط</h2>
-      <p>باستخدامك لتطبيق فرصة، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي جزء منها، يُرجى عدم استخدام التطبيق.</p>
+      <p>باستخدامك لتطبيق NAYVO، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي جزء منها، يُرجى عدم استخدام التطبيق.</p>
     </div>
     <div class="card">
       <h2>٢. الأهلية</h2>
@@ -2467,7 +2467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     </div>
   </div>
   <div class="footer">
-    <p>فرصة - Forsa &copy; ${new Date().getFullYear()}</p>
+    <p>NAYVO &copy; ${new Date().getFullYear()}</p>
     <p>آخر تحديث: ${new Date().toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</p>
   </div>
 </body>
@@ -2480,7 +2480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>الدعم الفني - فرصة</title>
+  <title>الدعم الفني - NAYVO</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
@@ -2501,12 +2501,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <body>
   <div class="header">
     <h1>الدعم الفني</h1>
-    <p>فرصة - Forsa</p>
+    <p>NAYVO</p>
   </div>
   <div class="container">
     <div class="card">
       <h2>كيف يمكننا مساعدتك؟</h2>
-      <p>فريق الدعم الفني في فرصة جاهز لمساعدتك في أي استفسار أو مشكلة تواجهك.</p>
+      <p>فريق الدعم الفني في NAYVO جاهز لمساعدتك في أي استفسار أو مشكلة تواجهك.</p>
     </div>
     <div class="card">
       <h2>الدعم من داخل التطبيق</h2>
@@ -2538,7 +2538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     </div>
   </div>
   <div class="footer">
-    <p>فرصة - Forsa &copy; ${new Date().getFullYear()}</p>
+    <p>NAYVO &copy; ${new Date().getFullYear()}</p>
   </div>
 </body>
 </html>`);

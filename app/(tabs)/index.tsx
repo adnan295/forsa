@@ -369,7 +369,10 @@ export default function HomeScreen() {
             )}
           </View>
           <View style={s.navCenter}>
-            <Text style={s.logo}>فرصة</Text>
+            <View style={s.brandRow}>
+              <Image source={require("../../assets/images/icon.png")} style={s.brandIcon} />
+              <Text style={s.logo}>NAYVO</Text>
+            </View>
             <View style={s.logoUnder} />
           </View>
           <View style={s.navRight}>
@@ -636,6 +639,8 @@ const s = StyleSheet.create({
   },
   navLeft: { flexDirection: "row", gap: 4, width: 90, justifyContent: "flex-start" },
   navCenter: { alignItems: "center" },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  brandIcon: { width: 26, height: 26, borderRadius: 7 },
   navRight: { width: 90, alignItems: "flex-end" },
   navBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", position: "relative" },
   dot: {
@@ -643,8 +648,8 @@ const s = StyleSheet.create({
     borderRadius: 8, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center",
   },
   dotText: { fontFamily: "Inter_700Bold", fontSize: 9, color: "#fff" },
-  logo: { fontFamily: "Inter_700Bold", fontSize: 24, color: "#1A1A1A" },
-  logoUnder: { height: 3, width: 32, backgroundColor: "#FFD000", borderRadius: 2, marginTop: 1, alignSelf: "center" },
+  logo: { fontFamily: "Inter_700Bold", fontSize: 21, letterSpacing: 1.2, color: "#1A1A1A" },
+  logoUnder: { height: 3, width: 42, backgroundColor: "#FFD000", borderRadius: 2, marginTop: 2, alignSelf: "center" },
   username: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#666", maxWidth: 80 },
   loginBtn: { backgroundColor: "#FFD000", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 },
   loginText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#1A1A1A" },
