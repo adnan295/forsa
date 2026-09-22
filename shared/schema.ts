@@ -66,8 +66,6 @@ export const users = pgTable("users", {
   city: text("city"),
   country: text("country"),
   emailVerified: boolean("email_verified").notNull().default(false),
-  referralCode: text("referral_code").unique(),
-  referredBy: varchar("referred_by"),
   pushToken: text("push_token"),
   fcmToken: text("fcm_token"),
   apnToken: text("apn_token"),

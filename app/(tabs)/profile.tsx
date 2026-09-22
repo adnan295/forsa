@@ -108,7 +108,6 @@ export default function ProfileScreen() {
     { icon: "location-outline", label: "عناويني", onPress: () => router.push("/edit-profile" as any) },
     { icon: "notifications-outline", label: "الإشعارات", onPress: () => router.push("/notifications" as any) },
     { icon: "heart-outline", label: "المفضلة", onPress: () => router.push("/favorites" as any) },
-    { icon: "people-outline", label: "دعوة الأصدقاء", onPress: () => router.push("/referral" as any) },
     { icon: "help-circle-outline", label: "المساعدة", onPress: () => router.push("/faq" as any) },
     { icon: "document-text-outline", label: "الشروط والخصوصية", onPress: () => router.push({ pathname: "/info", params: { type: "terms" } } as any) },
   ];
@@ -251,3 +250,4 @@ const s = StyleSheet.create({
     marginTop: Spacing.sm,
   },
 });
+

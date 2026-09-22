@@ -8,7 +8,6 @@ const ERROR_MAP: Record<string, string> = {
   "Email already verified": "البريد الإلكتروني مفعّل بالفعل",
   "Not authenticated": "يرجى تسجيل الدخول أولاً",
   "Admin access required": "هذه الصفحة للإدارة فقط",
-  "Invalid referral code": "كود الدعوة غير صحيح",
   "Product not found": "المنتج غير موجود",
   "Order not found": "الطلب غير موجود",
   "Access denied": "ما عندك صلاحية لهذا الإجراء",

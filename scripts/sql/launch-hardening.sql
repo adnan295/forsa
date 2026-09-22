@@ -15,3 +15,7 @@ DROP TABLE IF EXISTS wallet_transactions;
 ALTER TABLE users DROP COLUMN IF EXISTS wallet_balance;
 ALTER TABLE orders DROP COLUMN IF EXISTS wallet_amount;
 UPDATE payment_methods SET enabled = false WHERE lower(name) ~ 'cash|cod|sham' OR coalesce(name_ar, '') ~ 'شام|عند الاستلام';
+
+-- Referral system removed at the owner's request.
+ALTER TABLE users DROP COLUMN IF EXISTS referral_code;
+ALTER TABLE users DROP COLUMN IF EXISTS referred_by;

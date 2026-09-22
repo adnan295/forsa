@@ -187,10 +187,6 @@ function RootLayoutNav() {
         options={{ headerShown: false, presentation: "card" }}
       />
       <Stack.Screen
-        name="referral"
-        options={{ headerShown: false, presentation: "card" }}
-      />
-      <Stack.Screen
         name="orders"
         options={{ headerShown: false, presentation: "card" }}
       />

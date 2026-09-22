@@ -213,16 +213,13 @@ CREATE TABLE "users" (
 	"city" text,
 	"country" text,
 	"email_verified" boolean DEFAULT false NOT NULL,
-	"referral_code" text,
-	"referred_by" varchar,
 	"push_token" text,
 	"fcm_token" text,
 	"apn_token" text,
 	"is_suspended" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "users_username_unique" UNIQUE("username"),
-	CONSTRAINT "users_email_unique" UNIQUE("email"),
-	CONSTRAINT "users_referral_code_unique" UNIQUE("referral_code")
+	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 --> statement-breakpoint
