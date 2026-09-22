@@ -329,6 +329,9 @@ function setupErrorHandler(app: express.Application) {
     console.log("[Seed] Skipped seeding:", (err as any)?.message);
   }
 
+  const { startReminders } = await import("./reminders");
+  startReminders();
+
   setupErrorHandler(app);
 
   const port = parseInt(process.env.PORT || "5000", 10);

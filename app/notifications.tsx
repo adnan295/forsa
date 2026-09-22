@@ -43,6 +43,11 @@ const NOTIFICATION_STYLE: Record<
   tickets_awarded: { icon: "ticket", fg: StatusColors.success.fg, bg: StatusColors.success.bg },
   shipping_update: { icon: "cube", fg: StatusColors.info.fg, bg: StatusColors.info.bg },
   support_reply: { icon: "chatbubble-ellipses", fg: StatusColors.info.fg, bg: StatusColors.info.bg },
+  draw_closing: { icon: "hourglass", fg: StatusColors.warning.fg, bg: StatusColors.warning.bg },
+  your_chances: { icon: "ticket", fg: c.primary, bg: c.primarySoft },
+  not_joined: { icon: "gift", fg: c.primary, bg: c.primarySoft },
+  draw_ready_admin: { icon: "alert-circle", fg: StatusColors.warning.fg, bg: StatusColors.warning.bg },
+  receipt_due: { icon: "receipt", fg: StatusColors.warning.fg, bg: StatusColors.warning.bg },
 };
 
 const DEFAULT_STYLE = { icon: "notifications" as const, fg: c.primary, bg: c.primarySoft };
