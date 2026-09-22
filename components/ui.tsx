@@ -23,12 +23,9 @@ const c = Colors.light;
 /** «NAYVO» بالكحلي والنجمة بالذهبي — وعلى الخلفيات الكحلية الكلمة بيضاء */
 export function Logo({ onNavy = false, size = 22 }: { onNavy?: boolean; size?: number }) {
   return (
-    <View style={s.logoWrap}>
-      <Text style={[s.logoText, { fontSize: size, color: onNavy ? c.surface : c.navy }]}>
-        NAYVO
-      </Text>
-      <Ionicons name="sparkles" size={size * 0.44} color={c.gold} style={s.logoSpark} />
-    </View>
+    <Text style={[s.logoText, { fontSize: size, color: onNavy ? c.surface : c.navy }]}>
+      NAYVO
+    </Text>
   );
 }
 
@@ -519,9 +516,7 @@ export function Accordion({
 /* ────────────────────────── الأنماط ────────────────────────── */
 
 const s = StyleSheet.create({
-  logoWrap: { flexDirection: "row", alignItems: "flex-start" },
   /** النجمة ترتفع فوق الحرف الأخير كما في شعار العلامة */
-  logoSpark: { marginStart: 1, marginTop: -2 },
   logoText: { fontFamily: Fonts.bold, writingDirection: "ltr", letterSpacing: 0.5 },
 
   header: {
