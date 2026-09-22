@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Pressable,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +27,9 @@ const c = Colors.light;
 const FEATURED_COUNT = 4;
 
 export default function HomeScreen() {
+  const { width } = useWindowDimensions();
+  const columns = Platform.OS === "web" && width >= 900 ? 4 : Platform.OS === "web" && width >= 600 ? 3 : 2;
+  const cellWidth = (Math.min(width, 1200) - Spacing.screen * 2 - Spacing.md * (columns - 1)) / columns;
   const { user } = useAuth();
   const { addItem, getQuantity, totalItems } = useCart();
 
@@ -158,7 +162,7 @@ export default function HomeScreen() {
         ) : (
           <View style={s.grid}>
             {featured.map((p) => (
-              <View key={p.id} style={s.gridCell}>
+              <View key={p.id} style={[s.gridCell, { width: cellWidth }]}>
                 <ProductCard
                   product={p}
                   inCartQuantity={getQuantity(p.id)}
@@ -248,5 +252,6 @@ const s = StyleSheet.create({
   },
 
   grid: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.md },
-  gridCell: { width: "47.8%", flexGrow: 1 },
+  gridCell: { flexGrow: 0 },
 });
+

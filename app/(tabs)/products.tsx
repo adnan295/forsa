@@ -9,6 +9,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -35,6 +36,9 @@ const CATEGORIES = [
 ];
 
 export default function ProductsScreen() {
+  const { width } = useWindowDimensions();
+  const columns = Platform.OS === "web" && width >= 900 ? 4 : Platform.OS === "web" && width >= 600 ? 3 : 2;
+  const cellWidth = (Math.min(width, 1200) - Spacing.screen * 2 - Spacing.md * (columns - 1)) / columns;
   const { addItem, getQuantity } = useCart();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
@@ -134,7 +138,7 @@ export default function ProductsScreen() {
         ) : (
           <View style={s.grid}>
             {filtered.map((p) => (
-              <View key={p.id} style={s.gridCell}>
+              <View key={p.id} style={[s.gridCell, { width: cellWidth }]}>
                 <ProductCard
                   product={p}
                   showFavorite
@@ -206,5 +210,6 @@ const s = StyleSheet.create({
     paddingBottom: Platform.OS === "web" ? 110 : 120,
   },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.md },
-  gridCell: { width: "47.8%", flexGrow: 1 },
+  gridCell: { flexGrow: 0 },
 });
+

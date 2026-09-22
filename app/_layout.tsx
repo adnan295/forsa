@@ -227,7 +227,9 @@ export default function RootLayout() {
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <KeyboardProvider>
                     <PushNotificationManager />
-                    <RootLayoutNav />
+                    <View style={Platform.OS === "web" ? { flex: 1, width: "100%", maxWidth: 1200, alignSelf: "center" } : { flex: 1 }}>
+                      <RootLayoutNav />
+                    </View>
                     <OfflineBanner />
                   </KeyboardProvider>
                 </GestureHandlerRootView>
@@ -239,3 +241,4 @@ export default function RootLayout() {
     </ErrorBoundary>
   );
 }
+

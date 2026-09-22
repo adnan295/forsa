@@ -1,58 +1,46 @@
-# Hostinger VPS production deployment
+# NAYVO production website — Hostinger
 
-Canonical branch: `main`. Read PROJECT_GUIDE.md and RELEASE.md first.
-The user authorized deleting legacy application data for 1.1.0. Back up and reset the verified app database before deploying the new schema; follow RELEASE.md.
-The restore commands below apply only to an explicitly selected fresh migration target.
+Canonical branch: main. Read PROJECT_GUIDE.md and RELEASE.md.
+The web store and native apps share app/ and components/.
 
-Target: Hostinger KVM 2, Ubuntu 24.04 LTS, Docker Engine and Docker Compose.
+## Existing VPS: initial 1.1.0 deployment
 
-## First deployment
+The user explicitly authorized deletion of old application data. The following is a one-time reset, including old accounts, orders and tickets. The admin account is recreated using ADMIN_PASSWORD from the existing .env.production.
 
-1. Point `nayvo.store` and `www.nayvo.store` A records to the VPS IPv4 address. Keep `forsa.today` pointed to the same VPS during the app migration window.
-2. Install Docker Engine and the Compose plugin.
-3. Clone this repository into `/opt/forsa`.
-4. Copy `.env.production.example` to `.env.production` and replace every placeholder.
-5. Build and start the stack:
-
-   ```sh
-   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
-   ```
-
-6. Verify `https://nayvo.store/api/health` returns `{ "status": "ok" }`.
-
-Caddy requests and renews the TLS certificate automatically after DNS points to the VPS and ports 80/443 are open.
-
-## Database migration
-
-Export the current Replit PostgreSQL database in custom format:
-
-```sh
-pg_dump "$REPLIT_DATABASE_URL" --no-owner --no-acl -Fc > forsa-replit.dump
-```
-
-Copy the dump to `/opt/forsa/backups/`, then restore it before switching DNS:
-
-```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db \
-  sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --no-acl --clean --if-exists' \
-  < backups/forsa-replit.dump
-```
-
-## Backups
-
-Run `scripts/backup-postgres.sh` nightly from root's cron and copy backups to storage outside the VPS. Hostinger's weekly VPS backup is useful for disaster recovery but should not be the only database backup.
-
-## Update deployment
-
-```sh
-git checkout main
+```bash
+cd /opt/forsa
+git fetch origin
+git switch main
 git pull --ff-only origin main
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+bash scripts/deploy-production.sh --reset-data
 ```
 
-Check status after every deployment:
+The script builds first, checks the dedicated forsa database, stops the app, saves and checks a private PostgreSQL backup, resets public in a transaction, starts the web/API, and checks key routes. It retains a rollback image and prevents repeat resets.
+It never removes .env.production, signing credentials, backups or Caddy volumes.
 
-```sh
+## Later updates
+
+```bash
+cd /opt/forsa
+git pull --ff-only origin main
+bash scripts/deploy-production.sh --update
+```
+
+--update preserves data and does not run schema migrations. If shared/schema.ts changes later, supply and test a separate migration first.
+
+## After initial reset
+
+Open https://nayvo.store/admin/login. Sign in with admin and ADMIN_PASSWORD from the server environment.
+Add real products/photos/prices, draw details and payment configuration. Verify an entire order before submitting the mobile release.
+The new storefront is at /; /about keeps the brand introduction; /shop redirects to /products.
+
+## Diagnostics
+
+```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml ps
 docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=100 app
 ```
+
+For regular backups, run scripts/backup-postgres.sh and keep an additional copy off the VPS.
+Initial-reset backups use a distinct nayvo-before- prefix and are not deleted by that script's retention rule.
+Do not use docker compose down -v. Follow RELEASE.md for recovery notes.
