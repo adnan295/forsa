@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -6,940 +6,248 @@ import {
   StyleSheet,
   Pressable,
   Platform,
-  Linking,
-  Alert,
-  I18nManager,
 } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { Alert } from "@/lib/alert";
+import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { apiRequest } from "@/lib/query-client";
-import { useTheme } from "@/lib/theme-context";
-import {
-  getNotificationPermissionStatus,
-  registerForPushNotifications,
-} from "@/lib/push-notifications";
+import { queryClient } from "@/lib/query-client";
+import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
+import { Header, StatTile, EmptyState } from "@/components/ui";
 
-type UserStats = {
-  totalOrders: number;
-  confirmedOrders: number;
-  totalTickets: number;
-  winningTickets: number;
+const c = Colors.light;
+
+interface UserStats {
+  orderCount: number;
+  ticketCount: number;
   totalSpent: string;
-};
+}
 
-type SettingsItem = {
+interface MenuItem {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  color: string;
-  badge?: boolean;
   onPress: () => void;
-};
+  danger?: boolean;
+}
 
-function formatJoinDate(dateStr: string | undefined) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("ar-EG", { year: "numeric", month: "long" });
+function MenuRow({ item, first }: { item: MenuItem; first: boolean }) {
+  return (
+    <Pressable
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        item.onPress();
+      }}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        s.menuRow,
+        !first && s.menuRowDivided,
+        pressed && { backgroundColor: c.primarySoft },
+      ]}
+    >
+      <Ionicons name="chevron-back" size={18} color={c.textMuted} />
+      <Text style={[s.menuLabel, item.danger && { color: StatusColors.error.fg }]}>
+        {item.label}
+      </Text>
+      <Ionicons
+        name={item.icon}
+        size={20}
+        color={item.danger ? StatusColors.error.fg : c.textSecondary}
+      />
+    </Pressable>
+  );
 }
 
 export default function ProfileScreen() {
-  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
-  const { isDark, colors } = useTheme();
   const isAdmin = user?.role === "admin";
-  const [notifStatus, setNotifStatus] = useState<"granted" | "denied" | "undetermined" | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS !== "web") {
-        getNotificationPermissionStatus().then(setNotifStatus);
-      }
-    }, [])
-  );
-
-  async function handleEnableNotifications() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (notifStatus === "denied") {
-      Alert.alert(
-        "الإشعارات معطّلة",
-        "يرجى تفعيل الإشعارات من إعدادات جهازك للحصول على تنبيهات الفوز والعروض.",
-        [
-          { text: "إلغاء", style: "cancel" },
-          { text: "فتح الإعدادات", onPress: () => Linking.openSettings() },
-        ]
-      );
-    } else {
-      const token = await registerForPushNotifications();
-      const updated = await getNotificationPermissionStatus();
-      setNotifStatus(updated);
-      if (token) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert("تم التفعيل", "ستصلك إشعارات الفوز والعروض الحصرية!");
-      }
-    }
-  }
 
   const { data: stats } = useQuery<UserStats>({
     queryKey: ["/api/user/stats"],
     enabled: !!user,
-  });
-
-  const { data: walletData } = useQuery<{ balance: number; transactions: any[] }>({
-    queryKey: ["/api/user/wallet"],
-    enabled: !!user,
-  });
-
-  const { data: adminStats } = useQuery<{
-    totalCampaigns: number;
-    activeCampaigns: number;
-    completedCampaigns: number;
-    totalRevenue: string;
-  }>({
-    queryKey: ["/api/admin/stats"],
-    enabled: isAdmin,
+    staleTime: 10000,
   });
 
   async function handleLogout() {
-    await logout();
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }
-
-  async function handleDeleteAccount() {
-    Alert.alert(
-      "حذف الحساب",
-      "هل أنت متأكد من حذف حسابك؟ سيتم حذف جميع بياناتك وطلباتك نهائياً ولا يمكن التراجع عن هذا الإجراء.",
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: "حذف نهائياً",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await apiRequest("DELETE", "/api/auth/delete-account");
-              await logout();
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert("تم", "تم حذف حسابك بنجاح");
-            } catch (error: any) {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert("خطأ", "تعذّر حذف الحساب، حاول لاحقاً");
-            }
-          },
+    Alert.alert("تسجيل الخروج", "متأكد إنك بدك تسجّل خروج؟", [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "خروج",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          queryClient.clear();
+          router.replace("/(tabs)");
         },
-      ]
-    );
+      },
+    ]);
   }
 
   if (!user) {
     return (
-      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
-        <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top, alignItems: "center", paddingHorizontal: 32 }}>
-          <LinearGradient
-            colors={["#7C3AED", "#EC4899"]}
-            style={styles.emptyIconCircle}
-          >
-            <Ionicons name="person" size={40} color="#fff" />
-          </LinearGradient>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>سجّل الدخول لحسابك</Text>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            أدِر ملفك الشخصي، تابع طلباتك، واطلع على هداياك
-          </Text>
-          <Pressable
-            onPress={() => router.push("/auth")}
-            style={styles.signInButton}
-          >
-            <LinearGradient
-              colors={[Colors.light.accent, Colors.light.accentPink]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.signInGradient}
-            >
-              <Text style={styles.signInButtonText}>تسجيل الدخول</Text>
-            </LinearGradient>
-          </Pressable>
-        </View>
+      <View style={s.root}>
+        <Header title="حسابي" />
+        <EmptyState
+          icon="person-outline"
+          title="سجّل الدخول لحسابك"
+          body="تابع طلباتك وفرصك وبياناتك من مكان واحد"
+          action={{ label: "تسجيل الدخول", onPress: () => router.push("/auth") }}
+        />
       </View>
     );
   }
 
-  const isProfileComplete = !!(user.fullName && user.phone && user.address && user.city && user.country);
+  const joinedAt = new Date(user.createdAt ?? Date.now()).toLocaleDateString("ar-EG", {
+    month: "long",
+    year: "numeric",
+  });
 
-  const menuItems = [
-    {
-      icon: "person-circle-outline" as const,
-      label: "تعديل الملف الشخصي",
-      subtitle: isProfileComplete ? "مكتمل ✓" : "أكمل بياناتك للشراء",
-      color: isProfileComplete ? "#10B981" : "#EF4444",
-      onPress: () => router.push("/edit-profile" as any),
-    },
-    {
-      icon: "receipt-outline" as const,
-      label: "طلباتي",
-      subtitle: `${stats?.totalOrders || 0} طلب`,
-      color: "#7C3AED",
-      onPress: () => router.push("/(tabs)/tickets" as any),
-    },
-    {
-      icon: "ticket-outline" as const,
-      label: "تذاكر الهدايا",
-      subtitle: `${stats?.totalTickets || 0} تذكرة`,
-      color: "#EC4899",
-      onPress: () => router.push("/(tabs)/tickets" as any),
-    },
-    {
-      icon: "heart-outline" as const,
-      label: "المفضلة",
-      subtitle: "الحملات المحفوظة",
-      color: "#EF4444",
-      onPress: () => router.push("/favorites" as any),
-    },
-    {
-      icon: "trophy-outline" as const,
-      label: "جوائزي",
-      subtitle: stats?.winningTickets ? `${stats.winningTickets} فوز` : "لم تفز بعد",
-      color: "#F59E0B",
-      onPress: () => router.push("/(tabs)/tickets" as any),
-    },
-    {
-      icon: "gift-outline" as const,
-      label: "برنامج الإحالة",
-      subtitle: "ادعُ أصدقاءك واحصل على مكافآت",
-      color: "#06B6D4",
-      onPress: () => router.push("/referral" as any),
-    },
-    {
-      icon: "people-outline" as const,
-      label: "الفائزون السابقون",
-      subtitle: "عرض جميع الفائزين",
-      color: "#8B5CF6",
-      onPress: () => router.push("/winners" as any),
-    },
+  const menu: MenuItem[] = [
+    { icon: "person-outline", label: "بياناتي", onPress: () => router.push("/edit-profile" as any) },
+    { icon: "location-outline", label: "عناويني", onPress: () => router.push("/edit-profile" as any) },
+    { icon: "notifications-outline", label: "الإشعارات", onPress: () => router.push("/notifications" as any) },
+    { icon: "heart-outline", label: "المفضلة", onPress: () => router.push("/favorites" as any) },
+    { icon: "people-outline", label: "دعوة الأصدقاء", onPress: () => router.push("/referral" as any) },
+    { icon: "help-circle-outline", label: "المساعدة", onPress: () => router.push("/faq" as any) },
+    { icon: "document-text-outline", label: "الشروط والخصوصية", onPress: () => router.push({ pathname: "/info", params: { type: "terms" } } as any) },
   ];
 
-  const showNotifItem = Platform.OS !== "web" && notifStatus !== "granted" && notifStatus !== null;
-  const notifItem: SettingsItem[] = showNotifItem
-    ? [
-        {
-          icon: "notifications-outline" as const,
-          label: notifStatus === "denied" ? "فتح إعدادات الإشعارات" : "تفعيل الإشعارات",
-          color: "#F59E0B",
-          badge: true,
-          onPress: handleEnableNotifications,
-        },
-      ]
-    : [];
+  if (isAdmin) {
+    menu.push({
+      icon: "settings-outline",
+      label: "لوحة الإدارة",
+      onPress: () => router.push("/admin" as any),
+    });
+  }
 
-  const settingsItems: SettingsItem[] = [
-    ...notifItem,
-    {
-      icon: "help-circle-outline" as const,
-      label: "الأسئلة الشائعة",
-      color: "#7C3AED",
-      onPress: () => router.push("/faq" as any),
-    },
-    {
-      icon: "information-circle-outline" as const,
-      label: "عن التطبيق",
-      color: "#6366F1",
-      onPress: () => router.push({ pathname: "/info", params: { type: "about" } }),
-    },
-    {
-      icon: "document-text-outline" as const,
-      label: "الشروط والأحكام",
-      color: "#8B5CF6",
-      onPress: () => router.push({ pathname: "/info", params: { type: "terms" } }),
-    },
-    {
-      icon: "shield-checkmark-outline" as const,
-      label: "سياسة الخصوصية",
-      color: "#06B6D4",
-      onPress: () => router.push({ pathname: "/info", params: { type: "privacy" } }),
-    },
-    {
-      icon: "chatbubble-ellipses-outline" as const,
-      label: "تواصل معنا",
-      color: "#10B981",
-      onPress: () => router.push({ pathname: "/info", params: { type: "contact" } }),
-    },
-    {
-      icon: "star-outline" as const,
-      label: "قيّم التطبيق",
-      color: "#F59E0B",
-      onPress: () => {},
-    },
-  ];
+  menu.push({ icon: "log-out-outline", label: "تسجيل الخروج", onPress: handleLogout, danger: true });
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{
-        paddingTop: Platform.OS === "web" ? 67 : insets.top,
-        paddingBottom: Platform.OS === "web" ? 84 + 20 : 100,
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
-        style={styles.headerGradient}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.avatarRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user.username.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.userInfo}>
-              <View style={styles.nameRow}>
-                <Text style={styles.userName}>{user.fullName || user.username}</Text>
-                {isAdmin && (
-                  <View style={styles.adminBadge}>
-                    <Ionicons name="shield-checkmark" size={11} color="#FFD700" />
-                    <Text style={styles.adminText}>مدير</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.userEmail}>{user.email}</Text>
-              {(user as any).createdAt && (
-                <View style={styles.joinDateRow}>
-                  <Ionicons name="calendar-outline" size={13} color="rgba(255,255,255,0.5)" />
-                  <Text style={styles.joinDate}>
-                    عضو منذ {formatJoinDate((user as any).createdAt)}
-                  </Text>
-                </View>
-              )}
-            </View>
+    <View style={s.root}>
+      <Header title="حسابي" />
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
+        {/* ───── البطاقة الشخصية ───── */}
+        <View style={s.identity}>
+          <View style={s.avatar}>
+            <Ionicons name="person" size={40} color={c.textMuted} />
           </View>
+          <Text style={s.name}>{user.fullName || user.username}</Text>
+          <Text style={s.joined}>عضو منذ {joinedAt}</Text>
         </View>
-        <View style={styles.headerDecor1} />
-        <View style={styles.headerDecor2} />
-      </LinearGradient>
 
-      <View style={styles.statsCardWrapper}>
-        <View style={[styles.statsCard, { backgroundColor: colors.card }]}>
-          <StatItem
-            value={stats?.totalOrders?.toString() || "0"}
-            label="الطلبات"
-            icon="receipt"
-            color="#7C3AED"
-            colors={colors}
-          />
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <StatItem
-            value={stats?.totalTickets?.toString() || "0"}
-            label="التذاكر"
-            icon="ticket"
-            color="#EC4899"
-            colors={colors}
-          />
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <StatItem
-            value={`$${stats?.totalSpent || "0"}`}
-            label="المشتريات"
-            icon="wallet"
-            color="#10B981"
-            colors={colors}
-          />
-        </View>
-      </View>
-
-      {walletData !== undefined && (
-        <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
-          <Pressable
-            onPress={() => router.push("/referral" as any)}
-            style={{ borderRadius: 20, overflow: "hidden" }}
-          >
-            <LinearGradient
-              colors={["#059669", "#10B981", "#34D399"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{ padding: 18, flexDirection: "row", alignItems: "center", gap: 14, direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr" }}
-            >
-              <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name="wallet" size={26} color="#fff" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#fff", writingDirection: "rtl" as const, textAlign: "right" }}>
-                  {parseFloat(String(walletData.balance || 0)).toFixed(2)} $
-                </Text>
-                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: "rgba(255,255,255,0.85)", writingDirection: "rtl" as const, textAlign: "right" }}>
-                  رصيد المحفظة · اضغط لعرض تفاصيل الإحالة
-                </Text>
-              </View>
-              <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.7)" />
-            </LinearGradient>
-          </Pressable>
-        </View>
-      )}
-
-      {isAdmin && (
-        <View style={styles.section}>
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/admin");
-            }}
-            style={({ pressed }) => [
-              styles.adminCard,
-              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-            ]}
-          >
-            <LinearGradient
-              colors={["#7C3AED", "#EC4899"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.adminCardGradient}
-            >
-              <View style={styles.adminCardIcon}>
-                <Ionicons name="grid" size={24} color="#fff" />
-              </View>
-              <View style={styles.adminCardContent}>
-                <Text style={styles.adminCardTitle}>لوحة التحكم</Text>
-                <Text style={styles.adminCardSub}>
-                  إدارة الطلبات والمستخدمين والحملات
-                </Text>
-              </View>
-              <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.7)" />
-            </LinearGradient>
+        {/* ───── الإحصاءات ───── */}
+        <View style={s.stats}>
+          <Pressable style={s.statPress} onPress={() => router.push("/(tabs)/tickets" as any)}>
+            <StatTile
+              icon="ticket"
+              tone="gold"
+              value={stats?.ticketCount ?? 0}
+              label="قسائمي"
+            />
           </Pressable>
 
-          {adminStats && (
-            <View style={styles.adminStatsRow}>
-              <MiniStat value={adminStats.activeCampaigns.toString()} label="نشطة" color="#7C3AED" colors={colors} />
-              <MiniStat value={adminStats.totalCampaigns.toString()} label="الحملات" color="#3B82F6" colors={colors} />
-              <MiniStat value={`$${adminStats.totalRevenue}`} label="الإيرادات" color="#10B981" colors={colors} />
-            </View>
-          )}
+          <Pressable style={s.statPress} onPress={() => router.push("/orders" as any)}>
+            <StatTile
+              icon="cube"
+              tone="primary"
+              value={stats?.orderCount ?? 0}
+              label="طلباتي"
+            />
+          </Pressable>
         </View>
-      )}
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>نشاطي</Text>
-        <View style={[styles.menuCard, { backgroundColor: colors.card }]}>
-          {menuItems.map((item, index) => (
-            <React.Fragment key={item.label}>
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  item.onPress();
-                }}
-                style={({ pressed }) => [
-                  styles.menuItem,
-                  pressed && { backgroundColor: isDark ? colors.border : "#F9FAFB" },
-                ]}
-              >
-                <View style={[styles.menuIconWrap, { backgroundColor: item.color + "12" }]}>
-                  <Ionicons name={item.icon} size={20} color={item.color} />
-                </View>
-                <View style={styles.menuTextArea}>
-                  <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
-                  <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>{item.subtitle}</Text>
-                </View>
-                <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
-              </Pressable>
-              {index < menuItems.length - 1 && <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />}
-            </React.Fragment>
+        {/* ───── القائمة ───── */}
+        <View style={s.menu}>
+          {menu.map((item, i) => (
+            <MenuRow key={item.label} item={item} first={i === 0} />
           ))}
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>الإعدادات والمساعدة</Text>
-        <View style={[styles.menuCard, { backgroundColor: colors.card }]}>
-          {settingsItems.map((item, index) => (
-            <React.Fragment key={item.label}>
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  item.onPress();
-                }}
-                style={({ pressed }) => [
-                  styles.menuItem,
-                  pressed && { backgroundColor: isDark ? colors.border : "#F9FAFB" },
-                ]}
-              >
-                <View style={[styles.menuIconWrap, { backgroundColor: item.color + "12" }]}>
-                  <Ionicons name={item.icon} size={20} color={item.color} />
-                  {item.badge && (
-                    <View style={styles.badgeDot} />
-                  )}
-                </View>
-                <View style={styles.menuTextArea}>
-                  <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
-                </View>
-                <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
-              </Pressable>
-              {index < settingsItems.length - 1 && <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />}
-            </React.Fragment>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Pressable
-          onPress={handleLogout}
-          style={({ pressed }) => [
-            styles.logoutButton,
-            { backgroundColor: colors.card, borderColor: isDark ? "rgba(239, 68, 68, 0.25)" : "rgba(239, 68, 68, 0.15)" },
-            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-          ]}
-        >
-          <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-          <Text style={[styles.logoutText, { color: colors.danger }]}>تسجيل الخروج</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.section}>
-        <Pressable
-          onPress={handleDeleteAccount}
-          style={({ pressed }) => [
-            styles.deleteButton,
-            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-          ]}
-          testID="delete-account-button"
-        >
-          <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
-          <Text style={[styles.deleteText, { color: colors.textSecondary }]}>حذف الحساب</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.versionArea}>
-        <Text style={[styles.versionText, { color: colors.textSecondary }]}>NAYVO v1.0.2</Text>
-        <Text style={[styles.versionSub, { color: isDark ? colors.border : "#D1D5DB" }]}>صُنع بحب</Text>
-      </View>
-    </ScrollView>
-  );
-}
-
-function StatItem({ value, label, icon, color, colors }: {
-  value: string;
-  label: string;
-  icon: string;
-  color: string;
-  colors: any;
-}) {
-  return (
-    <View style={styles.statItem}>
-      <View style={[styles.statIconWrap, { backgroundColor: color + "15" }]}>
-        <Ionicons name={icon as any} size={18} color={color} />
-      </View>
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
+        <Text style={s.version}>NAYVO · الإصدار 1.1.0</Text>
+      </ScrollView>
     </View>
   );
 }
 
-function MiniStat({ value, label, color, colors }: { value: string; label: string; color: string; colors: any }) {
-  return (
-    <View style={[styles.miniStatItem, { backgroundColor: colors.card }]}>
-      <Text style={[styles.miniStatValue, { color }]}>{value}</Text>
-      <Text style={[styles.miniStatLabel, { color: colors.textSecondary }]}>{label}</Text>
-    </View>
-  );
-}
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.background },
+  content: {
+    padding: Spacing.screen,
+    paddingBottom: Platform.OS === "web" ? 110 : 120,
+    gap: Spacing.md,
+  },
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  centered: {
+  identity: {
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    paddingVertical: Spacing.xl,
     alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyIconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: Colors.light.text,
-    marginBottom: 8,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: Colors.light.textSecondary,
-    textAlign: "center",
-    writingDirection: "rtl",
-    lineHeight: 24,
-  },
-  signInButton: {
-    borderRadius: 16,
-    overflow: "hidden",
-    marginTop: 24,
-    width: "100%",
-  },
-  signInGradient: {
-    paddingVertical: 16,
-    alignItems: "center",
-    borderRadius: 16,
-  },
-  signInButtonText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: "#FFFFFF",
-    writingDirection: "rtl",
-    textAlign: "center",
-  },
-  headerGradient: {
-    paddingTop: 20,
-    paddingBottom: 50,
-    paddingHorizontal: 20,
-    overflow: "hidden",
-  },
-  headerContent: {
-    zIndex: 2,
-  },
-  headerDecor1: {
-    position: "absolute",
-    top: -60,
-    right: -40,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  headerDecor2: {
-    position: "absolute",
-    bottom: -30,
-    left: -30,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(236,72,153,0.12)",
-  },
-  avatarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
+    gap: Spacing.xs,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: c.background,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.3)",
+    marginBottom: Spacing.sm,
   },
-  avatarText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 28,
-    color: "#FFFFFF",
-  },
-  userInfo: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
-  },
-  userName: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: "#FFFFFF",
-    writingDirection: "rtl",
-    textAlign: "right",
-  },
-  adminBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(255, 215, 0, 0.2)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  adminText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-    color: "#FFD700",
-    writingDirection: "rtl",
-  },
-  userEmail: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.6)",
-    writingDirection: "rtl",
-    marginTop: 4,
-    textAlign: "right",
-  },
-  joinDateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 6,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
-  },
-  joinDate: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: "rgba(255,255,255,0.5)",
-    writingDirection: "rtl",
-    textAlign: "right",
-  },
-  statsCardWrapper: {
-    paddingHorizontal: 16,
-    marginTop: -30,
-    marginBottom: 8,
-  },
-  statsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    flexDirection: "row",
-    paddingVertical: 20,
-    paddingHorizontal: 8,
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 6,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: Colors.light.border,
-    marginVertical: 4,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 6,
-  },
-  statIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statValue: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: Colors.light.text,
-  },
-  statLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl",
+  name: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h2,
+    color: c.navy,
     textAlign: "center",
-  },
-  section: {
-    paddingHorizontal: 16,
-    marginTop: 20,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
-  },
-  sectionTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: Colors.light.text,
-    marginBottom: 12,
-    textAlign: "right",
-    writingDirection: "rtl",
-    paddingHorizontal: 4,
-  },
-  adminCard: {
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  adminCardGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 18,
-    gap: 14,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
-  },
-  adminCardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  adminCardContent: {
-    flex: 1,
-  },
-  adminCardTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: "#FFFFFF",
-    textAlign: "right",
     writingDirection: "rtl",
   },
-  adminCardSub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginTop: 2,
-  },
-  adminStatsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 12,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
-  },
-  miniStatItem: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 14,
-    alignItems: "center",
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  miniStatValue: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    marginBottom: 2,
-  },
-  miniStatLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl",
+  joined: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
     textAlign: "center",
+    writingDirection: "rtl",
   },
-  menuCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+
+  stats: { flexDirection: "row", gap: Spacing.md },
+  statPress: { flex: 1 },
+
+  menu: {
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
     overflow: "hidden",
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    elevation: 4,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
-  menuItem: {
+  menuRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 14,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
   },
-  menuIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeDot: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#EF4444",
-    borderWidth: 1.5,
-    borderColor: "#fff",
-  },
-  menuTextArea: {
-    flex: 1,
+  menuRowDivided: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.borderSubtle,
   },
   menuLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: Colors.light.text,
+    flex: 1,
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.body,
+    color: c.navy,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  menuSubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginTop: 2,
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: Colors.light.border,
-    marginHorizontal: 16,
-  },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#FFFFFF",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.15)",
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
-  },
-  logoutText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: Colors.light.danger,
-    writingDirection: "rtl",
+
+  version: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textMuted,
     textAlign: "center",
-  },
-  deleteButton: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    gap: 8,
-    padding: 14,
-    borderRadius: 16,
-    direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr",
-  },
-  deleteText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: "#9CA3AF",
-    writingDirection: "rtl" as const,
-    textAlign: "center",
-  },
-  versionArea: {
-    alignItems: "center",
-    paddingVertical: 24,
-    gap: 4,
-  },
-  versionText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-  versionSub: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: "#D1D5DB",
+    writingDirection: "rtl",
+    marginTop: Spacing.sm,
   },
 });

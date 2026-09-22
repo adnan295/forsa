@@ -1,9 +1,12 @@
 import {
   type User,
   type InsertUser,
-  type Campaign,
-  type InsertCampaign,
+  type Product,
+  type InsertProduct,
+  type Draw,
+  type InsertDraw,
   type Order,
+  type OrderItem,
   type Ticket,
   type PaymentMethod,
   type InsertPaymentMethod,
@@ -14,11 +17,13 @@ import {
   type AdminNotification,
   type UserNotification,
   type SupportTicket,
-  type CampaignProduct,
   type WalletTransaction,
+  type CheckoutPayload,
   users,
-  campaigns,
+  products,
+  draws,
   orders,
+  orderItems,
   tickets,
   paymentMethods,
   coupons,
@@ -29,153 +34,26 @@ import {
   passwordResetTokens,
   emailVerificationTokens,
   supportTickets,
-  campaignProducts,
   walletTransactions,
-  insertReviewSchema,
+  DEFAULT_DELIVERY_FEE,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, count, sum, gte, inArray } from "drizzle-orm";
-import { randomBytes } from "crypto";
+import { eq, ne, asc, desc, and, or, sql, count, sum, gte, inArray, isNull } from "drizzle-orm";
+import { randomBytes, randomInt } from "crypto";
 
-export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-
-  getCampaigns(): Promise<Campaign[]>;
-  getCampaign(id: string): Promise<Campaign | undefined>;
-  createCampaign(campaign: InsertCampaign): Promise<Campaign>;
-  updateCampaign(id: string, data: Partial<Campaign>): Promise<Campaign | undefined>;
-  deleteCampaign(id: string): Promise<boolean>;
-
-  createOrder(data: {
-    userId: string;
-    campaignId: string;
-    quantity: number;
-    totalAmount: string;
-    paymentMethod?: string;
-    status?: string;
-    paymentStatus?: string;
-    shippingAddress?: string;
-    shippingFullName?: string;
-    shippingPhone?: string;
-    shippingCity?: string;
-    shippingCountry?: string;
-    couponCode?: string;
-    discountAmount?: string;
-  }): Promise<Order>;
-  getOrdersByUser(userId: string): Promise<Order[]>;
-  getOrder(id: string): Promise<Order | undefined>;
-  updateOrder(id: string, data: Partial<Order>): Promise<Order | undefined>;
-
-  createTicket(data: {
-    userId: string;
-    campaignId: string;
-    orderId: string;
-    productId?: string;
-  }): Promise<Ticket>;
-  getTicketsByUser(userId: string): Promise<Ticket[]>;
-  getTicketsByCampaign(campaignId: string): Promise<Ticket[]>;
-  getTicket(id: string): Promise<Ticket | undefined>;
-  markTicketWinner(id: string): Promise<Ticket | undefined>;
-
-  purchaseProduct(
-    userId: string,
-    campaignId: string,
-    quantity: number,
-    paymentMethod: string,
-    shippingData?: { fullName: string; phone: string; city: string; address: string; country?: string },
-    couponCode?: string
-  ): Promise<{ order: Order; tickets: Ticket[] }>;
-
-  drawWinner(campaignId: string): Promise<{ winner: User; ticket: Ticket } | null>;
-
-  getAllUsers(): Promise<User[]>;
-  getUserStats(userId: string): Promise<{ orderCount: number; ticketCount: number; totalSpent: string }>;
-  getAllOrders(): Promise<(Order & { username: string; campaignTitle: string })[]>;
-  updateOrderShipping(orderId: string, data: { shippingStatus?: string; trackingNumber?: string; shippingAddress?: string }): Promise<Order | undefined>;
-  updateOrderPayment(orderId: string, data: { paymentStatus: string; receiptUrl?: string; rejectionReason?: string }): Promise<Order | undefined>;
-
-  getPaymentMethods(): Promise<PaymentMethod[]>;
-  getEnabledPaymentMethods(): Promise<PaymentMethod[]>;
-  createPaymentMethod(data: InsertPaymentMethod): Promise<PaymentMethod>;
-  updatePaymentMethod(id: string, data: Partial<PaymentMethod>): Promise<PaymentMethod | undefined>;
-  deletePaymentMethod(id: string): Promise<boolean>;
-
-  getCoupons(): Promise<Coupon[]>;
-  createCoupon(data: InsertCoupon): Promise<Coupon>;
-  updateCoupon(id: string, data: Partial<Coupon>): Promise<Coupon | undefined>;
-  deleteCoupon(id: string): Promise<boolean>;
-  validateCoupon(code: string): Promise<Coupon>;
-
-  getActivityLog(limit?: number): Promise<ActivityLogEntry[]>;
-  logActivity(type: string, title: string, description?: string, userId?: string, metadata?: string): Promise<ActivityLogEntry>;
-
-  getAdminDashboardStats(): Promise<{
-    totalRevenue: string;
-    totalOrders: number;
-    totalUsers: number;
-    activeCampaigns: number;
-    ordersToday: number;
-    newUsersThisWeek: number;
-    conversionRate: string;
-    averageOrderValue: string;
-    topCampaigns: { title: string; soldQuantity: number }[];
-  }>;
-
-  updateUserProfile(userId: string, data: { fullName: string; phone: string; address: string; city: string; country: string }): Promise<User | undefined>;
-  
-  getReviewsByCampaign(campaignId: string): Promise<(Review & { username: string })[]>;
-  createReview(userId: string, data: { campaignId: string; rating: number; comment?: string }): Promise<Review>;
-  getUserReviewForCampaign(userId: string, campaignId: string): Promise<Review | undefined>;
-  
-  getAdminNotifications(limit?: number): Promise<AdminNotification[]>;
-  createAdminNotification(type: string, title: string, message: string, metadata?: string): Promise<AdminNotification>;
-  markNotificationRead(id: string): Promise<boolean>;
-  markAllNotificationsRead(): Promise<boolean>;
-  getUnreadNotificationCount(): Promise<number>;
-
-  createUserNotification(userId: string, type: string, title: string, body: string, campaignId?: string, metadata?: string): Promise<UserNotification>;
-  createBulkUserNotifications(userIds: string[], type: string, title: string, body: string, campaignId?: string, metadata?: string): Promise<void>;
-  getUserNotifications(userId: string, limit?: number): Promise<UserNotification[]>;
-  markUserNotificationRead(id: string, userId: string): Promise<boolean>;
-  markAllUserNotificationsRead(userId: string): Promise<boolean>;
-  getUnreadUserNotificationCount(userId: string): Promise<number>;
-
-  updateUserPushToken(userId: string, pushToken: string | null): Promise<void>;
-  updateUserDeviceTokens(userId: string, tokens: { fcmToken?: string | null; apnToken?: string | null }): Promise<void>;
-  getUserPushTokensByIds(userIds: string[]): Promise<string[]>;
-  getUserApnTokensByIds(userIds: string[]): Promise<string[]>;
-  getAllUsersWithFcmTokens(): Promise<{ id: string; fcmToken: string | null; apnToken: string | null }[]>;
-
-  getWalletBalance(userId: string): Promise<number>;
-  addWalletCredit(userId: string, amount: number, type: string, description: string, referenceId?: string): Promise<void>;
-  deductWalletBalance(userId: string, amount: number, description: string, referenceId?: string): Promise<boolean>;
-  getWalletTransactions(userId: string): Promise<WalletTransaction[]>;
-
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createPasswordResetToken(userId: string, code: string, expiresAt: Date): Promise<any>;
-  verifyPasswordResetToken(userId: string, code: string): Promise<any>;
-  markResetTokenUsed(tokenId: string): Promise<void>;
-  updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
-  updateUserEmail(userId: string, email: string): Promise<void>;
-
-  createEmailVerificationToken(userId: string, code: string, expiresAt: Date): Promise<any>;
-  verifyEmailToken(userId: string, code: string): Promise<any>;
-  markEmailTokenUsed(tokenId: string): Promise<void>;
-  setEmailVerified(userId: string): Promise<void>;
-
-  getRecentPurchases(limit?: number): Promise<{ campaignTitle: string; minutesAgo: number }[]>;
-}
+/** سعر التذكرة الافتراضي لما ما يكون في جولة نشطة */
+export const DEFAULT_TICKET_PRICE = 10;
 
 function generateTicketNumber(): string {
-  const prefix = "LD";
+  const prefix = "FT";
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = randomBytes(4).toString("hex").toUpperCase();
   return `${prefix}-${timestamp}-${random}`;
 }
 
-export class DatabaseStorage implements IStorage {
+export type OrderWithItems = Order & { items: OrderItem[] };
+
+export class DatabaseStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
@@ -194,179 +72,541 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getCampaigns(): Promise<Campaign[]> {
-    return db.select().from(campaigns).orderBy(desc(campaigns.createdAt));
+  /* ============================ المنتجات (الكتالوج) ============================ */
+
+  async getProducts(includeInactive = false): Promise<Product[]> {
+    const query = db.select().from(products);
+    const rows = includeInactive
+      ? await query.orderBy(asc(products.sortOrder), desc(products.createdAt))
+      : await query
+          .where(eq(products.isActive, true))
+          .orderBy(asc(products.sortOrder), desc(products.createdAt));
+    return rows;
   }
 
-  async getCampaign(id: string): Promise<Campaign | undefined> {
-    const [campaign] = await db
-      .select()
-      .from(campaigns)
-      .where(eq(campaigns.id, id));
-    return campaign || undefined;
-  }
-
-  async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
-    const [created] = await db.insert(campaigns).values(campaign).returning();
-    return created;
-  }
-
-  async updateCampaign(
-    id: string,
-    data: Partial<Campaign>
-  ): Promise<Campaign | undefined> {
-    const [updated] = await db
-      .update(campaigns)
-      .set(data)
-      .where(eq(campaigns.id, id))
-      .returning();
-    return updated || undefined;
-  }
-
-  async deleteCampaign(id: string): Promise<boolean> {
-    const existingOrders = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.campaignId, id))
-      .limit(1);
-    if (existingOrders.length > 0) {
-      throw new Error("Cannot delete campaign with existing orders");
-    }
-    const [deleted] = await db
-      .delete(campaigns)
-      .where(eq(campaigns.id, id))
-      .returning();
-    return !!deleted;
-  }
-
-  async getCampaignProducts(campaignId: string): Promise<CampaignProduct[]> {
-    return db
-      .select()
-      .from(campaignProducts)
-      .where(eq(campaignProducts.campaignId, campaignId))
-      .orderBy(campaignProducts.sortOrder);
-  }
-
-  async getCampaignProduct(id: string): Promise<CampaignProduct | undefined> {
-    const [product] = await db
-      .select()
-      .from(campaignProducts)
-      .where(eq(campaignProducts.id, id));
+  async getProduct(id: string): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
     return product || undefined;
   }
 
-  async createCampaignProduct(data: {
-    campaignId: string;
-    name: string;
-    nameAr?: string;
-    imageUrl?: string;
-    imagesJson?: string;
-    price: string;
-    quantity: number;
-    sortOrder?: number;
-  }): Promise<CampaignProduct> {
+  async createProduct(data: InsertProduct): Promise<Product> {
     const [product] = await db
-      .insert(campaignProducts)
+      .insert(products)
       .values({
-        campaignId: data.campaignId,
         name: data.name,
-        nameAr: data.nameAr,
-        imageUrl: data.imageUrl,
-        imagesJson: data.imagesJson,
+        description: data.description ?? "",
+        imageUrl: data.imageUrl ?? null,
+        imagesJson: data.imagesJson ?? null,
+        specsJson: data.specsJson ?? null,
         price: data.price,
-        quantity: data.quantity,
-        sortOrder: data.sortOrder || 0,
+        stock: data.stock ?? null,
+        category: data.category ?? "other",
+        isActive: data.isActive ?? true,
+        sortOrder: data.sortOrder ?? 0,
       })
       .returning();
     return product;
   }
 
-  async updateCampaignProduct(id: string, data: Partial<CampaignProduct>): Promise<CampaignProduct | undefined> {
+  async updateProduct(id: string, data: Partial<Product>): Promise<Product | undefined> {
     const [updated] = await db
-      .update(campaignProducts)
+      .update(products)
       .set(data)
-      .where(eq(campaignProducts.id, id))
+      .where(eq(products.id, id))
       .returning();
     return updated || undefined;
   }
 
-  async deleteCampaignProduct(id: string): Promise<boolean> {
-    const [deleted] = await db
-      .delete(campaignProducts)
-      .where(eq(campaignProducts.id, id))
-      .returning();
+  async deleteProduct(id: string): Promise<boolean> {
+    const [deleted] = await db.delete(products).where(eq(products.id, id)).returning();
     return !!deleted;
   }
 
-  async syncCampaignAggregates(campaignId: string): Promise<void> {
-    const products = await this.getCampaignProducts(campaignId);
-    if (products.length === 0) {
-      await this.updateCampaign(campaignId, {
-        totalQuantity: 0,
-        soldQuantity: 0,
-        productPrice: "0.00",
-      });
-      return;
-    }
+  /* ============================== جولات السحب ============================== */
 
-    const totalQty = products.reduce((s, p) => s + p.quantity, 0);
-    const soldQty = products.reduce((s, p) => s + p.soldQuantity, 0);
-    const minPrice = Math.min(...products.map(p => parseFloat(p.price)));
-
-    const allSoldOut = products.every(p => p.soldQuantity >= p.quantity);
-
-    const updateData: Partial<Campaign> = {
-      totalQuantity: totalQty,
-      soldQuantity: soldQty,
-      productPrice: minPrice.toFixed(2),
-    };
-
-    if (allSoldOut && soldQty >= totalQty) {
-      updateData.status = "sold_out";
-    }
-
-    await this.updateCampaign(campaignId, updateData);
+  async getDraws(): Promise<Draw[]> {
+    return db
+      .select()
+      .from(draws)
+      .orderBy(asc(draws.sortOrder), desc(draws.createdAt));
   }
 
-  async createOrder(data: {
-    userId: string;
-    campaignId: string;
-    productId?: string;
-    quantity: number;
-    totalAmount: string;
-    paymentMethod?: string;
-    status?: string;
-    paymentStatus?: string;
-    shippingAddress?: string;
-    shippingFullName?: string;
-    shippingPhone?: string;
-    shippingCity?: string;
-    shippingCountry?: string;
-    couponCode?: string;
-    discountAmount?: string;
-  }): Promise<Order> {
-    const [order] = await db
-      .insert(orders)
+  async getDraw(id: string): Promise<Draw | undefined> {
+    const [draw] = await db.select().from(draws).where(eq(draws.id, id));
+    return draw || undefined;
+  }
+
+  /** الجولة اللي التذاكر الجديدة بتروح إلها */
+  async getActiveDraw(): Promise<Draw | undefined> {
+    const [draw] = await db
+      .select()
+      .from(draws)
+      .where(eq(draws.status, "active"))
+      .orderBy(asc(draws.sortOrder), asc(draws.createdAt))
+      .limit(1);
+    return draw || undefined;
+  }
+
+  async getCompletedDraws(): Promise<Draw[]> {
+    return db
+      .select()
+      .from(draws)
+      .where(eq(draws.status, "completed"))
+      .orderBy(desc(draws.drawnAt));
+  }
+
+  /**
+   * أول جولة نشطة أو مجدولة — بتُستخدم لعرض "الجولة الحالية" للمستخدم
+   * حتى لو الجولة النشطة وصلت للعدد وصارت ready_to_draw.
+   */
+  async getCurrentDraw(): Promise<Draw | undefined> {
+    const [draw] = await db
+      .select()
+      .from(draws)
+      .where(inArray(draws.status, ["active", "ready_to_draw"]))
+      .orderBy(asc(draws.sortOrder), asc(draws.createdAt))
+      .limit(1);
+    if (draw) return draw;
+    const [scheduled] = await db
+      .select()
+      .from(draws)
+      .where(eq(draws.status, "scheduled"))
+      .orderBy(asc(draws.sortOrder), asc(draws.createdAt))
+      .limit(1);
+    return scheduled || undefined;
+  }
+
+  /**
+   * بتنشئ جولة جديدة. إذا ما في ولا جولة نشطة بتصير هي النشطة فوراً
+   * وبتستلم أي تذاكر معلّقة (drawId = null) من طلبات سابقة.
+   */
+  async createDraw(data: InsertDraw): Promise<Draw> {
+    const existingActive = await this.getActiveDraw();
+    const [maxRow] = await db
+      .select({ maxOrder: sql<number>`coalesce(max(${draws.sortOrder}), 0)` })
+      .from(draws);
+
+    const [draw] = await db
+      .insert(draws)
       .values({
-        userId: data.userId,
-        campaignId: data.campaignId,
-        productId: data.productId,
-        quantity: data.quantity,
-        totalAmount: data.totalAmount,
-        paymentMethod: data.paymentMethod || "stripe",
-        status: (data.status as any) || "pending",
-        paymentStatus: (data.paymentStatus as any) || "pending_payment",
-        shippingAddress: data.shippingAddress,
-        shippingFullName: data.shippingFullName,
-        shippingPhone: data.shippingPhone,
-        shippingCity: data.shippingCity,
-        shippingCountry: data.shippingCountry,
-        couponCode: data.couponCode,
-        discountAmount: data.discountAmount,
+        title: data.title,
+        prizeName: data.prizeName,
+        prizeDescription: data.prizeDescription ?? null,
+        prizeImageUrl: data.prizeImageUrl ?? null,
+        ticketPrice: data.ticketPrice,
+        targetTickets: data.targetTickets,
+        sortOrder: (maxRow?.maxOrder ?? 0) + 1,
+        status: existingActive ? "scheduled" : "active",
+        startedAt: existingActive ? null : new Date(),
       })
       .returning();
-    return order;
+
+    if (!existingActive) {
+      await this.assignPendingTicketsToDraw(draw.id);
+      return (await this.getDraw(draw.id)) ?? draw;
+    }
+    return draw;
   }
+
+  async updateDraw(id: string, data: Partial<Draw>): Promise<Draw | undefined> {
+    const [updated] = await db
+      .update(draws)
+      .set(data)
+      .where(eq(draws.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteDraw(id: string): Promise<boolean> {
+    const draw = await this.getDraw(id);
+    if (!draw) return false;
+    if (draw.status === "completed") {
+      throw new Error("ما بينفع تحذف جولة تم السحب عليها");
+    }
+    // التذاكر بترجع معلّقة بدل ما تنحذف
+    await db.update(tickets).set({ drawId: null }).where(eq(tickets.drawId, id));
+    const [deleted] = await db.delete(draws).where(eq(draws.id, id)).returning();
+    return !!deleted;
+  }
+
+  /**
+   * بتفعّل الجولة المجدولة التالية وبتسلّمها التذاكر المعلّقة.
+   * بترجّع الجولة النشطة الجديدة أو undefined إذا ما في جولات مجدولة.
+   */
+  async activateNextScheduledDraw(): Promise<Draw | undefined> {
+    const [next] = await db
+      .select()
+      .from(draws)
+      .where(eq(draws.status, "scheduled"))
+      .orderBy(asc(draws.sortOrder), asc(draws.createdAt))
+      .limit(1);
+    if (!next) return undefined;
+
+    await db
+      .update(draws)
+      .set({ status: "active", startedAt: new Date() })
+      .where(eq(draws.id, next.id));
+
+    await this.assignPendingTicketsToDraw(next.id);
+    return (await this.getDraw(next.id)) ?? undefined;
+  }
+
+  /**
+   * بتسلّم التذاكر المعلّقة (drawId = null) لجولة، بحدود سعتها.
+   * إذا امتلأت الجولة بتصير ready_to_draw.
+   */
+  async assignPendingTicketsToDraw(drawId: string): Promise<number> {
+    const draw = await this.getDraw(drawId);
+    if (!draw) return 0;
+
+    const capacity = draw.targetTickets - draw.soldTickets;
+    if (capacity <= 0) {
+      if (draw.status === "active") {
+        await this.updateDraw(drawId, { status: "ready_to_draw" });
+      }
+      return 0;
+    }
+
+    const pending = await db
+      .select({ id: tickets.id })
+      .from(tickets)
+      .where(isNull(tickets.drawId))
+      .orderBy(asc(tickets.createdAt))
+      .limit(capacity);
+
+    if (pending.length === 0) return 0;
+
+    await db
+      .update(tickets)
+      .set({ drawId })
+      .where(inArray(tickets.id, pending.map((t) => t.id)));
+
+    const newSold = draw.soldTickets + pending.length;
+    await this.updateDraw(drawId, {
+      soldTickets: newSold,
+      ...(newSold >= draw.targetTickets ? { status: "ready_to_draw" as const } : {}),
+    });
+
+    return pending.length;
+  }
+
+  async getTicketsByDraw(drawId: string): Promise<Ticket[]> {
+    return db
+      .select()
+      .from(tickets)
+      .where(eq(tickets.drawId, drawId))
+      .orderBy(desc(tickets.createdAt));
+  }
+
+  /** عدد المشاركين الفريدين بجولة */
+  async getDrawParticipantCount(drawId: string): Promise<number> {
+    const [row] = await db
+      .select({ total: sql<number>`count(distinct ${tickets.userId})` })
+      .from(tickets)
+      .where(eq(tickets.drawId, drawId));
+    return Number(row?.total ?? 0);
+  }
+
+  /** تذاكر مستخدم معيّن بجولة معيّنة */
+  async getUserTicketCountForDraw(userId: string, drawId: string): Promise<number> {
+    const [row] = await db
+      .select({ total: count() })
+      .from(tickets)
+      .where(and(eq(tickets.userId, userId), eq(tickets.drawId, drawId)));
+    return Number(row?.total ?? 0);
+  }
+
+  /** السحب: اختيار تذكرة عشوائية من تذاكر الجولة */
+  async drawWinner(drawId: string): Promise<{ winner: User; ticket: Ticket; draw: Draw }> {
+    const draw = await this.getDraw(drawId);
+    if (!draw) throw new Error("الجولة غير موجودة");
+    if (draw.status === "completed") throw new Error("تم السحب على هذه الجولة مسبقاً");
+
+    const drawTickets = await this.getTicketsByDraw(drawId);
+    if (drawTickets.length === 0) {
+      throw new Error("لا توجد تذاكر في هذه الجولة لإجراء السحب");
+    }
+
+    const winningTicket = drawTickets[randomInt(0, drawTickets.length)];
+
+    await db
+      .update(tickets)
+      .set({ isWinner: true })
+      .where(eq(tickets.id, winningTicket.id));
+
+    const winner = await this.getUser(winningTicket.userId);
+    if (!winner) throw new Error("لم يتم العثور على المستخدم الفائز");
+
+    const [updatedDraw] = await db
+      .update(draws)
+      .set({
+        status: "completed",
+        winnerId: winner.id,
+        winnerTicketId: winningTicket.id,
+        winnerTicketNumber: winningTicket.ticketNumber,
+        drawnAt: new Date(),
+      })
+      .where(eq(draws.id, drawId))
+      .returning();
+
+    // تفعيل الجولة التالية تلقائياً
+    const stillActive = await this.getActiveDraw();
+    if (!stillActive) {
+      await this.activateNextScheduledDraw();
+    }
+
+    return { winner, ticket: { ...winningTicket, isWinner: true }, draw: updatedDraw };
+  }
+
+  /* ================================ الشراء ================================ */
+
+  /**
+   * عملية الشراء كاملة داخل transaction واحد:
+   * التحقق من المخزون، حساب السعر من السيرفر (مو من العميل)، الكوبون،
+   * المحفظة، إنشاء الطلب وسطوره، وخصم المخزون.
+   *
+   * التذاكر ما بتنمنح هون — بتنمنح لما الأدمن يأكّد الدفع
+   * (شوف awardTicketsForOrder).
+   */
+  async checkout(userId: string, payload: CheckoutPayload): Promise<OrderWithItems> {
+    return db.transaction(async (tx) => {
+      // تجميع الكميات لنفس المنتج
+      const wanted = new Map<string, number>();
+      for (const item of payload.items) {
+        wanted.set(item.productId, (wanted.get(item.productId) ?? 0) + item.quantity);
+      }
+
+      const productIds = [...wanted.keys()];
+      const rows = await tx
+        .select()
+        .from(products)
+        .where(inArray(products.id, productIds))
+        .for("update");
+
+      const byId = new Map(rows.map((p) => [p.id, p]));
+
+      let subtotal = 0;
+      const lines: {
+        productId: string;
+        productName: string;
+        productImageUrl: string | null;
+        unitPrice: string;
+        quantity: number;
+        lineTotal: string;
+      }[] = [];
+
+      for (const [productId, quantity] of wanted) {
+        const product = byId.get(productId);
+        if (!product) throw new Error("أحد المنتجات لم يعد متوفراً");
+        if (!product.isActive) throw new Error(`المنتج "${product.name}" غير متاح حالياً`);
+        if (product.stock !== null && product.stock < quantity) {
+          throw new Error(`متبقي ${product.stock} قطعة فقط من "${product.name}"`);
+        }
+
+        const unitPrice = parseFloat(product.price);
+        const lineTotal = unitPrice * quantity;
+        subtotal += lineTotal;
+
+        lines.push({
+          productId: product.id,
+          productName: product.name,
+          productImageUrl: product.imageUrl,
+          unitPrice: unitPrice.toFixed(2),
+          quantity,
+          lineTotal: lineTotal.toFixed(2),
+        });
+      }
+
+      // الكوبون — خصم مرة وحدة على الطلب كلّه
+      let discountAmount = 0;
+      let appliedCouponCode: string | null = null;
+      if (payload.couponCode) {
+        const [coupon] = await tx
+          .select()
+          .from(coupons)
+          .where(eq(coupons.code, payload.couponCode.trim().toUpperCase()))
+          .for("update");
+
+        if (!coupon) throw new Error("كود الخصم غير صحيح");
+        if (!coupon.enabled) throw new Error("كود الخصم غير مفعّل");
+        if (coupon.usedCount >= coupon.maxUses) throw new Error("تم استنفاد كود الخصم");
+        if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+          throw new Error("انتهت صلاحية كود الخصم");
+        }
+
+        discountAmount = (subtotal * coupon.discountPercent) / 100;
+        appliedCouponCode = coupon.code;
+
+        await tx
+          .update(coupons)
+          .set({ usedCount: coupon.usedCount + 1 })
+          .where(eq(coupons.id, coupon.id));
+      }
+
+      const afterDiscount = Math.max(0, subtotal - discountAmount);
+
+      // التوصيل بينضاف للمستحق بس ما بيدخل باحتساب فرص السحب
+      const deliveryFee = DEFAULT_DELIVERY_FEE;
+      const payable = afterDiscount + deliveryFee;
+
+      // المحفظة — المبلغ بينحسب بالسيرفر، مو من العميل
+      let walletAmount = 0;
+      if (payload.useWallet) {
+        const [user] = await tx
+          .select({ walletBalance: users.walletBalance })
+          .from(users)
+          .where(eq(users.id, userId))
+          .for("update");
+
+        const balance = parseFloat(user?.walletBalance ?? "0");
+        walletAmount = Math.min(balance, payable);
+
+        if (walletAmount > 0) {
+          await tx
+            .update(users)
+            .set({ walletBalance: sql`${users.walletBalance} - ${walletAmount.toFixed(2)}` })
+            .where(eq(users.id, userId));
+        }
+      }
+
+      const totalDue = Math.max(0, payable - walletAmount);
+
+      const isBankTransfer = payload.paymentMethod === "bank_transfer";
+      const [order] = await tx
+        .insert(orders)
+        .values({
+          userId,
+          subtotal: subtotal.toFixed(2),
+          discountAmount: discountAmount.toFixed(2),
+          deliveryFee: deliveryFee.toFixed(2),
+          walletAmount: walletAmount.toFixed(2),
+          totalAmount: totalDue.toFixed(2),
+          // التذاكر بتنحسب على قيمة البضاعة بعد الخصم، قبل خصم المحفظة
+          ticketEligibleAmount: afterDiscount.toFixed(2),
+          status: "pending",
+          paymentMethod: payload.paymentMethod,
+          paymentStatus: isBankTransfer ? "pending_payment" : "pending_review",
+          shippingFullName: payload.shippingFullName,
+          shippingPhone: payload.shippingPhone,
+          shippingCity: payload.shippingCity,
+          shippingAddress: payload.shippingAddress,
+          shippingCountry: payload.shippingCountry,
+          couponCode: appliedCouponCode,
+        })
+        .returning();
+
+      const insertedItems = await tx
+        .insert(orderItems)
+        .values(lines.map((l) => ({ ...l, orderId: order.id })))
+        .returning();
+
+      // خصم المخزون
+      for (const [productId, quantity] of wanted) {
+        const product = byId.get(productId)!;
+        await tx
+          .update(products)
+          .set({
+            soldCount: product.soldCount + quantity,
+            ...(product.stock !== null ? { stock: product.stock - quantity } : {}),
+          })
+          .where(eq(products.id, productId));
+      }
+
+      if (walletAmount > 0) {
+        await tx.insert(walletTransactions).values({
+          userId,
+          amount: (-walletAmount).toFixed(2),
+          type: "debit",
+          description: `خصم محفظة — طلب ${order.id.slice(0, 8)}`,
+          referenceId: order.id,
+        });
+      }
+
+      return { ...order, items: insertedItems };
+    });
+  }
+
+  /**
+   * بتمنح تذاكر لطلب بعد تأكيد الدفع. idempotent — نداءها مرتين ما بيضاعف.
+   * عدد التذاكر = floor(قيمة البضاعة بعد الخصم ÷ سعر التذكرة).
+   * إذا امتلأت الجولة النشطة، الزيادة بتروح للجولة التالية،
+   * وإذا ما في جولة تالية بتضلّ معلّقة لحدّ ما الأدمن يفتح جولة جديدة.
+   */
+  async awardTicketsForOrder(orderId: string): Promise<{ created: number; drawIds: string[] }> {
+    const order = await this.getOrder(orderId);
+    if (!order) throw new Error("الطلب غير موجود");
+    if (order.ticketsAwarded > 0) return { created: 0, drawIds: [] };
+    if (order.paymentStatus !== "confirmed") return { created: 0, drawIds: [] };
+
+    const eligible = parseFloat(order.ticketEligibleAmount);
+    let activeDraw = await this.getActiveDraw();
+    const ticketPrice = activeDraw
+      ? parseFloat(activeDraw.ticketPrice)
+      : DEFAULT_TICKET_PRICE;
+
+    const totalTickets = ticketPrice > 0 ? Math.floor(eligible / ticketPrice) : 0;
+    if (totalTickets <= 0) {
+      await this.updateOrder(orderId, { ticketsAwarded: 0 });
+      return { created: 0, drawIds: [] };
+    }
+
+    const drawIds: string[] = [];
+    let remaining = totalTickets;
+    let guard = 0;
+
+    while (remaining > 0 && guard++ < 100) {
+      if (!activeDraw) {
+        // ما في جولة مفتوحة — التذاكر بتنخزّن معلّقة
+        await this.createTickets(order.userId, order.id, null, remaining);
+        remaining = 0;
+        break;
+      }
+
+      const capacity = activeDraw.targetTickets - activeDraw.soldTickets;
+      if (capacity <= 0) {
+        await this.updateDraw(activeDraw.id, { status: "ready_to_draw" });
+        activeDraw = await this.activateNextScheduledDraw();
+        continue;
+      }
+
+      const take = Math.min(capacity, remaining);
+      await this.createTickets(order.userId, order.id, activeDraw.id, take);
+
+      const newSold = activeDraw.soldTickets + take;
+      await this.updateDraw(activeDraw.id, {
+        soldTickets: newSold,
+        ...(newSold >= activeDraw.targetTickets ? { status: "ready_to_draw" as const } : {}),
+      });
+
+      if (!drawIds.includes(activeDraw.id)) drawIds.push(activeDraw.id);
+      remaining -= take;
+
+      if (newSold >= activeDraw.targetTickets) {
+        activeDraw = await this.activateNextScheduledDraw();
+      }
+    }
+
+    await this.updateOrder(orderId, { ticketsAwarded: totalTickets });
+    return { created: totalTickets, drawIds };
+  }
+
+  private async createTickets(
+    userId: string,
+    orderId: string,
+    drawId: string | null,
+    quantity: number
+  ): Promise<Ticket[]> {
+    if (quantity <= 0) return [];
+    const values = Array.from({ length: quantity }, () => ({
+      ticketNumber: generateTicketNumber(),
+      userId,
+      orderId,
+      drawId,
+    }));
+    return db.insert(tickets).values(values).returning();
+  }
+
+  /* ================================ الطلبات ================================ */
 
   async getOrdersByUser(userId: string): Promise<Order[]> {
     return db
@@ -376,36 +616,24 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(orders.createdAt));
   }
 
-  async updateOrder(
-    id: string,
-    data: Partial<Order>
-  ): Promise<Order | undefined> {
+  async getOrderItems(orderId: string): Promise<OrderItem[]> {
+    return db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+  }
+
+  async getOrderWithItems(orderId: string): Promise<OrderWithItems | undefined> {
+    const order = await this.getOrder(orderId);
+    if (!order) return undefined;
+    const items = await this.getOrderItems(orderId);
+    return { ...order, items };
+  }
+
+  async updateOrder(id: string, data: Partial<Order>): Promise<Order | undefined> {
     const [updated] = await db
       .update(orders)
       .set(data)
       .where(eq(orders.id, id))
       .returning();
     return updated || undefined;
-  }
-
-  async createTicket(data: {
-    userId: string;
-    campaignId: string;
-    orderId: string;
-    productId?: string;
-  }): Promise<Ticket> {
-    const ticketNumber = generateTicketNumber();
-    const [ticket] = await db
-      .insert(tickets)
-      .values({
-        ticketNumber,
-        userId: data.userId,
-        campaignId: data.campaignId,
-        orderId: data.orderId,
-        productId: data.productId || null,
-      })
-      .returning();
-    return ticket;
   }
 
   async getTicketsByUser(userId: string): Promise<Ticket[]> {
@@ -416,161 +644,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(tickets.createdAt));
   }
 
-  async getTicketsByCampaign(campaignId: string): Promise<Ticket[]> {
-    return db
-      .select()
-      .from(tickets)
-      .where(eq(tickets.campaignId, campaignId))
-      .orderBy(desc(tickets.createdAt));
-  }
-
   async getTicket(id: string): Promise<Ticket | undefined> {
-    const [ticket] = await db
-      .select()
-      .from(tickets)
-      .where(eq(tickets.id, id));
+    const [ticket] = await db.select().from(tickets).where(eq(tickets.id, id));
     return ticket || undefined;
-  }
-
-  async markTicketWinner(id: string): Promise<Ticket | undefined> {
-    const [ticket] = await db
-      .update(tickets)
-      .set({ isWinner: true })
-      .where(eq(tickets.id, id))
-      .returning();
-    return ticket || undefined;
-  }
-
-  async purchaseProduct(
-    userId: string,
-    campaignId: string,
-    quantity: number,
-    paymentMethod: string,
-    shippingData?: { fullName: string; phone: string; city: string; address: string; country?: string },
-    couponCode?: string,
-    productId?: string
-  ): Promise<{ order: Order; tickets: Ticket[] }> {
-    const campaign = await this.getCampaign(campaignId);
-    if (!campaign) throw new Error("Campaign not found");
-    if (campaign.status !== "active") throw new Error("Campaign is not active");
-
-    const products = await this.getCampaignProducts(campaignId);
-    let unitPrice: number;
-    let selectedProduct: CampaignProduct | undefined;
-
-    if (products.length > 0) {
-      if (!productId) throw new Error("Product variant must be selected");
-      selectedProduct = products.find(p => p.id === productId);
-      if (!selectedProduct) throw new Error("Product variant not found");
-
-      const productRemaining = selectedProduct.quantity - selectedProduct.soldQuantity;
-      if (quantity > productRemaining)
-        throw new Error(`فقط ${productRemaining} قطعة متبقية من هذا الموديل`);
-
-      unitPrice = parseFloat(selectedProduct.price);
-    } else {
-      const remaining = campaign.totalQuantity - campaign.soldQuantity;
-      if (quantity > remaining)
-        throw new Error(`Only ${remaining} items remaining`);
-      unitPrice = parseFloat(campaign.productPrice);
-    }
-
-    let totalAmount = unitPrice * quantity;
-    let discountAmount: string | undefined;
-    let appliedCouponCode: string | undefined;
-
-    if (couponCode) {
-      const coupon = await this.validateCoupon(couponCode);
-      const discount = (totalAmount * coupon.discountPercent) / 100;
-      discountAmount = discount.toFixed(2);
-      totalAmount = totalAmount - discount;
-      appliedCouponCode = coupon.code;
-
-      await this.updateCoupon(coupon.id, { usedCount: coupon.usedCount + 1 });
-    }
-
-    const isBankTransfer = paymentMethod === "bank_transfer";
-    const orderStatus = isBankTransfer ? "pending" : "paid";
-    const orderPaymentStatus = isBankTransfer ? "pending_payment" : "confirmed";
-
-    const order = await this.createOrder({
-      userId,
-      campaignId,
-      productId: productId || undefined,
-      quantity,
-      totalAmount: totalAmount.toFixed(2),
-      paymentMethod,
-      status: orderStatus,
-      paymentStatus: orderPaymentStatus,
-      shippingAddress: shippingData?.address,
-      shippingFullName: shippingData?.fullName,
-      shippingPhone: shippingData?.phone,
-      shippingCity: shippingData?.city,
-      shippingCountry: shippingData?.country,
-      couponCode: appliedCouponCode,
-      discountAmount,
-    });
-
-    const createdTickets: Ticket[] = [];
-    for (let i = 0; i < quantity; i++) {
-      const ticket = await this.createTicket({
-        userId,
-        campaignId,
-        orderId: order.id,
-        productId: productId || undefined,
-      });
-      createdTickets.push(ticket);
-    }
-
-    if (selectedProduct && productId) {
-      await this.updateCampaignProduct(productId, {
-        soldQuantity: selectedProduct.soldQuantity + quantity,
-      });
-      await this.syncCampaignAggregates(campaignId);
-    } else {
-      const newSoldQty = campaign.soldQuantity + quantity;
-      const updateData: Partial<Campaign> = { soldQuantity: newSoldQty };
-      if (newSoldQty >= campaign.totalQuantity) {
-        updateData.status = "sold_out";
-      }
-      await this.updateCampaign(campaignId, updateData);
-    }
-
-    return { order, tickets: createdTickets };
-  }
-
-  async drawWinner(
-    campaignId: string
-  ): Promise<{ winner: User; ticket: Ticket } | null> {
-    const campaign = await this.getCampaign(campaignId);
-    if (!campaign) throw new Error("Campaign not found");
-    // Admin can force-draw any campaign regardless of status
-    const campaignTickets = await this.getTicketsByCampaign(campaignId);
-    if (campaignTickets.length === 0) {
-      throw new Error("لا توجد تذاكر في هذه الحملة لإجراء السحب");
-    }
-
-    await this.updateCampaign(campaignId, { status: "drawing" });
-
-    const randomIndex = Math.floor(
-      (parseInt(randomBytes(4).toString("hex"), 16) / 0xffffffff) *
-        campaignTickets.length
-    );
-    const winningTicket = campaignTickets[randomIndex];
-
-    await this.markTicketWinner(winningTicket.id);
-
-    const winner = await this.getUser(winningTicket.userId);
-    if (!winner) throw new Error("Winner user not found");
-
-    await this.updateCampaign(campaignId, {
-      status: "completed",
-      winnerId: winner.id,
-      winnerTicketId: winningTicket.ticketNumber,
-      drawAt: new Date(),
-    });
-
-    return { winner, ticket: winningTicket };
   }
 
   async getAllUsers(): Promise<User[]> {
@@ -595,42 +671,41 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getAllOrders(): Promise<(Order & { username: string; campaignTitle: string })[]> {
-    const result = await db
+  async getAllOrders(): Promise<(Order & { username: string; itemCount: number; summary: string })[]> {
+    const rows = await db
       .select({
-        id: orders.id,
-        userId: orders.userId,
-        campaignId: orders.campaignId,
-        quantity: orders.quantity,
-        totalAmount: orders.totalAmount,
-        status: orders.status,
-        paymentMethod: orders.paymentMethod,
-        paymentStatus: orders.paymentStatus,
-        receiptUrl: orders.receiptUrl,
-        rejectionReason: orders.rejectionReason,
-        shippingStatus: orders.shippingStatus,
-        shippingAddress: orders.shippingAddress,
-        shippingFullName: orders.shippingFullName,
-        shippingPhone: orders.shippingPhone,
-        shippingCity: orders.shippingCity,
-        shippingCountry: orders.shippingCountry,
-        trackingNumber: orders.trackingNumber,
-        couponCode: orders.couponCode,
-        discountAmount: orders.discountAmount,
-        createdAt: orders.createdAt,
+        order: orders,
         username: users.username,
-        campaignTitle: campaigns.title,
       })
       .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
-      .leftJoin(campaigns, eq(orders.campaignId, campaigns.id))
       .orderBy(desc(orders.createdAt));
 
-    return result.map((row) => ({
-      ...row,
-      username: row.username || "Unknown",
-      campaignTitle: row.campaignTitle || "Unknown",
-    }));
+    if (rows.length === 0) return [];
+
+    const items = await db
+      .select()
+      .from(orderItems)
+      .where(inArray(orderItems.orderId, rows.map((r) => r.order.id)));
+
+    const itemsByOrder = new Map<string, OrderItem[]>();
+    for (const item of items) {
+      const list = itemsByOrder.get(item.orderId) ?? [];
+      list.push(item);
+      itemsByOrder.set(item.orderId, list);
+    }
+
+    return rows.map(({ order, username }) => {
+      const orderItemList = itemsByOrder.get(order.id) ?? [];
+      const itemCount = orderItemList.reduce((s, i) => s + i.quantity, 0);
+      const names = orderItemList.map((i) => `${i.productName} ×${i.quantity}`);
+      return {
+        ...order,
+        username: username || "Unknown",
+        itemCount,
+        summary: names.length > 0 ? names.join("، ") : "—",
+      };
+    });
   }
 
   async getOrder(id: string): Promise<Order | undefined> {
@@ -771,30 +846,33 @@ export class DatabaseStorage implements IStorage {
     totalRevenue: string;
     totalOrders: number;
     totalUsers: number;
-    activeCampaigns: number;
+    activeProducts: number;
     ordersToday: number;
     newUsersThisWeek: number;
     conversionRate: string;
     averageOrderValue: string;
-    topCampaigns: { title: string; soldQuantity: number }[];
+    pendingReviewOrders: number;
+    ticketsInActiveDraw: number;
+    activeDraw: Draw | null;
+    topProducts: { name: string; soldCount: number }[];
   }> {
     const [revenueResult] = await db
       .select({ total: sum(orders.totalAmount) })
       .from(orders)
-      .where(eq(orders.status, "paid"));
+      .where(eq(orders.paymentStatus, "confirmed"));
 
-    const [ordersResult] = await db
-      .select({ total: count() })
-      .from(orders);
+    const [ordersResult] = await db.select({ total: count() }).from(orders);
+    const [usersResult] = await db.select({ total: count() }).from(users);
 
-    const [usersResult] = await db
+    const [activeProductsResult] = await db
       .select({ total: count() })
-      .from(users);
+      .from(products)
+      .where(eq(products.isActive, true));
 
-    const [activeCampaignsResult] = await db
+    const [pendingResult] = await db
       .select({ total: count() })
-      .from(campaigns)
-      .where(eq(campaigns.status, "active"));
+      .from(orders)
+      .where(eq(orders.paymentStatus, "pending_review"));
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -810,34 +888,36 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .where(gte(users.createdAt, weekAgo));
 
-    const topCampaigns = await db
-      .select({ title: campaigns.title, soldQuantity: campaigns.soldQuantity })
-      .from(campaigns)
-      .orderBy(desc(campaigns.soldQuantity))
+    const topProducts = await db
+      .select({ name: products.name, soldCount: products.soldCount })
+      .from(products)
+      .orderBy(desc(products.soldCount))
       .limit(5);
+
+    const activeDraw = (await this.getCurrentDraw()) ?? null;
 
     const totalOrdersCount = ordersResult?.total || 0;
     const totalUsersCount = usersResult?.total || 0;
     const totalRevenueNum = parseFloat(revenueResult?.total || "0");
 
-    const conversionRate = totalUsersCount > 0
-      ? ((totalOrdersCount / totalUsersCount) * 100).toFixed(1)
-      : "0.0";
-
-    const averageOrderValue = totalOrdersCount > 0
-      ? (totalRevenueNum / totalOrdersCount).toFixed(2)
-      : "0.00";
+    const conversionRate =
+      totalUsersCount > 0 ? ((totalOrdersCount / totalUsersCount) * 100).toFixed(1) : "0.0";
+    const averageOrderValue =
+      totalOrdersCount > 0 ? (totalRevenueNum / totalOrdersCount).toFixed(2) : "0.00";
 
     return {
       totalRevenue: revenueResult?.total || "0.00",
       totalOrders: totalOrdersCount,
       totalUsers: totalUsersCount,
-      activeCampaigns: activeCampaignsResult?.total || 0,
+      activeProducts: activeProductsResult?.total || 0,
       ordersToday: ordersTodayResult?.total || 0,
       newUsersThisWeek: newUsersResult?.total || 0,
       conversionRate,
       averageOrderValue,
-      topCampaigns,
+      pendingReviewOrders: pendingResult?.total || 0,
+      ticketsInActiveDraw: activeDraw?.soldTickets ?? 0,
+      activeDraw,
+      topProducts,
     };
   }
 
@@ -852,35 +932,44 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getReviewsByCampaign(campaignId: string): Promise<(Review & { username: string })[]> {
-    const result = await db.select({
-      id: reviews.id,
-      userId: reviews.userId,
-      campaignId: reviews.campaignId,
-      rating: reviews.rating,
-      comment: reviews.comment,
-      createdAt: reviews.createdAt,
-      username: users.username,
-    }).from(reviews)
+  async getReviewsByProduct(productId: string): Promise<(Review & { username: string })[]> {
+    return db
+      .select({
+        id: reviews.id,
+        userId: reviews.userId,
+        productId: reviews.productId,
+        rating: reviews.rating,
+        comment: reviews.comment,
+        createdAt: reviews.createdAt,
+        username: users.username,
+      })
+      .from(reviews)
       .innerJoin(users, eq(reviews.userId, users.id))
-      .where(eq(reviews.campaignId, campaignId))
+      .where(eq(reviews.productId, productId))
       .orderBy(desc(reviews.createdAt));
-    return result;
   }
 
-  async createReview(userId: string, data: { campaignId: string; rating: number; comment?: string }): Promise<Review> {
-    const [review] = await db.insert(reviews).values({
-      userId,
-      campaignId: data.campaignId,
-      rating: data.rating,
-      comment: data.comment || null,
-    }).returning();
+  async createReview(
+    userId: string,
+    data: { productId: string; rating: number; comment?: string }
+  ): Promise<Review> {
+    const [review] = await db
+      .insert(reviews)
+      .values({
+        userId,
+        productId: data.productId,
+        rating: data.rating,
+        comment: data.comment || null,
+      })
+      .returning();
     return review;
   }
 
-  async getUserReviewForCampaign(userId: string, campaignId: string): Promise<Review | undefined> {
-    const [review] = await db.select().from(reviews)
-      .where(and(eq(reviews.userId, userId), eq(reviews.campaignId, campaignId)));
+  async getUserReviewForProduct(userId: string, productId: string): Promise<Review | undefined> {
+    const [review] = await db
+      .select()
+      .from(reviews)
+      .where(and(eq(reviews.userId, userId), eq(reviews.productId, productId)));
     return review || undefined;
   }
 
@@ -1020,26 +1109,26 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  async createUserNotification(userId: string, type: string, title: string, body: string, campaignId?: string, metadata?: string): Promise<UserNotification> {
+  async createUserNotification(userId: string, type: string, title: string, body: string, drawId?: string, metadata?: string): Promise<UserNotification> {
     const [notification] = await db.insert(userNotifications).values({
       userId,
       type,
       title,
       body,
-      campaignId: campaignId || null,
+      drawId: drawId || null,
       metadata: metadata || null,
     }).returning();
     return notification;
   }
 
-  async createBulkUserNotifications(userIds: string[], type: string, title: string, body: string, campaignId?: string, metadata?: string): Promise<void> {
+  async createBulkUserNotifications(userIds: string[], type: string, title: string, body: string, drawId?: string, metadata?: string): Promise<void> {
     if (userIds.length === 0) return;
     const values = userIds.map((userId) => ({
       userId,
       type,
       title,
       body,
-      campaignId: campaignId || null,
+      drawId: drawId || null,
       metadata: metadata || null,
     }));
     await db.insert(userNotifications).values(values);
@@ -1176,22 +1265,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  async getRecentPurchases(limit: number = 5): Promise<{ campaignTitle: string; minutesAgo: number }[]> {
-    const recentOrders = await db
+  async getRecentPurchases(limit: number = 5): Promise<{ productName: string; minutesAgo: number }[]> {
+    const rows = await db
       .select({
-        campaignTitle: campaigns.title,
+        productName: orderItems.productName,
         createdAt: orders.createdAt,
       })
-      .from(orders)
-      .innerJoin(campaigns, eq(orders.campaignId, campaigns.id))
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
       .where(eq(orders.paymentStatus, "confirmed"))
       .orderBy(desc(orders.createdAt))
       .limit(limit);
 
-    return recentOrders.map((o) => {
-      const minutesAgo = Math.max(1, Math.floor((Date.now() - new Date(o.createdAt!).getTime()) / 60000));
-      return { campaignTitle: o.campaignTitle, minutesAgo };
-    });
+    return rows.map((o) => ({
+      productName: o.productName,
+      minutesAgo: Math.max(1, Math.floor((Date.now() - new Date(o.createdAt!).getTime()) / 60000)),
+    }));
   }
 
   async deleteUser(userId: string): Promise<boolean> {
@@ -1201,6 +1290,10 @@ export class DatabaseStorage implements IStorage {
     await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
     await db.delete(reviews).where(eq(reviews.userId, userId));
     await db.delete(tickets).where(eq(tickets.userId, userId));
+    const userOrders = await db.select({ id: orders.id }).from(orders).where(eq(orders.userId, userId));
+    if (userOrders.length > 0) {
+      await db.delete(orderItems).where(inArray(orderItems.orderId, userOrders.map((o) => o.id)));
+    }
     await db.delete(orders).where(eq(orders.userId, userId));
     const result = await db.delete(users).where(eq(users.id, userId));
     return (result?.rowCount ?? 0) > 0;
@@ -1267,3 +1360,4 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+

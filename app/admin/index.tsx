@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,33 +6,29 @@ import {
   StyleSheet,
   Pressable,
   Platform,
+  useWindowDimensions,
   ActivityIndicator,
-  Alert,
   TextInput,
   Modal,
   FlatList,
   Switch,
   Image,
 } from "react-native";
+import { Alert } from "@/lib/alert";
 import { router } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import Colors from "@/constants/colors";
+import { Logo, StatTile, StatusBadge } from "@/components/ui";
+import { parseProductSpecs } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
 
-type AdminTab = "dashboard" | "orders" | "users" | "campaigns" | "payments" | "coupons" | "notifications" | "activity" | "support" | "settings";
+type AdminTab = "dashboard" | "orders" | "users" | "products" | "draws" | "payments" | "coupons" | "notifications" | "activity" | "support" | "settings";
 
 const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "dashboard", label: "الرئيسية", icon: "grid" },
@@ -40,7 +36,8 @@ const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "orders", label: "الطلبات", icon: "receipt" },
   { key: "support", label: "تذاكر الدعم", icon: "chatbubbles" },
   { key: "users", label: "المستخدمين", icon: "people" },
-  { key: "campaigns", label: "الحملات", icon: "megaphone" },
+  { key: "products", label: "المنتجات", icon: "cube" },
+  { key: "draws", label: "جولات السحب", icon: "gift" },
   { key: "payments", label: "الدفع", icon: "card" },
   { key: "coupons", label: "الكوبونات", icon: "pricetag" },
   { key: "activity", label: "السجل", icon: "time" },
@@ -51,24 +48,13 @@ export default function AdminPanel() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
-  const tabOpacity = useSharedValue(1);
-  const tabTranslateY = useSharedValue(0);
-
-  const tabContentStyle = useAnimatedStyle(() => ({
-    opacity: tabOpacity.value,
-    transform: [{ translateY: tabTranslateY.value }],
-  }));
+  const { width } = useWindowDimensions();
+  /** القائمة الجانبية على الشاشات العريضة، وشريط أفقي على الجوال */
+  const wideLayout = width >= 900;
 
   const switchTab = (tab: AdminTab) => {
-    tabOpacity.value = withTiming(0, { duration: 120, easing: Easing.in(Easing.ease) }, () => {
-      tabTranslateY.value = 8;
-    });
-    setTimeout(() => {
-      setActiveTab(tab);
-      tabOpacity.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) });
-      tabTranslateY.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.ease) });
-    }, 130);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setActiveTab(tab);
   };
 
   if (!user || user.role !== "admin") {
@@ -82,45 +68,218 @@ export default function AdminPanel() {
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <LinearGradient colors={["#7C3AED", "#A855F7", "#EC4899"]} style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} style={styles.headerBackBtn}>
-            <Ionicons name="arrow-forward" size={24} color="#fff" />
-          </Pressable>
-          <Text style={styles.headerTitle}>لوحة التحكم</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRow}>
-          {TABS.map((tab) => (
+  const activeLabel = TABS.find((t) => t.key === activeTab)?.label ?? "";
+
+  const Sidebar = (
+    <View style={[shell.sidebar, { paddingTop: Platform.OS === "web" ? 24 : insets.top + 16 }]}>
+      <View style={shell.sidebarBrand}>
+        <Logo onNavy size={26} />
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={shell.sidebarNav}>
+        {TABS.map((tab) => {
+          const active = activeTab === tab.key;
+          return (
             <Pressable
               key={tab.key}
               onPress={() => switchTab(tab.key)}
-              style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              style={[shell.sideItem, active && shell.sideItemActive]}
             >
-              <Ionicons name={tab.icon as any} size={18} color={activeTab === tab.key ? Colors.light.accent : "rgba(255,255,255,0.5)"} />
-              <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+              <Ionicons
+                name={tab.icon as any}
+                size={20}
+                color={active ? "#FFFFFF" : "rgba(255,255,255,0.65)"}
+              />
+              <Text style={[shell.sideLabel, active && shell.sideLabelActive]}>{tab.label}</Text>
             </Pressable>
-          ))}
-        </ScrollView>
-      </LinearGradient>
+          );
+        })}
+      </ScrollView>
 
-      <Animated.View style={[styles.content, tabContentStyle]}>
-        {activeTab === "dashboard" && <DashboardSection />}
+      <Pressable onPress={() => router.back()} style={shell.sideExit}>
+        <Ionicons name="exit-outline" size={19} color="rgba(255,255,255,0.65)" />
+        <Text style={shell.sideLabel}>رجوع للتطبيق</Text>
+      </Pressable>
+    </View>
+  );
+
+  const Body = (
+    <View style={shell.main}>
+      {!wideLayout && (
+        <View style={[shell.mobileBar, { paddingTop: Platform.OS === "web" ? 20 : insets.top + 8 }]}>
+          <View style={shell.mobileBarTop}>
+            <Pressable onPress={() => router.back()} hitSlop={8} style={shell.mobileBack}>
+              <Ionicons name="chevron-back" size={24} color={Colors.light.navy} />
+            </Pressable>
+            <Text style={shell.mobileTitle}>لوحة الإدارة</Text>
+            <Logo />
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={shell.mobileTabs}
+          >
+            {TABS.map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <Pressable
+                  key={tab.key}
+                  onPress={() => switchTab(tab.key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  style={[shell.mobileTab, active && shell.mobileTabActive]}
+                >
+                  <Ionicons
+                    name={tab.icon as any}
+                    size={17}
+                    color={active ? "#FFFFFF" : Colors.light.textSecondary}
+                  />
+                  <Text style={[shell.mobileTabText, active && shell.mobileTabTextActive]}>
+                    {tab.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {wideLayout && (
+        <View style={shell.desktopHead}>
+          <Text style={shell.desktopTitle}>{activeLabel}</Text>
+          <Text style={shell.desktopSub}>إدارة المنصة ومتابعة الأداء في NAYVO</Text>
+        </View>
+      )}
+
+      <View style={styles.content}>
+        {activeTab === "dashboard" && <DashboardSection wide={wideLayout} onNavigate={switchTab} />}
         {activeTab === "notifications" && <NotificationsSection />}
         {activeTab === "orders" && <OrdersSection />}
         {activeTab === "users" && <UsersSection />}
-        {activeTab === "campaigns" && <CampaignsSection />}
+        {activeTab === "products" && <ProductsSection />}
+        {activeTab === "draws" && <DrawsSection />}
         {activeTab === "payments" && <PaymentsSection />}
         {activeTab === "coupons" && <CouponsSection />}
         {activeTab === "support" && <SupportTicketsSection />}
         {activeTab === "activity" && <ActivitySection />}
         {activeTab === "settings" && <AccountSettingsSection />}
-      </Animated.View>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={[styles.container, wideLayout && shell.wideRow]}>
+      {wideLayout && Sidebar}
+      {Body}
     </View>
   );
 }
+
+const shell = StyleSheet.create({
+  wideRow: { flexDirection: "row" },
+
+  sidebar: {
+    width: 232,
+    backgroundColor: Colors.light.navy,
+    paddingHorizontal: 12,
+    paddingBottom: 16,
+  },
+  sidebarBrand: { alignItems: "center", paddingVertical: 20 },
+  sidebarNav: { gap: 4, paddingBottom: 16 },
+  sideItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
+  },
+  sideItemActive: { backgroundColor: Colors.light.primary },
+  sideLabel: {
+    flex: 1,
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 15,
+    color: "rgba(255,255,255,0.65)",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  sideLabelActive: { color: "#FFFFFF", fontFamily: "Tajawal_700Bold" },
+  sideExit: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.15)",
+  },
+
+  main: { flex: 1, backgroundColor: Colors.light.background },
+
+  mobileBar: {
+    backgroundColor: "#FFFFFF",
+    paddingBottom: 12,
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.light.border,
+  },
+  mobileBarTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+  },
+  mobileBack: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
+  mobileTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 17,
+    color: Colors.light.navy,
+    writingDirection: "rtl",
+  },
+  mobileTabs: { paddingHorizontal: 16, gap: 8 },
+  mobileTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: Colors.light.background,
+  },
+  mobileTabActive: { backgroundColor: Colors.light.primary },
+  mobileTabText: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+  mobileTabTextActive: { color: "#FFFFFF" },
+
+  desktopHead: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 4,
+    gap: 2,
+  },
+  desktopTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 24,
+    color: Colors.light.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  desktopSub: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+});
 
 function SalesChart() {
   const { data: chartData } = useQuery<{ date: string; total: string; count: number }[]>({
@@ -191,49 +350,386 @@ function SalesChart() {
   );
 }
 
-function DashboardSection() {
+/** حالة الطلب كما تظهر في جدول لوحة الإدارة */
+function orderRowState(order: any): { label: string; kind: "success" | "warning" | "error" | "info" } {
+  if (order.paymentStatus === "rejected") return { label: "مرفوض", kind: "error" };
+  if (order.paymentStatus !== "confirmed") return { label: "قيد التأكيد", kind: "warning" };
+  if (order.shippingStatus === "delivered") return { label: "مكتمل", kind: "success" };
+  if (order.shippingStatus === "cancelled") return { label: "ملغي", kind: "error" };
+  return { label: "قيد التنفيذ", kind: "info" };
+}
+
+function DashboardSection({
+  wide,
+  onNavigate,
+}: {
+  wide: boolean;
+  onNavigate: (tab: AdminTab) => void;
+}) {
   const { data: stats, isLoading } = useQuery<any>({
     queryKey: ["/api/admin/dashboard"],
     refetchInterval: 10000,
   });
 
+  const { data: orders } = useQuery<any[]>({
+    queryKey: ["/api/admin/orders"],
+    refetchInterval: 15000,
+  });
+
   if (isLoading) return <LoadingView />;
 
+  const draw = stats?.activeDraw ?? null;
+  const soldTickets = draw?.soldTickets ?? 0;
+  const targetTickets = draw?.targetTickets ?? 0;
+  const remaining = Math.max(0, targetTickets - soldTickets);
+  const progress = targetTickets > 0 ? Math.min(soldTickets / targetTickets, 1) : 0;
+  const recentOrders = (orders ?? []).slice(0, 5);
+
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sectionPadding}>
-      <Text style={styles.sectionTitle}>نظرة عامة</Text>
-      <View style={styles.statsGrid}>
-        <StatCard icon="cash" label="إجمالي الإيرادات" value={`${stats?.totalRevenue || "0"} $`} color="#9B59B6" />
-        <StatCard icon="receipt" label="إجمالي الطلبات" value={stats?.totalOrders?.toString() || "0"} color="#3498DB" />
-        <StatCard icon="people" label="المستخدمين" value={stats?.totalUsers?.toString() || "0"} color="#2ECC71" />
-        <StatCard icon="flame" label="حملات نشطة" value={stats?.activeCampaigns?.toString() || "0"} color={Colors.light.accent} />
-        <StatCard icon="today" label="طلبات اليوم" value={stats?.ordersToday?.toString() || "0"} color="#E74C3C" />
-        <StatCard icon="person-add" label="مستخدمين جدد (أسبوع)" value={stats?.newUsersThisWeek?.toString() || "0"} color="#1ABC9C" />
-        <StatCard icon="trending-up" label="معدل التحويل" value={`${stats?.conversionRate || "0"}%`} color="#E67E22" />
-        <StatCard icon="cart" label="متوسط قيمة الطلب" value={`${stats?.averageOrderValue || "0"} $`} color="#8E44AD" />
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={dash.content}>
+      {!wide && (
+        <View style={dash.mobileHead}>
+          <View style={dash.demoBadge}>
+            <Ionicons name="server-outline" size={13} color={Colors.light.textSecondary} />
+            <Text style={dash.demoText}>بيانات مباشرة</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={dash.mobileTitle}>لوحة الإدارة</Text>
+            <Text style={dash.mobileSub}>إدارة المنصة ومتابعة الأداء في NAYVO</Text>
+          </View>
+        </View>
+      )}
+
+      {/* ───── بطاقات الأرقام ───── */}
+      <View style={dash.statsGrid}>
+        <StatTile
+          icon="bar-chart"
+          tone="primary"
+          value={`$${stats?.totalRevenue ?? "0"}`}
+          label="المبيعات"
+          style={wide ? dash.statWide : dash.statNarrow}
+        />
+        <StatTile
+          icon="ticket"
+          tone="success"
+          value={soldTickets}
+          label="الفرص المؤكدة"
+          style={wide ? dash.statWide : dash.statNarrow}
+        />
+        <StatTile
+          icon="trophy"
+          tone="navy"
+          value={remaining}
+          label="المتبقي للسحب"
+          style={wide ? dash.statWide : dash.statNarrow}
+        />
+        <StatTile
+          icon="cart"
+          tone="warning"
+          value={stats?.pendingReviewOrders ?? 0}
+          label="طلبات بانتظار التأكيد"
+          style={wide ? dash.statWide : dash.statNarrow}
+        />
+      </View>
+
+      <View style={[dash.panels, wide && dash.panelsWide]}>
+        {/* ───── أحدث الطلبات ───── */}
+        <View style={[dash.panel, wide && dash.panelGrow]}>
+          <View style={dash.panelHead}>
+            <Pressable onPress={() => onNavigate("orders")} hitSlop={8} accessibilityRole="button">
+              <Text style={dash.panelLink}>عرض الكل ‹</Text>
+            </Pressable>
+            <Text style={dash.panelTitle}>أحدث الطلبات</Text>
+          </View>
+
+          <View style={dash.tableHead}>
+            <Text style={[dash.th, dash.colDate]}>التاريخ</Text>
+            <Text style={[dash.th, dash.colState]}>الحالة</Text>
+            {wide && <Text style={[dash.th, dash.colPay]}>الدفع</Text>}
+            <Text style={[dash.th, dash.colAmount]}>القيمة</Text>
+            <Text style={[dash.th, dash.colId]}>الطلب</Text>
+          </View>
+
+          {recentOrders.length === 0 ? (
+            <Text style={dash.emptyRow}>ما في طلبات بعد</Text>
+          ) : (
+            recentOrders.map((o) => {
+              const state = orderRowState(o);
+              return (
+                <View key={o.id} style={dash.tr}>
+                  <Text style={[dash.td, dash.colDate]}>
+                    {new Date(o.createdAt).toLocaleDateString("en-GB")}
+                  </Text>
+                  <View style={dash.colState}>
+                    <StatusBadge kind={state.kind} label={state.label} />
+                  </View>
+                  {wide && (
+                    <Text style={[dash.td, dash.colPay]} numberOfLines={1}>
+                      {o.paymentMethod || "—"}
+                    </Text>
+                  )}
+                  <Text style={[dash.td, dash.colAmount, dash.tdStrong]}>
+                    ${parseFloat(o.totalAmount).toFixed(0)}
+                  </Text>
+                  <Text style={[dash.td, dash.colId, dash.tdStrong]}>#{o.id.slice(0, 6)}</Text>
+                </View>
+              );
+            })
+          )}
+        </View>
+
+        {/* ───── السحب الحالي ───── */}
+        <View style={[dash.panel, wide && dash.panelSide]}>
+          <View style={dash.panelHead}>
+            <Ionicons name="ellipsis-horizontal" size={18} color={Colors.light.textMuted} />
+            <Text style={dash.panelTitle}>السحب الحالي</Text>
+          </View>
+
+          {draw ? (
+            <>
+              <View style={dash.drawRow}>
+                <View style={dash.drawImage}>
+                  {draw.prizeImageUrl ? (
+                    <Image
+                      source={{ uri: buildMediaUrl(draw.prizeImageUrl)! }}
+                      style={{ width: "100%", height: "100%" }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Ionicons name="trophy" size={28} color={Colors.light.gold} />
+                  )}
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={dash.drawTitle}>{draw.title}</Text>
+                  <Text style={dash.drawPrize}>الجائزة: {draw.prizeName}</Text>
+                </View>
+              </View>
+
+              <View style={dash.progressRow}>
+                <Text style={dash.progressPercent}>{(progress * 100).toFixed(1)}%</Text>
+                <View style={dash.progressTrack}>
+                  <View style={[dash.progressFill, { width: `${Math.max(progress * 100, 2)}%` }]} />
+                </View>
+              </View>
+
+              <Text style={dash.drawCount}>
+                {soldTickets} من {targetTickets} فرصة
+              </Text>
+
+              <Pressable
+                onPress={() => onNavigate("draws")}
+                accessibilityRole="button"
+                style={dash.drawBtn}
+              >
+                <Ionicons name="settings-outline" size={17} color="#FFFFFF" />
+                <Text style={dash.drawBtnText}>إدارة السحب</Text>
+              </Pressable>
+            </>
+          ) : (
+            <View style={dash.noDraw}>
+              <Ionicons name="gift-outline" size={34} color={Colors.light.border} />
+              <Text style={dash.noDrawText}>ما في سحب مفتوح</Text>
+              <Pressable onPress={() => onNavigate("draws")} style={dash.drawBtn}>
+                <Ionicons name="add" size={17} color="#FFFFFF" />
+                <Text style={dash.drawBtnText}>إنشاء جولة</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
       </View>
 
       <SalesChart />
 
-      {stats?.topCampaigns && stats.topCampaigns.length > 0 && (
-        <>
-          <Text style={[styles.sectionTitle, { marginTop: 24 }]}>أفضل الحملات مبيعاً</Text>
-          {stats.topCampaigns.map((c: any, i: number) => (
+      {stats?.topProducts && stats.topProducts.length > 0 && (
+        <View style={dash.panel}>
+          <Text style={dash.panelTitle}>أفضل المنتجات مبيعاً</Text>
+          {stats.topProducts.map((p: any, i: number) => (
             <View key={i} style={styles.topCampaignItem}>
               <View style={styles.topCampaignRank}>
                 <Text style={styles.topCampaignRankText}>{i + 1}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.topCampaignTitle}>{c.title}</Text>
-                <Text style={styles.topCampaignSub}>{c.soldQuantity} مبيعات</Text>
+                <Text style={styles.topCampaignTitle}>{p.name}</Text>
+                <Text style={styles.topCampaignSub}>{p.soldCount} مبيعات</Text>
               </View>
             </View>
           ))}
-        </>
+        </View>
       )}
     </ScrollView>
   );
 }
+
+const dash = StyleSheet.create({
+  content: { padding: 16, gap: 16 },
+
+  mobileHead: { flexDirection: "row", alignItems: "center", gap: 12 },
+  mobileTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 20,
+    color: Colors.light.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  mobileSub: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  demoBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.light.border,
+  },
+  demoText: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 11,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  statWide: { minWidth: 210 },
+  statNarrow: { minWidth: "45%" },
+
+  panels: { gap: 16 },
+  panelsWide: { flexDirection: "row", alignItems: "flex-start" },
+  panel: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.light.border,
+  },
+  panelGrow: { flex: 2 },
+  panelSide: { flex: 1, minWidth: 280 },
+  panelHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  panelTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 16,
+    color: Colors.light.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  panelLink: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 13,
+    color: Colors.light.primary,
+    writingDirection: "rtl",
+  },
+
+  tableHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.light.border,
+  },
+  th: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 12,
+    color: Colors.light.textMuted,
+    writingDirection: "rtl",
+  },
+  tr: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.light.borderSubtle,
+  },
+  td: { fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary },
+  tdStrong: { fontFamily: "Tajawal_700Bold", color: Colors.light.navy },
+  colDate: { width: 86, textAlign: "left", writingDirection: "ltr" },
+  colState: { width: 104, alignItems: "flex-start" },
+  colPay: { flex: 1, textAlign: "right", writingDirection: "rtl" },
+  colAmount: { width: 62, textAlign: "right" },
+  colId: { width: 66, textAlign: "right", writingDirection: "ltr" },
+  emptyRow: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 13,
+    color: Colors.light.textMuted,
+    textAlign: "center",
+    writingDirection: "rtl",
+    paddingVertical: 20,
+  },
+
+  drawRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  drawImage: {
+    width: 62,
+    height: 78,
+    borderRadius: 12,
+    backgroundColor: Colors.light.background,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  drawTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 17,
+    color: Colors.light.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  drawPrize: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  progressRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  progressPercent: { fontFamily: "Tajawal_700Bold", fontSize: 13, color: Colors.light.primary },
+  progressTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: Colors.light.borderSubtle,
+    overflow: "hidden",
+  },
+  progressFill: { height: "100%", borderRadius: 999, backgroundColor: Colors.light.primary },
+  drawCount: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  drawBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: Colors.light.primary,
+  },
+  drawBtnText: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 15,
+    color: "#FFFFFF",
+    writingDirection: "rtl",
+  },
+  noDraw: { alignItems: "center", gap: 12, paddingVertical: 20 },
+  noDrawText: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+    writingDirection: "rtl",
+  },
+});
 
 function OrdersSection() {
   const { data: orders, isLoading } = useQuery<any[]>({
@@ -275,8 +771,8 @@ function OrdersSection() {
     return map[s] || s;
   };
   const getShippingColor = (s: string) => {
-    const map: Record<string, string> = { pending: "#F39C12", processing: "#3498DB", shipped: "#9B59B6", delivered: "#2ECC71", cancelled: "#E74C3C" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { pending: "#B54708", processing: "#175CD3", shipped: "#164A9E", delivered: "#067647", cancelled: "#B42318" };
+    return map[s] || "#475467";
   };
   const getOrderStatusAr = (s: string) => {
     const map: Record<string, string> = { pending: "معلق", paid: "مدفوع", failed: "فشل", refunded: "مسترد" };
@@ -287,8 +783,8 @@ function OrdersSection() {
     return map[s] || s;
   };
   const getPaymentColor = (s: string) => {
-    const map: Record<string, string> = { pending_payment: "#F39C12", pending_review: "#3498DB", confirmed: "#2ECC71", rejected: "#E74C3C" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { pending_payment: "#B54708", pending_review: "#175CD3", confirmed: "#067647", rejected: "#B42318" };
+    return map[s] || "#475467";
   };
 
   return (
@@ -310,12 +806,12 @@ function OrdersSection() {
                     } else {
                       Alert.alert("تصدير CSV", "التصدير متاح عبر المتصفح فقط حالياً");
                     }
-                  } catch (e) {}
+                  } catch {}
                 }}
-                style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#2ECC7115", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#06764715", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
               >
-                <Ionicons name="download-outline" size={16} color="#2ECC71" />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#2ECC71" }}>CSV</Text>
+                <Ionicons name="download-outline" size={16} color="#067647" />
+                <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: "#067647" }}>CSV</Text>
               </Pressable>
             </View>
           </View>
@@ -335,12 +831,12 @@ function OrdersSection() {
             </View>
             <View style={styles.orderRow}>
               <Ionicons name="megaphone" size={14} color={Colors.light.textSecondary} />
-              <Text style={styles.orderDetailText}>{item.campaignTitle || "حملة"}</Text>
+              <Text style={styles.orderDetailText} numberOfLines={2}>{item.summary || "—"}</Text>
             </View>
             <View style={styles.orderFooter}>
               <Text style={styles.orderAmount}>{item.totalAmount} $</Text>
-              <View style={[styles.statusPill, { backgroundColor: item.status === "paid" ? "#2ECC7120" : "#F39C1220" }]}>
-                <Text style={[styles.statusPillText, { color: item.status === "paid" ? "#2ECC71" : "#F39C12" }]}>{getOrderStatusAr(item.status)}</Text>
+              <View style={[styles.statusPill, { backgroundColor: item.status === "paid" ? "#06764720" : "#B5470820" }]}>
+                <Text style={[styles.statusPillText, { color: item.status === "paid" ? "#067647" : "#B54708" }]}>{getOrderStatusAr(item.status)}</Text>
               </View>
               {item.paymentStatus && (
                 <View style={[styles.statusPill, { backgroundColor: getPaymentColor(item.paymentStatus) + "20" }]}>
@@ -385,8 +881,8 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
     return map[s] || s;
   };
   const getPaymentColor = (s: string) => {
-    const map: Record<string, string> = { pending_payment: "#F39C12", pending_review: "#3498DB", confirmed: "#2ECC71", rejected: "#E74C3C" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { pending_payment: "#B54708", pending_review: "#175CD3", confirmed: "#067647", rejected: "#B42318" };
+    return map[s] || "#475467";
   };
 
   const statuses = [
@@ -564,12 +1060,12 @@ function UsersSection() {
                 } else {
                   Alert.alert("تصدير CSV", "التصدير متاح عبر المتصفح فقط حالياً");
                 }
-              } catch (e) {}
+              } catch {}
             }}
-            style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#2ECC7115", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#06764715", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
           >
-            <Ionicons name="download-outline" size={16} color="#2ECC71" />
-            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#2ECC71" }}>CSV</Text>
+            <Ionicons name="download-outline" size={16} color="#067647" />
+            <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: "#067647" }}>CSV</Text>
           </Pressable>
         </View>
       }
@@ -586,10 +1082,10 @@ function UsersSection() {
                 <View style={styles.adminPill}><Text style={styles.adminPillText}>أدمن</Text></View>
               )}
               {item.emailVerified ? (
-                <View style={styles.verifiedPill}><Ionicons name="checkmark-circle" size={12} color="#10B981" /><Text style={styles.verifiedPillText}>مفعّل</Text></View>
+                <View style={styles.verifiedPill}><Ionicons name="checkmark-circle" size={12} color="#067647" /><Text style={styles.verifiedPillText}>مفعّل</Text></View>
               ) : (
                 <Pressable onPress={() => handleVerify(item.id, item.username)} style={styles.unverifiedPill}>
-                  <Ionicons name="close-circle" size={12} color="#EF4444" />
+                  <Ionicons name="close-circle" size={12} color="#B42318" />
                   <Text style={styles.unverifiedPillText}>تفعيل</Text>
                 </Pressable>
               )}
@@ -638,16 +1134,16 @@ function SupportTicketsSection() {
     return map[s] || s;
   };
   const getStatusColor = (s: string) => {
-    const map: Record<string, string> = { open: "#F39C12", in_progress: "#3498DB", closed: "#2ECC71" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { open: "#B54708", in_progress: "#175CD3", closed: "#067647" };
+    return map[s] || "#475467";
   };
   const getPriorityAr = (s: string) => {
     const map: Record<string, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية" };
     return map[s] || s;
   };
   const getPriorityColor = (s: string) => {
-    const map: Record<string, string> = { low: "#2ECC71", medium: "#F39C12", high: "#E74C3C" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { low: "#067647", medium: "#B54708", high: "#B42318" };
+    return map[s] || "#475467";
   };
 
   const filters: { key: TicketStatusFilter; label: string }[] = [
@@ -673,13 +1169,13 @@ function SupportTicketsSection() {
               {(openCount > 0 || inProgressCount > 0) && (
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {openCount > 0 && (
-                    <View style={[styles.statusPill, { backgroundColor: "#F39C1220" }]}>
-                      <Text style={[styles.statusPillText, { color: "#F39C12" }]}>{openCount} جديدة</Text>
+                    <View style={[styles.statusPill, { backgroundColor: "#B5470820" }]}>
+                      <Text style={[styles.statusPillText, { color: "#B54708" }]}>{openCount} جديدة</Text>
                     </View>
                   )}
                   {inProgressCount > 0 && (
-                    <View style={[styles.statusPill, { backgroundColor: "#3498DB20" }]}>
-                      <Text style={[styles.statusPillText, { color: "#3498DB" }]}>{inProgressCount} قيد المعالجة</Text>
+                    <View style={[styles.statusPill, { backgroundColor: "#175CD320" }]}>
+                      <Text style={[styles.statusPillText, { color: "#175CD3" }]}>{inProgressCount} قيد المعالجة</Text>
                     </View>
                   )}
                 </View>
@@ -715,8 +1211,8 @@ function SupportTicketsSection() {
                 </View>
               </View>
             </View>
-            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 4 }}>{item.subject}</Text>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 8 }} numberOfLines={2}>{item.message}</Text>
+            <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 4 }}>{item.subject}</Text>
+            <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 8 }} numberOfLines={2}>{item.message}</Text>
             <View style={styles.orderFooter}>
               <View style={styles.orderRow}>
                 <Ionicons name="person" size={14} color={Colors.light.textSecondary} />
@@ -760,17 +1256,13 @@ function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; tic
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
-  const getStatusAr = (s: string) => {
-    const map: Record<string, string> = { open: "مفتوحة", in_progress: "قيد المعالجة", closed: "مغلقة" };
-    return map[s] || s;
-  };
   const getPriorityAr = (s: string) => {
     const map: Record<string, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية" };
     return map[s] || s;
   };
   const getPriorityColor = (s: string) => {
-    const map: Record<string, string> = { low: "#2ECC71", medium: "#F39C12", high: "#E74C3C" };
-    return map[s] || "#666";
+    const map: Record<string, string> = { low: "#067647", medium: "#B54708", high: "#B42318" };
+    return map[s] || "#475467";
   };
 
   const statuses = [
@@ -809,7 +1301,7 @@ function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; tic
 
             <View style={orderMgmtStyles.infoSection}>
               <Text style={orderMgmtStyles.infoSectionTitle}>رسالة المستخدم</Text>
-              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", lineHeight: 22 }}>{ticket.message}</Text>
+              <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", lineHeight: 22 }}>{ticket.message}</Text>
             </View>
 
             <Text style={modalStyles.inputLabel}>حالة التذكرة</Text>
@@ -837,57 +1329,110 @@ function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; tic
   );
 }
 
-function CampaignsSection() {
-  const { data: campaigns, isLoading } = useQuery<any[]>({ queryKey: ["/api/campaigns"] });
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingCampaign, setEditingCampaign] = useState<any>(null);
+/** رفع صورة للسيرفر — مشترك بين نماذج المنتجات والجولات */
+async function uploadAdminImage(imageUri: string | null, imageFile: any): Promise<string | undefined> {
+  if (!imageUri && !imageFile) return undefined;
+  try {
+    const url = new URL("/api/admin/products/upload-image", getApiUrl());
+    const formData = new FormData();
 
-  const drawMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", `/api/admin/draw/${id}`);
+    if (Platform.OS === "web" && imageFile) {
+      formData.append("image", imageFile);
+    } else if (imageUri) {
+      const base64 = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: "base64" as any,
+      });
+      const byteChars = atob(base64);
+      const byteNumbers = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([new Uint8Array(byteNumbers)], { type: "image/jpeg" });
+      formData.append("image", blob, "image.jpg");
+    } else {
+      return undefined;
+    }
+
+    const res = await fetch(url.toString(), { method: "POST", body: formData, credentials: "include" });
+    if (!res.ok) throw new Error("فشل رفع الصورة");
+    const data = await res.json();
+    return data.imageUrl;
+  } catch (err) {
+    console.error("Image upload error:", err);
+    return undefined;
+  }
+}
+
+/** منتقي صورة مشترك */
+async function pickAdminImage(
+  setImageUri: (v: string | null) => void,
+  setImageFile: (v: any) => void
+) {
+  if (Platform.OS === "web") {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (ev) => setImageUri(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  } else {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) setImageUri(result.assets[0].uri);
+  }
+}
+
+const PRODUCT_CATEGORIES = [
+  { key: "electronics", label: "إلكترونيات" },
+  { key: "fashion", label: "أزياء" },
+  { key: "beauty", label: "جمال" },
+  { key: "accessories", label: "إكسسوارات" },
+  { key: "home", label: "منزل" },
+  { key: "other", label: "أخرى" },
+];
+
+function ProductsSection() {
+  const { data: products, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/products"] });
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const res = await apiRequest("PUT", `/api/admin/products/${id}`, { isActive });
       return res.json();
     },
-    onSuccess: (data) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("تم اختيار الفائز!", `الفائز: ${data.winner.username}\nالتذكرة: ${data.ticket.ticketNumber}`);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+    onSuccess: () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiRequest("DELETE", `/api/admin/campaigns/${id}`);
+      const res = await apiRequest("DELETE", `/api/admin/products/${id}`);
       return res.json();
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
-  const handleDraw = (c: any) => {
-    Alert.alert("اختيار الفائز", `هل أنت متأكد من اختيار الفائز لحملة "${c.title}"؟`, [
+  const handleDelete = (p: any) => {
+    Alert.alert("حذف المنتج", `حذف "${p.name}" نهائياً؟ إذا عليه طلبات سابقة عطّله بدل ما تحذفه.`, [
       { text: "إلغاء", style: "cancel" },
-      { text: "اختيار", style: "destructive", onPress: () => drawMutation.mutate(c.id) },
+      { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(p.id) },
     ]);
-  };
-
-  const handleDelete = (c: any) => {
-    Alert.alert("حذف الحملة", `هل أنت متأكد من حذف "${c.title}"؟`, [
-      { text: "إلغاء", style: "cancel" },
-      { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(c.id) },
-    ]);
-  };
-
-  const getStatusAr = (s: string) => {
-    const map: Record<string, string> = { active: "نشط", sold_out: "نفذت الكمية", drawing: "جاري الاختيار", completed: "مكتمل" };
-    return map[s] || s;
-  };
-  const getStatusColor = (s: string) => {
-    const map: Record<string, string> = { active: "#2ECC71", sold_out: "#F39C12", drawing: "#9B59B6", completed: "#3498DB" };
-    return map[s] || "#666";
   };
 
   if (isLoading) return <LoadingView />;
@@ -895,274 +1440,649 @@ function CampaignsSection() {
   return (
     <>
       <FlatList
-        data={campaigns || []}
+        data={products || []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.sectionPadding}
         ListHeaderComponent={
-          <View>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>الحملات ({campaigns?.length || 0})</Text>
-              <Pressable onPress={() => setShowCreateModal(true)} style={styles.addBtn}>
-                <Ionicons name="add" size={20} color="#fff" />
-                <Text style={styles.addBtnText}>جديد</Text>
-              </Pressable>
-            </View>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>المنتجات ({products?.length || 0})</Text>
+            <Pressable
+              onPress={() => { setEditing(null); setShowForm(true); }}
+              style={styles.addBtn}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+              <Text style={styles.addBtnText}>منتج جديد</Text>
+            </Pressable>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={styles.campaignCard}>
-            <View style={styles.campaignHeader}>
-              <Text style={styles.campaignTitle} numberOfLines={1}>{item.title}</Text>
-              <View style={[styles.statusPill, { backgroundColor: getStatusColor(item.status) + "20" }]}>
-                <Text style={[styles.statusPillText, { color: getStatusColor(item.status) }]}>{getStatusAr(item.status)}</Text>
-              </View>
-            </View>
-            <View style={styles.campaignInfo}>
-              <Text style={styles.campaignInfoText}>الجائزة: {item.prizeName}</Text>
-              <Text style={styles.campaignInfoText}>السعر: {item.productPrice} $</Text>
-              <Text style={styles.campaignInfoText}>المباع: {item.soldQuantity}/{item.totalQuantity}</Text>
-              {item.products && item.products.length > 0 && (
-                <View>
-                  <Text style={[styles.campaignInfoText, { color: Colors.light.accent }]}>
-                    الموديلات: {item.products.length}
-                  </Text>
-                  {item.products.map((p: any) => (
-                    <Text key={p.id} style={[styles.campaignInfoText, { fontSize: 11, color: Colors.light.textLight, paddingStart: 8 }]}>
-                      • {p.nameAr || p.name}: {p.soldQuantity}/{p.quantity} ({p.price} $)
-                    </Text>
-                  ))}
-                </View>
-              )}
-            </View>
-            <View style={styles.campaignProgressWrap}>
-              <View style={styles.campaignProgressBg}>
-                <View style={[styles.campaignProgressFill, { width: `${Math.min((item.soldQuantity / item.totalQuantity) * 100, 100)}%`, backgroundColor: getStatusColor(item.status) }]} />
-              </View>
-            </View>
-            <View style={styles.campaignActions}>
-              <Pressable onPress={() => setEditingCampaign(item)} style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}>
-                <Ionicons name="create" size={16} color="#fff" />
-                <Text style={styles.actionBtnText}>الموديلات</Text>
-              </Pressable>
-              {(item.status === "sold_out" || item.status === "drawing") && (
-                <Pressable onPress={() => handleDraw(item)} style={[styles.actionBtn, { backgroundColor: "#9B59B6" }]}>
-                  <Ionicons name="dice" size={16} color="#fff" />
-                  <Text style={styles.actionBtnText}>اختيار</Text>
-                </Pressable>
-              )}
-              {item.soldQuantity === 0 && (
-                <Pressable onPress={() => handleDelete(item)} style={[styles.actionBtn, { backgroundColor: "#E74C3C" }]}>
-                  <Ionicons name="trash" size={16} color="#fff" />
-                  <Text style={styles.actionBtnText}>حذف</Text>
-                </Pressable>
-              )}
-            </View>
-            {item.winnerId && (
-              <View style={styles.winnerBanner}>
-                <Ionicons name="trophy" size={16} color="#FFD700" />
-                <Text style={styles.winnerText}>الفائز: تذكرة {item.winnerTicketId}</Text>
-              </View>
-            )}
+        ListEmptyComponent={
+          <View style={{ alignItems: "center", paddingVertical: 50, gap: 10 }}>
+            <Ionicons name="cube-outline" size={44} color={Colors.light.border} />
+            <Text style={styles.campaignInfoText}>ما في منتجات بعد — ضيف أول منتج</Text>
           </View>
-        )}
+        }
+        renderItem={({ item }) => {
+          const outOfStock = item.stock !== null && item.stock <= 0;
+          return (
+            <View style={[styles.campaignCard, !item.isActive && { opacity: 0.6 }]}>
+              <View style={styles.campaignHeader}>
+                <Text style={styles.campaignTitle} numberOfLines={1}>{item.name}</Text>
+                <View
+                  style={[
+                    styles.statusPill,
+                    { backgroundColor: (item.isActive ? "#067647" : "#667085") + "20" },
+                  ]}
+                >
+                  <Text
+                    style={[styles.statusPillText, { color: item.isActive ? "#067647" : "#667085" }]}
+                  >
+                    {item.isActive ? "ظاهر" : "مخفي"}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.campaignInfo}>
+                <Text style={styles.campaignInfoText}>السعر: {parseFloat(item.price).toFixed(2)} $</Text>
+                <Text style={[styles.campaignInfoText, outOfStock && { color: "#B42318" }]}>
+                  المخزون: {item.stock === null ? "غير محدود" : item.stock}
+                </Text>
+                <Text style={styles.campaignInfoText}>المباع: {item.soldCount}</Text>
+                <Text style={styles.campaignInfoText}>
+                  التصنيف: {PRODUCT_CATEGORIES.find((c) => c.key === item.category)?.label || item.category}
+                </Text>
+              </View>
+
+              <View style={styles.campaignActions}>
+                <Pressable
+                  onPress={() => { setEditing(item); setShowForm(true); }}
+                  style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}
+                >
+                  <Ionicons name="create" size={16} color="#0B2142" />
+                  <Text style={[styles.actionBtnText, { color: "#0B2142" }]}>تعديل</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => toggleMutation.mutate({ id: item.id, isActive: !item.isActive })}
+                  style={[styles.actionBtn, { backgroundColor: item.isActive ? "#667085" : "#067647" }]}
+                >
+                  <Ionicons name={item.isActive ? "eye-off" : "eye"} size={16} color="#fff" />
+                  <Text style={styles.actionBtnText}>{item.isActive ? "إخفاء" : "إظهار"}</Text>
+                </Pressable>
+                {item.soldCount === 0 && (
+                  <Pressable
+                    onPress={() => handleDelete(item)}
+                    style={[styles.actionBtn, { backgroundColor: "#B42318" }]}
+                  >
+                    <Ionicons name="trash" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>حذف</Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          );
+        }}
       />
-      <CreateCampaignModal visible={showCreateModal} onClose={() => setShowCreateModal(false)} />
-      {editingCampaign && (
-        <EditCampaignProductsModal campaign={editingCampaign} onClose={() => setEditingCampaign(null)} />
+      {showForm && (
+        <ProductFormModal
+          product={editing}
+          onClose={() => { setShowForm(false); setEditing(null); }}
+        />
       )}
     </>
   );
 }
 
-function EditCampaignProductsModal({ campaign, onClose }: { campaign: any; onClose: () => void }) {
-  const existingProducts: any[] = campaign.products || [];
-  const [products, setProducts] = useState<ProductVariant[]>(
-    existingProducts.map((p: any) => ({
-      key: p.id,
-      name: p.name || "",
-      nameAr: p.nameAr || "",
-      price: String(p.price),
-      quantity: String(p.quantity),
-      imageUrl: p.imageUrl || "",
-    }))
+function ProductFormModal({ product, onClose }: { product: any | null; onClose: () => void }) {
+  const isEdit = !!product;
+  const [name, setName] = useState(product?.name || "");
+  const [description, setDescription] = useState(product?.description || "");
+  const [price, setPrice] = useState(product ? String(product.price) : "");
+  const [unlimitedStock, setUnlimitedStock] = useState(product ? product.stock === null : false);
+  const [stock, setStock] = useState(product?.stock != null ? String(product.stock) : "");
+  const [category, setCategory] = useState(product?.category || "other");
+  const [specs, setSpecs] = useState<string[]>(() =>
+    parseProductSpecs(product?.specsJson).map((sp) => sp.text)
   );
-  const [newProducts, setNewProducts] = useState<ProductVariant[]>([]);
-  const [productError, setProductError] = useState<string | null>(null);
+  const [imageUri, setImageUri] = useState<string | null>(product?.imageUrl || null);
+  const [imageFile, setImageFile] = useState<any>(null);
+  const [imageChanged, setImageChanged] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addNewProduct = () => {
-    setNewProducts((prev) => [
-      ...prev,
-      { key: Date.now().toString(), name: "", nameAr: "", price: "", quantity: "", imageUrl: "" },
-    ]);
-  };
-
-  const updateProduct = (key: string, field: keyof ProductVariant, value: string) => {
-    setProducts((prev) => prev.map((v) => (v.key === key ? { ...v, [field]: value } : v)));
-  };
-
-  const updateNewProduct = (key: string, field: keyof ProductVariant, value: string) => {
-    setNewProducts((prev) => prev.map((v) => (v.key === key ? { ...v, [field]: value } : v)));
-  };
-
-  const removeNewProduct = (key: string) => {
-    setNewProducts((prev) => prev.filter((v) => v.key !== key));
-  };
-
-  const deleteMutation = useMutation({
-    mutationFn: async (productId: string) => {
-      const res = await apiRequest("DELETE", `/api/admin/campaign-products/${productId}`);
-      return res.json();
-    },
-    onSuccess: (_data: any, productId: string) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setProducts((prev) => prev.filter((v) => v.key !== productId));
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
-    },
-    onError: (err: any) => {
-      const msg = (err as any)?.message || "حدث خطأ أثناء حذف المنتج";
-      setProductError(msg);
-    },
-  });
-
-  const handleDeleteProduct = (p: ProductVariant) => {
-    Alert.alert("حذف الموديل", `هل تريد حذف "${p.nameAr || p.name}"؟`, [
-      { text: "إلغاء", style: "cancel" },
-      {
-        text: "حذف", style: "destructive", onPress: () => {
-          setProductError(null);
-          deleteMutation.mutate(p.key);
-        },
-      },
-    ]);
-  };
-
-  const handleSave = () => {
-    const totalCount = products.length + newProducts.filter(p => p.name && p.price && p.quantity).length;
-    if (totalCount < 2) {
-      setProductError("يجب الإبقاء على منتجين (موديلين) على الأقل في الحملة");
-      return;
-    }
-    setProductError(null);
-    saveMutation.mutate();
-  };
-
-  const saveMutation = useMutation({
+  const mutation = useMutation({
     mutationFn: async () => {
-      for (const p of products) {
-        const orig = existingProducts.find((ep: any) => ep.id === p.key);
-        if (orig && (orig.name !== p.name || orig.nameAr !== p.nameAr || String(orig.price) !== p.price || String(orig.quantity) !== p.quantity || (orig.imageUrl || "") !== p.imageUrl)) {
-          await apiRequest("PUT", `/api/admin/campaign-products/${p.key}`, {
-            name: p.name,
-            nameAr: p.nameAr,
-            price: p.price,
-            quantity: parseInt(p.quantity),
-            imageUrl: p.imageUrl || undefined,
-          });
-        }
+      setUploading(true);
+      let imageUrl = product?.imageUrl;
+      if (imageChanged) {
+        imageUrl = (await uploadAdminImage(imageUri, imageFile)) ?? null;
       }
-      for (const p of newProducts) {
-        if (!p.name || !p.price || !p.quantity) continue;
-        await apiRequest("POST", `/api/admin/campaigns/${campaign.id}/products`, {
-          name: p.name,
-          nameAr: p.nameAr || p.name,
-          price: p.price,
-          quantity: parseInt(p.quantity),
-          imageUrl: p.imageUrl || undefined,
-        });
-      }
+      setUploading(false);
+
+      const payload = {
+        name: name.trim(),
+        description: description.trim(),
+        price: price.trim(),
+        stock: unlimitedStock ? null : parseInt(stock, 10) || 0,
+        category,
+        imageUrl,
+        specsJson: JSON.stringify(
+          specs.map((t) => t.trim()).filter(Boolean).map((text) => ({ text }))
+        ),
+      };
+
+      const res = isEdit
+        ? await apiRequest("PUT", `/api/admin/products/${product.id}`, payload)
+        : await apiRequest("POST", "/api/admin/products", payload);
+      return res.json();
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       onClose();
+    },
+    onError: (err: any) => {
+      setUploading(false);
+      const msg = err.message || "فشلت العملية";
+      setError(msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
+    },
+  });
+
+  function submit() {
+    setError(null);
+    if (name.trim().length < 2) return setError("اسم المنتج مطلوب");
+    const priceNum = parseFloat(price);
+    if (!priceNum || priceNum <= 0) return setError("السعر لازم يكون أكبر من صفر");
+    if (!unlimitedStock && (!stock.trim() || parseInt(stock, 10) < 0)) {
+      return setError("حدّد المخزون أو فعّل المخزون غير المحدود");
+    }
+    mutation.mutate();
+  }
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.container}>
+          <View style={modalStyles.header}>
+            <Text style={modalStyles.title}>{isEdit ? "تعديل منتج" : "منتج جديد"}</Text>
+            <Pressable onPress={onClose} hitSlop={8}>
+              <Ionicons name="close" size={24} color={Colors.light.text} />
+            </Pressable>
+          </View>
+
+          <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ padding: 16, gap: 4 }}>
+            <ModalInput label="اسم المنتج" value={name} onChangeText={setName} placeholder="مثال: سماعات لاسلكية" />
+            <ModalInput
+              label="الوصف"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="وصف مختصر للمنتج"
+              multiline
+            />
+            <ModalInput label="السعر ($)" value={price} onChangeText={setPrice} placeholder="50" keyboardType="numeric" />
+
+            <Text style={modalStyles.inputLabel}>المخزون</Text>
+            <View style={modalStyles.switchRow}>
+              <Switch
+                value={unlimitedStock}
+                onValueChange={setUnlimitedStock}
+                trackColor={{ true: Colors.light.accent }}
+              />
+              <Text style={modalStyles.switchLabel}>مخزون غير محدود</Text>
+            </View>
+            {!unlimitedStock && (
+              <ModalInput label="" value={stock} onChangeText={setStock} placeholder="عدد القطع المتوفرة" keyboardType="numeric" />
+            )}
+
+            <Text style={modalStyles.inputLabel}>المواصفات (تظهر كنقاط بصفحة المنتج)</Text>
+            {specs.map((spec, i) => (
+              <View key={i} style={modalStyles.specRow}>
+                <Pressable
+                  onPress={() => setSpecs((prev) => prev.filter((_, idx) => idx !== i))}
+                  hitSlop={8}
+                  accessibilityLabel="حذف المواصفة"
+                  style={modalStyles.specRemove}
+                >
+                  <Ionicons name="close-circle" size={20} color={Colors.light.danger} />
+                </Pressable>
+                <TextInput
+                  value={spec}
+                  onChangeText={(t) =>
+                    setSpecs((prev) => prev.map((v, idx) => (idx === i ? t : v)))
+                  }
+                  placeholder="مثال: قدرة 2000 واط"
+                  placeholderTextColor={Colors.light.textMuted}
+                  style={[modalStyles.input, { flex: 1 }]}
+                />
+              </View>
+            ))}
+            <Pressable
+              onPress={() => setSpecs((prev) => [...prev, ""])}
+              style={modalStyles.specAdd}
+              accessibilityRole="button"
+            >
+              <Ionicons name="add" size={18} color={Colors.light.accent} />
+              <Text style={modalStyles.specAddText}>إضافة مواصفة</Text>
+            </Pressable>
+
+            <Text style={modalStyles.inputLabel}>التصنيف</Text>
+            <View style={modalStyles.chipRow}>
+              {PRODUCT_CATEGORIES.map((c) => (
+                <Pressable
+                  key={c.key}
+                  onPress={() => setCategory(c.key)}
+                  style={[modalStyles.chip, category === c.key && modalStyles.chipActive]}
+                >
+                  <Text style={[modalStyles.chipText, category === c.key && modalStyles.chipTextActive]}>
+                    {c.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={modalStyles.inputLabel}>صورة المنتج</Text>
+            <Pressable
+              onPress={() => { setImageChanged(true); pickAdminImage(setImageUri, setImageFile); }}
+              style={modalStyles.imagePicker}
+            >
+              {imageUri ? (
+                <Image source={{ uri: buildMediaUrl(imageUri)! }} style={modalStyles.imagePreview} resizeMode="cover" />
+              ) : (
+                <>
+                  <Ionicons name="image-outline" size={30} color={Colors.light.accent} />
+                  <Text style={modalStyles.imagePickerText}>اختر صورة</Text>
+                </>
+              )}
+            </Pressable>
+
+            {error && (
+              <View style={modalStyles.errorBox}>
+                <Ionicons name="alert-circle" size={16} color={Colors.light.danger} />
+                <Text style={modalStyles.errorText}>{error}</Text>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={modalStyles.footerRow}>
+            <Pressable onPress={onClose} style={modalStyles.cancelButton}>
+              <Text style={modalStyles.cancelButtonText}>إلغاء</Text>
+            </Pressable>
+            <Pressable
+              onPress={submit}
+              disabled={mutation.isPending || uploading}
+              style={[modalStyles.submitButton, (mutation.isPending || uploading) && { opacity: 0.5 }]}
+            >
+              {mutation.isPending || uploading ? (
+                <ActivityIndicator color="#0B2142" size="small" />
+              ) : (
+                <Text style={modalStyles.submitButtonText}>{isEdit ? "حفظ" : "إضافة"}</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const DRAW_STATUS_AR: Record<string, string> = {
+  scheduled: "مجدولة",
+  active: "نشطة",
+  ready_to_draw: "جاهزة للسحب",
+  completed: "تم السحب",
+  cancelled: "ملغاة",
+};
+const DRAW_STATUS_COLOR: Record<string, string> = {
+  scheduled: "#667085",
+  active: "#067647",
+  ready_to_draw: "#B54708",
+  completed: "#175CD3",
+  cancelled: "#B42318",
+};
+
+function DrawsSection() {
+  const { data: draws, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/draws"] });
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+
+  const drawMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", `/api/admin/draws/${id}/draw-winner`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        "تم اختيار الفائز! 🏆",
+        `الفائز: ${data.winner.username}\nالتذكرة: ${data.ticket.ticketNumber}` +
+          (data.nextDraw ? `\n\nتم تفعيل الجولة التالية: ${data.nextDraw.title}` : "\n\nما في جولة تالية مجدولة"),
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/draws"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
+  const activateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", `/api/admin/draws/${id}/activate`);
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/draws"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
+    },
+    onError: (err: any) => Alert.alert("خطأ", err.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/draws/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/draws"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
+    },
+    onError: (err: any) => Alert.alert("خطأ", err.message),
+  });
+
+  function handleDraw(d: any) {
+    const shortfall = d.targetTickets - d.soldTickets;
+    Alert.alert(
+      "اختيار الفائز",
+      shortfall > 0
+        ? `الجولة لسا ما اكتملت (باقي ${shortfall} تذكرة). متأكد بدك تسحب هلق؟`
+        : `اختيار الفائز بجولة "${d.title}"؟ العملية ما بترجع.`,
+      [
+        { text: "إلغاء", style: "cancel" },
+        { text: "اسحب", style: "destructive", onPress: () => drawMutation.mutate(d.id) },
+      ]
+    );
+  }
+
+  function handleDelete(d: any) {
+    Alert.alert(
+      "حذف الجولة",
+      d.soldTickets > 0
+        ? `الجولة فيها ${d.soldTickets} تذكرة — رح ترجع معلّقة وتنضاف لجولة لاحقة. متأكد؟`
+        : `حذف "${d.title}"؟`,
+      [
+        { text: "إلغاء", style: "cancel" },
+        { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(d.id) },
+      ]
+    );
+  }
+
+  if (isLoading) return <LoadingView />;
+
   return (
-    <Modal visible={true} animationType="slide" transparent>
+    <>
+      <FlatList
+        data={draws || []}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.sectionPadding}
+        ListHeaderComponent={
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>جولات السحب ({draws?.length || 0})</Text>
+            <Pressable
+              onPress={() => { setEditing(null); setShowForm(true); }}
+              style={styles.addBtn}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+              <Text style={styles.addBtnText}>جولة جديدة</Text>
+            </Pressable>
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={{ alignItems: "center", paddingVertical: 50, gap: 10 }}>
+            <Ionicons name="gift-outline" size={44} color={Colors.light.border} />
+            <Text style={styles.campaignInfoText}>ما في جولات — أنشئ أول جولة سحب</Text>
+          </View>
+        }
+        renderItem={({ item }) => {
+          const progress = item.targetTickets > 0
+            ? Math.min(item.soldTickets / item.targetTickets, 1)
+            : 0;
+          const color = DRAW_STATUS_COLOR[item.status] || "#475467";
+          return (
+            <View style={styles.campaignCard}>
+              <View style={styles.campaignHeader}>
+                <Text style={styles.campaignTitle} numberOfLines={1}>{item.title}</Text>
+                <View style={[styles.statusPill, { backgroundColor: color + "20" }]}>
+                  <Text style={[styles.statusPillText, { color }]}>
+                    {DRAW_STATUS_AR[item.status] || item.status}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.campaignInfo}>
+                <Text style={styles.campaignInfoText}>الجائزة: {item.prizeName}</Text>
+                <Text style={styles.campaignInfoText}>
+                  سعر التذكرة: {parseFloat(item.ticketPrice).toFixed(2)} $
+                </Text>
+                <Text style={styles.campaignInfoText}>
+                  التذاكر: {item.soldTickets} / {item.targetTickets}
+                </Text>
+                <Text style={styles.campaignInfoText}>المشاركون: {item.participants ?? 0}</Text>
+              </View>
+
+              <View style={styles.campaignProgressWrap}>
+                <View style={styles.campaignProgressBg}>
+                  <View
+                    style={[
+                      styles.campaignProgressFill,
+                      { width: `${progress * 100}%`, backgroundColor: color },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.campaignActions}>
+                {item.status !== "completed" && (
+                  <Pressable
+                    onPress={() => { setEditing(item); setShowForm(true); }}
+                    style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}
+                  >
+                    <Ionicons name="create" size={16} color="#0B2142" />
+                    <Text style={[styles.actionBtnText, { color: "#0B2142" }]}>تعديل</Text>
+                  </Pressable>
+                )}
+                {item.status === "scheduled" && (
+                  <Pressable
+                    onPress={() => activateMutation.mutate(item.id)}
+                    style={[styles.actionBtn, { backgroundColor: "#067647" }]}
+                  >
+                    <Ionicons name="play" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>تفعيل</Text>
+                  </Pressable>
+                )}
+                {(item.status === "active" || item.status === "ready_to_draw") && item.soldTickets > 0 && (
+                  <Pressable
+                    onPress={() => handleDraw(item)}
+                    style={[
+                      styles.actionBtn,
+                      { backgroundColor: item.status === "ready_to_draw" ? "#B54708" : "#164A9E" },
+                    ]}
+                  >
+                    <Ionicons name="dice" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>اسحب</Text>
+                  </Pressable>
+                )}
+                {item.status !== "completed" && (
+                  <Pressable
+                    onPress={() => handleDelete(item)}
+                    style={[styles.actionBtn, { backgroundColor: "#B42318" }]}
+                  >
+                    <Ionicons name="trash" size={16} color="#fff" />
+                    <Text style={styles.actionBtnText}>حذف</Text>
+                  </Pressable>
+                )}
+              </View>
+
+              {item.status === "completed" && (
+                <View style={styles.winnerBanner}>
+                  <Ionicons name="trophy" size={16} color="#F5B731" />
+                  <Text style={styles.winnerText}>
+                    الفائز: {item.winnerUsername || "—"} · تذكرة {item.winnerTicketNumber}
+                  </Text>
+                </View>
+              )}
+            </View>
+          );
+        }}
+      />
+      {showForm && (
+        <DrawFormModal
+          draw={editing}
+          onClose={() => { setShowForm(false); setEditing(null); }}
+        />
+      )}
+    </>
+  );
+}
+
+function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => void }) {
+  const isEdit = !!draw;
+  const [title, setTitle] = useState(draw?.title || "");
+  const [prizeName, setPrizeName] = useState(draw?.prizeName || "");
+  const [prizeDescription, setPrizeDescription] = useState(draw?.prizeDescription || "");
+  const [ticketPrice, setTicketPrice] = useState(draw ? String(draw.ticketPrice) : "10");
+  const [targetTickets, setTargetTickets] = useState(draw ? String(draw.targetTickets) : "1000");
+  const [imageUri, setImageUri] = useState<string | null>(draw?.prizeImageUrl || null);
+  const [imageFile, setImageFile] = useState<any>(null);
+  const [imageChanged, setImageChanged] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      setUploading(true);
+      let prizeImageUrl = draw?.prizeImageUrl;
+      if (imageChanged) {
+        prizeImageUrl = (await uploadAdminImage(imageUri, imageFile)) ?? null;
+      }
+      setUploading(false);
+
+      const payload = {
+        title: title.trim(),
+        prizeName: prizeName.trim(),
+        prizeDescription: prizeDescription.trim() || null,
+        prizeImageUrl,
+        ticketPrice: ticketPrice.trim(),
+        targetTickets: parseInt(targetTickets, 10),
+      };
+
+      const res = isEdit
+        ? await apiRequest("PUT", `/api/admin/draws/${draw.id}`, payload)
+        : await apiRequest("POST", "/api/admin/draws", payload);
+      return res.json();
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/draws"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
+      onClose();
+    },
+    onError: (err: any) => {
+      setUploading(false);
+      const msg = err.message || "فشلت العملية";
+      setError(msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
+    },
+  });
+
+  function submit() {
+    setError(null);
+    if (title.trim().length < 2) return setError("عنوان الجولة مطلوب");
+    if (prizeName.trim().length < 2) return setError("اسم الجائزة مطلوب");
+    const priceNum = parseFloat(ticketPrice);
+    if (!priceNum || priceNum <= 0) return setError("سعر التذكرة لازم يكون أكبر من صفر");
+    const targetNum = parseInt(targetTickets, 10);
+    if (!targetNum || targetNum < 1) return setError("عدد التذاكر المستهدف مطلوب");
+    mutation.mutate();
+  }
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={modalStyles.overlay}>
         <View style={modalStyles.container}>
           <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>موديلات: {campaign.title}</Text>
-            <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
-          </View>
-          <ScrollView style={modalStyles.body} showsVerticalScrollIndicator={false}>
-            {products.length > 0 && (
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" as const, marginBottom: 8 }}>الموديلات الحالية ({products.length})</Text>
-            )}
-            {products.map((v, idx) => (
-              <View key={v.key} style={{ backgroundColor: "#F9FAFB", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: Colors.light.border }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.accent }}>موديل {idx + 1}</Text>
-                  <Pressable onPress={() => handleDeleteProduct(v)}>
-                    <Ionicons name="trash-outline" size={20} color={Colors.light.danger} />
-                  </Pressable>
-                </View>
-                <ModalInput label="الاسم (إنجليزي)" value={v.name} onChangeText={(t) => updateProduct(v.key, "name", t)} placeholder="256GB Black" />
-                <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateProduct(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <ModalInput label="السعر ($)" value={v.price} onChangeText={(t) => updateProduct(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ModalInput label="الكمية" value={v.quantity} onChangeText={(t) => updateProduct(v.key, "quantity", t)} placeholder="1000" keyboardType="number-pad" />
-                  </View>
-                </View>
-                <ModalInput label="رابط الصورة" value={v.imageUrl} onChangeText={(t) => updateProduct(v.key, "imageUrl", t)} placeholder="https://example.com/image.jpg" />
-              </View>
-            ))}
-
-            {newProducts.length > 0 && (
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#2ECC71", textAlign: "right", writingDirection: "rtl" as const, marginBottom: 8, marginTop: 4 }}>موديلات جديدة ({newProducts.length})</Text>
-            )}
-            {newProducts.map((v, idx) => (
-              <View key={v.key} style={{ backgroundColor: "#F0FFF4", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#2ECC7140" }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#2ECC71" }}>جديد {idx + 1}</Text>
-                  <Pressable onPress={() => removeNewProduct(v.key)}>
-                    <Ionicons name="close-circle" size={22} color={Colors.light.danger} />
-                  </Pressable>
-                </View>
-                <ModalInput label="الاسم (إنجليزي) *" value={v.name} onChangeText={(t) => updateNewProduct(v.key, "name", t)} placeholder="256GB Black" />
-                <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateNewProduct(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <ModalInput label="السعر ($) *" value={v.price} onChangeText={(t) => updateNewProduct(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ModalInput label="الكمية *" value={v.quantity} onChangeText={(t) => updateNewProduct(v.key, "quantity", t)} placeholder="1000" keyboardType="number-pad" />
-                  </View>
-                </View>
-                <ModalInput label="رابط الصورة" value={v.imageUrl} onChangeText={(t) => updateNewProduct(v.key, "imageUrl", t)} placeholder="https://example.com/image.jpg" />
-              </View>
-            ))}
-
-            <Pressable onPress={addNewProduct} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed", marginBottom: 16 }}>
-              <Ionicons name="add-circle" size={20} color={Colors.light.accent} />
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.accent }}>إضافة موديل جديد</Text>
+            <Text style={modalStyles.title}>{isEdit ? "تعديل الجولة" : "جولة سحب جديدة"}</Text>
+            <Pressable onPress={onClose} hitSlop={8}>
+              <Ionicons name="close" size={24} color={Colors.light.text} />
             </Pressable>
+          </View>
+
+          <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ padding: 16, gap: 4 }}>
+            <ModalInput label="عنوان الجولة" value={title} onChangeText={setTitle} placeholder="مثال: جولة يناير" />
+            <ModalInput label="اسم الجائزة" value={prizeName} onChangeText={setPrizeName} placeholder="مثال: iPhone 16 Pro" />
+            <ModalInput
+              label="وصف الجائزة"
+              value={prizeDescription}
+              onChangeText={setPrizeDescription}
+              placeholder="تفاصيل إضافية عن الجائزة"
+              multiline
+            />
+            <ModalInput
+              label="سعر التذكرة ($)"
+              value={ticketPrice}
+              onChangeText={setTicketPrice}
+              placeholder="10"
+              keyboardType="numeric"
+            />
+            <ModalInput
+              label="عدد التذاكر المستهدف"
+              value={targetTickets}
+              onChangeText={setTargetTickets}
+              placeholder="1000"
+              keyboardType="numeric"
+            />
+
+            <View style={modalStyles.hintBox}>
+              <Ionicons name="information-circle" size={16} color={Colors.light.accentDark} />
+              <Text style={modalStyles.hintText}>
+                كل {parseFloat(ticketPrice) || 0}$ من مشتريات العميل = تذكرة وحدة. لما تنباع{" "}
+                {parseInt(targetTickets, 10) || 0} تذكرة بتصير الجولة جاهزة للسحب.
+              </Text>
+            </View>
+
+            <Text style={modalStyles.inputLabel}>صورة الجائزة</Text>
+            <Pressable
+              onPress={() => { setImageChanged(true); pickAdminImage(setImageUri, setImageFile); }}
+              style={modalStyles.imagePicker}
+            >
+              {imageUri ? (
+                <Image source={{ uri: buildMediaUrl(imageUri)! }} style={modalStyles.imagePreview} resizeMode="cover" />
+              ) : (
+                <>
+                  <Ionicons name="image-outline" size={30} color={Colors.light.accent} />
+                  <Text style={modalStyles.imagePickerText}>اختر صورة</Text>
+                </>
+              )}
+            </Pressable>
+
+            {error && (
+              <View style={modalStyles.errorBox}>
+                <Ionicons name="alert-circle" size={16} color={Colors.light.danger} />
+                <Text style={modalStyles.errorText}>{error}</Text>
+              </View>
+            )}
           </ScrollView>
 
-          {productError && (
-            <View style={{ marginHorizontal: 16, marginBottom: 8, backgroundColor: "#FEE2E2", borderRadius: 10, padding: 10 }}>
-              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#991B1B", textAlign: "right", writingDirection: "rtl" as const }}>{productError}</Text>
-            </View>
-          )}
-
-          <View style={modalStyles.footer}>
-            <Pressable onPress={onClose} style={modalStyles.cancelBtn}>
-              <Text style={modalStyles.cancelText}>إلغاء</Text>
+          <View style={modalStyles.footerRow}>
+            <Pressable onPress={onClose} style={modalStyles.cancelButton}>
+              <Text style={modalStyles.cancelButtonText}>إلغاء</Text>
             </Pressable>
             <Pressable
-              onPress={handleSave}
-              style={[modalStyles.submitBtn, saveMutation.isPending && { opacity: 0.6 }]}
-              disabled={saveMutation.isPending}
+              onPress={submit}
+              disabled={mutation.isPending || uploading}
+              style={[modalStyles.submitButton, (mutation.isPending || uploading) && { opacity: 0.5 }]}
             >
-              {saveMutation.isPending ? (
-                <ActivityIndicator size="small" color="#fff" />
+              {mutation.isPending || uploading ? (
+                <ActivityIndicator color="#0B2142" size="small" />
               ) : (
-                <Text style={modalStyles.submitText}>حفظ التغييرات</Text>
+                <Text style={modalStyles.submitButtonText}>{isEdit ? "حفظ" : "إنشاء"}</Text>
               )}
             </Pressable>
           </View>
@@ -1235,26 +2155,26 @@ function PaymentsSection() {
               <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: Colors.light.border }}>
                 {item.bankName ? (
                   <View style={{ flexDirection: "row", gap: 6, marginBottom: 4 }}>
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>البنك:</Text>
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.text }}>{item.bankName}</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>البنك:</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.text }}>{item.bankName}</Text>
                   </View>
                 ) : null}
                 {item.accountName ? (
                   <View style={{ flexDirection: "row", gap: 6, marginBottom: 4 }}>
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>الحساب:</Text>
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.text }}>{item.accountName}</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>الحساب:</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.text }}>{item.accountName}</Text>
                   </View>
                 ) : null}
                 {item.iban ? (
                   <View style={{ flexDirection: "row", gap: 6, marginBottom: 4 }}>
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>IBAN:</Text>
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.light.text }}>{item.iban}</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.textSecondary, writingDirection: "rtl" }}>IBAN:</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 11, color: Colors.light.text }}>{item.iban}</Text>
                   </View>
                 ) : null}
                 {!item.bankName && !item.accountName && !item.iban && (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 }}>
                     <Ionicons name="warning" size={14} color={Colors.light.warning} />
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.warning, writingDirection: "rtl" }}>بيانات البنك غير مكتملة - اضغط تعديل لإضافتها</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.warning, writingDirection: "rtl" }}>بيانات البنك غير مكتملة - اضغط تعديل لإضافتها</Text>
                   </View>
                 )}
               </View>
@@ -1265,7 +2185,7 @@ function PaymentsSection() {
                 style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "12", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
               >
                 <Ionicons name="create-outline" size={14} color={Colors.light.accent} />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.accent }}>تعديل</Text>
+                <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.accent }}>تعديل</Text>
               </Pressable>
               <Pressable
                 onPress={() => Alert.alert("حذف", `حذف طريقة الدفع "${item.nameAr}"؟`, [
@@ -1275,7 +2195,7 @@ function PaymentsSection() {
                 style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.danger + "12", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
               >
                 <Ionicons name="trash-outline" size={14} color={Colors.light.danger} />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.danger }}>حذف</Text>
+                <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.danger }}>حذف</Text>
               </Pressable>
             </View>
           </View>
@@ -1381,7 +2301,7 @@ function ActivitySection() {
     return map[type] || "time";
   };
   const getTypeColor = (type: string) => {
-    const map: Record<string, string> = { user_register: "#2ECC71", purchase: "#3498DB", draw: "#FFD700", campaign_create: "#9B59B6", shipping_update: "#E67E22" };
+    const map: Record<string, string> = { user_register: "#067647", purchase: "#175CD3", draw: "#F5B731", campaign_create: "#164A9E", shipping_update: "#B54708" };
     return map[type] || Colors.light.textSecondary;
   };
 
@@ -1410,17 +2330,6 @@ function ActivitySection() {
   );
 }
 
-function StatCard({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) {
-  return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: color + "18" }]}>
-        <Ionicons name={icon as any} size={20} color={color} />
-      </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
 
 function NotificationsSection() {
   const { data: notifications, isLoading } = useQuery<any[]>({
@@ -1455,10 +2364,10 @@ function NotificationsSection() {
     return "notifications";
   };
   const getNotifColor = (type: string) => {
-    if (type === "new_order") return "#7C3AED";
-    if (type === "receipt_uploaded") return "#3498DB";
-    if (type === "new_user") return "#2ECC71";
-    if (type === "broadcast") return "#E67E22";
+    if (type === "new_order") return "#0B2142";
+    if (type === "receipt_uploaded") return "#175CD3";
+    if (type === "new_user") return "#067647";
+    if (type === "broadcast") return "#B54708";
     return Colors.light.accent;
   };
 
@@ -1475,10 +2384,10 @@ function NotificationsSection() {
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Pressable
                   onPress={() => { setShowBroadcastModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#E67E2215", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#B5470815", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                 >
-                  <Ionicons name="megaphone-outline" size={16} color="#E67E22" />
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#E67E22" }}>إرسال إشعار</Text>
+                  <Ionicons name="megaphone-outline" size={16} color="#B54708" />
+                  <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: "#B54708" }}>إرسال إشعار</Text>
                 </Pressable>
                 {unreadCount > 0 && (
                   <Pressable
@@ -1486,7 +2395,7 @@ function NotificationsSection() {
                     style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent + "15", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
                   >
                     <Ionicons name="checkmark-done" size={16} color={Colors.light.accent} />
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.light.accent }}>قراءة الكل ({unreadCount})</Text>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.accent }}>قراءة الكل ({unreadCount})</Text>
                   </Pressable>
                 )}
               </View>
@@ -1497,15 +2406,15 @@ function NotificationsSection() {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => { if (!item.isRead) markReadMutation.mutate(item.id); }}
-            style={[styles.orderCard, { borderEndWidth: 3, borderEndColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#FAFBFF" }]}
+            style={[styles.orderCard, { borderEndWidth: 3, borderEndColor: item.isRead ? "transparent" : getNotifColor(item.type), backgroundColor: item.isRead ? "#fff" : "#F7F9FC" }]}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: getNotifColor(item.type) + "15", alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name={getNotifIcon(item.type) as any} size={18} color={getNotifColor(item.type)} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: item.isRead ? "Inter_400Regular" : "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" }}>{item.message}</Text>
-                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", marginTop: 4 }}>
+                <Text style={{ fontFamily: item.isRead ? "Tajawal_400Regular" : "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" }}>{item.message}</Text>
+                <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", marginTop: 4 }}>
                   {new Date(item.createdAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </Text>
               </View>
@@ -1581,344 +2490,6 @@ function LoadingView() {
     <View style={[styles.container, styles.centered]}>
       <ActivityIndicator size="large" color={Colors.light.accent} />
     </View>
-  );
-}
-
-const CATEGORY_OPTIONS: { key: string; label: string }[] = [
-  { key: "electronics", label: "إلكترونيات" },
-  { key: "fashion", label: "أزياء" },
-  { key: "beauty", label: "جمال" },
-  { key: "accessories", label: "إكسسوارات" },
-  { key: "other", label: "أخرى" },
-];
-
-interface ProductVariant {
-  key: string;
-  name: string;
-  nameAr: string;
-  price: string;
-  quantity: string;
-  imageUrl: string;
-}
-
-function CreateCampaignModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState("");
-  const [prizeName, setPrizeName] = useState("");
-  const [prizeDesc, setPrizeDesc] = useState("");
-  const [category, setCategory] = useState("other");
-  const [endsAtText, setEndsAtText] = useState("");
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<any>(null);
-  const [uploading, setUploading] = useState(false);
-  const [hasVariants, setHasVariants] = useState(false);
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [isFlashSale, setIsFlashSale] = useState(false);
-  const [originalPriceText, setOriginalPriceText] = useState("");
-  const [flashSaleEndsAtText, setFlashSaleEndsAtText] = useState("");
-
-  const pickCampaignImage = async () => {
-    if (Platform.OS === "web") {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = (e: any) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          setImageFile(file);
-          const reader = new FileReader();
-          reader.onload = (ev) => setImageUri(ev.target?.result as string);
-          reader.readAsDataURL(file);
-        }
-      };
-      input.click();
-    } else {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
-      }
-    }
-  };
-
-  const uploadImage = async (): Promise<string | undefined> => {
-    if (!imageUri && !imageFile) return undefined;
-    setUploading(true);
-    try {
-      const baseUrl = getApiUrl();
-      const url = new URL("/api/admin/campaigns/upload-image", baseUrl);
-
-      if (Platform.OS === "web" && imageFile) {
-        const formData = new FormData();
-        formData.append("image", imageFile);
-        const res = await fetch(url.toString(), {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("فشل رفع الصورة");
-        const data = await res.json();
-        return data.imageUrl;
-      } else if (imageUri) {
-        const base64 = await FileSystem.readAsStringAsync(imageUri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        const byteChars = atob(base64);
-        const byteNumbers = new Array(byteChars.length);
-        for (let i = 0; i < byteChars.length; i++) {
-          byteNumbers[i] = byteChars.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "image/jpeg" });
-        const formData = new FormData();
-        formData.append("image", blob, "campaign.jpg");
-        const res = await fetch(url.toString(), {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("فشل رفع الصورة");
-        const data = await res.json();
-        return data.imageUrl;
-      }
-      return undefined;
-    } catch (err) {
-      console.error("Image upload error:", err);
-      return undefined;
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const mutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/campaigns", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
-      onClose();
-      setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setPrizeName(""); setPrizeDesc(""); setCategory("other"); setEndsAtText(""); setImageUri(null); setImageFile(null); setHasVariants(false); setVariants([]); setIsFlashSale(false); setOriginalPriceText(""); setFlashSaleEndsAtText("");
-    },
-    onError: (err: any) => setCreateError(err.message || "حدث خطأ أثناء إنشاء الحملة"),
-  });
-
-  const addVariant = () => {
-    setVariants((prev) => [
-      ...prev,
-      { key: Date.now().toString(), name: "", nameAr: "", price: "", quantity: "", imageUrl: "" },
-    ]);
-  };
-
-  const removeVariant = (key: string) => {
-    setVariants((prev) => prev.filter((v) => v.key !== key));
-  };
-
-  const updateVariant = (key: string, field: keyof ProductVariant, value: string) => {
-    setVariants((prev) =>
-      prev.map((v) => (v.key === key ? { ...v, [field]: value } : v))
-    );
-  };
-
-  const handleCreate = async () => {
-    setCreateError(null);
-
-    if (!title || !description || !prizeName) {
-      setCreateError("يرجى ملء جميع الحقول المطلوبة (العنوان، الوصف، الجائزة)");
-      return;
-    }
-
-    if (!hasVariants) {
-      setCreateError("يجب تفعيل 'موديلات متعددة' وإضافة منتجين على الأقل لإنشاء الحملة");
-      return;
-    }
-
-    if (variants.length < 2) {
-      setCreateError("يجب إضافة منتجين (موديلين) على الأقل لإنشاء الحملة");
-      return;
-    }
-    for (const v of variants) {
-      if (!v.name || !v.price || !v.quantity) {
-        setCreateError("يرجى ملء جميع حقول الموديلات (الاسم، السعر، الكمية)");
-        return;
-      }
-    }
-
-    let imageUrl: string | undefined;
-    if (imageUri || imageFile) {
-      imageUrl = await uploadImage();
-    }
-
-    const campaignData: any = {
-      title,
-      description,
-      prizeName,
-      prizeDescription: prizeDesc || undefined,
-      category,
-      endsAt: endsAtText && !isNaN(new Date(endsAtText).getTime()) ? new Date(endsAtText).toISOString() : undefined,
-      imageUrl,
-      isFlashSale,
-      originalPrice: isFlashSale && originalPriceText ? originalPriceText : undefined,
-      flashSaleEndsAt: isFlashSale && flashSaleEndsAtText && !isNaN(new Date(flashSaleEndsAtText).getTime()) ? new Date(flashSaleEndsAtText).toISOString() : undefined,
-    };
-
-    if (hasVariants) {
-      campaignData.productPrice = variants[0].price;
-      campaignData.totalQuantity = variants.reduce((s, v) => s + parseInt(v.quantity || "0"), 0);
-      campaignData.products = variants.map((v) => ({
-        name: v.name,
-        nameAr: v.nameAr || v.name,
-        price: v.price,
-        quantity: v.quantity,
-        imageUrl: v.imageUrl || undefined,
-      }));
-    } else {
-      campaignData.productPrice = price;
-      campaignData.totalQuantity = parseInt(quantity);
-    }
-
-    mutation.mutate(campaignData);
-  };
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={modalStyles.overlay}>
-        <View style={modalStyles.container}>
-          <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>حملة جديدة</Text>
-            <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
-          </View>
-          <ScrollView contentContainerStyle={modalStyles.scrollContent}>
-            <View style={{ alignItems: "center", marginBottom: 16 }}>
-              <Pressable onPress={pickCampaignImage} style={{ width: "100%", height: 160, borderRadius: 16, backgroundColor: Colors.light.background, borderWidth: 2, borderColor: Colors.light.accent + "30", borderStyle: "dashed", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                {imageUri ? (
-                  <Image source={{ uri: imageUri }} style={{ width: "100%", height: "100%", borderRadius: 14 }} resizeMode="cover" />
-                ) : (
-                  <View style={{ alignItems: "center", gap: 8 }}>
-                    <Ionicons name="image-outline" size={36} color={Colors.light.accent} />
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" }}>اضغط لرفع صورة المنتج</Text>
-                  </View>
-                )}
-              </Pressable>
-              {imageUri && (
-                <Pressable onPress={() => { setImageUri(null); setImageFile(null); }} style={{ marginTop: 8 }}>
-                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: "#EF4444" }}>إزالة الصورة</Text>
-                </Pressable>
-              )}
-            </View>
-            <ModalInput label="العنوان *" value={title} onChangeText={setTitle} placeholder="اسم الحملة" />
-            <ModalInput label="الوصف *" value={description} onChangeText={setDescription} placeholder="وصف المنتج" multiline />
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, backgroundColor: "#F3F4F6", borderRadius: 12, padding: 14 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="color-palette-outline" size={20} color={Colors.light.accent} />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>موديلات متعددة</Text>
-              </View>
-              <Switch
-                value={hasVariants}
-                onValueChange={(v) => {
-                  setHasVariants(v);
-                  if (v && variants.length === 0) addVariant();
-                }}
-                trackColor={{ true: Colors.light.accent }}
-              />
-            </View>
-
-            {!hasVariants ? (
-              <>
-                <ModalInput label="السعر ($) *" value={price} onChangeText={setPrice} placeholder="29.99" keyboardType="decimal-pad" />
-                <ModalInput label="الكمية الإجمالية *" value={quantity} onChangeText={setQuantity} placeholder="4000" keyboardType="number-pad" />
-              </>
-            ) : (
-              <View style={{ marginBottom: 12 }}>
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 8 }}>الموديلات ({variants.length})</Text>
-                {variants.map((v, idx) => (
-                  <View key={v.key} style={{ backgroundColor: "#F9FAFB", borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: Colors.light.border }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.accent }}>موديل {idx + 1}</Text>
-                      <Pressable onPress={() => removeVariant(v.key)}>
-                        <Ionicons name="close-circle" size={22} color={Colors.light.danger} />
-                      </Pressable>
-                    </View>
-                    <ModalInput label="الاسم (إنجليزي) *" value={v.name} onChangeText={(t) => updateVariant(v.key, "name", t)} placeholder="256GB Black" />
-                    <ModalInput label="الاسم (عربي)" value={v.nameAr} onChangeText={(t) => updateVariant(v.key, "nameAr", t)} placeholder="256 جيجا أسود" />
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      <View style={{ flex: 1 }}>
-                        <ModalInput label="السعر ($) *" value={v.price} onChangeText={(t) => updateVariant(v.key, "price", t)} placeholder="29.99" keyboardType="decimal-pad" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <ModalInput label="الكمية *" value={v.quantity} onChangeText={(t) => updateVariant(v.key, "quantity", t)} placeholder="1000" keyboardType="number-pad" />
-                      </View>
-                    </View>
-                    <ModalInput label="رابط الصورة (اختياري)" value={v.imageUrl} onChangeText={(t) => updateVariant(v.key, "imageUrl", t)} placeholder="https://example.com/image.jpg" />
-                  </View>
-                ))}
-                <Pressable onPress={addVariant} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, backgroundColor: "rgba(124,58,237,0.06)", borderRadius: 12, borderWidth: 1, borderColor: Colors.light.accent + "30", borderStyle: "dashed" }}>
-                  <Ionicons name="add-circle" size={20} color={Colors.light.accent} />
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.accent }}>إضافة موديل</Text>
-                </Pressable>
-              </View>
-            )}
-
-            <ModalInput label="اسم الجائزة *" value={prizeName} onChangeText={setPrizeName} placeholder="iPhone 16 Pro Max" />
-            <ModalInput label="وصف الجائزة" value={prizeDesc} onChangeText={setPrizeDesc} placeholder="تفاصيل إضافية" multiline />
-            <View style={modalStyles.inputGroup}>
-              <Text style={modalStyles.inputLabel}>التصنيف</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {CATEGORY_OPTIONS.map((cat) => (
-                  <Pressable
-                    key={cat.key}
-                    onPress={() => setCategory(cat.key)}
-                    style={[styles.statusOption, category === cat.key && styles.statusOptionActive]}
-                  >
-                    <Text style={[styles.statusOptionText, category === cat.key && styles.statusOptionTextActive]}>{cat.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-            <ModalInput label="تاريخ الانتهاء (اختياري)" value={endsAtText} onChangeText={setEndsAtText} placeholder="2025-12-31T23:59" />
-
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, backgroundColor: "#FFF1F1", borderRadius: 12, padding: 14 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text style={{ fontSize: 18 }}>🔥</Text>
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>عرض محدود (Flash Sale)</Text>
-              </View>
-              <Switch
-                value={isFlashSale}
-                onValueChange={setIsFlashSale}
-                trackColor={{ true: "#EF4444" }}
-              />
-            </View>
-
-            {isFlashSale && (
-              <View style={{ backgroundColor: "#FFF5F5", borderRadius: 12, padding: 12, marginBottom: 12, gap: 8 }}>
-                <ModalInput label="السعر الأصلي قبل الخصم ($)" value={originalPriceText} onChangeText={setOriginalPriceText} placeholder="49.99" keyboardType="decimal-pad" />
-                <ModalInput label="ينتهي العرض في" value={flashSaleEndsAtText} onChangeText={setFlashSaleEndsAtText} placeholder="2025-06-30T23:59" />
-              </View>
-            )}
-
-            {createError && (
-              <View style={{ backgroundColor: "#FEE2E2", borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#991B1B", textAlign: "right", writingDirection: "rtl" as const }}>{createError}</Text>
-              </View>
-            )}
-
-            <Pressable
-              onPress={handleCreate}
-              disabled={mutation.isPending || uploading}
-              style={[modalStyles.createBtn, (mutation.isPending || uploading) && { opacity: 0.6 }]}
-            >
-              {(mutation.isPending || uploading) ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>إنشاء الحملة</Text>}
-            </Pressable>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
   );
 }
 
@@ -2022,7 +2593,7 @@ function EditPaymentModal({ visible, method, onClose }: { visible: boolean; meth
             <View style={{ backgroundColor: "rgba(124,58,237,0.04)", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: Colors.light.accent + "20" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
                 <Ionicons name="business" size={16} color={Colors.light.accent} />
-                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" }}>بيانات الحساب البنكي</Text>
+                <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" }}>بيانات الحساب البنكي</Text>
               </View>
               <ModalInput label="اسم البنك" value={bankName} onChangeText={setBankName} placeholder="مثال: البنك الأهلي السعودي" />
               <ModalInput label="اسم صاحب الحساب" value={accountName} onChangeText={setAccountName} placeholder="الاسم كما في الحساب البنكي" />
@@ -2228,146 +2799,203 @@ function AccountSettingsSection() {
 
 const settingsStyles = StyleSheet.create({
   card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  cardTitle: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 14 },
+  cardTitle: { fontFamily: "Tajawal_700Bold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 14 },
   saveBtn: { backgroundColor: Colors.light.accent, borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center" },
-  createBtn: { backgroundColor: "#2ECC71", borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center" },
-  saveBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#fff", writingDirection: "rtl" },
+  createBtn: { backgroundColor: "#067647", borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center" },
+  saveBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 16, color: "#fff", writingDirection: "rtl" },
 });
 
 const styles = StyleSheet.create({
+  activeDrawCard: {
+    backgroundColor: "#FFF4D6",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#F5B731",
+  },
+  activeDrawHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  activeDrawTitle: {
+    flex: 1,
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 15,
+    color: Colors.light.text,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  activeDrawSub: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 12,
+    color: "#754500",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
   container: { flex: 1, backgroundColor: Colors.light.background },
   centered: { alignItems: "center", justifyContent: "center" },
-  errorText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: Colors.light.danger, marginBottom: 16, writingDirection: "rtl" },
+  errorText: { fontFamily: "Tajawal_500Medium", fontSize: 16, color: Colors.light.danger, marginBottom: 16, writingDirection: "rtl" },
   backBtn: { backgroundColor: Colors.light.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 },
-  backBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
+  backBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: "#fff", writingDirection: "rtl" },
   header: { paddingBottom: 0 },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12 },
   headerBackBtn: { padding: 8 },
-  headerTitle: { fontFamily: "Inter_700Bold", fontSize: 20, color: "#fff", writingDirection: "rtl" },
+  headerTitle: { fontFamily: "Tajawal_700Bold", fontSize: 20, color: "#fff", writingDirection: "rtl" },
   tabsRow: { flexDirection: "row", paddingHorizontal: 12, paddingBottom: 12, gap: 4 },
   tab: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   tabActive: { backgroundColor: "rgba(212, 168, 83, 0.15)" },
-  tabText: { fontFamily: "Inter_500Medium", fontSize: 12, color: "rgba(255,255,255,0.5)", writingDirection: "rtl" },
-  tabTextActive: { color: Colors.light.accent, fontFamily: "Inter_600SemiBold" },
+  tabText: { fontFamily: "Tajawal_500Medium", fontSize: 12, color: "rgba(255,255,255,0.5)", writingDirection: "rtl" },
+  tabTextActive: { color: Colors.light.accent, fontFamily: "Tajawal_500Medium" },
   content: { flex: 1 },
   sectionPadding: { padding: 16, paddingBottom: 40 },
-  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.light.text, marginBottom: 14, textAlign: "right", writingDirection: "rtl" },
+  sectionTitle: { fontFamily: "Tajawal_700Bold", fontSize: 18, color: Colors.light.text, marginBottom: 14, textAlign: "right", writingDirection: "rtl" },
   sectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
   addBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.accent, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
-  addBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff", writingDirection: "rtl" },
+  addBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: "#fff", writingDirection: "rtl" },
 
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   statCard: { width: "47%", backgroundColor: "#fff", borderRadius: 14, padding: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   statIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  statValue: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.light.text, marginBottom: 2, textAlign: "right", writingDirection: "rtl" },
-  statLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
+  statValue: { fontFamily: "Tajawal_700Bold", fontSize: 20, color: Colors.light.text, marginBottom: 2, textAlign: "right", writingDirection: "rtl" },
+  statLabel: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
 
   topCampaignItem: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#fff", padding: 14, borderRadius: 12, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   topCampaignRank: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.light.accent + "18", alignItems: "center", justifyContent: "center" },
-  topCampaignRankText: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.accent },
-  topCampaignTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
-  topCampaignSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
+  topCampaignRankText: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.accent },
+  topCampaignTitle: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  topCampaignSub: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
 
   orderCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   orderHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  orderIdText: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" },
+  orderIdText: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" },
   orderRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
-  orderDetailText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  orderDetailText: { fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
   orderFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.light.border },
-  orderAmount: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.light.text },
-  orderDate: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary },
+  orderAmount: { fontFamily: "Tajawal_700Bold", fontSize: 16, color: Colors.light.text },
+  orderDate: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary },
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  statusPillText: { fontFamily: "Inter_600SemiBold", fontSize: 11, writingDirection: "rtl" },
+  statusPillText: { fontFamily: "Tajawal_500Medium", fontSize: 11, writingDirection: "rtl" },
 
   statusPicker: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
   statusOption: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: Colors.light.progressBg },
   statusOptionActive: { backgroundColor: Colors.light.accent },
-  statusOptionText: { fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  statusOptionText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
   statusOptionTextActive: { color: "#fff" },
 
   userCard: { flexDirection: "row", backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, gap: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   userAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.light.accent + "18", alignItems: "center", justifyContent: "center" },
-  userAvatarText: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.light.accent },
+  userAvatarText: { fontFamily: "Tajawal_700Bold", fontSize: 18, color: Colors.light.accent },
   userNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  userName: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
-  userEmail: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
-  adminPill: { backgroundColor: "#FFD70020", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  adminPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#FFD700", writingDirection: "rtl" as const },
-  verifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#10B98118", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  verifiedPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#10B981", writingDirection: "rtl" as const },
-  unverifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#EF444418", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  unverifiedPillText: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#EF4444", writingDirection: "rtl" as const },
+  userName: { fontFamily: "Tajawal_500Medium", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  userEmail: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
+  adminPill: { backgroundColor: "#F5B73120", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  adminPillText: { fontFamily: "Tajawal_500Medium", fontSize: 10, color: "#F5B731", writingDirection: "rtl" as const },
+  verifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#06764718", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  verifiedPillText: { fontFamily: "Tajawal_500Medium", fontSize: 10, color: "#067647", writingDirection: "rtl" as const },
+  unverifiedPill: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#B4231818", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  unverifiedPillText: { fontFamily: "Tajawal_500Medium", fontSize: 10, color: "#B42318", writingDirection: "rtl" as const },
   userStatsRow: { flexDirection: "row", gap: 12, marginTop: 8 },
   userStat: { flexDirection: "row", alignItems: "center", gap: 4 },
-  userStatText: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  userStatText: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
 
   campaignCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   campaignHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  campaignTitle: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.light.text, flex: 1, textAlign: "right", writingDirection: "rtl" },
+  campaignTitle: { fontFamily: "Tajawal_700Bold", fontSize: 15, color: Colors.light.text, flex: 1, textAlign: "right", writingDirection: "rtl" },
   campaignInfo: { marginBottom: 10 },
-  campaignInfoText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 2 },
+  campaignInfoText: { fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 2 },
   campaignProgressWrap: { marginBottom: 10 },
   campaignProgressBg: { height: 6, backgroundColor: Colors.light.progressBg, borderRadius: 3, overflow: "hidden" },
   campaignProgressFill: { height: "100%", borderRadius: 3 },
   campaignActions: { flexDirection: "row", gap: 8 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
-  actionBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff", writingDirection: "rtl" },
-  winnerBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFD70012", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 10 },
-  winnerText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#B8912D", writingDirection: "rtl" },
+  actionBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: "#fff", writingDirection: "rtl" },
+  winnerBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F5B73112", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 10 },
+  winnerText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: "#754500", writingDirection: "rtl" },
 
   paymentCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   paymentRow: { flexDirection: "row", alignItems: "center", gap: 14 },
-  paymentName: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
-  paymentNameEn: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right" },
-  paymentDesc: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
+  paymentName: { fontFamily: "Tajawal_500Medium", fontSize: 15, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  paymentNameEn: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right" },
+  paymentDesc: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
   deletePaymentBtn: { alignSelf: "flex-start", padding: 8, marginTop: 8 },
 
   couponCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   couponHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   couponCodeBadge: { backgroundColor: Colors.light.accent + "18", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
-  couponCode: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.light.accent, letterSpacing: 1 },
+  couponCode: { fontFamily: "Tajawal_700Bold", fontSize: 16, color: Colors.light.accent, letterSpacing: 1 },
   couponDetails: { flexDirection: "row", justifyContent: "space-around", marginBottom: 12 },
   couponStat: { alignItems: "center" },
-  couponStatLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, marginBottom: 2, writingDirection: "rtl" },
-  couponStatValue: { fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.light.text },
+  couponStatLabel: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, marginBottom: 2, writingDirection: "rtl" },
+  couponStatValue: { fontFamily: "Tajawal_700Bold", fontSize: 15, color: Colors.light.text },
   deleteCouponBtn: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", padding: 4 },
-  deleteCouponText: { fontFamily: "Inter_500Medium", fontSize: 12, color: Colors.light.danger, writingDirection: "rtl" },
+  deleteCouponText: { fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.danger, writingDirection: "rtl" },
 
   activityItem: { flexDirection: "row", gap: 12, backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   activityIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  activityTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
-  activityDesc: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
-  activityTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.tabIconDefault, textAlign: "right", writingDirection: "rtl", marginTop: 4 },
+  activityTitle: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  activityDesc: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginTop: 2 },
+  activityTime: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.tabIconDefault, textAlign: "right", writingDirection: "rtl", marginTop: 4 },
 
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.textSecondary, textAlign: "center", marginTop: 40, writingDirection: "rtl" },
+  emptyText: { fontFamily: "Tajawal_400Regular", fontSize: 14, color: Colors.light.textSecondary, textAlign: "center", marginTop: 40, writingDirection: "rtl" },
 });
 
 const modalStyles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
   container: { backgroundColor: Colors.light.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "90%" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.light.border },
-  title: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  title: { fontFamily: "Tajawal_700Bold", fontSize: 20, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
   scrollContent: { padding: 20, paddingBottom: 40 },
   inputGroup: { marginBottom: 16 },
-  inputLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.textSecondary, marginBottom: 6, textAlign: "right", writingDirection: "rtl" },
-  input: { backgroundColor: "#fff", borderRadius: 12, padding: 14, fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl" },
+  inputLabel: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, marginBottom: 6, textAlign: "right", writingDirection: "rtl" },
+  input: { backgroundColor: "#fff", borderRadius: 12, padding: 14, fontFamily: "Tajawal_400Regular", fontSize: 15, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl" },
   createBtn: { backgroundColor: Colors.light.accent, borderRadius: 14, height: 52, alignItems: "center", justifyContent: "center", marginTop: 8 },
-  createBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#fff", writingDirection: "rtl" },
+  createBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 16, color: "#0B2142", writingDirection: "rtl" },
+
+  specRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  specRemove: { width: 28, alignItems: "center", justifyContent: "center" },
+  specAdd: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    paddingVertical: 12, borderRadius: 12, backgroundColor: Colors.light.accentLight, marginBottom: 14,
+  },
+  specAddText: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" },
+  switchRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12, justifyContent: "flex-end" },
+  switchLabel: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" },
+
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14, justifyContent: "flex-end" },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.light.border },
+  chipActive: { backgroundColor: Colors.light.accent, borderColor: Colors.light.accent },
+  chipText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  chipTextActive: { fontFamily: "Tajawal_700Bold", color: "#0B2142" },
+
+  hintBox: { flexDirection: "row", gap: 8, backgroundColor: "#FFF4D6", borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: "#F5B731" },
+  hintText: { flex: 1, fontFamily: "Tajawal_400Regular", fontSize: 12, color: "#754500", textAlign: "right", writingDirection: "rtl", lineHeight: 19 },
+
+  imagePicker: { height: 130, borderRadius: 14, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.light.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 14, overflow: "hidden" },
+  imagePreview: { width: "100%", height: "100%" },
+  imagePickerText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
+
+  errorBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(239,68,68,0.08)", borderRadius: 10, padding: 12, marginBottom: 8 },
+  errorText: { flex: 1, fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.danger, textAlign: "right", writingDirection: "rtl" },
+
+  footerRow: { flexDirection: "row", gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: Colors.light.border },
+  cancelButton: { flex: 1, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: Colors.light.inputBg },
+  cancelButtonText: { fontFamily: "Tajawal_500Medium", fontSize: 15, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  submitButton: { flex: 2, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: Colors.light.accent },
+  submitButtonText: { fontFamily: "Tajawal_700Bold", fontSize: 16, color: "#0B2142", writingDirection: "rtl" },
 });
 
 const orderMgmtStyles = StyleSheet.create({
   infoSection: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: Colors.light.border },
-  infoSectionTitle: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 10 },
+  infoSectionTitle: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 10 },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
-  infoText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
-  receiptLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
+  infoText: { fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
+  receiptLabel: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
   receiptImage: { width: "100%", height: 200, borderRadius: 10, backgroundColor: Colors.light.inputBg },
   paymentActions: { marginTop: 8 },
-  confirmBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#2ECC71", borderRadius: 10, paddingVertical: 12 },
-  confirmBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
-  rejectBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#E74C3C", borderRadius: 10, paddingVertical: 12, marginTop: 8 },
-  rejectBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
-  rejectionInput: { backgroundColor: Colors.light.inputBg, borderRadius: 10, padding: 12, fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
+  confirmBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#067647", borderRadius: 10, paddingVertical: 12 },
+  confirmBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: "#fff", writingDirection: "rtl" },
+  rejectBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#B42318", borderRadius: 10, paddingVertical: 12, marginTop: 8 },
+  rejectBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: "#fff", writingDirection: "rtl" },
+  rejectionInput: { backgroundColor: Colors.light.inputBg, borderRadius: 10, padding: 12, fontFamily: "Tajawal_400Regular", fontSize: 14, color: Colors.light.text, borderWidth: 1, borderColor: Colors.light.border, textAlign: "right", writingDirection: "rtl", marginBottom: 8 },
 });
 
 const chartStyles = StyleSheet.create({
@@ -2375,13 +3003,13 @@ const chartStyles = StyleSheet.create({
   headerRow: { marginBottom: 16 },
   summaryRow: { flexDirection: "row", gap: 4, marginTop: -4 },
   summaryItem: { alignItems: "center" },
-  summaryValue: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.light.text },
-  summaryLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
+  summaryValue: { fontFamily: "Tajawal_700Bold", fontSize: 16, color: Colors.light.text },
+  summaryLabel: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
   barsContainer: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", height: 180, paddingTop: 8 },
   barCol: { flex: 1, alignItems: "center", gap: 4 },
-  barValue: { fontFamily: "Inter_600SemiBold", fontSize: 9, color: Colors.light.accent, minHeight: 14, textAlign: "center" },
+  barValue: { fontFamily: "Tajawal_500Medium", fontSize: 9, color: Colors.light.accent, minHeight: 14, textAlign: "center" },
   barTrack: { width: 28, height: 120, backgroundColor: Colors.light.progressBg, borderRadius: 6, justifyContent: "flex-end", overflow: "hidden" },
   barFill: { width: "100%", borderRadius: 6 },
-  barLabel: { fontFamily: "Inter_500Medium", fontSize: 9, color: Colors.light.textSecondary, writingDirection: "rtl", textAlign: "center" },
-  barCount: { fontFamily: "Inter_400Regular", fontSize: 9, color: Colors.light.tabIconDefault },
+  barLabel: { fontFamily: "Tajawal_500Medium", fontSize: 9, color: Colors.light.textSecondary, writingDirection: "rtl", textAlign: "center" },
+  barCount: { fontFamily: "Tajawal_400Regular", fontSize: 9, color: Colors.light.tabIconDefault },
 });

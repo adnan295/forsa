@@ -19,6 +19,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   ios:
+    if: github.ref == 'refs/heads/main'
     runs-on: macos-15
     timeout-minutes: 90
     env:

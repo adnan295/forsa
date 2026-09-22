@@ -1,5 +1,4 @@
-import { Alert } from "@/lib/alert";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,14 +6,14 @@ import {
   StyleSheet,
   Pressable,
   TextInput,
-
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
   Switch,
   Image,
 } from "react-native";
-import { router, Redirect, useLocalSearchParams } from "expo-router";
+import { Alert } from "@/lib/alert";
+import { router } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,9 +27,10 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { useCart, CartItem } from "@/lib/cart-context";
+import { useCart } from "@/lib/cart-context";
 import { apiRequest, queryClient, buildMediaUrl, getApiUrl } from "@/lib/query-client";
-import type { Campaign, PaymentMethod } from "@shared/schema";
+import type { PaymentMethod } from "@shared/schema";
+import type { CurrentDraw } from "@/components/DrawBanner";
 import { registerForPushNotifications } from "@/lib/push-notifications";
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -51,25 +51,14 @@ function requiresReceiptUpload(method: PaymentMethod): boolean {
 }
 
 export default function CheckoutScreen() {
-  const params = useLocalSearchParams<{
-    campaignId: string;
-    quantity: string;
-    fromCart: string;
-    productId: string;
-  }>();
   const insets = useSafeAreaInsets();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user } = useAuth();
   const { items: cartItems, clearCart } = useCart();
 
   const submitScale = useSharedValue(1);
   const submitAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: submitScale.value }],
   }));
-
-  const isCartMode = params.fromCart === "true";
-  const campaignId = params.campaignId;
-  const qty = parseInt(params.quantity || "1", 10) || 1;
-  const productId = params.productId || undefined;
 
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
@@ -84,20 +73,11 @@ export default function CheckoutScreen() {
   const [shippingPhone, setShippingPhone] = useState(user?.phone || "");
   const [shippingCity, setShippingCity] = useState(user?.city || "");
   const [shippingAddress, setShippingAddress] = useState(user?.address || "");
-  const [shippingCountry, setShippingCountry] = useState(user?.country || "سوريا");
+  const [shippingCountry, setShippingCountry] = useState(user?.country || "السعودية");
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [receiptFile, setReceiptFile] = useState<any>(null);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
-  const [pendingReceiptOrders, setPendingReceiptOrders] = useState<string[]>([]);
   const [uploadRetryPending, setUploadRetryPending] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    setShippingFullName(value => value || user.fullName || "");
-    setShippingPhone(value => value || user.phone || "");
-    setShippingCity(value => value || user.city || "");
-    setShippingAddress(value => value || user.address || "");
-  }, [user]);
 
   const isProfileComplete = !!(user?.fullName && user?.phone && user?.address && user?.city && user?.country);
 
@@ -117,7 +97,6 @@ export default function CheckoutScreen() {
           resolve(blob ? new File([blob], "receipt.jpg", { type: "image/jpeg" }) : file);
         }, "image/jpeg", 0.82);
       };
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
       img.src = url;
     });
   };
@@ -147,11 +126,8 @@ export default function CheckoutScreen() {
     if (!receiptImage) return;
     setUploadRetryPending(true);
     try {
-      for (const id of pendingReceiptOrders.length ? pendingReceiptOrders : [orderId]) {
-        await uploadReceiptToOrder(id, receiptImage, receiptFile);
-      }
+      await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
       setPendingOrderId(null);
-      setPendingReceiptOrders([]);
       router.replace(`/order/${orderId}` as any);
     } catch (e: any) {
       const msg = e.message || "فشل رفع الوصل";
@@ -178,9 +154,9 @@ export default function CheckoutScreen() {
     return true;
   };
 
-  const { data: campaign, isLoading: campaignLoading } = useQuery<Campaign & { products?: any[] }>({
-    queryKey: ["/api/campaigns", campaignId],
-    enabled: !isCartMode && !!campaignId,
+  const { data: draw } = useQuery<CurrentDraw | null>({
+    queryKey: ["/api/draws/current"],
+    staleTime: 15000,
   });
 
   const { data: paymentMethods, isLoading: methodsLoading } = useQuery<
@@ -197,15 +173,8 @@ export default function CheckoutScreen() {
   const selectedMethod =
     paymentMethods?.find((m) => m.id === selectedMethodId) || null;
 
-  const selectedVariant = campaign?.products?.find((p: any) => String(p.id) === String(productId));
-  const unitPrice = selectedVariant ? parseFloat(selectedVariant.price) : (campaign ? parseFloat(campaign.productPrice) : 0);
-  const variantName = selectedVariant?.nameAr || selectedVariant?.name || undefined;
-  const subtotal = isCartMode
-    ? cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    : unitPrice * qty;
-  const totalItemCount = isCartMode
-    ? cartItems.reduce((sum, item) => sum + item.quantity, 0)
-    : qty;
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const discountAmount = appliedCoupon
     ? (subtotal * appliedCoupon.discountPercent) / 100
     : 0;
@@ -213,6 +182,10 @@ export default function CheckoutScreen() {
   const afterCoupon = subtotal - discountAmount;
   const walletDeduction = useWallet ? Math.min(walletBalance, afterCoupon) : 0;
   const total = afterCoupon - walletDeduction;
+
+  // التذاكر بتنحسب على قيمة البضاعة بعد الخصم، قبل خصم المحفظة
+  const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
+  const expectedTickets = ticketPrice > 0 ? Math.floor(afterCoupon / ticketPrice) : 0;
 
   const couponMutation = useMutation({
     mutationFn: async () => {
@@ -239,45 +212,26 @@ export default function CheckoutScreen() {
 
   const purchaseMutation = useMutation({
     mutationFn: async () => {
-      if (isCartMode) {
-        const res = await apiRequest("POST", "/api/cart-purchase", {
-          items: cartItems.map((item) => ({
-            campaignId: item.campaignId,
-            quantity: item.quantity,
-            productId: item.productId,
-          })),
-          paymentMethod: selectedMethod?.name,
-          shippingFullName,
-          shippingPhone,
-          shippingCity,
-          shippingAddress,
-          shippingCountry,
-          couponCode: appliedCoupon?.code || undefined,
-          useWallet,
-          walletAmount: walletDeduction,
-        });
-        return res.json();
-      } else {
-        const res = await apiRequest("POST", "/api/purchase", {
-          campaignId,
-          quantity: qty,
-          productId,
-          paymentMethod: selectedMethod?.name,
-          shippingFullName,
-          shippingPhone,
-          shippingCity,
-          shippingAddress,
-          shippingCountry,
-          couponCode: appliedCoupon?.code || undefined,
-          useWallet,
-          walletAmount: walletDeduction,
-        });
-        return res.json();
-      }
+      const res = await apiRequest("POST", "/api/checkout", {
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+        paymentMethod: selectedMethod?.name,
+        shippingFullName,
+        shippingPhone,
+        shippingCity,
+        shippingAddress,
+        shippingCountry,
+        couponCode: appliedCoupon?.code || undefined,
+        useWallet,
+      });
+      return res.json();
     },
     onSuccess: async (data: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/wallet"] });
@@ -286,39 +240,26 @@ export default function CheckoutScreen() {
         registerForPushNotifications().catch(() => {});
       }
 
-      if (isCartMode) {
-        clearCart();
-        const firstOrderId = data.orders?.[0]?.id;
-        if (receiptImage && firstOrderId) {
-          try {
-            for (const ord of (data.orders || [])) {
-              await uploadReceiptToOrder(ord.id, receiptImage, receiptFile);
-            }
-            Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
-              { text: "حسناً", onPress: () => router.replace("/(tabs)/tickets" as any) },
-            ]);
-          } catch (_) {
-            setPendingReceiptOrders((data.orders || []).map((order: { id: string }) => order.id));
-            setPendingOrderId(firstOrderId);
-          }
-        } else {
-          Alert.alert("تم بنجاح", `تم تأكيد ${data.orders?.length || 1} طلب بنجاح!`, [
-            { text: "حسناً", onPress: () => router.replace("/(tabs)/tickets" as any) },
-          ]);
-        }
-      } else {
-        const orderId = data.order?.id || data.id;
-        if (receiptImage && orderId) {
-          try {
-            await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
-            router.replace(`/order/${orderId}` as any);
-          } catch (_) {
-            setPendingOrderId(orderId);
-          }
-        } else {
-          router.replace(`/order/${orderId}` as any);
+      const orderId = data.order?.id;
+      clearCart();
+
+      if (receiptImage && orderId) {
+        try {
+          await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
+        } catch {
+          setPendingOrderId(orderId);
+          return;
         }
       }
+
+      const ticketCount = data.expectedTickets ?? 0;
+      Alert.alert(
+        "تم استلام طلبك",
+        ticketCount > 0
+          ? `رح تحصل على ${ticketCount} ${ticketCount === 1 ? "تذكرة" : "تذكرة"} للسحب بمجرد تأكيد دفعتك.`
+          : "طلبك قيد المراجعة وسيتم تأكيده قريباً.",
+        [{ text: "تتبّع الطلب", onPress: () => router.replace(`/order/${orderId}` as any) }]
+      );
     },
     onError: (err: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -350,7 +291,7 @@ export default function CheckoutScreen() {
     purchaseMutation.mutate();
   }
 
-  if (authLoading || (!isCartMode && campaignLoading) || methodsLoading) {
+  if (methodsLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={Colors.light.accent} />
@@ -358,27 +299,7 @@ export default function CheckoutScreen() {
     );
   }
 
-  if (!user && Platform.OS === "web") {
-    const query = new URLSearchParams();
-    if (isCartMode) query.set("fromCart", "true");
-    else {
-      query.set("campaignId", campaignId || "");
-      query.set("quantity", String(qty));
-      if (productId) query.set("productId", productId);
-    }
-    return <Redirect href={{ pathname: "/auth", params: { returnTo: "/checkout?" + query.toString() } }} />;
-  }
-
-  if (!isCartMode && !campaign) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Ionicons name="alert-circle" size={48} color={Colors.light.danger} />
-        <Text style={styles.errorText}>لم يتم العثور على الحملة</Text>
-      </View>
-    );
-  }
-
-  if (isCartMode && cartItems.length === 0 && !pendingOrderId) {
+  if (cartItems.length === 0) {
     return (
       <View style={[styles.container, styles.centered]}>
         <Ionicons name="cart-outline" size={48} color={Colors.light.textSecondary} />
@@ -387,16 +308,16 @@ export default function CheckoutScreen() {
     );
   }
 
-  if (!isProfileComplete && Platform.OS !== "web") {
+  if (!isProfileComplete) {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={["#7C3AED", "#A855F7", "#EC4899"]}
+          colors={["#0B2142", "#164A9E"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
             styles.header,
-            { paddingTop: insets.top },
+            { paddingTop: Platform.OS === "web" ? 67 : insets.top },
           ]}
         >
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -409,10 +330,10 @@ export default function CheckoutScreen() {
           <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(239,68,68,0.1)", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
             <Ionicons name="person-circle-outline" size={44} color={Colors.light.danger} />
           </View>
-          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.light.text, textAlign: "center", writingDirection: "rtl", marginBottom: 8 }}>
+          <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 20, color: Colors.light.text, textAlign: "center", writingDirection: "rtl", marginBottom: 8 }}>
             أكمل ملفك الشخصي أولاً
           </Text>
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", lineHeight: 24, marginBottom: 24 }}>
+          <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 15, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", lineHeight: 24, marginBottom: 24 }}>
             يجب إكمال بياناتك الشخصية (الاسم، الهاتف، العنوان) قبل إتمام عملية الشراء
           </Text>
           <Pressable
@@ -420,12 +341,12 @@ export default function CheckoutScreen() {
             style={{ borderRadius: 16, overflow: "hidden", width: "100%" }}
           >
             <LinearGradient
-              colors={[Colors.light.accent, Colors.light.accentPink]}
+              colors={[Colors.light.accent, Colors.light.accentDark]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={{ paddingVertical: 16, alignItems: "center", borderRadius: 16 }}
             >
-              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 17, color: "#FFFFFF", writingDirection: "rtl" }}>
+              <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 17, color: "#FFFFFF", writingDirection: "rtl" }}>
                 إكمال الملف الشخصي
               </Text>
             </LinearGradient>
@@ -438,7 +359,7 @@ export default function CheckoutScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
+        colors={["#0B2142", "#164A9E"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[
@@ -475,45 +396,41 @@ export default function CheckoutScreen() {
               <Text style={styles.sectionTitle}>ملخص الطلب</Text>
             </View>
             <View style={styles.divider} />
-            {isCartMode ? (
-              <>
-                {cartItems.map((item, idx) => (
-                  <View key={`${item.campaignId}-${item.productId || idx}`} style={styles.cartItemRow}>
-                    <Text style={styles.cartItemPrice}>{(item.price * item.quantity).toFixed(2)} $</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.campaignTitle}>{item.title}</Text>
-                      {item.productName && (
-                        <Text style={[styles.summaryLabel, { color: Colors.light.accent, marginBottom: 2 }]}>{item.productName}</Text>
-                      )}
-                      <Text style={styles.summaryLabel}>{item.quantity} × {item.price.toFixed(2)} $</Text>
-                    </View>
-                  </View>
-                ))}
-              </>
-            ) : (
-              <>
-                <Text style={styles.campaignTitle}>{campaign!.title}</Text>
-                {variantName && (
-                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: Colors.light.accent, textAlign: "right", writingDirection: "rtl" as const, marginBottom: 4 }}>{variantName}</Text>
-                )}
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryValue}>{unitPrice.toFixed(2)} $</Text>
-                  <Text style={styles.summaryLabel}>سعر المنتج</Text>
+            {cartItems.map((item) => (
+              <View key={item.productId} style={styles.cartItemRow}>
+                <Text style={styles.cartItemPrice}>{(item.price * item.quantity).toFixed(2)} $</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemTitle}>{item.name}</Text>
+                  <Text style={styles.summaryLabel}>{item.quantity} × {item.price.toFixed(2)} $</Text>
                 </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryValue}>{qty}</Text>
-                  <Text style={styles.summaryLabel}>الكمية</Text>
-                </View>
-              </>
-            )}
+              </View>
+            ))}
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text style={styles.subtotalValue}>
                 {subtotal.toFixed(2)} $
               </Text>
-              <Text style={styles.subtotalLabel}>المجموع الفرعي ({totalItemCount} منتج)</Text>
+              <Text style={styles.subtotalLabel}>المجموع الفرعي ({totalItemCount} قطعة)</Text>
             </View>
           </View>
+
+          {draw && (
+            <View style={styles.ticketCard}>
+              <View style={styles.ticketIconWrap}>
+                <Ionicons name="ticket" size={20} color="#0B2142" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ticketCardTitle}>
+                  {expectedTickets > 0
+                    ? `${expectedTickets} ${expectedTickets === 1 ? "تذكرة" : "تذكرة"} لجولة "${draw.prizeName}"`
+                    : `لسا ما وصلت لأول تذكرة`}
+                </Text>
+                <Text style={styles.ticketCardSub}>
+                  كل {ticketPrice.toFixed(0)}$ = تذكرة · بتنمنح بعد تأكيد الدفع
+                </Text>
+              </View>
+            </View>
+          )}
 
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
@@ -632,10 +549,10 @@ export default function CheckoutScreen() {
                 ) : !selectedMethod.imageUrl ? (
                   <View style={{ paddingVertical: 12, alignItems: "center" }}>
                     <Ionicons name="alert-circle" size={28} color={Colors.light.warning} />
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.light.warning, textAlign: "center", writingDirection: "rtl", marginTop: 8 }}>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.warning, textAlign: "center", writingDirection: "rtl", marginTop: 8 }}>
                       بيانات الحساب غير متوفرة حالياً
                     </Text>
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", marginTop: 4 }}>
+                    <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "center", writingDirection: "rtl", marginTop: 4 }}>
                       يرجى التواصل مع الإدارة للحصول على بيانات الدفع
                     </Text>
                   </View>
@@ -651,7 +568,7 @@ export default function CheckoutScreen() {
                 <View style={{ marginTop: 16 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
                     <Ionicons name="cloud-upload-outline" size={18} color={Colors.light.accent} />
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, writingDirection: "rtl" }}>
                       رفع وصل الدفع <Text style={{ color: Colors.light.danger }}>*</Text>
                     </Text>
                   </View>
@@ -751,24 +668,24 @@ export default function CheckoutScreen() {
           {walletBalance > 0 && (
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="wallet-outline" size={20} color="#10B981" />
+                <Ionicons name="wallet-outline" size={20} color="#067647" />
                 <Text style={styles.sectionTitle}>المحفظة</Text>
               </View>
               <View style={styles.divider} />
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
                   <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(16,185,129,0.1)", alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="wallet" size={20} color="#10B981" />
+                    <Ionicons name="wallet" size={20} color="#067647" />
                   </View>
                   <View>
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" as const }}>
+                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" as const }}>
                       استخدام رصيد المحفظة
                     </Text>
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "#10B981", textAlign: "right", writingDirection: "rtl" as const }}>
+                    <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 13, color: "#067647", textAlign: "right", writingDirection: "rtl" as const }}>
                       الرصيد: {walletBalance.toFixed(2)} $
                     </Text>
                     {useWallet && walletDeduction > 0 && (
-                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#059669", textAlign: "right", writingDirection: "rtl" as const }}>
+                      <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: "#067647", textAlign: "right", writingDirection: "rtl" as const }}>
                         خصم: -{walletDeduction.toFixed(2)} $
                       </Text>
                     )}
@@ -780,7 +697,7 @@ export default function CheckoutScreen() {
                     setUseWallet(v);
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
-                  trackColor={{ true: "#10B981" }}
+                  trackColor={{ true: "#067647" }}
                 />
               </View>
             </View>
@@ -869,7 +786,7 @@ export default function CheckoutScreen() {
             )}
             {useWallet && walletDeduction > 0 && (
               <View style={styles.totalRow}>
-                <Text style={[styles.totalRowValue, { color: "#10B981" }]}>
+                <Text style={[styles.totalRowValue, { color: "#067647" }]}>
                   -{walletDeduction.toFixed(2)} $
                 </Text>
                 <Text style={styles.totalRowLabel}>خصم المحفظة 💳</Text>
@@ -878,20 +795,28 @@ export default function CheckoutScreen() {
             <View style={styles.totalDivider} />
             <View style={styles.totalRow}>
               <Text style={styles.grandTotal}>{total.toFixed(2)} $</Text>
-              <Text style={styles.grandTotalLabel}>الإجمالي</Text>
+              <Text style={styles.grandTotalLabel}>الإجمالي المستحق</Text>
             </View>
+            {draw && expectedTickets > 0 && (
+              <View style={[styles.totalRow, { marginTop: 6 }]}>
+                <Text style={[styles.totalRowValue, { color: Colors.light.accentDark }]}>
+                  {expectedTickets} تذكرة
+                </Text>
+                <Text style={styles.totalRowLabel}>تذاكر السحب 🎟️</Text>
+              </View>
+            )}
           </View>
 
           {pendingOrderId && (
             <View style={styles.retryUploadCard}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <Ionicons name="warning-outline" size={20} color={Colors.light.warning} />
-                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.light.warning, writingDirection: "rtl", flex: 1 }}>
+                <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.warning, writingDirection: "rtl", flex: 1 }}>
                   تم إنشاء طلبك لكن فشل رفع الوصل
                 </Text>
               </View>
-              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 12 }}>
-                يرجى تغيير الصورة إن لزم ثم اضغط "إعادة رفع الوصل"
+              <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 12 }}>
+                يرجى تغيير الصورة إن لزم ثم اضغط «إعادة رفع الوصل»
               </Text>
               <Pressable
                 onPress={() => handleRetryUpload(pendingOrderId)}
@@ -903,7 +828,7 @@ export default function CheckoutScreen() {
                 ) : (
                   <>
                     <Ionicons name="cloud-upload" size={18} color="#fff" />
-                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff", writingDirection: "rtl" }}>إعادة رفع الوصل</Text>
+                    <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 15, color: "#fff", writingDirection: "rtl" }}>إعادة رفع الوصل</Text>
                   </>
                 )}
               </Pressable>
@@ -947,6 +872,40 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
+  ticketCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#FFF4D6",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#F5B731",
+  },
+  ticketIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#1267E8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ticketCardTitle: {
+    fontFamily: "Tajawal_700Bold",
+    fontSize: 14,
+    color: "#0B2142",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  ticketCardSub: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 12,
+    color: "#754500",
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginTop: 2,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
@@ -956,7 +915,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   errorText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 16,
     color: Colors.light.textSecondary,
     marginTop: 12,
@@ -969,7 +928,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    shadowColor: "#7C3AED",
+    shadowColor: "#0B2142",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -985,7 +944,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 18,
     color: "#FFFFFF",
     textAlign: "center",
@@ -999,7 +958,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 22,
     padding: 20,
-    shadowColor: "#7C3AED",
+    shadowColor: "#0B2142",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 16,
@@ -1011,7 +970,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 16,
     color: Colors.light.text,
     textAlign: "right",
@@ -1032,13 +991,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cartItemPrice: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 15,
     color: Colors.light.accent,
     marginEnd: 12,
   },
-  campaignTitle: {
-    fontFamily: "Inter_600SemiBold",
+  itemTitle: {
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
@@ -1052,25 +1011,25 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   summaryLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     textAlign: "right",
     writingDirection: "rtl",
   },
   summaryValue: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
   },
   subtotalLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     writingDirection: "rtl",
   },
   subtotalValue: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 16,
     color: Colors.light.accent,
   },
@@ -1108,14 +1067,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   paymentName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
     textAlign: "right",
     writingDirection: "rtl",
   },
   paymentDesc: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: "right",
@@ -1141,7 +1100,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   bankHeaderText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.accent,
     textAlign: "right",
@@ -1156,13 +1115,13 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(124, 58, 237, 0.12)",
   },
   bankLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
   },
   bankValue: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     writingDirection: "rtl",
@@ -1180,7 +1139,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   bankNoteText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.warning,
     textAlign: "right",
@@ -1199,7 +1158,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   payImageCaption: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: "center",
@@ -1215,7 +1174,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.inputBg,
     borderRadius: 12,
     padding: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.text,
     textAlign: "right",
@@ -1230,7 +1189,7 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   couponBtnText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 14,
     color: "#FFFFFF",
   },
@@ -1244,7 +1203,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   couponSuccessText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.success,
     textAlign: "right",
@@ -1260,14 +1219,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   couponErrorText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.danger,
     textAlign: "right",
     writingDirection: "rtl",
   },
   inputLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.text,
     textAlign: "right",
@@ -1279,7 +1238,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.inputBg,
     borderRadius: 14,
     padding: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.text,
     textAlign: "right",
@@ -1294,13 +1253,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   totalRowLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 14,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
   },
   totalRowValue: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 15,
     color: Colors.light.text,
   },
@@ -1310,13 +1269,13 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   grandTotalLabel: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 16,
     color: Colors.light.text,
     writingDirection: "rtl",
   },
   grandTotal: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 26,
     color: Colors.light.accent,
   },
@@ -1348,14 +1307,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   uploadTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 14,
     color: Colors.light.accent,
     textAlign: "center",
     writingDirection: "rtl",
   },
   uploadSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Tajawal_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: "center",
@@ -1389,7 +1348,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
   },
   previewChangeText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Tajawal_500Medium",
     fontSize: 13,
     color: Colors.light.textSecondary,
     writingDirection: "rtl",
@@ -1413,13 +1372,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   placeOrderText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: "#FFFFFF",
     writingDirection: "rtl",
   },
   placeOrderPrice: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Tajawal_700Bold",
     fontSize: 17,
     color: "rgba(255,255,255,0.85)",
   },

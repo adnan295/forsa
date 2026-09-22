@@ -7,9 +7,11 @@ workflows:
       release_version:
         description: App Store version (confirm against the existing app before building)
         type: string
+        default: "1.1.0"
       build_number:
         description: Unused build number greater than the latest uploaded build
         type: string
+        default: "14"
     integrations:
       app_store_connect: NAYVO
     environment:
@@ -28,13 +30,17 @@ workflows:
       - name: Validate release identity and version
         script: |
           set -euo pipefail
-          node <<'NODE'
+          if [ "${CM_BRANCH:-}" != "main" ]; then
+            echo "Release builds must use the canonical main branch."
+            exit 1
+          fi
+          node <<'NODE' 
           const fs = require('fs');
           const config = JSON.parse(fs.readFileSync('app.json', 'utf8'));
           const version = process.env.RELEASE_VERSION;
           const build = process.env.RELEASE_BUILD;
           if (config.expo.ios.bundleIdentifier !== 'app.replit.forsa') throw new Error('Existing iOS bundle identifier must be preserved');
-          if (!/^\d+\.\d+\.\d+$/.test(version || '')) throw new Error('Enter a release version such as 1.0.3');
+          if (!/^\d+\.\d+\.\d+$/.test(version || '')) throw new Error('Enter a release version such as 1.1.0');
           if (!/^[1-9]\d{0,3}$/.test(build || '')) throw new Error('Enter an unused integer build number from 1 to 9999');
           config.expo.version = version;
           config.expo.ios.buildNumber = build;

@@ -1,75 +1,37 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
-  Pressable,
-  TextInput,
-  Platform,
   KeyboardAvoidingView,
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  I18nManager,
+  Platform,
 } from "react-native";
+import { Alert } from "@/lib/alert";
+import { router, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  withSequence,
-  Easing,
-} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { apiRequest } from "@/lib/query-client";
+import { translateError } from "@/lib/errors";
+import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
+import { Header, Button, Card, Field, InfoNote } from "@/components/ui";
 
-const { width: W } = Dimensions.get("window");
+const c = Colors.light;
 
-// ─── Step dot ────────────────────────────────────────────────
-function StepItem({ num, title, sub }: { num: number; title: string; sub: string }) {
-  return (
-    <View style={st.stepRow}>
-      <View style={st.stepNumBox}>
-        <Text style={st.stepNum}>{num}</Text>
-      </View>
-      <View style={st.stepBody}>
-        <Text style={st.stepTitle}>{title}</Text>
-        <Text style={st.stepSub}>{sub}</Text>
-      </View>
-    </View>
-  );
-}
+/** خطوات الشراكة كما تُعرض للتاجر */
+const STEPS: { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }[] = [
+  { icon: "document-text-outline", title: "أرسل طلبك", body: "عبّي البيانات وحدّد المنتج اللي بدك تعرضه" },
+  { icon: "call-outline", title: "منتواصل معك", body: "بنراجع الطلب وبنرجعلك خلال يومين عمل" },
+  { icon: "pricetags-outline", title: "منعرض منتجك", body: "بنضيف منتجك للمتجر ومنتابع المبيعات معك" },
+  { icon: "cash-outline", title: "منحاسبك", body: "بنحوّل مستحقاتك حسب الاتفاق" },
+];
 
-// ─── Benefit card ─────────────────────────────────────────────
-function BenefitCard({ icon, title, sub }: { icon: string; title: string; sub: string }) {
-  return (
-    <View style={st.benefitCard}>
-      <View style={st.benefitIcon}>
-        <Ionicons name={icon as any} size={24} color="#FFD000" />
-      </View>
-      <Text style={st.benefitTitle}>{title}</Text>
-      <Text style={st.benefitSub}>{sub}</Text>
-    </View>
-  );
-}
+type Errors = Partial<Record<"businessName" | "contactName" | "phone" | "productName", string>>;
 
-// ─── Stat box ─────────────────────────────────────────────────
-function StatBox({ num, label }: { num: string; label: string }) {
-  return (
-    <View style={st.statBox}>
-      <Text style={st.statNum}>{num}</Text>
-      <Text style={st.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-// ─── Main ─────────────────────────────────────────────────────
 export default function ClientScreen() {
   const insets = useSafeAreaInsets();
+
   const [businessName, setBusinessName] = useState("");
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
@@ -77,20 +39,27 @@ export default function ClientScreen() {
   const [productName, setProductName] = useState("");
   const [productValue, setProductValue] = useState("");
   const [description, setDescription] = useState("");
+  const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
-  const checkScale = useSharedValue(0);
-  const checkAnim = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }] }));
+  function validate(): boolean {
+    const next: Errors = {};
+    if (businessName.trim().length < 2) next.businessName = "اسم النشاط التجاري مطلوب";
+    if (contactName.trim().length < 2) next.contactName = "اسم المسؤول مطلوب";
+    if (phone.trim().length < 7) next.phone = "رقم الهاتف غير صحيح";
+    if (productName.trim().length < 2) next.productName = "اسم المنتج مطلوب";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
 
   async function handleSubmit() {
-    if (!businessName.trim() || !contactName.trim() || !phone.trim() || !productName.trim()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("تنبيه", "يرجى ملء جميع الحقول المطلوبة (*) قبل الإرسال.");
+    if (!validate()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
+
     setLoading(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await apiRequest("POST", "/api/campaign-requests", {
         businessName: businessName.trim(),
@@ -101,15 +70,11 @@ export default function ClientScreen() {
         productValue: productValue.trim() || undefined,
         description: description.trim() || undefined,
       });
-      setDone(true);
-      checkScale.value = withSequence(
-        withSpring(1.3, { damping: 8 }),
-        withSpring(1, { damping: 12 })
-      );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (e: any) {
+      setDone(true);
+    } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("خطأ", e?.message || "حدث خطأ، حاول مجدداً");
+      Alert.alert("تعذّر الإرسال", translateError(error?.message));
     } finally {
       setLoading(false);
     }
@@ -117,215 +82,279 @@ export default function ClientScreen() {
 
   function reset() {
     setDone(false);
-    setBusinessName(""); setContactName(""); setPhone(""); setEmail("");
-    setProductName(""); setProductValue(""); setDescription("");
-    checkScale.value = withTiming(0, { duration: 200 });
+    setBusinessName("");
+    setContactName("");
+    setPhone("");
+    setEmail("");
+    setProductName("");
+    setProductValue("");
+    setDescription("");
+    setErrors({});
+  }
+
+  if (done) {
+    return (
+      <View style={s.root}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Header title="شراكة تجارية" showBack />
+
+        <ScrollView contentContainerStyle={s.doneWrap} showsVerticalScrollIndicator={false}>
+          <View style={s.doneIcon}>
+            <Ionicons name="checkmark-circle" size={52} color={StatusColors.success.fg} />
+          </View>
+
+          <Text style={s.doneTitle}>وصلنا طلبك</Text>
+          <Text style={s.doneBody}>
+            شكراً لك! فريقنا رح يراجع الطلب ويتواصل معك خلال يومين عمل على الرقم اللي أدخلته.
+          </Text>
+
+          <View style={s.doneActions}>
+            <Button label="إرسال طلب آخر" variant="secondary" onPress={reset} />
+            <Button
+              label="رجوع للمتجر"
+              icon="storefront-outline"
+              onPress={() => router.push("/(tabs)/products" as any)}
+            />
+          </View>
+        </ScrollView>
+      </View>
+    );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#F8F8F8" }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 84 + 24 : 110 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Hero */}
-        <LinearGradient
-          colors={["#1A1A1A", "#2D2D2D"]}
-          style={[st.hero, { paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16 }]}
+    <View style={s.root}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <Header title="شراكة تجارية" showBack />
+
+      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={s.content}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={st.heroBadge}>
-            <Text style={st.heroBadgeText}>شراكة تجارية</Text>
-          </View>
-          <Text style={st.heroTitle}>اعرض منتجك{"\n"}على NAYVO</Text>
-          <Text style={st.heroSub}>
-            حوّل منتجك إلى حملة إثارة يتنافس عليها الآلاف — وسوّقه بتكلفة صفر
-          </Text>
-          <View style={st.statsRow}>
-            <StatBox num="+500" label="مشترك نشط" />
-            <View style={st.statsDivider} />
-            <StatBox num="+30" label="حملة ناجحة" />
-            <View style={st.statsDivider} />
-            <StatBox num="$0" label="تكلفة التسويق" />
-          </View>
-        </LinearGradient>
-
-        {/* Benefits */}
-        <View style={st.section}>
-          <Text style={st.sectionTitle}>لماذا NAYVO؟</Text>
-          <View style={st.benefitsGrid}>
-            <BenefitCard icon="megaphone" title="تسويق مجاني" sub="حملتك تصل لآلاف المشترين بدون تكلفة إعلانية" />
-            <BenefitCard icon="flash" title="مبيعات فورية" sub="التذاكر تُباع بسرعة كبيرة عبر مجتمعنا النشط" />
-            <BenefitCard icon="shield-checkmark" title="ضمان الدفع" sub="تستلم قيمة منتجك كاملاً قبل إجراء السحب" />
-            <BenefitCard icon="trending-up" title="تعزيز البراند" sub="ظهور واسع لمنتجك ومتجرك أمام جمهور متحمس" />
-          </View>
-        </View>
-
-        {/* How it works */}
-        <View style={[st.section, { backgroundColor: "#fff", borderRadius: 20, marginHorizontal: 16, padding: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 }]}>
-          <Text style={st.sectionTitle}>كيف يعمل؟</Text>
-          <StepItem num={1} title="أرسل طلبك" sub="أرسل تفاصيل منتجك من خلال النموذج أدناه" />
-          <View style={st.stepLine} />
-          <StepItem num={2} title="نراجع الطلب" sub="فريقنا يتواصل معك خلال 24 ساعة لتأكيد التفاصيل" />
-          <View style={st.stepLine} />
-          <StepItem num={3} title="نطلق الحملة" sub="نصوّر المنتج ونبني الحملة ونطلقها أمام مجتمعنا" />
-          <View style={st.stepLine} />
-          <StepItem num={4} title="تستلم قيمتك" sub="تستلم قيمة المنتج بعد اكتمال الحملة والسحب" />
-        </View>
-
-        {/* Form */}
-        {done ? (
-          <View style={st.successBox}>
-            <Animated.View style={[st.successIcon, checkAnim]}>
-              <Ionicons name="checkmark-circle" size={72} color="#10B981" />
-            </Animated.View>
-            <Text style={st.successTitle}>تم إرسال طلبك!</Text>
-            <Text style={st.successSub}>
-              سيتواصل معك فريقنا على رقم الهاتف المسجل خلال 24 ساعة عمل.
+          {/* ───── تعريف ───── */}
+          <View style={s.hero}>
+            <View style={s.heroIcon}>
+              <Ionicons name="briefcase" size={30} color={c.primary} />
+            </View>
+            <Text style={s.heroTitle}>اعرض منتجك على فرصة</Text>
+            <Text style={s.heroBody}>
+              وصّل منتجك لآلاف المتسوّقين — نحن منتولّى العرض والبيع والسحب، وأنت بتتابع النتائج.
             </Text>
-            <Pressable style={st.newBtn} onPress={reset}>
-              <Text style={st.newBtnText}>إرسال طلب آخر</Text>
-            </Pressable>
           </View>
-        ) : (
-          <View style={st.formBox}>
-            <Text style={st.formTitle}>أرسل طلبك الآن</Text>
-            <Text style={st.formSub}>الحقول المميزة بـ * إلزامية</Text>
 
-            <Field label="اسم النشاط التجاري *" placeholder="مثال: متجر الأناقة" value={businessName} onChangeText={setBusinessName} />
-            <Field label="الاسم الكامل *" placeholder="اسمك الكامل" value={contactName} onChangeText={setContactName} />
-            <Field label="رقم الهاتف *" placeholder="+963 9XX XXX XXX" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-            <Field label="البريد الإلكتروني" placeholder="اختياري" value={email} onChangeText={setEmail} keyboardType="email-address" />
-            <Field label="اسم المنتج *" placeholder="مثال: iPhone 15 Pro Max" value={productName} onChangeText={setProductName} />
-            <Field label="قيمة المنتج (USD)" placeholder="مثال: 1200" value={productValue} onChangeText={setProductValue} keyboardType="numeric" />
-            <Field label="تفاصيل إضافية" placeholder="صف منتجك وأي تفاصيل تريد مشاركتها..." value={description} onChangeText={setDescription} multiline lines={4} />
+          {/* ───── الخطوات ───── */}
+          <Card title="كيف بتصير الشراكة؟" icon="git-branch-outline">
+            {STEPS.map((step, i) => (
+              <View key={step.title} style={s.stepRow}>
+                <Text style={s.stepNum}>{i + 1}</Text>
+                <View style={s.stepText}>
+                  <Text style={s.stepTitle}>{step.title}</Text>
+                  <Text style={s.stepBody}>{step.body}</Text>
+                </View>
+                <View style={s.stepIcon}>
+                  <Ionicons name={step.icon} size={19} color={c.primary} />
+                </View>
+              </View>
+            ))}
+          </Card>
 
-            <Pressable
-              style={[st.submitBtn, loading && { opacity: 0.7 }]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#1A1A1A" />
-              ) : (
-                <>
-                  <Ionicons name="send" size={18} color="#1A1A1A" />
-                  <Text style={st.submitText}>إرسال الطلب</Text>
-                </>
-              )}
-            </Pressable>
-          </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
-}
+          {/* ───── النموذج ───── */}
+          <Card title="بيانات الطلب" icon="create-outline">
+            <Field
+              label="اسم النشاط التجاري *"
+              value={businessName}
+              onChangeText={setBusinessName}
+              placeholder="اسم المتجر أو الشركة"
+              icon="business-outline"
+              error={errors.businessName}
+            />
 
-function Field({
-  label, placeholder, value, onChangeText, keyboardType = "default", multiline = false, lines = 1,
-}: {
-  label: string; placeholder: string; value: string;
-  onChangeText: (t: string) => void; keyboardType?: any; multiline?: boolean; lines?: number;
-}) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <View style={st.field}>
-      <Text style={st.fieldLabel}>{label}</Text>
-      <TextInput
-                textContentType="none"
-        style={[st.input, focused && st.inputFocused, multiline && { height: lines * 44, textAlignVertical: "top", paddingTop: 12 }]}
-        placeholder={placeholder}
-        placeholderTextColor="#C0C0C0"
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        textAlign="right"
-        multiline={multiline}
-        numberOfLines={multiline ? lines : 1}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-      />
+            <Field
+              label="اسم المسؤول *"
+              value={contactName}
+              onChangeText={setContactName}
+              placeholder="الاسم الكامل"
+              icon="person-outline"
+              error={errors.contactName}
+            />
+
+            <Field
+              label="رقم الهاتف *"
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="05xxxxxxxx"
+              icon="call-outline"
+              keyboardType="phone-pad"
+              error={errors.phone}
+              ltr
+            />
+
+            <Field
+              label="البريد الإلكتروني"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="name@example.com"
+              icon="mail-outline"
+              keyboardType="email-address"
+              hint="اختياري"
+              ltr
+            />
+
+            <Field
+              label="اسم المنتج *"
+              value={productName}
+              onChangeText={setProductName}
+              placeholder="المنتج اللي بدك تعرضه"
+              icon="cube-outline"
+              error={errors.productName}
+            />
+
+            <Field
+              label="قيمة المنتج التقريبية ($)"
+              value={productValue}
+              onChangeText={setProductValue}
+              placeholder="مثال: 250"
+              icon="pricetag-outline"
+              keyboardType="numeric"
+              hint="اختياري"
+              ltr
+            />
+
+            <Field
+              label="تفاصيل إضافية"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="أي معلومات بتساعدنا نفهم منتجك أكثر"
+              icon="document-text-outline"
+              multiline
+              hint="اختياري"
+            />
+          </Card>
+
+          <InfoNote>الحقول المعلّمة بـ * مطلوبة — الباقي بيساعدنا نرجعلك أسرع</InfoNote>
+        </ScrollView>
+
+        <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}>
+          <Button label="إرسال الطلب" onPress={handleSubmit} loading={loading} />
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
-const st = StyleSheet.create({
-  hero: { paddingHorizontal: 20, paddingBottom: 28 },
-  heroBadge: {
-    alignSelf: I18nManager.isRTL ? "flex-start" : "flex-end", backgroundColor: "rgba(255,208,0,0.15)",
-    borderWidth: 1, borderColor: "#FFD000",
-    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, marginBottom: 16,
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.background },
+  flex: { flex: 1 },
+  content: { padding: Spacing.screen, paddingBottom: 120, gap: Spacing.md },
+
+  hero: {
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    padding: Spacing.xl,
+    alignItems: "center",
+    gap: Spacing.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
-  heroBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#FFD000" },
-  heroTitle: { fontFamily: "Inter_700Bold", fontSize: 28, color: "#fff", textAlign: "right", lineHeight: 38, marginBottom: 10 },
-  heroSub: { fontFamily: "Inter_400Regular", fontSize: 15, color: "rgba(255,255,255,0.65)", textAlign: "right", lineHeight: 22, marginBottom: 24, writingDirection: "rtl" },
-  statsRow: { flexDirection: "row", justifyContent: "space-around", backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 16, padding: 16 },
-  statBox: { alignItems: "center", gap: 4 },
-  statNum: { fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFD000" },
-  statLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.6)" },
-  statsDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.1)" },
-
-  section: { paddingHorizontal: 16, paddingTop: 28, paddingBottom: 8, direction: (I18nManager.isRTL ? "rtl" : "ltr") as "rtl" | "ltr" },
-  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 19, color: "#1A1A1A", textAlign: "right", marginBottom: 16, writingDirection: "rtl" },
-
-  benefitsGrid: { flexDirection: I18nManager.isRTL ? "row-reverse" : "row", flexWrap: "wrap", gap: 12 },
-  benefitCard: {
-    width: (W - 32 - 12) / 2,
-    backgroundColor: "#fff", borderRadius: 16, padding: 16,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
-    alignItems: "flex-start", gap: 8,
+  heroIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: c.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  benefitIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: "#FFF9E0", alignItems: "center", justifyContent: "center" },
-  benefitTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#1A1A1A", textAlign: "right", writingDirection: "rtl" },
-  benefitSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#888", textAlign: "right", lineHeight: 17, writingDirection: "rtl" },
-
-  stepRow: { flexDirection: "row", gap: 14, alignItems: "flex-start" },
-  stepNumBox: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  stepNum: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#1A1A1A" },
-  stepBody: { flex: 1 },
-  stepTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#1A1A1A", textAlign: "right", writingDirection: "rtl" },
-  stepSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#888", textAlign: "right", lineHeight: 17, marginTop: 2, writingDirection: "rtl" },
-  stepLine: { height: 20, width: 1, backgroundColor: "#E5E7EB", marginStart: 16, marginVertical: 4 },
-
-  formBox: {
-    marginHorizontal: 16, marginTop: 24,
-    backgroundColor: "#fff", borderRadius: 20, padding: 20,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+  heroTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h2,
+    color: c.navy,
+    textAlign: "center",
+    writingDirection: "rtl",
   },
-  formTitle: { fontFamily: "Inter_700Bold", fontSize: 19, color: "#1A1A1A", textAlign: "right", marginBottom: 4, writingDirection: "rtl" },
-  formSub: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#888", textAlign: "right", marginBottom: 20, writingDirection: "rtl" },
-
-  field: { marginBottom: 14 },
-  fieldLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#444", textAlign: "right", marginBottom: 6, writingDirection: "rtl" },
-  input: {
-    backgroundColor: "#F8F8F8", borderRadius: 12,
-    borderWidth: 1.5, borderColor: "#EBEBEB",
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontFamily: "Inter_400Regular", fontSize: 14, color: "#1A1A1A",
-    minHeight: 48,
+  heroBody: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "center",
+    writingDirection: "rtl",
+    lineHeight: 23,
   },
-  inputFocused: { borderColor: "#FFD000", backgroundColor: "#FFFDF0" },
 
-  submitBtn: {
-    backgroundColor: "#FFD000", borderRadius: 14,
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 8, paddingVertical: 15, marginTop: 8,
+  stepRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
+  stepNum: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h2,
+    color: c.borderSubtle,
+    width: 22,
+    textAlign: "center",
   },
-  submitText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#1A1A1A" },
+  stepText: { flex: 1, gap: 2 },
+  stepTitle: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  stepBody: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 19,
+  },
+  stepIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: Radius.button,
+    backgroundColor: c.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  successBox: {
-    marginHorizontal: 16, marginTop: 24,
-    backgroundColor: "#fff", borderRadius: 20, padding: 32,
-    alignItems: "center", gap: 12,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    start: 0,
+    end: 0,
+    backgroundColor: c.surface,
+    paddingHorizontal: Spacing.screen,
+    paddingTop: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
   },
-  successIcon: {},
-  successTitle: { fontFamily: "Inter_700Bold", fontSize: 22, color: "#1A1A1A", textAlign: "center" },
-  successSub: { fontFamily: "Inter_400Regular", fontSize: 14, color: "#666", textAlign: "center", lineHeight: 22, writingDirection: "rtl" },
-  newBtn: { backgroundColor: "#FFD000", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  newBtnText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#1A1A1A" },
+
+  doneWrap: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  doneIcon: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    backgroundColor: StatusColors.success.bg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  doneTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h2,
+    color: c.navy,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  doneBody: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "center",
+    writingDirection: "rtl",
+    lineHeight: 23,
+  },
+  doneActions: { alignSelf: "stretch", gap: Spacing.md, marginTop: Spacing.sm },
 });

@@ -1,4 +1,3 @@
-import { Alert } from "@/lib/alert";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
@@ -6,22 +5,23 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  TextInput,
-
-  ActivityIndicator,
-  Platform,
-  KeyboardAvoidingView,
   Modal,
-  FlatList,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { router } from "expo-router";
+import { Alert } from "@/lib/alert";
+import { router, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest } from "@/lib/query-client";
+import { translateError } from "@/lib/errors";
+import Colors, { Fonts, FontSize, Radius, Sizing, Spacing } from "@/constants/colors";
+import { Header, Button, Field, InfoNote } from "@/components/ui";
+
+const c = Colors.light;
 
 const ARAB_COUNTRIES = [
   "السعودية", "الإمارات", "الكويت", "البحرين", "قطر", "عمان",
@@ -61,13 +61,7 @@ const OTHER_COUNTRIES = [
   "فنزويلا", "فيتنام", "زامبيا", "زيمبابوي",
 ];
 
-interface FormErrors {
-  fullName?: string;
-  phone?: string;
-  city?: string;
-  address?: string;
-  country?: string;
-}
+type FormErrors = Partial<Record<"fullName" | "phone" | "city" | "address" | "country", string>>;
 
 export default function EditProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -80,45 +74,44 @@ export default function EditProfileScreen() {
   const [country, setCountry] = useState("السعودية");
   const [errors, setErrors] = useState<FormErrors>({});
   const [saving, setSaving] = useState(false);
-  const [countryModalVisible, setCountryModalVisible] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
 
   useEffect(() => {
-    if (user) {
-      setFullName(user.fullName || "");
-      setPhone(user.phone || "");
-      setCity(user.city || "");
-      setAddress(user.address || "");
-      setCountry(user.country || "السعودية");
-    }
+    if (!user) return;
+    setFullName(user.fullName || "");
+    setPhone(user.phone || "");
+    setCity(user.city || "");
+    setAddress(user.address || "");
+    setCountry(user.country || "السعودية");
   }, [user]);
 
-  const filteredArabCountries = useMemo(() => {
-    if (!countrySearch.trim()) return ARAB_COUNTRIES;
-    return ARAB_COUNTRIES.filter((c) => c.includes(countrySearch.trim()));
-  }, [countrySearch]);
-
-  const filteredOtherCountries = useMemo(() => {
-    if (!countrySearch.trim()) return OTHER_COUNTRIES;
-    return OTHER_COUNTRIES.filter((c) => c.includes(countrySearch.trim()));
+  const filtered = useMemo(() => {
+    const q = countrySearch.trim();
+    const match = (name: string) => !q || name.includes(q);
+    return {
+      arab: ARAB_COUNTRIES.filter(match),
+      other: OTHER_COUNTRIES.filter(match),
+    };
   }, [countrySearch]);
 
   function validate(): boolean {
-    const newErrors: FormErrors = {};
-    if (!fullName.trim()) newErrors.fullName = "الاسم الكامل مطلوب";
-    if (!phone.trim()) newErrors.phone = "رقم الهاتف مطلوب";
-    if (!city.trim()) newErrors.city = "المدينة مطلوبة";
-    if (!address.trim()) newErrors.address = "العنوان التفصيلي مطلوب";
-    if (!country.trim()) newErrors.country = "الدولة مطلوبة";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const next: FormErrors = {};
+    if (fullName.trim().length < 2) next.fullName = "الاسم الكامل مطلوب";
+    if (phone.trim().length < 8) next.phone = "رقم الهاتف غير صحيح";
+    if (city.trim().length < 2) next.city = "المدينة مطلوبة";
+    if (address.trim().length < 5) next.address = "العنوان التفصيلي مطلوب";
+    if (!country.trim()) next.country = "الدولة مطلوبة";
+    setErrors(next);
+    return Object.keys(next).length === 0;
   }
 
   async function handleSave() {
     if (!validate()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
+
     setSaving(true);
     try {
       await apiRequest("PUT", "/api/user/profile", {
@@ -130,301 +123,158 @@ export default function EditProfileScreen() {
       });
       await refreshUser();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("تم بنجاح", "تم تحديث بياناتك بنجاح");
-      router.back();
-    } catch (err: any) {
+      Alert.alert("تم الحفظ", "تم تحديث بياناتك", [
+        { text: "تمام", onPress: () => router.back() },
+      ]);
+    } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const msg = err.message || "حدث خطأ أثناء الحفظ";
-      Alert.alert("خطأ", msg.includes(":") ? msg.split(": ").slice(1).join(": ") : msg);
+      Alert.alert("تعذّر الحفظ", translateError(error?.message));
     } finally {
       setSaving(false);
     }
   }
 
-  function selectCountry(c: string) {
-    setCountry(c);
-    setCountryModalVisible(false);
+  function pickCountry(name: string) {
+    Haptics.selectionAsync();
+    setCountry(name);
+    setPickerOpen(false);
     setCountrySearch("");
-    if (errors.country) {
-      setErrors((prev) => ({ ...prev, country: undefined }));
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setErrors((prev) => ({ ...prev, country: undefined }));
   }
 
-  const modalData = useMemo(() => {
-    const sections: { key: string; type: "header" | "item"; label: string }[] = [];
-    if (filteredArabCountries.length > 0) {
-      sections.push({ key: "header-arab", type: "header", label: "الدول العربية" });
-      filteredArabCountries.forEach((c) =>
-        sections.push({ key: `arab-${c}`, type: "item", label: c })
-      );
-    }
-    if (filteredOtherCountries.length > 0) {
-      sections.push({ key: "header-other", type: "header", label: "دول أخرى" });
-      filteredOtherCountries.forEach((c) =>
-        sections.push({ key: `other-${c}`, type: "item", label: c })
-      );
-    }
-    return sections;
-  }, [filteredArabCountries, filteredOtherCountries]);
-
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[
-          styles.header,
-          { paddingTop: Platform.OS === "web" ? 67 : insets.top },
-        ]}
-      >
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
-        </Pressable>
-        <Text style={styles.headerTitle}>تعديل الملف الشخصي</Text>
-        <View style={{ width: 40 }} />
-      </LinearGradient>
+    <View style={s.root}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <Header title="بياناتي" showBack />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
-      >
+      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.scrollContent,
-            {
-              paddingBottom:
-                Platform.OS === "web" ? 34 : Math.max(insets.bottom, 16),
-            },
-          ]}
+          contentContainerStyle={s.content}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="person-outline" size={20} color={Colors.light.accent} />
-              <Text style={styles.sectionTitle}>المعلومات الشخصية</Text>
-            </View>
-            <View style={styles.divider} />
+          <InfoNote>بياناتك بتُستخدم لتوصيل طلباتك وتسليم الجوائز — خلّيها محدّثة</InfoNote>
 
-            <Text style={styles.inputLabel}>الاسم الكامل</Text>
-            <TextInput
-                textContentType="none"
-              style={[styles.input, errors.fullName ? styles.inputError : null]}
-              placeholder="الاسم الكامل"
-              placeholderTextColor={Colors.light.textSecondary}
-              value={fullName}
-              onChangeText={(t) => {
-                setFullName(t);
-                if (errors.fullName) setErrors((p) => ({ ...p, fullName: undefined }));
-              }}
-            />
-            {errors.fullName ? (
-              <Text style={styles.errorText}>{errors.fullName}</Text>
-            ) : null}
+          <Field
+            label="الاسم الكامل"
+            value={fullName}
+            onChangeText={setFullName}
+            placeholder="الاسم كما في الهوية"
+            icon="person-outline"
+            error={errors.fullName}
+          />
 
-            <Text style={styles.inputLabel}>رقم الهاتف</Text>
-            <TextInput
-                textContentType="none"
-              style={[styles.input, errors.phone ? styles.inputError : null]}
-              placeholder="رقم الهاتف"
-              placeholderTextColor={Colors.light.textSecondary}
-              value={phone}
-              onChangeText={(t) => {
-                setPhone(t);
-                if (errors.phone) setErrors((p) => ({ ...p, phone: undefined }));
-              }}
-              keyboardType="phone-pad"
-            />
-            {errors.phone ? (
-              <Text style={styles.errorText}>{errors.phone}</Text>
-            ) : null}
+          <Field
+            label="رقم الهاتف"
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="05xxxxxxxx"
+            icon="call-outline"
+            keyboardType="phone-pad"
+            error={errors.phone}
+            ltr
+          />
 
-            <Text style={styles.inputLabel}>المدينة</Text>
-            <TextInput
-                textContentType="none"
-              style={[styles.input, errors.city ? styles.inputError : null]}
-              placeholder="المدينة"
-              placeholderTextColor={Colors.light.textSecondary}
-              value={city}
-              onChangeText={(t) => {
-                setCity(t);
-                if (errors.city) setErrors((p) => ({ ...p, city: undefined }));
-              }}
-            />
-            {errors.city ? (
-              <Text style={styles.errorText}>{errors.city}</Text>
-            ) : null}
-
-            <Text style={styles.inputLabel}>العنوان التفصيلي</Text>
-            <TextInput
-                textContentType="none"
-              style={[
-                styles.input,
-                { minHeight: 80, textAlignVertical: "top" },
-                errors.address ? styles.inputError : null,
-              ]}
-              placeholder="العنوان التفصيلي"
-              placeholderTextColor={Colors.light.textSecondary}
-              value={address}
-              onChangeText={(t) => {
-                setAddress(t);
-                if (errors.address) setErrors((p) => ({ ...p, address: undefined }));
-              }}
-              multiline
-              numberOfLines={3}
-            />
-            {errors.address ? (
-              <Text style={styles.errorText}>{errors.address}</Text>
-            ) : null}
-
-            <Text style={styles.inputLabel}>الدولة</Text>
+          {/* الدولة — منتقي بدل حقل حر */}
+          <View style={s.field}>
+            <Text style={s.fieldLabel}>الدولة</Text>
             <Pressable
-              onPress={() => setCountryModalVisible(true)}
-              style={[
-                styles.input,
-                styles.countryPicker,
-                errors.country ? styles.inputError : null,
-              ]}
+              onPress={() => setPickerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`الدولة: ${country}`}
+              style={[s.picker, !!errors.country && s.pickerError]}
             >
-              <Text
-                style={[
-                  styles.countryPickerText,
-                  !country && { color: Colors.light.textSecondary },
-                ]}
-              >
-                {country || "اختر الدولة"}
-              </Text>
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={Colors.light.textSecondary}
-              />
+              <Ionicons name="chevron-down" size={18} color={c.textMuted} />
+              <Text style={s.pickerValue}>{country}</Text>
+              <Ionicons name="flag-outline" size={19} color={c.textMuted} />
             </Pressable>
-            {errors.country ? (
-              <Text style={styles.errorText}>{errors.country}</Text>
-            ) : null}
+            {errors.country ? <Text style={s.fieldError}>{errors.country}</Text> : null}
           </View>
 
-          <Pressable
-            onPress={handleSave}
-            disabled={saving}
-            style={({ pressed }) => [
-              styles.saveBtn,
-              pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
-              saving && { opacity: 0.6 },
-            ]}
-          >
-            <LinearGradient
-              colors={[Colors.light.accent, Colors.light.accentDark]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.saveGradient}
-            >
-              {saving ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.saveText}>حفظ التغييرات</Text>
-              )}
-            </LinearGradient>
-          </Pressable>
+          <Field
+            label="المدينة"
+            value={city}
+            onChangeText={setCity}
+            placeholder="اسم المدينة"
+            icon="business-outline"
+            error={errors.city}
+          />
+
+          <Field
+            label="العنوان التفصيلي"
+            value={address}
+            onChangeText={setAddress}
+            placeholder="الحي، الشارع، رقم المبنى"
+            icon="location-outline"
+            multiline
+            error={errors.address}
+          />
         </ScrollView>
+
+        <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}>
+          <Button label="حفظ البيانات" onPress={handleSave} loading={saving} />
+        </View>
       </KeyboardAvoidingView>
 
+      {/* ───────── منتقي الدولة ───────── */}
       <Modal
-        visible={countryModalVisible}
+        visible={pickerOpen}
+        transparent
         animationType="slide"
-        transparent={true}
-        onRequestClose={() => {
-          setCountryModalVisible(false);
-          setCountrySearch("");
-        }}
+        onRequestClose={() => setPickerOpen(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              {
-                paddingTop: Platform.OS === "web" ? 20 : Math.max(insets.top, 20),
-                paddingBottom: Platform.OS === "web" ? 34 : Math.max(insets.bottom, 20),
-              },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <Pressable
-                onPress={() => {
-                  setCountryModalVisible(false);
-                  setCountrySearch("");
-                }}
-                style={styles.modalCloseBtn}
-              >
-                <Ionicons name="close" size={24} color={Colors.light.text} />
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <View style={s.modalHead}>
+              <Pressable onPress={() => setPickerOpen(false)} hitSlop={8} accessibilityLabel="إغلاق">
+                <Ionicons name="close" size={24} color={c.navy} />
               </Pressable>
-              <Text style={styles.modalTitle}>اختر الدولة</Text>
-              <View style={{ width: 40 }} />
+              <Text style={s.modalTitle}>اختر الدولة</Text>
             </View>
 
-            <View style={styles.searchContainer}>
-              <Ionicons
-                name="search"
-                size={20}
-                color={Colors.light.textSecondary}
-                style={styles.searchIcon}
-              />
+            <View style={s.searchRow}>
+              <Ionicons name="search" size={19} color={c.textMuted} />
               <TextInput
-                textContentType="none"
-                style={styles.searchInput}
-                placeholder="ابحث عن دولة..."
-                placeholderTextColor={Colors.light.textSecondary}
                 value={countrySearch}
                 onChangeText={setCountrySearch}
-                autoFocus={false}
+                placeholder="ابحث عن دولة"
+                placeholderTextColor={c.textMuted}
+                style={s.searchInput}
+                accessibilityLabel="البحث عن دولة"
               />
             </View>
 
-            <FlatList
-              data={modalData}
-              keyExtractor={(item) => item.key}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => {
-                if (item.type === "header") {
-                  return (
-                    <View style={styles.countryGroupHeader}>
-                      <Text style={styles.countryGroupTitle}>{item.label}</Text>
-                    </View>
-                  );
-                }
-                const isSelected = country === item.label;
-                return (
-                  <Pressable
-                    onPress={() => selectCountry(item.label)}
-                    style={[
-                      styles.countryItem,
-                      isSelected && styles.countryItemSelected,
-                    ]}
-                  >
-                    {isSelected && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={22}
-                        color={Colors.light.accent}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.countryItemText,
-                        isSelected && { color: Colors.light.accent, fontFamily: "Inter_600SemiBold" },
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              }}
-            />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.modalList}>
+              {filtered.arab.length > 0 && <Text style={s.groupLabel}>الدول العربية</Text>}
+              {filtered.arab.map((name) => (
+                <Pressable
+                  key={name}
+                  onPress={() => pickCountry(name)}
+                  accessibilityRole="button"
+                  style={[s.countryRow, country === name && s.countryRowActive]}
+                >
+                  {country === name && <Ionicons name="checkmark" size={18} color={c.primary} />}
+                  <Text style={[s.countryText, country === name && s.countryTextActive]}>{name}</Text>
+                </Pressable>
+              ))}
+
+              {filtered.other.length > 0 && <Text style={s.groupLabel}>باقي الدول</Text>}
+              {filtered.other.map((name) => (
+                <Pressable
+                  key={name}
+                  onPress={() => pickCountry(name)}
+                  accessibilityRole="button"
+                  style={[s.countryRow, country === name && s.countryRowActive]}
+                >
+                  {country === name && <Ionicons name="checkmark" size={18} color={c.primary} />}
+                  <Text style={[s.countryText, country === name && s.countryTextActive]}>{name}</Text>
+                </Pressable>
+              ))}
+
+              {filtered.arab.length === 0 && filtered.other.length === 0 && (
+                <Text style={s.noResult}>ما في دولة بهذا الاسم</Text>
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -432,215 +282,138 @@ export default function EditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.background },
+  flex: { flex: 1 },
+  content: { padding: Spacing.screen, paddingBottom: 120, gap: Spacing.lg },
+
+  field: { gap: 6 },
+  fieldLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.navy,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
-  header: {
+  fieldError: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: "#B42318",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  picker: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 4,
-    zIndex: 10,
+    gap: Spacing.sm,
+    height: Sizing.inputHeight,
+    borderRadius: Radius.input,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
-  },
-  headerTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: "#FFFFFF",
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  scrollContent: {
-    padding: 16,
-    gap: 14,
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    padding: 20,
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  sectionTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.light.border,
-    marginVertical: 14,
-  },
-  inputLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  input: {
-    backgroundColor: Colors.light.inputBg,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl",
-    borderWidth: 1.5,
-    borderColor: "transparent",
-  },
-  inputError: {
-    borderColor: Colors.light.danger,
-  },
-  errorText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.light.danger,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginTop: 4,
-  },
-  countryPicker: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  countryPickerText: {
+  pickerError: { borderColor: "#B42318", backgroundColor: "#FEF3F2" },
+  pickerValue: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: Colors.light.text,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.body,
+    color: c.text,
     textAlign: "right",
     writingDirection: "rtl",
   },
-  saveBtn: {
-    borderRadius: 18,
-    overflow: "hidden",
+
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    start: 0,
+    end: 0,
+    backgroundColor: c.surface,
+    paddingHorizontal: Spacing.screen,
+    paddingTop: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
   },
-  saveGradient: {
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 18,
-  },
-  saveText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: "#FFFFFF",
-    writingDirection: "rtl",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(31, 41, 55, 0.6)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+
+  modalOverlay: { flex: 1, backgroundColor: c.overlay, justifyContent: "flex-end" },
+  modalCard: {
+    backgroundColor: c.background,
+    borderTopStartRadius: Radius.hero,
+    borderTopEndRadius: Radius.hero,
     maxHeight: "85%",
-    minHeight: "60%",
-    paddingHorizontal: 16,
+    paddingBottom: Spacing.lg,
   },
-  modalHeader: {
+  modalHead: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  modalCloseBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    padding: Spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
   },
   modalTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: Colors.light.text,
-    textAlign: "center",
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h3,
+    color: c.navy,
     writingDirection: "rtl",
   },
-  searchContainer: {
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.light.inputBg,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    marginBottom: 12,
-  },
-  searchIcon: {
-    marginStart: 8,
+    gap: Spacing.sm,
+    margin: Spacing.lg,
+    marginBottom: Spacing.sm,
+    backgroundColor: c.surface,
+    borderRadius: Radius.input,
+    paddingHorizontal: Spacing.md,
+    height: Sizing.inputHeight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: Colors.light.text,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.body,
+    color: c.text,
     textAlign: "right",
     writingDirection: "rtl",
+    padding: 0,
   },
-  countryGroupHeader: {
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    backgroundColor: "#FFFFFF",
-  },
-  countryGroupTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 14,
-    color: Colors.light.accent,
+  modalList: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg, gap: 4 },
+  groupLabel: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.label,
+    color: c.textMuted,
     textAlign: "right",
     writingDirection: "rtl",
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xs,
   },
-  countryItem: {
+  countryRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-    gap: 10,
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.button,
+    backgroundColor: c.surface,
   },
-  countryItemSelected: {
-    backgroundColor: "rgba(124, 58, 237, 0.06)",
-  },
-  countryItemText: {
+  countryRowActive: { backgroundColor: c.primarySoft },
+  countryText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: Colors.light.text,
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.body,
+    color: c.text,
     textAlign: "right",
     writingDirection: "rtl",
+  },
+  countryTextActive: { fontFamily: Fonts.bold, color: c.primary },
+  noResult: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textMuted,
+    textAlign: "center",
+    writingDirection: "rtl",
+    paddingVertical: Spacing.xl,
   },
 });

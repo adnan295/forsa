@@ -1,5 +1,9 @@
 # Hostinger VPS production deployment
 
+Canonical branch: `main`. Read PROJECT_GUIDE.md and RELEASE.md first.
+The 1.1.0 schema migration is not ready for production: do not deploy over the legacy database.
+The restore commands below apply only to an explicitly selected fresh migration target.
+
 Target: Hostinger KVM 2, Ubuntu 24.04 LTS, Docker Engine and Docker Compose.
 
 ## First deployment
@@ -41,7 +45,8 @@ Run `scripts/backup-postgres.sh` nightly from root's cron and copy backups to st
 ## Update deployment
 
 ```sh
-git pull --ff-only
+git checkout main
+git pull --ff-only origin main
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
 

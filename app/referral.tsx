@@ -5,496 +5,309 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
-  Platform,
+  ActivityIndicator,
   Share,
-  Alert,
+  Platform,
 } from "react-native";
-import { router } from "expo-router";
+import { Stack, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
-import Colors from "@/constants/colors";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@/lib/auth-context";
-import { apiRequest, queryClient } from "@/lib/query-client";
+import { getApiUrl } from "@/lib/query-client";
+import Colors, { Fonts, FontSize, Radius, Spacing } from "@/constants/colors";
+import { Header, Button, StatusBadge, EmptyState } from "@/components/ui";
 
-type ReferralData = {
+const c = Colors.light;
+
+interface ReferralData {
   referralCode: string;
   referralCount: number;
   referredUsers: { username: string; joinedAt: string }[];
-};
-
-type WalletData = {
-  balance: number;
-  transactions: { type: string; amount: string; description: string; createdAt: string }[];
-};
+}
 
 export default function ReferralScreen() {
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const [copied, setCopied] = React.useState<"code" | "link" | null>(null);
 
   const { data, isLoading } = useQuery<ReferralData>({
     queryKey: ["/api/referral"],
     enabled: !!user,
   });
 
-  const { data: walletData } = useQuery<WalletData>({
-    queryKey: ["/api/user/wallet"],
-    enabled: !!user,
-  });
+  const code = data?.referralCode ?? "";
+  const inviteLink = code ? `${getApiUrl().replace(/\/$/, "")}/?ref=${code}` : "";
+  const shareMessage = `جرّب NAYVO معي — كل مشترياتك بتعطيك فرص للسحب على جوائز.\nكود الدعوة: ${code}\n${inviteLink}`;
 
-  const referralEarnings = walletData?.transactions
-    .filter((t) => t.type === "referral_reward")
-    .reduce((sum, t) => sum + parseFloat(t.amount), 0) ?? 0;
-
-  async function handleCopyCode() {
-    if (!data?.referralCode) return;
-    await Clipboard.setStringAsync(data.referralCode);
+  async function copy(value: string, which: "code" | "link") {
+    if (!value) return;
+    await Clipboard.setStringAsync(value);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert("تم النسخ", "تم نسخ رمز الإحالة");
+    setCopied(which);
+    setTimeout(() => setCopied(null), 2000);
   }
 
-  async function handleShare() {
-    if (!data?.referralCode) return;
+  async function shareInvite() {
+    if (!code) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS === "web") {
+      await copy(shareMessage, "link");
+      return;
+    }
     try {
-      const message = `انضم إلى NAYVO واحصل على فرصة للفوز بهدايا رائعة!\n\nاستخدم رمز الإحالة: ${data.referralCode}`;
-      await Share.share({ message });
-    } catch (e) {}
-  }
-
-  function formatDate(dateStr: string) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("ar-EG", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+      await Share.share({ message: shareMessage });
+    } catch {
+      // المستخدم ألغى المشاركة — ما في شي نعمله
+    }
   }
 
   if (!user) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.emptyText}>يرجى تسجيل الدخول أولاً</Text>
+      <View style={s.root}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Header title="دعوة الأصدقاء" showBack />
+        <EmptyState
+          icon="people-outline"
+          title="سجّل الدخول لدعوة أصحابك"
+          action={{ label: "تسجيل الدخول", onPress: () => router.push("/auth") }}
+        />
       </View>
     );
   }
 
+  if (isLoading) {
+    return (
+      <View style={s.root}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Header title="دعوة الأصدقاء" showBack />
+        <View style={s.loading}>
+          <ActivityIndicator size="large" color={c.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  const invites = data?.referredUsers ?? [];
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{
-        paddingTop: Platform.OS === "web" ? 67 : insets.top,
-        paddingBottom: Platform.OS === "web" ? 84 + 20 : 100,
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-forward" size={24} color={Colors.light.text} />
+    <View style={s.root}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <Header title="دعوة الأصدقاء" showBack />
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
+        {/* ───── البطل ───── */}
+        <View style={s.hero}>
+          <View style={s.heroArt}>
+            <View style={[s.heroBubble, s.heroBubbleStart]}>
+              <Ionicons name="person" size={17} color={c.primary} />
+            </View>
+            <View style={[s.heroBubble, s.heroBubbleEnd]}>
+              <Ionicons name="person" size={17} color={c.primary} />
+            </View>
+            <View style={s.heroGift}>
+              <Ionicons name="gift" size={52} color={c.primary} />
+            </View>
+          </View>
+
+          <Text style={s.heroTitle}>شارك NAYVO مع أصحابك</Text>
+          <Text style={s.heroSub}>ادعُ أصدقائك ليستمتعوا بتجربة NAYVO</Text>
+        </View>
+
+        {/* ───── الكود ───── */}
+        <Pressable
+          onPress={() => copy(code, "code")}
+          accessibilityRole="button"
+          accessibilityLabel={`نسخ كود الدعوة ${code}`}
+          style={({ pressed }) => [s.codeBox, pressed && { backgroundColor: c.primarySoft }]}
+        >
+          <Ionicons
+            name={copied === "code" ? "checkmark-circle" : "copy-outline"}
+            size={20}
+            color={copied === "code" ? c.primary : c.textMuted}
+          />
+          <Text style={s.codeText}>{code || "—"}</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>برنامج الإحالة</Text>
-        <View style={{ width: 40 }} />
-      </View>
 
-      <LinearGradient
-        colors={["#7C3AED", "#A855F7", "#EC4899"]}
-        style={styles.heroGradient}
-      >
-        <View style={styles.heroDecor1} />
-        <View style={styles.heroDecor2} />
-        <View style={styles.heroContent}>
-          <View style={styles.giftIconWrap}>
-            <Ionicons name="gift" size={36} color="#fff" />
-          </View>
-          <Text style={styles.heroTitle}>ادعُ أصدقاءك</Text>
-          <Text style={styles.heroSubtitle}>
-            ادعُ صديقاً واحصل على 10 ريال في محفظتك، ويحصل صديقك على 5 ريال ترحيباً
-          </Text>
-        </View>
-      </LinearGradient>
-
-      <View style={styles.codeSection}>
-        <Text style={styles.codeSectionLabel}>رمز الإحالة الخاص بك</Text>
-        <View style={styles.codeCard}>
-          <Text style={styles.codeText}>
-            {isLoading ? "..." : data?.referralCode || "---"}
-          </Text>
-          <Pressable onPress={handleCopyCode} style={styles.copyBtn}>
-            <Ionicons name="copy-outline" size={22} color={Colors.light.accent} />
-          </Pressable>
+        <View style={s.actions}>
+          <Button
+            label={copied === "link" ? "تم النسخ" : "نسخ الرابط"}
+            variant="secondary"
+            icon={copied === "link" ? "checkmark" : "link-outline"}
+            onPress={() => copy(inviteLink, "link")}
+            style={s.actionBtn}
+          />
+          <Button
+            label="مشاركة الدعوة"
+            variant="secondary"
+            icon="share-social-outline"
+            onPress={shareInvite}
+            style={s.actionBtn}
+          />
         </View>
 
-        <View style={styles.actionRow}>
-          <Pressable onPress={handleCopyCode} style={styles.actionBtn}>
-            <LinearGradient
-              colors={[Colors.light.accent, Colors.light.accentDark]}
-              style={styles.actionGradient}
-            >
-              <Ionicons name="copy" size={20} color="#fff" />
-              <Text style={styles.actionText}>نسخ الرمز</Text>
-            </LinearGradient>
-          </Pressable>
-          <Pressable onPress={handleShare} style={styles.actionBtn}>
-            <LinearGradient
-              colors={[Colors.light.accentPink, Colors.light.accentPinkDark]}
-              style={styles.actionGradient}
-            >
-              <Ionicons name="share-social" size={20} color="#fff" />
-              <Text style={styles.actionText}>مشاركة</Text>
-            </LinearGradient>
-          </Pressable>
-        </View>
-      </View>
+        {/* ───── سجل الدعوات ───── */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>سجل الدعوات</Text>
 
-      <View style={styles.statsSection}>
-        <View style={styles.statsCard}>
-          <View style={[styles.statIconWrap, { backgroundColor: "#7C3AED15" }]}>
-            <Ionicons name="people" size={24} color="#7C3AED" />
-          </View>
-          <Text style={styles.statValue}>{data?.referralCount ?? 0}</Text>
-          <Text style={styles.statLabel}>دعوات ناجحة</Text>
-        </View>
-        <View style={styles.statsCard}>
-          <View style={[styles.statIconWrap, { backgroundColor: "#10B98115" }]}>
-            <Ionicons name="wallet" size={24} color="#10B981" />
-          </View>
-          <Text style={styles.statValue}>{referralEarnings.toFixed(0)} ر</Text>
-          <Text style={styles.statLabel}>أرباح الإحالة</Text>
-        </View>
-        <View style={styles.statsCard}>
-          <View style={[styles.statIconWrap, { backgroundColor: "#F59E0B15" }]}>
-            <Ionicons name="cash" size={24} color="#F59E0B" />
-          </View>
-          <Text style={styles.statValue}>{walletData?.balance ? parseFloat(String(walletData.balance)).toFixed(0) : 0} ر</Text>
-          <Text style={styles.statLabel}>رصيد المحفظة</Text>
-        </View>
-      </View>
+          {invites.length === 0 ? (
+            <Text style={s.emptyLog}>لسا ما في دعوات — شارك كودك وبتظهر هنا</Text>
+          ) : (
+            invites.map((inv, i) => (
+              <View key={`${inv.username}-${i}`} style={[s.logRow, i > 0 && s.logRowDivided]}>
+                <StatusBadge kind="success" label="انضمّ" icon="checkmark-circle" />
 
-      {data && data.referredUsers.length > 0 && (
-        <View style={styles.listSection}>
-          <Text style={styles.listTitle}>الأصدقاء المدعوون</Text>
-          <View style={styles.listCard}>
-            {data.referredUsers.map((u, index) => (
-              <React.Fragment key={u.username}>
-                <View style={styles.listItem}>
-                  <View style={styles.listAvatar}>
-                    <Text style={styles.listAvatarText}>
-                      {u.username.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={styles.listInfo}>
-                    <Text style={styles.listUsername}>{u.username}</Text>
-                    <Text style={styles.listDate}>
-                      انضم {formatDate(u.joinedAt)}
-                    </Text>
-                  </View>
-                  <Ionicons name="checkmark-circle" size={22} color={Colors.light.success} />
+                <View style={s.logInfo}>
+                  <Text style={s.logName}>{inv.username}</Text>
+                  <Text style={s.logDate}>
+                    {new Date(inv.joinedAt).toLocaleDateString("en-GB", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                    })}
+                  </Text>
                 </View>
-                {index < data.referredUsers.length - 1 && (
-                  <View style={styles.listDivider} />
-                )}
-              </React.Fragment>
-            ))}
-          </View>
-        </View>
-      )}
 
-      {data && data.referredUsers.length === 0 && !isLoading && (
-        <View style={styles.emptySection}>
-          <Ionicons name="people-outline" size={48} color={Colors.light.textSecondary} />
-          <Text style={styles.emptyTitle}>لا توجد دعوات بعد</Text>
-          <Text style={styles.emptySubtitle}>
-            شارك رمز الإحالة مع أصدقائك للبدء
-          </Text>
+                <View style={s.logAvatar}>
+                  <Ionicons name="person" size={18} color={c.textMuted} />
+                </View>
+              </View>
+            ))
+          )}
         </View>
-      )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.background },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+  content: { padding: Spacing.screen, paddingBottom: 40, gap: Spacing.md },
+
+  hero: {
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+    alignItems: "center",
+    gap: Spacing.xs,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
-  centered: {
+  heroArt: {
+    width: 150,
+    height: 110,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.sm,
+  },
+  heroGift: {
+    width: 92,
+    height: 92,
+    borderRadius: Radius.hero,
+    backgroundColor: c.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 16,
-    color: Colors.light.textSecondary,
+  heroBubble: {
+    position: "absolute",
+    top: 4,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: c.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  header: {
+  heroBubbleStart: { start: 0 },
+  heroBubbleEnd: { end: 0 },
+  heroTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h2,
+    color: c.navy,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+  heroSub: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "center",
+    writingDirection: "rtl",
+  },
+
+  codeBox: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: Colors.light.text,
-    writingDirection: "rtl",
-    textAlign: "center",
-  },
-  heroGradient: {
-    marginHorizontal: 16,
-    borderRadius: 24,
-    overflow: "hidden",
-    padding: 28,
-  },
-  heroDecor1: {
-    position: "absolute",
-    top: -40,
-    right: -30,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  heroDecor2: {
-    position: "absolute",
-    bottom: -20,
-    left: -20,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(236,72,153,0.15)",
-  },
-  heroContent: {
-    alignItems: "center",
-    zIndex: 2,
-  },
-  giftIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.25)",
-  },
-  heroTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 24,
-    color: "#fff",
-    writingDirection: "rtl",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  heroSubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.75)",
-    textAlign: "center",
-    writingDirection: "rtl",
-    lineHeight: 22,
-  },
-  codeSection: {
-    paddingHorizontal: 16,
-    marginTop: 24,
-  },
-  codeSectionLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginBottom: 10,
-    paddingHorizontal: 4,
-  },
-  codeCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-    borderWidth: 2,
-    borderColor: Colors.light.accent + "20",
-    borderStyle: "dashed",
-    gap: 16,
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
   codeText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 32,
-    color: Colors.light.accent,
-    letterSpacing: 6,
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h3,
+    color: c.navy,
+    /** ثابت الاتجاه حتى ما ينعكس ضمن النص العربي */
+    writingDirection: "ltr",
+    letterSpacing: 1,
   },
-  copyBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: Colors.light.accent + "12",
-    alignItems: "center",
-    justifyContent: "center",
+
+  actions: { flexDirection: "row", gap: Spacing.md },
+  actionBtn: { flex: 1 },
+
+  card: {
+    backgroundColor: c.surface,
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
   },
-  actionRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 16,
-  },
-  actionBtn: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  actionGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    gap: 8,
-    borderRadius: 16,
-  },
-  actionText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: "#fff",
+  cardTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: FontSize.h3,
+    color: c.navy,
+    textAlign: "right",
     writingDirection: "rtl",
-    textAlign: "center",
   },
-  statsSection: {
-    paddingHorizontal: 16,
-    marginTop: 24,
-    flexDirection: "row",
-    gap: 10,
+  emptyLog: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.caption,
+    color: c.textSecondary,
+    textAlign: "right",
+    writingDirection: "rtl",
   },
-  statsCard: {
-    flex: 1,
-    backgroundColor: "#fff",
+
+  logRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
+  logRowDivided: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.borderSubtle,
+    paddingTop: Spacing.md,
+  },
+  logAvatar: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    padding: 16,
-    alignItems: "center",
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  statIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  statValue: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: Colors.light.text,
-    textAlign: "center",
-  },
-  statLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    writingDirection: "rtl",
-    marginTop: 4,
-    textAlign: "center",
-  },
-  listSection: {
-    paddingHorizontal: 16,
-    marginTop: 24,
-  },
-  listTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: Colors.light.text,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  listCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    elevation: 4,
-  },
-  listItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 14,
-  },
-  listAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: Colors.light.accent + "15",
+    backgroundColor: c.background,
     alignItems: "center",
     justifyContent: "center",
   },
-  listAvatarText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: Colors.light.accent,
-  },
-  listInfo: {
-    flex: 1,
-  },
-  listUsername: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: Colors.light.text,
-    textAlign: "right",
+  logInfo: { flex: 1, alignItems: "flex-end", gap: 2 },
+  logName: {
+    fontFamily: Fonts.medium,
+    fontSize: FontSize.caption,
+    color: c.navy,
     writingDirection: "rtl",
   },
-  listDate: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    textAlign: "right",
-    writingDirection: "rtl",
-    marginTop: 2,
-  },
-  listDivider: {
-    height: 1,
-    backgroundColor: Colors.light.border,
-    marginHorizontal: 16,
-  },
-  emptySection: {
-    alignItems: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 17,
-    color: Colors.light.text,
-    writingDirection: "rtl",
-    marginTop: 16,
-    textAlign: "center",
-  },
-  emptySubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: "center",
-    writingDirection: "rtl",
-    marginTop: 8,
-    lineHeight: 22,
+  logDate: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textMuted,
+    writingDirection: "ltr",
   },
 });

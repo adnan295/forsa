@@ -19,7 +19,7 @@ function setupCors(app: express.Application) {
     const origins = new Set<string>();
 
     if (process.env.APP_ORIGINS) {
-      process.env.APP_ORIGINS.split(",").forEach((origin) => {
+      process.env.APP_ORIGINS.split(",").forEach((origin: string) => {
         const normalized = origin.trim().replace(/\/$/, "");
         if (normalized) origins.add(normalized);
       });
@@ -30,7 +30,7 @@ function setupCors(app: express.Application) {
     }
 
     if (process.env.REPLIT_DOMAINS) {
-      process.env.REPLIT_DOMAINS.split(",").forEach((d) => {
+      process.env.REPLIT_DOMAINS.split(",").forEach((d: string) => {
         origins.add(`https://${d.trim()}`);
       });
     }
@@ -196,22 +196,15 @@ function configureExpoAndLanding(app: express.Application) {
     res.status(200).send(html);
   });
 
-  // Admin web panel
-  const adminLoginPath = path.resolve(process.cwd(), "server", "templates", "admin", "login.html");
-  const adminIndexPath = path.resolve(process.cwd(), "server", "templates", "admin", "index.html");
-  const adminLoginHtml = fs.readFileSync(adminLoginPath, "utf-8");
-  const adminIndexHtml = fs.readFileSync(adminIndexPath, "utf-8");
-
+  // Web and native use the same Expo screens and admin panel.
   app.get("/admin/login", (_req: Request, res: Response) => {
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-    res.status(200).send(adminLoginHtml);
+    res.redirect(302, "/auth?returnTo=/admin");
   });
-
-  app.get("/admin", (_req: Request, res: Response) => {
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-    res.status(200).send(adminIndexHtml);
+  app.get("/shop", (_req: Request, res: Response) => {
+    res.redirect(302, "/products");
+  });
+  app.get("/about", (req: Request, res: Response) => {
+    serveLandingPage({ req, res, landingPageTemplate, appName });
   });
 
   log("Serving static Expo files with dynamic manifest routing");
@@ -230,14 +223,6 @@ function configureExpoAndLanding(app: express.Application) {
       return serveExpoManifest(platform, res);
     }
 
-    if (req.path === "/") {
-      return serveLandingPage({
-        req,
-        res,
-        landingPageTemplate,
-        appName,
-      });
-    }
 
     next();
   });
@@ -333,7 +318,7 @@ function setupErrorHandler(app: express.Application) {
       });
       const adminUser = await storage.getUserByUsername("admin");
       if (adminUser) {
-        await storage.updateUserProfile(adminUser.id, { fullName: "مدير النظام" });
+        await storage.updateUserProfile(adminUser.id, { fullName: "مدير النظام", phone: "", address: "", city: "", country: "" });
         const { db: seedDb } = await import("./db");
         const { users } = await import("@shared/schema");
         const { eq } = await import("drizzle-orm");
@@ -359,3 +344,4 @@ function setupErrorHandler(app: express.Application) {
     },
   );
 })();
+

@@ -10,19 +10,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient, getApiUrl } from "@/lib/query-client";
-import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import { FavoritesProvider } from "@/lib/favorites-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { setupNotificationHandlers, registerForPushNotifications } from "@/lib/push-notifications";
-import { useAuth } from "@/lib/auth-context";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import {
   useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
+  Tajawal_400Regular,
+  Tajawal_500Medium,
+  Tajawal_700Bold,
+} from "@expo-google-fonts/tajawal";
 
 if (!I18nManager.isRTL && Platform.OS !== "web") {
   I18nManager.allowRTL(true);
@@ -88,7 +86,7 @@ const offlineStyles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#EF4444",
+    backgroundColor: "#B42318",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -99,7 +97,7 @@ const offlineStyles = StyleSheet.create({
   text: {
     color: "#fff",
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Tajawal_500Medium",
   },
 });
 
@@ -149,7 +147,11 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
-        name="campaign/[id]"
+        name="product/[id]"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
+        name="draw"
         options={{ headerShown: false, presentation: "card" }}
       />
       <Stack.Screen
@@ -188,16 +190,23 @@ function RootLayoutNav() {
         name="referral"
         options={{ headerShown: false, presentation: "card" }}
       />
+      <Stack.Screen
+        name="orders"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
+        name="faq"
+        options={{ headerShown: false, presentation: "card" }}
+      />
     </Stack>
   );
 }
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Tajawal_400Regular,
+    Tajawal_500Medium,
+    Tajawal_700Bold,
   });
 
   useEffect(() => {

@@ -1,3 +1,5 @@
+> The canonical iOS release path is Codemagic on main; see IOS_CODEMAGIC.md. This GitHub workflow is a manual fallback only.
+
 # NAYVO iOS release from GitHub
 
 The workflow builds the native Expo application on a GitHub macOS runner. It does
@@ -24,7 +26,7 @@ Distribution certificate and matching profile without revoking unrelated certifi
 
 The workflow file must also exist on the repository default branch before GitHub
 exposes its Run workflow button. Integrate the reviewed workflow changes first;
-select `hostinger-vps-migration` as the source branch containing the NAYVO updates.
+select `main` as the source branch containing the NAYVO updates.
 Do not build the older application from main by accident.
 
 1. Confirm latest published version and uploaded build numbers in App Store Connect.

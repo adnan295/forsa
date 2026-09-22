@@ -2,7 +2,7 @@
   "expo": {
     "name": "NAYVO",
     "slug": "forsa",
-    "version": "1.0.2",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "forsa",
@@ -21,7 +21,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "4",
+      "buildNumber": "14",
       "bundleIdentifier": "app.replit.forsa",
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -38,7 +38,7 @@
     "android": {
       "package": "today.forsa",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 6,
+      "versionCode": 7,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
@@ -97,3 +97,4 @@
     }
   }
 }
+
