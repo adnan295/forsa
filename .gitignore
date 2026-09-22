@@ -45,10 +45,14 @@ yarn-error.*
 .env
 credentials.json
 forsa-release.keystore
-RELEASE_GUIDE.mdattached_assets/forsa-a1b1a-firebase-adminsdk-fbsvc-2fb461f3e9_1776595254252.json
+RELEASE_GUIDE.md
+attached_assets/forsa-a1b1a-firebase-adminsdk-fbsvc-2fb461f3e9_1776595254252.json
 attached_assets/*firebase-adminsdk*.json
 
 # Production configuration, backups and local deployment state
-.env.production
+# .env* catches editor backups such as .env.production.save, which hold the
+# same secrets as the file they copy.
+.env*
+!.env.production.example
 backups/
 .deploy/
