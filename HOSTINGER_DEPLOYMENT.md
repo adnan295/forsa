@@ -1,7 +1,7 @@
 # Hostinger VPS production deployment
 
 Canonical branch: `main`. Read PROJECT_GUIDE.md and RELEASE.md first.
-The 1.1.0 schema migration is not ready for production: do not deploy over the legacy database.
+The user authorized deleting legacy application data for 1.1.0. Back up and reset the verified app database before deploying the new schema; follow RELEASE.md.
 The restore commands below apply only to an explicitly selected fresh migration target.
 
 Target: Hostinger KVM 2, Ubuntu 24.04 LTS, Docker Engine and Docker Compose.
