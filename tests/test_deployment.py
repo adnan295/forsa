@@ -15,6 +15,7 @@ class DeploymentTests(unittest.TestCase):
         (self.root / 'scripts/sql').mkdir(parents=True)
         shutil.copy(SCRIPT, self.root / 'scripts/deploy-production.sh')
         (self.root / 'scripts/sql/nayvo-schema.sql').write_text('CREATE TABLE products(id int);')
+        (self.root / 'scripts/sql/launch-hardening.sql').write_text('ALTER TABLE products ADD COLUMN IF NOT EXISTS label text;')
         (self.root / '.env.production').write_text('DOMAIN=nayvo.store\n')
         bindir = self.root / 'bin'
         bindir.mkdir()
@@ -27,7 +28,7 @@ case "$*" in
   *"SELECT current_database()"*) echo "${TEST_DB:-forsa}";;
   *pg_dump*) [[ "${FAIL_AT:-}" != backup ]] && echo backup-content;;
   *"pg_restore --list"*) cat >/dev/null; [[ "${FAIL_AT:-}" != verify ]];;
-  *--single-transaction*) cat > "$TEST_SQL"; [[ "${FAIL_AT:-}" != reset ]];;
+  *--single-transaction*) cat >> "$TEST_SQL"; [[ "${FAIL_AT:-}" != reset ]];;
 esac
 ''')
         for p in bindir.iterdir():
@@ -79,10 +80,11 @@ esac
         self.assertNotEqual(self.run_deploy().returncode, 0)
         self.assertEqual(self.calls().count('--single-transaction'), count)
 
-    def test_update_never_drops_data(self):
+    def test_update_preserves_schema_and_runs_migration(self):
         result = self.run_deploy('--update')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertNotIn('--single-transaction', self.calls())
+        self.assertIn('--single-transaction', self.calls())
+        self.assertNotIn('DROP SCHEMA', (self.root / 'reset.sql').read_text())
 
 if __name__ == '__main__':
     unittest.main()

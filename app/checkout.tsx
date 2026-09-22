@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
-  Switch,
   Image,
 } from "react-native";
 import { Alert } from "@/lib/alert";
@@ -29,29 +28,24 @@ import Colors from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
 import { apiRequest, queryClient, buildMediaUrl, getApiUrl } from "@/lib/query-client";
-import type { PaymentMethod } from "@shared/schema";
+import { DEFAULT_DELIVERY_FEE, type PaymentMethod } from "@shared/schema";
+import { requiresPaymentReceipt as requiresReceiptUpload } from "@shared/commerce";
 import type { CurrentDraw } from "@/components/DrawBanner";
 import { registerForPushNotifications } from "@/lib/push-notifications";
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   card: "card-outline",
-  cash: "cash-outline",
-  wallet: "wallet-outline",
+  business: "business-outline",
 };
 
 function getPaymentIcon(icon: string): keyof typeof Ionicons.glyphMap {
   return iconMap[icon] || "ellipse-outline";
 }
 
-function requiresReceiptUpload(method: PaymentMethod): boolean {
-  if (method.imageUrl) return true;
-  if (method.iban) return true;
-  const name = (method.name + " " + (method.nameAr || "")).toLowerCase();
-  return name.includes("bank") || name.includes("تحويل") || name.includes("حوالة") || name.includes("sham") || name.includes("شام") || name.includes("cash");
-}
 
 export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
+  const checkoutKey = useRef(`order-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
   const { user } = useAuth();
   const { items: cartItems, clearCart } = useCart();
 
@@ -67,7 +61,6 @@ export default function CheckoutScreen() {
     discountPercent: number;
   } | null>(null);
   const [couponError, setCouponError] = useState("");
-  const [useWallet, setUseWallet] = useState(false);
 
   const [shippingFullName, setShippingFullName] = useState(user?.fullName || "");
   const [shippingPhone, setShippingPhone] = useState(user?.phone || "");
@@ -165,10 +158,7 @@ export default function CheckoutScreen() {
     queryKey: ["/api/payment-methods"],
   });
 
-  const { data: walletData } = useQuery<{ balance: number; transactions: any[] }>({
-    queryKey: ["/api/user/wallet"],
-    enabled: !!user,
-  });
+
 
   const selectedMethod =
     paymentMethods?.find((m) => m.id === selectedMethodId) || null;
@@ -176,15 +166,14 @@ export default function CheckoutScreen() {
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const discountAmount = appliedCoupon
-    ? (subtotal * appliedCoupon.discountPercent) / 100
+    ? Math.round(subtotal * appliedCoupon.discountPercent) / 100
     : 0;
-  const walletBalance = walletData?.balance ? parseFloat(String(walletData.balance)) : 0;
-  const afterCoupon = subtotal - discountAmount;
-  const walletDeduction = useWallet ? Math.min(walletBalance, afterCoupon) : 0;
-  const total = afterCoupon - walletDeduction;
+  const afterCoupon = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+  const payable = afterCoupon + DEFAULT_DELIVERY_FEE;
+  const total = payable;
 
-  // التذاكر بتنحسب على قيمة البضاعة بعد الخصم، قبل خصم المحفظة
-  const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
+  // التذاكر بتنحسب على قيمة البضاعة بعد الخصم
+  const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 10;
   const expectedTickets = ticketPrice > 0 ? Math.floor(afterCoupon / ticketPrice) : 0;
 
   const couponMutation = useMutation({
@@ -217,14 +206,14 @@ export default function CheckoutScreen() {
           productId: item.productId,
           quantity: item.quantity,
         })),
-        paymentMethod: selectedMethod?.name,
+        paymentMethod: selectedMethod?.id,
+        checkoutKey: checkoutKey.current,
         shippingFullName,
         shippingPhone,
         shippingCity,
         shippingAddress,
         shippingCountry,
         couponCode: appliedCoupon?.code || undefined,
-        useWallet,
       });
       return res.json();
     },
@@ -234,24 +223,26 @@ export default function CheckoutScreen() {
       queryClient.invalidateQueries({ queryKey: ["/api/draws/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/wallet"] });
 
       if (Platform.OS !== "web") {
         registerForPushNotifications().catch(() => {});
       }
 
       const orderId = data.order?.id;
-      clearCart();
+
 
       if (receiptImage && orderId) {
         try {
           await uploadReceiptToOrder(orderId, receiptImage, receiptFile);
         } catch {
-          setPendingOrderId(orderId);
+          clearCart();
+          router.replace(`/order/${orderId}` as any);
+          Alert.alert("الطلب محفوظ", "تعذّر رفع الإيصال. أعد رفعه من صفحة الطلب.");
           return;
         }
       }
 
+      clearCart();
       const ticketCount = data.expectedTickets ?? 0;
       Alert.alert(
         "تم استلام طلبك",
@@ -283,7 +274,7 @@ export default function CheckoutScreen() {
       Alert.alert("تنبيه", "يرجى تعبئة جميع حقول الشحن");
       return;
     }
-    if (selectedMethod && requiresReceiptUpload(selectedMethod) && !receiptImage) {
+    if (selectedMethod && total > 0 && requiresReceiptUpload(selectedMethod) && !receiptImage) {
       Alert.alert("تنبيه", "يرجى رفع وصل الدفع قبل تأكيد الطلب");
       return;
     }
@@ -665,44 +656,6 @@ export default function CheckoutScreen() {
             ) : null}
           </View>
 
-          {walletBalance > 0 && (
-            <View style={styles.card}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="wallet-outline" size={20} color="#067647" />
-                <Text style={styles.sectionTitle}>المحفظة</Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(16,185,129,0.1)", alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="wallet" size={20} color="#067647" />
-                  </View>
-                  <View>
-                    <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" as const }}>
-                      استخدام رصيد المحفظة
-                    </Text>
-                    <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 13, color: "#067647", textAlign: "right", writingDirection: "rtl" as const }}>
-                      الرصيد: {walletBalance.toFixed(2)} $
-                    </Text>
-                    {useWallet && walletDeduction > 0 && (
-                      <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: "#067647", textAlign: "right", writingDirection: "rtl" as const }}>
-                        خصم: -{walletDeduction.toFixed(2)} $
-                      </Text>
-                    )}
-                  </View>
-                </View>
-                <Switch
-                  value={useWallet}
-                  onValueChange={(v) => {
-                    setUseWallet(v);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  trackColor={{ true: "#067647" }}
-                />
-              </View>
-            </View>
-          )}
-
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
               <Ionicons name="location-outline" size={20} color={Colors.light.accent} />
@@ -784,14 +737,11 @@ export default function CheckoutScreen() {
                 <Text style={styles.totalRowLabel}>خصم الكوبون</Text>
               </View>
             )}
-            {useWallet && walletDeduction > 0 && (
-              <View style={styles.totalRow}>
-                <Text style={[styles.totalRowValue, { color: "#067647" }]}>
-                  -{walletDeduction.toFixed(2)} $
-                </Text>
-                <Text style={styles.totalRowLabel}>خصم المحفظة 💳</Text>
-              </View>
-            )}
+
+            <View style={styles.totalRow}>
+              <Text style={styles.totalRowValue}>{DEFAULT_DELIVERY_FEE.toFixed(2)} $</Text>
+              <Text style={styles.totalRowLabel}>التوصيل</Text>
+            </View>
             <View style={styles.totalDivider} />
             <View style={styles.totalRow}>
               <Text style={styles.grandTotal}>{total.toFixed(2)} $</Text>
@@ -840,10 +790,10 @@ export default function CheckoutScreen() {
               onPressIn={() => { submitScale.value = withSpring(0.95, { damping: 15, stiffness: 300 }); }}
               onPressOut={() => { submitScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
               onPress={handlePlaceOrder}
-              disabled={purchaseMutation.isPending || !!(selectedMethod && requiresReceiptUpload(selectedMethod) && !receiptImage) || !!pendingOrderId}
+              disabled={purchaseMutation.isPending || !!(selectedMethod && total > 0 && requiresReceiptUpload(selectedMethod) && !receiptImage) || !!pendingOrderId}
               style={[
                 styles.placeOrderBtn,
-                (purchaseMutation.isPending || !!(selectedMethod && requiresReceiptUpload(selectedMethod) && !receiptImage) || !!pendingOrderId) && { opacity: 0.5 },
+                (purchaseMutation.isPending || !!(selectedMethod && total > 0 && requiresReceiptUpload(selectedMethod) && !receiptImage) || !!pendingOrderId) && { opacity: 0.5 },
               ]}
             >
               <LinearGradient
@@ -1383,3 +1333,4 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.85)",
   },
 });
+

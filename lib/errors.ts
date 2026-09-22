@@ -9,7 +9,6 @@ const ERROR_MAP: Record<string, string> = {
   "Not authenticated": "يرجى تسجيل الدخول أولاً",
   "Admin access required": "هذه الصفحة للإدارة فقط",
   "Invalid referral code": "كود الدعوة غير صحيح",
-  "Insufficient wallet balance": "رصيد المحفظة غير كافٍ",
   "Product not found": "المنتج غير موجود",
   "Order not found": "الطلب غير موجود",
   "Access denied": "ما عندك صلاحية لهذا الإجراء",
@@ -42,3 +41,4 @@ export function translateError(msg: string | undefined | null): string {
 
   return msg;
 }
+

@@ -17,7 +17,8 @@
     "db:push": "drizzle-kit push",
     "start": "npx expo start",
     "lint": "npx expo lint",
-    "lint:fix": "npx expo lint --fix"
+    "lint:fix": "npx expo lint --fix",
+    "test:commerce": "node tests/commerce-regression.cjs"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -90,6 +91,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@electric-sql/pglite": "^0.5.8",
     "@expo/ngrok": "^4.1.0",
     "@types/express": "^5.0.0",
     "@types/react": "~19.1.10",

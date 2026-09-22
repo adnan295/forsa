@@ -1898,7 +1898,7 @@ function DrawsSection() {
                     <Text style={styles.actionBtnText}>تفعيل</Text>
                   </Pressable>
                 )}
-                {(item.status === "active" || item.status === "ready_to_draw") && item.soldTickets > 0 && (
+                {item.status === "ready_to_draw" && item.soldTickets >= item.targetTickets && (
                   <Pressable
                     onPress={() => handleDraw(item)}
                     style={[
@@ -2496,7 +2496,7 @@ function LoadingView() {
 function CreatePaymentModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [name, setName] = useState("");
   const [nameAr, setNameAr] = useState("");
-  const [icon, setIcon] = useState("card");
+  const [icon, setIcon] = useState("business");
   const [desc, setDesc] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -2511,7 +2511,7 @@ function CreatePaymentModal({ visible, onClose }: { visible: boolean; onClose: (
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-methods"] });
       onClose();
-      setName(""); setNameAr(""); setIcon("card"); setDesc(""); setBankName(""); setAccountName(""); setIban("");
+      setName(""); setNameAr(""); setIcon("business"); setDesc(""); setBankName(""); setAccountName(""); setIban("");
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
@@ -2521,17 +2521,17 @@ function CreatePaymentModal({ visible, onClose }: { visible: boolean; onClose: (
       <View style={modalStyles.overlay}>
         <View style={modalStyles.container}>
           <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>إضافة طريقة دفع</Text>
+            <Text style={modalStyles.title}>إضافة حساب بنكي</Text>
             <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
           </View>
           <ScrollView contentContainerStyle={modalStyles.scrollContent}>
-            <ModalInput label="الاسم (إنجليزي) *" value={name} onChangeText={setName} placeholder="Credit Card" />
-            <ModalInput label="الاسم (عربي) *" value={nameAr} onChangeText={setNameAr} placeholder="بطاقة ائتمان" />
-            <ModalInput label="أيقونة" value={icon} onChangeText={setIcon} placeholder="card" />
+            <ModalInput label="الاسم (إنجليزي) *" value={name} onChangeText={setName} placeholder="Bank Transfer" />
+            <ModalInput label="الاسم (عربي) *" value={nameAr} onChangeText={setNameAr} placeholder="تحويل بنكي" />
+            <ModalInput label="أيقونة" value={icon} onChangeText={setIcon} placeholder="business" />
             <ModalInput label="وصف" value={desc} onChangeText={setDesc} placeholder="وصف اختياري" />
             <ModalInput label="اسم البنك" value={bankName} onChangeText={setBankName} placeholder="مثال: البنك الأهلي" />
             <ModalInput label="اسم صاحب الحساب" value={accountName} onChangeText={setAccountName} placeholder="الاسم كما في الحساب البنكي" />
-            <ModalInput label="رقم الآيبان (IBAN)" value={iban} onChangeText={setIban} placeholder="SA..." />
+            <ModalInput label="رقم الحساب / IBAN" value={iban} onChangeText={setIban} placeholder="رقم الحساب البنكي" />
             <Pressable
               onPress={() => {
                 if (!name || !nameAr) { Alert.alert("خطأ", "يرجى ملء الحقول المطلوبة"); return; }
@@ -2582,13 +2582,13 @@ function EditPaymentModal({ visible, method, onClose }: { visible: boolean; meth
       <View style={modalStyles.overlay}>
         <View style={modalStyles.container}>
           <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>تعديل طريقة الدفع</Text>
+            <Text style={modalStyles.title}>تعديل حساب بنكي</Text>
             <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
           </View>
           <ScrollView contentContainerStyle={modalStyles.scrollContent}>
-            <ModalInput label="الاسم (إنجليزي) *" value={name} onChangeText={setName} placeholder="Credit Card" />
-            <ModalInput label="الاسم (عربي) *" value={nameAr} onChangeText={setNameAr} placeholder="بطاقة ائتمان" />
-            <ModalInput label="أيقونة" value={icon} onChangeText={setIcon} placeholder="card" />
+            <ModalInput label="الاسم (إنجليزي) *" value={name} onChangeText={setName} placeholder="Bank Transfer" />
+            <ModalInput label="الاسم (عربي) *" value={nameAr} onChangeText={setNameAr} placeholder="تحويل بنكي" />
+            <ModalInput label="أيقونة" value={icon} onChangeText={setIcon} placeholder="business" />
             <ModalInput label="وصف" value={desc} onChangeText={setDesc} placeholder="وصف اختياري" />
             <View style={{ backgroundColor: "rgba(124,58,237,0.04)", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: Colors.light.accent + "20" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
@@ -2597,7 +2597,7 @@ function EditPaymentModal({ visible, method, onClose }: { visible: boolean; meth
               </View>
               <ModalInput label="اسم البنك" value={bankName} onChangeText={setBankName} placeholder="مثال: البنك الأهلي السعودي" />
               <ModalInput label="اسم صاحب الحساب" value={accountName} onChangeText={setAccountName} placeholder="الاسم كما في الحساب البنكي" />
-              <ModalInput label="رقم الآيبان (IBAN)" value={iban} onChangeText={setIban} placeholder="SA..." />
+              <ModalInput label="رقم الحساب / IBAN" value={iban} onChangeText={setIban} placeholder="رقم الحساب البنكي" />
             </View>
             <Pressable
               onPress={() => {
@@ -3013,3 +3013,4 @@ const chartStyles = StyleSheet.create({
   barLabel: { fontFamily: "Tajawal_500Medium", fontSize: 9, color: Colors.light.textSecondary, writingDirection: "rtl", textAlign: "center" },
   barCount: { fontFamily: "Tajawal_400Regular", fontSize: 9, color: Colors.light.tabIconDefault },
 });
+

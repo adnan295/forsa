@@ -74,12 +74,13 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
 
   try {
     const client = getResendClient();
-    await client.emails.send({
+    const result = await client.emails.send({
       from: `${APP_NAME} <${FROM_EMAIL}>`,
       to,
       subject,
       html,
     });
+    if (result.error) return false;
     console.log("[Email] Sent to", to);
     return true;
   } catch (err: any) {
@@ -181,7 +182,7 @@ export async function sendEmailVerificationCode(
   data: { code: string; username: string }
 ): Promise<boolean> {
   if (!isResendConfigured()) {
-    console.log(`[Email] Resend not configured. Verification code for ${to} is: ${data.code}`);
+    console.error("[Email] Verification delivery unavailable");
     return false;
   }
 
@@ -205,7 +206,7 @@ export async function sendPasswordResetCode(
   data: { code: string; username: string }
 ): Promise<boolean> {
   if (!isResendConfigured()) {
-    console.log(`[Email] Resend not configured. Password reset code for ${to} is: ${data.code}`);
+    console.error("[Email] Password reset delivery unavailable");
     return false;
   }
 
@@ -249,3 +250,4 @@ export async function sendShippingUpdate(
 
   await sendEmail(to, `${statusInfo.emoji} تحديث الشحن - طلب #${data.orderId.slice(0, 8)} - ${APP_NAME}`, html);
 }
+

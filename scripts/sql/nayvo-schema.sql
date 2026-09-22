@@ -94,9 +94,10 @@ CREATE TABLE "orders" (
 	"subtotal" numeric(10, 2) NOT NULL,
 	"discount_amount" numeric(10, 2) DEFAULT '0' NOT NULL,
 	"delivery_fee" numeric(10, 2) DEFAULT '0' NOT NULL,
-	"wallet_amount" numeric(10, 2) DEFAULT '0' NOT NULL,
 	"total_amount" numeric(10, 2) NOT NULL,
 	"ticket_eligible_amount" numeric(10, 2) DEFAULT '0' NOT NULL,
+	"checkout_key" text UNIQUE,
+	"expected_tickets" integer DEFAULT 0 NOT NULL,
 	"tickets_awarded" integer DEFAULT 0 NOT NULL,
 	"status" "order_status" DEFAULT 'pending' NOT NULL,
 	"payment_method" text,
@@ -217,7 +218,6 @@ CREATE TABLE "users" (
 	"push_token" text,
 	"fcm_token" text,
 	"apn_token" text,
-	"wallet_balance" numeric(10, 2) DEFAULT '0' NOT NULL,
 	"is_suspended" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "users_username_unique" UNIQUE("username"),
@@ -225,15 +225,6 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_referral_code_unique" UNIQUE("referral_code")
 );
 --> statement-breakpoint
-CREATE TABLE "wallet_transactions" (
-	"id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" varchar NOT NULL,
-	"amount" numeric(10, 2) NOT NULL,
-	"type" text NOT NULL,
-	"description" text NOT NULL,
-	"reference_id" varchar,
-	"created_at" timestamp DEFAULT now() NOT NULL
-);
 --> statement-breakpoint
 ALTER TABLE "email_verification_tokens" ADD CONSTRAINT "email_verification_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -243,4 +234,3 @@ ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_user_id_users_id_f
 ALTER TABLE "tickets" ADD CONSTRAINT "tickets_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tickets" ADD CONSTRAINT "tickets_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_notifications" ADD CONSTRAINT "user_notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;

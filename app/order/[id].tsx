@@ -186,7 +186,7 @@ export default function OrderDetailScreen() {
   const shippingIndex = SHIPPING_STEPS.findIndex((st) => st.key === order.shippingStatus);
   const isCancelled = order.shippingStatus === "cancelled";
   const needsReceipt =
-    order.paymentMethod === "bank_transfer" && order.paymentStatus === "pending_payment";
+    order.paymentStatus === "pending_payment";
   const receiptUrl = buildMediaUrl(order.receiptUrl);
 
   const orderDate = new Date(order.createdAt).toLocaleDateString("ar-EG", {
@@ -399,14 +399,7 @@ export default function OrderDetailScreen() {
             </View>
           )}
 
-          {parseFloat(order.walletAmount) > 0 && (
-            <View style={s.sumRow}>
-              <Text style={[s.sumValue, { color: StatusColors.success.fg }]}>
-                -${parseFloat(order.walletAmount).toFixed(2)}
-              </Text>
-              <Text style={s.sumLabel}>خصم المحفظة</Text>
-            </View>
-          )}
+
 
           <View style={s.divider} />
 
@@ -664,3 +657,4 @@ const s = StyleSheet.create({
   modalImage: { width: "92%", height: "76%" },
   modalClose: { position: "absolute", top: 54, end: 20 },
 });
+

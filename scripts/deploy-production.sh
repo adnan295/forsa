@@ -36,7 +36,7 @@ stage=build
 "${compose[@]}" up -d --wait db
 db_name=$("${compose[@]}" exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atqc "SELECT current_database()"')
 [[ "$db_name" == forsa ]] || { echo 'Refusing reset/deploy: expected the dedicated forsa database' >&2; exit 1; }
-"${compose[@]}" run --rm --no-deps -T app node --input-type=module -e 'if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.startsWith("replace-with") || !process.env.SESSION_SECRET || process.env.SESSION_SECRET.startsWith("replace-with")) throw new Error("Configure ADMIN_PASSWORD and SESSION_SECRET before deployment")'
+"${compose[@]}" run --rm --no-deps -T app node --input-type=module -e 'if (!process.env.RESEND_API_KEY || !process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.startsWith("replace-with") || !process.env.SESSION_SECRET || process.env.SESSION_SECRET.startsWith("replace-with")) throw new Error("Configure RESEND_API_KEY, ADMIN_PASSWORD and SESSION_SECRET before deployment")'
 stage=backup
 "${compose[@]}" stop app
 "${compose[@]}" exec -T db sh -c 'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup"
@@ -52,6 +52,8 @@ if [[ "$mode" == --reset-data ]]; then
   } | "${compose[@]}" exec -T db sh -c 'exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 --single-transaction'
   printf '%s\n' "$(git rev-parse HEAD)" "$backup" "nayvo-rollback:$timestamp" > "$marker"
 fi
+stage=migrate
+"${compose[@]}" exec -T db sh -c 'exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 --single-transaction' < scripts/sql/launch-hardening.sql
 stage=start
 "${compose[@]}" up -d app caddy
 stage=health

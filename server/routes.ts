@@ -10,6 +10,7 @@ import { insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, c
 import { sendFcmNotification, sendFcmToUser } from "./firebase";
 import { sendApnsNotifications, isApnsConfigured } from "./apns";
 import { sum, count, and, gte, sql, eq, desc, inArray } from "drizzle-orm";
+import { isBankTransferMethod, isConfiguredBankTransfer } from "@shared/commerce";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -176,7 +177,7 @@ async function requireAdmin(req: Request, res: Response, next: Function) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   const user = await storage.getUser(req.session.userId);
-  if (!user || user.role !== "admin") {
+  if (!user || user.role !== "admin" || user.isSuspended) {
     return res.status(403).json({ message: "Admin access required" });
   }
   next();
@@ -239,10 +240,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const referrer = await storage.getUserByReferralCode(appliedCode);
         if (referrer && referrer.id !== user.id) {
           await storage.setUserReferredBy(user.id, referrer.id);
-          await storage.addWalletCredit(referrer.id, 10, "referral_reward", `مكافأة إحالة: انضم ${user.username} باستخدام رمزك`, user.id);
-          await storage.createUserNotification(referrer.id, "referral_reward", "مكافأة إحالة 🎉", `انضم ${user.username} باستخدام رمز إحالتك! تمت إضافة 10 ريال إلى محفظتك`);
-          sendPushNotifications([referrer.id], "مكافأة إحالة 🎉", `انضم ${user.username} باستخدام رمزك! +10 ريال في محفظتك`);
-          await storage.addWalletCredit(user.id, 5, "welcome_bonus", "مكافأة ترحيبية للمنضمين عبر رمز إحالة", referrer.id);
         }
       }
 
@@ -259,9 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "تم إرسال رمز التحقق إلى بريدك الإلكتروني",
       };
       if (!emailSent) {
-        response.verificationCode = otpCode;
-        response.emailFallback = true;
-        response.message = "تعذر إرسال البريد الإلكتروني. استخدم الرمز الظاهر على الشاشة";
+        response.message = "تعذّر إرسال البريد، حاول إعادة إرسال رمز التحقق لاحقاً";
       }
       res.json(response);
     } catch (error: any) {
@@ -337,9 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const response: any = { message: "تم إرسال رمز تحقق جديد" };
       if (!emailSent) {
-        response.verificationCode = otpCode;
-        response.emailFallback = true;
-        response.message = "تعذر إرسال البريد الإلكتروني. استخدم الرمز الظاهر على الشاشة";
+        response.message = "تعذّر إرسال البريد، حاول إعادة إرسال رمز التحقق لاحقاً";
       }
       res.json(response);
     } catch (error) {
@@ -418,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emailSent = await sendPasswordResetCode(user.email, { code, username: user.username });
 
       if (!emailSent) {
-        res.json({ message: "تعذّر إرسال البريد الإلكتروني، استخدم الرمز المعروض", code, emailFailed: true });
+        res.json({ message: "إذا كان البريد مسجلاً، سيتم إرسال رمز إعادة التعيين" });
       } else {
         res.json({ message: "إذا كان البريد مسجلاً، سيتم إرسال رمز إعادة التعيين" });
       }
@@ -809,7 +802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/payment-methods", async (_req: Request, res: Response) => {
     try {
       const methods = await storage.getEnabledPaymentMethods();
-      res.json(methods);
+      res.json(methods.filter(isConfiguredBankTransfer));
     } catch (error) {
       console.error("Get payment methods error:", error);
       res.status(500).json({ message: "Server error" });
@@ -859,9 +852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       // كم تذكرة رح ياخد لما ينتأكد الدفع
-      const activeDraw = await storage.getActiveDraw();
-      const ticketPrice = activeDraw ? parseFloat(activeDraw.ticketPrice) : DEFAULT_TICKET_PRICE;
-      const expectedTickets = Math.floor(parseFloat(order.ticketEligibleAmount) / ticketPrice);
+      const expectedTickets = order.expectedTickets;
 
       if (buyer) {
         sendOrderConfirmation(buyer.email, {
@@ -884,16 +875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/user/wallet", requireAuth as any, async (req: Request, res: Response) => {
-    try {
-      const balance = await storage.getWalletBalance(req.session.userId!);
-      const transactions = await storage.getWalletTransactions(req.session.userId!);
-      res.json({ balance, transactions });
-    } catch (error) {
-      console.error("Wallet error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
+
 
   app.get("/api/tickets", requireAuth as any, async (req: Request, res: Response) => {
     try {
@@ -951,17 +933,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const receiptUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
-      const updated = await storage.updateOrderPayment(order.id, {
-        paymentStatus: "pending_review",
-        receiptUrl,
-      });
+      const updated = await storage.submitReceipt(order.id, req.session.userId!, receiptUrl);
 
       await storage.logActivity(
         "receipt_upload",
         "Receipt uploaded",
         `User uploaded receipt for order ${order.id}`,
         req.session.userId!,
-        JSON.stringify({ orderId: order.id, receiptUrl })
+        JSON.stringify({ orderId: order.id })
       );
 
       await storage.createAdminNotification(
@@ -1139,16 +1118,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Order not found" });
       }
 
-      let awardedTickets = 0;
+      const award = await storage.decidePayment(order.id, paymentStatus, rejectionReason || "");
+      const awardedTickets = award.created;
+      if (award.unchanged) return res.json({ ...await storage.getOrder(order.id), awardedTickets });
 
       if (paymentStatus === "confirmed") {
-        await storage.updateOrder(order.id, { status: "paid" as any });
-        await storage.updateOrderPayment(order.id, { paymentStatus: "confirmed" });
-
-        // هون بتنمنح التذاكر — بعد تأكيد الدفع فقط
-        const award = await storage.awardTicketsForOrder(order.id);
-        awardedTickets = award.created;
-
         await storage.logActivity(
           "payment_confirmed",
           "تم تأكيد الدفع",
@@ -1190,23 +1164,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Ticket award notification error:", e);
         }
       } else {
-        await storage.updateOrderPayment(order.id, {
-          paymentStatus: "rejected",
-          rejectionReason: rejectionReason || "",
-        });
-
-        // إرجاع المبلغ المخصوم من المحفظة
-        const walletUsed = parseFloat(order.walletAmount);
-        if (walletUsed > 0) {
-          await storage.addWalletCredit(
-            order.userId,
-            walletUsed,
-            "refund",
-            `إرجاع رصيد — طلب مرفوض ${order.id.slice(0, 8)}`,
-            order.id
-          );
-        }
-
         await storage.logActivity(
           "payment_rejected",
           "تم رفض الدفع",
@@ -1228,9 +1185,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({ ...updated, awardedTickets });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Update payment error:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(409).json({ message: error.message || "تعذّر تحديث حالة الدفع" });
     }
   });
 
@@ -1248,7 +1205,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             phone: user.phone,
             role: user.role,
             emailVerified: user.emailVerified,
-            walletBalance: user.walletBalance,
             referralCode: user.referralCode,
             referredBy: user.referredBy,
             isSuspended: user.isSuspended,
@@ -1324,7 +1280,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const labelMap: Record<string, string> = {
         bank_transfer: "تحويل بنكي",
         online: "دفع إلكتروني",
-        wallet: "محفظة",
         card: "بطاقة",
         cash: "نقداً",
         cash_on_delivery: "الدفع عند الاستلام",
@@ -1379,24 +1334,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateUserSchema = z.object({
         email: z.string().email().optional(),
         role: z.enum(["user", "admin"]).optional(),
-        walletBalance: z.union([z.string(), z.number()]).transform(v => parseFloat(String(v))).pipe(z.number().min(0).max(1000000)).optional(),
         isSuspended: z.boolean().optional(),
       });
       const parsed = updateUserSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: "بيانات غير صالحة", errors: parsed.error.flatten() });
       }
-      const { email, role, walletBalance, isSuspended } = parsed.data;
+      const { email, role, isSuspended } = parsed.data;
       const adminId = (req.session as any).userId;
       if (role === "user" && req.params.id === adminId) {
         return res.status(403).json({ message: "لا يمكنك سحب صلاحية الأدمن من نفسك" });
       }
       const user = await storage.getUser(req.params.id as string);
       if (!user) return res.status(404).json({ message: "User not found" });
-      const userUpdates: Partial<{ email: string; role: "user" | "admin"; walletBalance: string; isSuspended: boolean }> = {};
+      const userUpdates: Partial<{ email: string; role: "user" | "admin"; isSuspended: boolean }> = {};
       if (email !== undefined) userUpdates.email = email;
       if (role !== undefined) userUpdates.role = role;
-      if (walletBalance !== undefined) userUpdates.walletBalance = walletBalance.toFixed(2);
       if (isSuspended !== undefined) userUpdates.isSuspended = isSuspended;
       if (Object.keys(userUpdates).length > 0) {
         await db.update(users).set(userUpdates).where(eq(users.id, req.params.id as string));
@@ -1427,15 +1380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/users/:id/wallet-transactions", requireAdmin as any, async (req: Request, res: Response) => {
-    try {
-      const txs = await storage.getWalletTransactions(req.params.id as string);
-      res.json(txs);
-    } catch (error) {
-      console.error("Get user wallet transactions error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
+
 
   app.get("/api/admin/users/:id/orders", requireAdmin as any, async (req: Request, res: Response) => {
     try {
@@ -1525,7 +1470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/payment-methods", requireAdmin as any, async (_req: Request, res: Response) => {
     try {
       const methods = await storage.getPaymentMethods();
-      res.json(methods);
+      res.json(methods.filter(isBankTransferMethod));
     } catch (error) {
       console.error("Get payment methods error:", error);
       res.status(500).json({ message: "Server error" });
@@ -1548,7 +1493,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/payment-methods/:id", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const updated = await storage.updatePaymentMethod(req.params.id as string, req.body);
+      const parsed = insertPaymentMethodSchema.partial().safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "بيانات الحساب البنكي غير صالحة" });
+      const updated = await storage.updatePaymentMethod(req.params.id as string, parsed.data);
       if (!updated) {
         return res.status(404).json({ message: "Payment method not found" });
       }
@@ -1866,8 +1813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const methods = [
-        { name: "Bank Transfer", nameAr: "تحويل بنكي", icon: "business", enabled: true, description: "تحويل مباشر إلى الحساب البنكي" },
-        { name: "Cash on Delivery", nameAr: "الدفع عند الاستلام", icon: "cash", enabled: true, description: "ادفع نقداً عند استلام المنتج" },
+        { name: "Bank Transfer", nameAr: "تحويل بنكي", icon: "business", enabled: false, description: "تحويل مباشر إلى الحساب البنكي" },
       ];
 
       for (const m of methods) {

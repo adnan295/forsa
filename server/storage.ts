@@ -17,7 +17,6 @@ import {
   type AdminNotification,
   type UserNotification,
   type SupportTicket,
-  type WalletTransaction,
   type CheckoutPayload,
   users,
   products,
@@ -34,10 +33,10 @@ import {
   passwordResetTokens,
   emailVerificationTokens,
   supportTickets,
-  walletTransactions,
   DEFAULT_DELIVERY_FEE,
 } from "@shared/schema";
-import { db } from "./db";
+import { db as database } from "./db";
+import { normalizePaymentMethod, isBankTransferMethod, isConfiguredBankTransfer } from "@shared/commerce";
 import { eq, ne, asc, desc, and, or, sql, count, sum, gte, inArray, isNull } from "drizzle-orm";
 import { randomBytes, randomInt } from "crypto";
 
@@ -54,13 +53,24 @@ function generateTicketNumber(): string {
 export type OrderWithItems = Order & { items: OrderItem[] };
 
 export class DatabaseStorage {
+  constructor(private db: typeof database = database, private inTransaction = false) {}
+
+  // Serialize financial and draw mutations across all server processes.
+  private async atomic<T>(work: (store: DatabaseStorage) => Promise<T>): Promise<T> {
+    if (this.inTransaction) return work(this);
+    return this.db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(73492011)`);
+      return work(new DatabaseStorage(tx as unknown as typeof database, true));
+    });
+  }
+
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db
+    const [user] = await this.db
       .select()
       .from(users)
       .where(eq(users.username, username));
@@ -68,14 +78,14 @@ export class DatabaseStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const [user] = await this.db.insert(users).values(insertUser).returning();
     return user;
   }
 
   /* ============================ المنتجات (الكتالوج) ============================ */
 
   async getProducts(includeInactive = false): Promise<Product[]> {
-    const query = db.select().from(products);
+    const query = this.db.select().from(products);
     const rows = includeInactive
       ? await query.orderBy(asc(products.sortOrder), desc(products.createdAt))
       : await query
@@ -85,12 +95,12 @@ export class DatabaseStorage {
   }
 
   async getProduct(id: string): Promise<Product | undefined> {
-    const [product] = await db.select().from(products).where(eq(products.id, id));
+    const [product] = await this.db.select().from(products).where(eq(products.id, id));
     return product || undefined;
   }
 
   async createProduct(data: InsertProduct): Promise<Product> {
-    const [product] = await db
+    const [product] = await this.db
       .insert(products)
       .values({
         name: data.name,
@@ -109,7 +119,7 @@ export class DatabaseStorage {
   }
 
   async updateProduct(id: string, data: Partial<Product>): Promise<Product | undefined> {
-    const [updated] = await db
+    const [updated] = await this.db
       .update(products)
       .set(data)
       .where(eq(products.id, id))
@@ -118,27 +128,27 @@ export class DatabaseStorage {
   }
 
   async deleteProduct(id: string): Promise<boolean> {
-    const [deleted] = await db.delete(products).where(eq(products.id, id)).returning();
+    const [deleted] = await this.db.delete(products).where(eq(products.id, id)).returning();
     return !!deleted;
   }
 
   /* ============================== جولات السحب ============================== */
 
   async getDraws(): Promise<Draw[]> {
-    return db
+    return this.db
       .select()
       .from(draws)
       .orderBy(asc(draws.sortOrder), desc(draws.createdAt));
   }
 
   async getDraw(id: string): Promise<Draw | undefined> {
-    const [draw] = await db.select().from(draws).where(eq(draws.id, id));
+    const [draw] = await this.db.select().from(draws).where(eq(draws.id, id));
     return draw || undefined;
   }
 
   /** الجولة اللي التذاكر الجديدة بتروح إلها */
   async getActiveDraw(): Promise<Draw | undefined> {
-    const [draw] = await db
+    const [draw] = await this.db
       .select()
       .from(draws)
       .where(eq(draws.status, "active"))
@@ -148,7 +158,7 @@ export class DatabaseStorage {
   }
 
   async getCompletedDraws(): Promise<Draw[]> {
-    return db
+    return this.db
       .select()
       .from(draws)
       .where(eq(draws.status, "completed"))
@@ -160,14 +170,14 @@ export class DatabaseStorage {
    * حتى لو الجولة النشطة وصلت للعدد وصارت ready_to_draw.
    */
   async getCurrentDraw(): Promise<Draw | undefined> {
-    const [draw] = await db
+    const [draw] = await this.db
       .select()
       .from(draws)
       .where(inArray(draws.status, ["active", "ready_to_draw"]))
       .orderBy(asc(draws.sortOrder), asc(draws.createdAt))
       .limit(1);
     if (draw) return draw;
-    const [scheduled] = await db
+    const [scheduled] = await this.db
       .select()
       .from(draws)
       .where(eq(draws.status, "scheduled"))
@@ -181,12 +191,13 @@ export class DatabaseStorage {
    * وبتستلم أي تذاكر معلّقة (drawId = null) من طلبات سابقة.
    */
   async createDraw(data: InsertDraw): Promise<Draw> {
+    if (!this.inTransaction) return this.atomic(store => store.createDraw(data));
     const existingActive = await this.getActiveDraw();
-    const [maxRow] = await db
+    const [maxRow] = await this.db
       .select({ maxOrder: sql<number>`coalesce(max(${draws.sortOrder}), 0)` })
       .from(draws);
 
-    const [draw] = await db
+    const [draw] = await this.db
       .insert(draws)
       .values({
         title: data.title,
@@ -209,7 +220,24 @@ export class DatabaseStorage {
   }
 
   async updateDraw(id: string, data: Partial<Draw>): Promise<Draw | undefined> {
-    const [updated] = await db
+    if (!this.inTransaction) return this.atomic(store => store.updateDraw(id, data));
+    const existing = await this.getDraw(id);
+    if (!existing) return undefined;
+    if (existing.status === "completed") throw new Error("لا يمكن تعديل جولة مكتملة");
+    if (data.ticketPrice !== undefined && (!Number.isFinite(Number(data.ticketPrice)) || Number(data.ticketPrice) <= 0)) throw new Error("قيمة الفرصة غير صالحة");
+    if (data.targetTickets !== undefined && (!Number.isInteger(data.targetTickets) || data.targetTickets < Math.max(1, existing.soldTickets))) throw new Error("العدد المستهدف غير صالح");
+    if (data.status === "active") {
+      const active = await this.getActiveDraw();
+      if (active && active.id !== id) throw new Error("توجد جولة نشطة بالفعل");
+    }
+    if (data.targetTickets !== undefined && ["active", "ready_to_draw"].includes(existing.status)) {
+      data = { ...data, status: existing.soldTickets >= data.targetTickets ? "ready_to_draw" : "active" };
+      if (data.status === "active") {
+        const active = await this.getActiveDraw();
+        if (active && active.id !== id) throw new Error("لا يمكن إعادة فتح جولة أثناء وجود جولة نشطة أخرى");
+      }
+    }
+    const [updated] = await this.db
       .update(draws)
       .set(data)
       .where(eq(draws.id, id))
@@ -218,14 +246,15 @@ export class DatabaseStorage {
   }
 
   async deleteDraw(id: string): Promise<boolean> {
+    if (!this.inTransaction) return this.atomic(store => store.deleteDraw(id));
     const draw = await this.getDraw(id);
     if (!draw) return false;
     if (draw.status === "completed") {
       throw new Error("ما بينفع تحذف جولة تم السحب عليها");
     }
     // التذاكر بترجع معلّقة بدل ما تنحذف
-    await db.update(tickets).set({ drawId: null }).where(eq(tickets.drawId, id));
-    const [deleted] = await db.delete(draws).where(eq(draws.id, id)).returning();
+    await this.db.update(tickets).set({ drawId: null }).where(eq(tickets.drawId, id));
+    const [deleted] = await this.db.delete(draws).where(eq(draws.id, id)).returning();
     return !!deleted;
   }
 
@@ -234,7 +263,10 @@ export class DatabaseStorage {
    * بترجّع الجولة النشطة الجديدة أو undefined إذا ما في جولات مجدولة.
    */
   async activateNextScheduledDraw(): Promise<Draw | undefined> {
-    const [next] = await db
+    if (!this.inTransaction) return this.atomic(store => store.activateNextScheduledDraw());
+    const active = await this.getActiveDraw();
+    if (active) return active;
+    const [next] = await this.db
       .select()
       .from(draws)
       .where(eq(draws.status, "scheduled"))
@@ -242,7 +274,7 @@ export class DatabaseStorage {
       .limit(1);
     if (!next) return undefined;
 
-    await db
+    await this.db
       .update(draws)
       .set({ status: "active", startedAt: new Date() })
       .where(eq(draws.id, next.id));
@@ -256,6 +288,7 @@ export class DatabaseStorage {
    * إذا امتلأت الجولة بتصير ready_to_draw.
    */
   async assignPendingTicketsToDraw(drawId: string): Promise<number> {
+    if (!this.inTransaction) return this.atomic(store => store.assignPendingTicketsToDraw(drawId));
     const draw = await this.getDraw(drawId);
     if (!draw) return 0;
 
@@ -267,7 +300,7 @@ export class DatabaseStorage {
       return 0;
     }
 
-    const pending = await db
+    const pending = await this.db
       .select({ id: tickets.id })
       .from(tickets)
       .where(isNull(tickets.drawId))
@@ -276,7 +309,7 @@ export class DatabaseStorage {
 
     if (pending.length === 0) return 0;
 
-    await db
+    await this.db
       .update(tickets)
       .set({ drawId })
       .where(inArray(tickets.id, pending.map((t) => t.id)));
@@ -291,7 +324,7 @@ export class DatabaseStorage {
   }
 
   async getTicketsByDraw(drawId: string): Promise<Ticket[]> {
-    return db
+    return this.db
       .select()
       .from(tickets)
       .where(eq(tickets.drawId, drawId))
@@ -300,7 +333,7 @@ export class DatabaseStorage {
 
   /** عدد المشاركين الفريدين بجولة */
   async getDrawParticipantCount(drawId: string): Promise<number> {
-    const [row] = await db
+    const [row] = await this.db
       .select({ total: sql<number>`count(distinct ${tickets.userId})` })
       .from(tickets)
       .where(eq(tickets.drawId, drawId));
@@ -309,7 +342,7 @@ export class DatabaseStorage {
 
   /** تذاكر مستخدم معيّن بجولة معيّنة */
   async getUserTicketCountForDraw(userId: string, drawId: string): Promise<number> {
-    const [row] = await db
+    const [row] = await this.db
       .select({ total: count() })
       .from(tickets)
       .where(and(eq(tickets.userId, userId), eq(tickets.drawId, drawId)));
@@ -318,18 +351,23 @@ export class DatabaseStorage {
 
   /** السحب: اختيار تذكرة عشوائية من تذاكر الجولة */
   async drawWinner(drawId: string): Promise<{ winner: User; ticket: Ticket; draw: Draw }> {
+    if (!this.inTransaction) return this.atomic(store => store.drawWinner(drawId));
     const draw = await this.getDraw(drawId);
     if (!draw) throw new Error("الجولة غير موجودة");
     if (draw.status === "completed") throw new Error("تم السحب على هذه الجولة مسبقاً");
 
+    if (draw.status !== "ready_to_draw" || draw.soldTickets < draw.targetTickets) {
+      throw new Error("لا يمكن إجراء السحب قبل اكتمال العدد المستهدف");
+    }
     const drawTickets = await this.getTicketsByDraw(drawId);
+    if (drawTickets.length !== draw.targetTickets) throw new Error("عدد التذاكر لا يطابق العدد المستهدف");
     if (drawTickets.length === 0) {
       throw new Error("لا توجد تذاكر في هذه الجولة لإجراء السحب");
     }
 
     const winningTicket = drawTickets[randomInt(0, drawTickets.length)];
 
-    await db
+    await this.db
       .update(tickets)
       .set({ isWinner: true })
       .where(eq(tickets.id, winningTicket.id));
@@ -337,7 +375,7 @@ export class DatabaseStorage {
     const winner = await this.getUser(winningTicket.userId);
     if (!winner) throw new Error("لم يتم العثور على المستخدم الفائز");
 
-    const [updatedDraw] = await db
+    const [updatedDraw] = await this.db
       .update(draws)
       .set({
         status: "completed",
@@ -363,13 +401,25 @@ export class DatabaseStorage {
   /**
    * عملية الشراء كاملة داخل transaction واحد:
    * التحقق من المخزون، حساب السعر من السيرفر (مو من العميل)، الكوبون،
-   * المحفظة، إنشاء الطلب وسطوره، وخصم المخزون.
+   * إنشاء الطلب وسطوره، وخصم المخزون.
    *
    * التذاكر ما بتنمنح هون — بتنمنح لما الأدمن يأكّد الدفع
    * (شوف awardTicketsForOrder).
    */
   async checkout(userId: string, payload: CheckoutPayload): Promise<OrderWithItems> {
-    return db.transaction(async (tx) => {
+    return this.atomic(async (store) => {
+      const tx = store.db;
+      if (payload.checkoutKey) {
+        const [existing] = await tx.select().from(orders).where(eq(orders.checkoutKey, payload.checkoutKey));
+        if (existing) {
+          if (existing.userId !== userId) throw new Error("معرّف الطلب غير صالح");
+          return { ...existing, items: await store.getOrderItems(existing.id) };
+        }
+      }
+      const [method] = await tx.select().from(paymentMethods).where(and(eq(paymentMethods.enabled, true), or(eq(paymentMethods.id, payload.paymentMethod), eq(paymentMethods.name, payload.paymentMethod))));
+      if (!method || !isConfiguredBankTransfer(method)) throw new Error("طريقة الدفع غير متاحة، حدّث الصفحة واختر مجدداً");
+      const currentDraw = await store.getCurrentDraw();
+      const ticketPrice = currentDraw ? Number(currentDraw.ticketPrice) : DEFAULT_TICKET_PRICE;
       // تجميع الكميات لنفس المنتج
       const wanted = new Map<string, number>();
       for (const item of payload.items) {
@@ -434,7 +484,7 @@ export class DatabaseStorage {
           throw new Error("انتهت صلاحية كود الخصم");
         }
 
-        discountAmount = (subtotal * coupon.discountPercent) / 100;
+        discountAmount = Math.round(subtotal * coupon.discountPercent) / 100;
         appliedCouponCode = coupon.code;
 
         await tx
@@ -443,35 +493,14 @@ export class DatabaseStorage {
           .where(eq(coupons.id, coupon.id));
       }
 
-      const afterDiscount = Math.max(0, subtotal - discountAmount);
+      const afterDiscount = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
 
       // التوصيل بينضاف للمستحق بس ما بيدخل باحتساب فرص السحب
       const deliveryFee = DEFAULT_DELIVERY_FEE;
       const payable = afterDiscount + deliveryFee;
 
-      // المحفظة — المبلغ بينحسب بالسيرفر، مو من العميل
-      let walletAmount = 0;
-      if (payload.useWallet) {
-        const [user] = await tx
-          .select({ walletBalance: users.walletBalance })
-          .from(users)
-          .where(eq(users.id, userId))
-          .for("update");
-
-        const balance = parseFloat(user?.walletBalance ?? "0");
-        walletAmount = Math.min(balance, payable);
-
-        if (walletAmount > 0) {
-          await tx
-            .update(users)
-            .set({ walletBalance: sql`${users.walletBalance} - ${walletAmount.toFixed(2)}` })
-            .where(eq(users.id, userId));
-        }
-      }
-
-      const totalDue = Math.max(0, payable - walletAmount);
-
-      const isBankTransfer = payload.paymentMethod === "bank_transfer";
+      const totalDue = payable;
+      const needsReceipt = totalDue > 0;
       const [order] = await tx
         .insert(orders)
         .values({
@@ -479,13 +508,14 @@ export class DatabaseStorage {
           subtotal: subtotal.toFixed(2),
           discountAmount: discountAmount.toFixed(2),
           deliveryFee: deliveryFee.toFixed(2),
-          walletAmount: walletAmount.toFixed(2),
           totalAmount: totalDue.toFixed(2),
-          // التذاكر بتنحسب على قيمة البضاعة بعد الخصم، قبل خصم المحفظة
+          // التذاكر بتنحسب على قيمة البضاعة بعد الخصم
           ticketEligibleAmount: afterDiscount.toFixed(2),
           status: "pending",
-          paymentMethod: payload.paymentMethod,
-          paymentStatus: isBankTransfer ? "pending_payment" : "pending_review",
+          paymentMethod: normalizePaymentMethod(method.name),
+          expectedTickets: Math.floor(afterDiscount / ticketPrice),
+          checkoutKey: payload.checkoutKey,
+          paymentStatus: needsReceipt ? "pending_payment" : "pending_review",
           shippingFullName: payload.shippingFullName,
           shippingPhone: payload.shippingPhone,
           shippingCity: payload.shippingCity,
@@ -512,16 +542,6 @@ export class DatabaseStorage {
           .where(eq(products.id, productId));
       }
 
-      if (walletAmount > 0) {
-        await tx.insert(walletTransactions).values({
-          userId,
-          amount: (-walletAmount).toFixed(2),
-          type: "debit",
-          description: `خصم محفظة — طلب ${order.id.slice(0, 8)}`,
-          referenceId: order.id,
-        });
-      }
-
       return { ...order, items: insertedItems };
     });
   }
@@ -532,19 +552,44 @@ export class DatabaseStorage {
    * إذا امتلأت الجولة النشطة، الزيادة بتروح للجولة التالية،
    * وإذا ما في جولة تالية بتضلّ معلّقة لحدّ ما الأدمن يفتح جولة جديدة.
    */
+  async decidePayment(orderId: string, status: "confirmed" | "rejected", reason = "") {
+    return this.atomic(async (store) => {
+      const order = await store.getOrder(orderId);
+      if (!order) throw new Error("الطلب غير موجود");
+      if (order.paymentStatus === status) return { created: 0, drawIds: [] as string[], unchanged: true };
+      if (order.paymentStatus === "confirmed" || order.paymentStatus === "rejected") {
+        throw new Error("تم حسم هذا الطلب مسبقاً ولا يمكن تبديل حالة الدفع");
+      }
+      if (status === "confirmed" && Number(order.totalAmount) > 0 && !order.receiptUrl) throw new Error("يجب رفع إيصال التحويل البنكي قبل تأكيد الدفع");
+      await store.updateOrderPayment(orderId, { paymentStatus: status, rejectionReason: status === "rejected" ? reason : "" });
+      await store.updateOrder(orderId, { status: status === "confirmed" ? "paid" : "failed", ...(status === "rejected" ? { shippingStatus: "cancelled" as const } : {}) });
+      if (status === "confirmed") return { ...await store.awardTicketsForOrder(orderId), unchanged: false };
+      for (const item of await store.getOrderItems(orderId)) {
+        await store.db.update(products).set({ stock: sql`case when ${products.stock} is null then null else ${products.stock} + ${item.quantity} end`, soldCount: sql`greatest(0, ${products.soldCount} - ${item.quantity})` }).where(eq(products.id, item.productId));
+      }
+      if (order.couponCode) await store.db.update(coupons).set({ usedCount: sql`greatest(0, ${coupons.usedCount} - 1)` }).where(eq(coupons.code, order.couponCode));
+      return { created: 0, drawIds: [] as string[], unchanged: false };
+    });
+  }
+
+  async submitReceipt(orderId: string, userId: string, receiptUrl: string) {
+    return this.atomic(async (store) => {
+      const order = await store.getOrder(orderId);
+      if (!order || order.userId !== userId) throw new Error("الطلب غير متاح");
+      if (!["pending_payment", "pending_review"].includes(order.paymentStatus)) throw new Error("لا يمكن تعديل إيصال طلب محسوم");
+      return store.updateOrderPayment(orderId, { receiptUrl, paymentStatus: "pending_review" });
+    });
+  }
+
   async awardTicketsForOrder(orderId: string): Promise<{ created: number; drawIds: string[] }> {
+    if (!this.inTransaction) return this.atomic(store => store.awardTicketsForOrder(orderId));
     const order = await this.getOrder(orderId);
     if (!order) throw new Error("الطلب غير موجود");
     if (order.ticketsAwarded > 0) return { created: 0, drawIds: [] };
     if (order.paymentStatus !== "confirmed") return { created: 0, drawIds: [] };
 
-    const eligible = parseFloat(order.ticketEligibleAmount);
     let activeDraw = await this.getActiveDraw();
-    const ticketPrice = activeDraw
-      ? parseFloat(activeDraw.ticketPrice)
-      : DEFAULT_TICKET_PRICE;
-
-    const totalTickets = ticketPrice > 0 ? Math.floor(eligible / ticketPrice) : 0;
+    const totalTickets = order.expectedTickets;
     if (totalTickets <= 0) {
       await this.updateOrder(orderId, { ticketsAwarded: 0 });
       return { created: 0, drawIds: [] };
@@ -552,9 +597,7 @@ export class DatabaseStorage {
 
     const drawIds: string[] = [];
     let remaining = totalTickets;
-    let guard = 0;
-
-    while (remaining > 0 && guard++ < 100) {
+    while (remaining > 0) {
       if (!activeDraw) {
         // ما في جولة مفتوحة — التذاكر بتنخزّن معلّقة
         await this.createTickets(order.userId, order.id, null, remaining);
@@ -603,13 +646,13 @@ export class DatabaseStorage {
       orderId,
       drawId,
     }));
-    return db.insert(tickets).values(values).returning();
+    return this.db.insert(tickets).values(values).returning();
   }
 
   /* ================================ الطلبات ================================ */
 
   async getOrdersByUser(userId: string): Promise<Order[]> {
-    return db
+    return this.db
       .select()
       .from(orders)
       .where(eq(orders.userId, userId))
@@ -617,7 +660,7 @@ export class DatabaseStorage {
   }
 
   async getOrderItems(orderId: string): Promise<OrderItem[]> {
-    return db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+    return this.db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
   }
 
   async getOrderWithItems(orderId: string): Promise<OrderWithItems | undefined> {
@@ -628,7 +671,7 @@ export class DatabaseStorage {
   }
 
   async updateOrder(id: string, data: Partial<Order>): Promise<Order | undefined> {
-    const [updated] = await db
+    const [updated] = await this.db
       .update(orders)
       .set(data)
       .where(eq(orders.id, id))
@@ -637,7 +680,7 @@ export class DatabaseStorage {
   }
 
   async getTicketsByUser(userId: string): Promise<Ticket[]> {
-    return db
+    return this.db
       .select()
       .from(tickets)
       .where(eq(tickets.userId, userId))
@@ -645,21 +688,21 @@ export class DatabaseStorage {
   }
 
   async getTicket(id: string): Promise<Ticket | undefined> {
-    const [ticket] = await db.select().from(tickets).where(eq(tickets.id, id));
+    const [ticket] = await this.db.select().from(tickets).where(eq(tickets.id, id));
     return ticket || undefined;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return db.select().from(users).orderBy(desc(users.createdAt));
+    return this.db.select().from(users).orderBy(desc(users.createdAt));
   }
 
   async getUserStats(userId: string): Promise<{ orderCount: number; ticketCount: number; totalSpent: string }> {
-    const [orderResult] = await db
+    const [orderResult] = await this.db
       .select({ orderCount: count(), totalSpent: sum(orders.totalAmount) })
       .from(orders)
       .where(eq(orders.userId, userId));
 
-    const [ticketResult] = await db
+    const [ticketResult] = await this.db
       .select({ ticketCount: count() })
       .from(tickets)
       .where(eq(tickets.userId, userId));
@@ -672,7 +715,7 @@ export class DatabaseStorage {
   }
 
   async getAllOrders(): Promise<(Order & { username: string; itemCount: number; summary: string })[]> {
-    const rows = await db
+    const rows = await this.db
       .select({
         order: orders,
         username: users.username,
@@ -683,7 +726,7 @@ export class DatabaseStorage {
 
     if (rows.length === 0) return [];
 
-    const items = await db
+    const items = await this.db
       .select()
       .from(orderItems)
       .where(inArray(orderItems.orderId, rows.map((r) => r.order.id)));
@@ -709,7 +752,7 @@ export class DatabaseStorage {
   }
 
   async getOrder(id: string): Promise<Order | undefined> {
-    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    const [order] = await this.db.select().from(orders).where(eq(orders.id, id));
     return order || undefined;
   }
 
@@ -722,7 +765,7 @@ export class DatabaseStorage {
     if (data.trackingNumber !== undefined) updateData.trackingNumber = data.trackingNumber;
     if (data.shippingAddress !== undefined) updateData.shippingAddress = data.shippingAddress;
 
-    const [updated] = await db
+    const [updated] = await this.db
       .update(orders)
       .set(updateData)
       .where(eq(orders.id, orderId))
@@ -738,7 +781,7 @@ export class DatabaseStorage {
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
     if (data.rejectionReason !== undefined) updateData.rejectionReason = data.rejectionReason;
 
-    const [updated] = await db
+    const [updated] = await this.db
       .update(orders)
       .set(updateData)
       .where(eq(orders.id, orderId))
@@ -747,20 +790,25 @@ export class DatabaseStorage {
   }
 
   async getPaymentMethods(): Promise<PaymentMethod[]> {
-    return db.select().from(paymentMethods).orderBy(desc(paymentMethods.createdAt));
+    return this.db.select().from(paymentMethods).orderBy(desc(paymentMethods.createdAt));
   }
 
   async getEnabledPaymentMethods(): Promise<PaymentMethod[]> {
-    return db.select().from(paymentMethods).where(eq(paymentMethods.enabled, true)).orderBy(desc(paymentMethods.createdAt));
+    return this.db.select().from(paymentMethods).where(eq(paymentMethods.enabled, true)).orderBy(desc(paymentMethods.createdAt));
   }
 
   async createPaymentMethod(data: InsertPaymentMethod): Promise<PaymentMethod> {
-    const [created] = await db.insert(paymentMethods).values(data).returning();
+    if (!isBankTransferMethod(data) || (data.enabled !== false && !isConfiguredBankTransfer(data))) throw new Error("أدخل اسم البنك وصاحب الحساب ورقم الحساب لتفعيل التحويل البنكي");
+    const [created] = await this.db.insert(paymentMethods).values(data).returning();
     return created;
   }
 
   async updatePaymentMethod(id: string, data: Partial<PaymentMethod>): Promise<PaymentMethod | undefined> {
-    const [updated] = await db
+    const [existing] = await this.db.select().from(paymentMethods).where(eq(paymentMethods.id, id));
+    if (!existing) return undefined;
+    const candidate = { ...existing, ...data };
+    if (!isBankTransferMethod(candidate) || (candidate.enabled && !isConfiguredBankTransfer(candidate))) throw new Error("أدخل اسم البنك وصاحب الحساب ورقم الحساب لتفعيل التحويل البنكي");
+    const [updated] = await this.db
       .update(paymentMethods)
       .set(data)
       .where(eq(paymentMethods.id, id))
@@ -769,7 +817,7 @@ export class DatabaseStorage {
   }
 
   async deletePaymentMethod(id: string): Promise<boolean> {
-    const [deleted] = await db
+    const [deleted] = await this.db
       .delete(paymentMethods)
       .where(eq(paymentMethods.id, id))
       .returning();
@@ -777,16 +825,16 @@ export class DatabaseStorage {
   }
 
   async getCoupons(): Promise<Coupon[]> {
-    return db.select().from(coupons).orderBy(desc(coupons.createdAt));
+    return this.db.select().from(coupons).orderBy(desc(coupons.createdAt));
   }
 
   async createCoupon(data: InsertCoupon): Promise<Coupon> {
-    const [created] = await db.insert(coupons).values(data).returning();
+    const [created] = await this.db.insert(coupons).values(data).returning();
     return created;
   }
 
   async updateCoupon(id: string, data: Partial<Coupon>): Promise<Coupon | undefined> {
-    const [updated] = await db
+    const [updated] = await this.db
       .update(coupons)
       .set(data)
       .where(eq(coupons.id, id))
@@ -795,7 +843,7 @@ export class DatabaseStorage {
   }
 
   async deleteCoupon(id: string): Promise<boolean> {
-    const [deleted] = await db
+    const [deleted] = await this.db
       .delete(coupons)
       .where(eq(coupons.id, id))
       .returning();
@@ -803,7 +851,7 @@ export class DatabaseStorage {
   }
 
   async validateCoupon(code: string): Promise<Coupon> {
-    const [coupon] = await db
+    const [coupon] = await this.db
       .select()
       .from(coupons)
       .where(eq(coupons.code, code.toUpperCase()));
@@ -821,7 +869,7 @@ export class DatabaseStorage {
   }
 
   async getActivityLog(limit: number = 50): Promise<ActivityLogEntry[]> {
-    return db
+    return this.db
       .select()
       .from(activityLog)
       .orderBy(desc(activityLog.createdAt))
@@ -835,7 +883,7 @@ export class DatabaseStorage {
     userId?: string,
     metadata?: string
   ): Promise<ActivityLogEntry> {
-    const [entry] = await db
+    const [entry] = await this.db
       .insert(activityLog)
       .values({ type, title, description, userId, metadata })
       .returning();
@@ -856,39 +904,39 @@ export class DatabaseStorage {
     activeDraw: Draw | null;
     topProducts: { name: string; soldCount: number }[];
   }> {
-    const [revenueResult] = await db
+    const [revenueResult] = await this.db
       .select({ total: sum(orders.totalAmount) })
       .from(orders)
       .where(eq(orders.paymentStatus, "confirmed"));
 
-    const [ordersResult] = await db.select({ total: count() }).from(orders);
-    const [usersResult] = await db.select({ total: count() }).from(users);
+    const [ordersResult] = await this.db.select({ total: count() }).from(orders);
+    const [usersResult] = await this.db.select({ total: count() }).from(users);
 
-    const [activeProductsResult] = await db
+    const [activeProductsResult] = await this.db
       .select({ total: count() })
       .from(products)
       .where(eq(products.isActive, true));
 
-    const [pendingResult] = await db
+    const [pendingResult] = await this.db
       .select({ total: count() })
       .from(orders)
       .where(eq(orders.paymentStatus, "pending_review"));
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [ordersTodayResult] = await db
+    const [ordersTodayResult] = await this.db
       .select({ total: count() })
       .from(orders)
       .where(gte(orders.createdAt, today));
 
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    const [newUsersResult] = await db
+    const [newUsersResult] = await this.db
       .select({ total: count() })
       .from(users)
       .where(gte(users.createdAt, weekAgo));
 
-    const topProducts = await db
+    const topProducts = await this.db
       .select({ name: products.name, soldCount: products.soldCount })
       .from(products)
       .orderBy(desc(products.soldCount))
@@ -922,7 +970,7 @@ export class DatabaseStorage {
   }
 
   async updateUserProfile(userId: string, data: { fullName: string; phone: string; address: string; city: string; country: string }): Promise<User | undefined> {
-    const [user] = await db.update(users).set({
+    const [user] = await this.db.update(users).set({
       fullName: data.fullName,
       phone: data.phone,
       address: data.address,
@@ -933,7 +981,7 @@ export class DatabaseStorage {
   }
 
   async getReviewsByProduct(productId: string): Promise<(Review & { username: string })[]> {
-    return db
+    return this.db
       .select({
         id: reviews.id,
         userId: reviews.userId,
@@ -953,7 +1001,7 @@ export class DatabaseStorage {
     userId: string,
     data: { productId: string; rating: number; comment?: string }
   ): Promise<Review> {
-    const [review] = await db
+    const [review] = await this.db
       .insert(reviews)
       .values({
         userId,
@@ -966,7 +1014,7 @@ export class DatabaseStorage {
   }
 
   async getUserReviewForProduct(userId: string, productId: string): Promise<Review | undefined> {
-    const [review] = await db
+    const [review] = await this.db
       .select()
       .from(reviews)
       .where(and(eq(reviews.userId, userId), eq(reviews.productId, productId)));
@@ -974,13 +1022,13 @@ export class DatabaseStorage {
   }
 
   async getAdminNotifications(limit: number = 50): Promise<AdminNotification[]> {
-    return db.select().from(adminNotifications)
+    return this.db.select().from(adminNotifications)
       .orderBy(desc(adminNotifications.createdAt))
       .limit(limit);
   }
 
   async createAdminNotification(type: string, title: string, message: string, metadata?: string): Promise<AdminNotification> {
-    const [notification] = await db.insert(adminNotifications).values({
+    const [notification] = await this.db.insert(adminNotifications).values({
       type,
       title,
       message,
@@ -990,7 +1038,7 @@ export class DatabaseStorage {
   }
 
   async markNotificationRead(id: string): Promise<boolean> {
-    const [result] = await db.update(adminNotifications)
+    const [result] = await this.db.update(adminNotifications)
       .set({ isRead: true })
       .where(eq(adminNotifications.id, id))
       .returning();
@@ -998,14 +1046,14 @@ export class DatabaseStorage {
   }
 
   async markAllNotificationsRead(): Promise<boolean> {
-    await db.update(adminNotifications)
+    await this.db.update(adminNotifications)
       .set({ isRead: true })
       .where(eq(adminNotifications.isRead, false));
     return true;
   }
 
   async getUnreadNotificationCount(): Promise<number> {
-    const [result] = await db.select({ count: count() }).from(adminNotifications)
+    const [result] = await this.db.select({ count: count() }).from(adminNotifications)
       .where(eq(adminNotifications.isRead, false));
     return result?.count || 0;
   }
@@ -1019,32 +1067,32 @@ export class DatabaseStorage {
       for (let i = 0; i < 6; i++) {
         code += chars.charAt(Math.floor(Math.random() * chars.length));
       }
-      const [existing] = await db.select().from(users).where(eq(users.referralCode, code)).limit(1);
+      const [existing] = await this.db.select().from(users).where(eq(users.referralCode, code)).limit(1);
       exists = !!existing;
     } while (exists);
     return code;
   }
 
   async getUserByReferralCode(code: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.referralCode, code.toUpperCase()));
+    const [user] = await this.db.select().from(users).where(eq(users.referralCode, code.toUpperCase()));
     return user || undefined;
   }
 
   async setUserReferralCode(userId: string, code: string): Promise<void> {
-    await db.update(users).set({ referralCode: code }).where(eq(users.id, userId));
+    await this.db.update(users).set({ referralCode: code }).where(eq(users.id, userId));
   }
 
   async setUserReferredBy(userId: string, referrerId: string): Promise<void> {
-    await db.update(users).set({ referredBy: referrerId }).where(eq(users.id, userId));
+    await this.db.update(users).set({ referredBy: referrerId }).where(eq(users.id, userId));
   }
 
   async getReferralCount(userId: string): Promise<number> {
-    const [result] = await db.select({ count: count() }).from(users).where(eq(users.referredBy, userId));
+    const [result] = await this.db.select({ count: count() }).from(users).where(eq(users.referredBy, userId));
     return result?.count || 0;
   }
 
   async getReferredUsers(userId: string): Promise<{ username: string; createdAt: Date }[]> {
-    const result = await db.select({
+    const result = await this.db.select({
       username: users.username,
       createdAt: users.createdAt,
     }).from(users).where(eq(users.referredBy, userId)).orderBy(desc(users.createdAt));
@@ -1052,7 +1100,7 @@ export class DatabaseStorage {
   }
 
   async ensureAllUsersHaveReferralCodes(): Promise<number> {
-    const usersWithoutCodes = await db.select({ id: users.id }).from(users).where(sql`${users.referralCode} IS NULL`);
+    const usersWithoutCodes = await this.db.select({ id: users.id }).from(users).where(sql`${users.referralCode} IS NULL`);
     let updated = 0;
     for (const u of usersWithoutCodes) {
       const code = await this.generateReferralCode();
@@ -1063,12 +1111,12 @@ export class DatabaseStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await this.db.select().from(users).where(eq(users.email, email));
     return user || undefined;
   }
 
   async createPasswordResetToken(userId: string, code: string, expiresAt: Date): Promise<any> {
-    const [token] = await db.insert(passwordResetTokens).values({
+    const [token] = await this.db.insert(passwordResetTokens).values({
       userId,
       code,
       expiresAt,
@@ -1077,7 +1125,7 @@ export class DatabaseStorage {
   }
 
   async verifyPasswordResetToken(userId: string, code: string): Promise<any> {
-    const [token] = await db.select().from(passwordResetTokens)
+    const [token] = await this.db.select().from(passwordResetTokens)
       .where(
         and(
           eq(passwordResetTokens.userId, userId),
@@ -1092,25 +1140,25 @@ export class DatabaseStorage {
   }
 
   async markResetTokenUsed(tokenId: string): Promise<void> {
-    await db.update(passwordResetTokens)
+    await this.db.update(passwordResetTokens)
       .set({ used: true })
       .where(eq(passwordResetTokens.id, tokenId));
   }
 
   async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
-    await db.update(users)
+    await this.db.update(users)
       .set({ password: hashedPassword })
       .where(eq(users.id, userId));
   }
 
   async updateUserEmail(userId: string, email: string): Promise<void> {
-    await db.update(users)
+    await this.db.update(users)
       .set({ email })
       .where(eq(users.id, userId));
   }
 
   async createUserNotification(userId: string, type: string, title: string, body: string, drawId?: string, metadata?: string): Promise<UserNotification> {
-    const [notification] = await db.insert(userNotifications).values({
+    const [notification] = await this.db.insert(userNotifications).values({
       userId,
       type,
       title,
@@ -1131,18 +1179,18 @@ export class DatabaseStorage {
       drawId: drawId || null,
       metadata: metadata || null,
     }));
-    await db.insert(userNotifications).values(values);
+    await this.db.insert(userNotifications).values(values);
   }
 
   async getUserNotifications(userId: string, limit = 50): Promise<UserNotification[]> {
-    return db.select().from(userNotifications)
+    return this.db.select().from(userNotifications)
       .where(eq(userNotifications.userId, userId))
       .orderBy(desc(userNotifications.createdAt))
       .limit(limit);
   }
 
   async markUserNotificationRead(id: string, userId: string): Promise<boolean> {
-    const [result] = await db.update(userNotifications)
+    const [result] = await this.db.update(userNotifications)
       .set({ isRead: true })
       .where(and(eq(userNotifications.id, id), eq(userNotifications.userId, userId)))
       .returning();
@@ -1150,28 +1198,28 @@ export class DatabaseStorage {
   }
 
   async markAllUserNotificationsRead(userId: string): Promise<boolean> {
-    await db.update(userNotifications)
+    await this.db.update(userNotifications)
       .set({ isRead: true })
       .where(and(eq(userNotifications.userId, userId), eq(userNotifications.isRead, false)));
     return true;
   }
 
   async getUnreadUserNotificationCount(userId: string): Promise<number> {
-    const [result] = await db.select({ count: count() }).from(userNotifications)
+    const [result] = await this.db.select({ count: count() }).from(userNotifications)
       .where(and(eq(userNotifications.userId, userId), eq(userNotifications.isRead, false)));
     return result?.count || 0;
   }
 
   async updateUserPushToken(userId: string, pushToken: string | null): Promise<void> {
     if (pushToken) {
-      await db.update(users).set({ pushToken: null }).where(eq(users.pushToken, pushToken));
+      await this.db.update(users).set({ pushToken: null }).where(eq(users.pushToken, pushToken));
     }
-    await db.update(users).set({ pushToken }).where(eq(users.id, userId));
+    await this.db.update(users).set({ pushToken }).where(eq(users.id, userId));
   }
 
   async getUserPushTokensByIds(userIds: string[]): Promise<string[]> {
     if (userIds.length === 0) return [];
-    const result = await db.select({ pushToken: users.pushToken })
+    const result = await this.db.select({ pushToken: users.pushToken })
       .from(users)
       .where(inArray(users.id, userIds));
     return result.map(r => r.pushToken).filter((t): t is string => !!t);
@@ -1179,7 +1227,7 @@ export class DatabaseStorage {
 
   async getUserApnTokensByIds(userIds: string[]): Promise<string[]> {
     if (userIds.length === 0) return [];
-    const result = await db.select({ apnToken: users.apnToken })
+    const result = await this.db.select({ apnToken: users.apnToken })
       .from(users)
       .where(inArray(users.id, userIds));
     return result.map(r => r.apnToken).filter((t): t is string => !!t && t.length > 20);
@@ -1190,47 +1238,18 @@ export class DatabaseStorage {
     if (tokens.fcmToken !== undefined) update.fcmToken = tokens.fcmToken;
     if (tokens.apnToken !== undefined) update.apnToken = tokens.apnToken;
     if (Object.keys(update).length === 0) return;
-    await db.update(users).set(update).where(eq(users.id, userId));
+    await this.db.update(users).set(update).where(eq(users.id, userId));
   }
 
   async getAllUsersWithFcmTokens(): Promise<{ id: string; fcmToken: string | null; apnToken: string | null }[]> {
-    const result = await db.select({ id: users.id, fcmToken: users.fcmToken, apnToken: users.apnToken })
+    const result = await this.db.select({ id: users.id, fcmToken: users.fcmToken, apnToken: users.apnToken })
       .from(users)
       .where(eq(users.isSuspended, false));
     return result;
   }
 
-  async getWalletBalance(userId: string): Promise<number> {
-    const [u] = await db.select({ walletBalance: users.walletBalance }).from(users).where(eq(users.id, userId));
-    return parseFloat(u?.walletBalance || "0");
-  }
-
-  async addWalletCredit(userId: string, amount: number, type: string, description: string, referenceId?: string): Promise<void> {
-    await db.update(users)
-      .set({ walletBalance: sql`wallet_balance + ${amount}` })
-      .where(eq(users.id, userId));
-    await db.insert(walletTransactions).values({ userId, amount: String(amount), type, description, referenceId });
-  }
-
-  async deductWalletBalance(userId: string, amount: number, description: string, referenceId?: string): Promise<boolean> {
-    const balance = await this.getWalletBalance(userId);
-    if (balance < amount) return false;
-    await db.update(users)
-      .set({ walletBalance: sql`wallet_balance - ${amount}` })
-      .where(eq(users.id, userId));
-    await db.insert(walletTransactions).values({ userId, amount: String(-amount), type: "debit", description, referenceId });
-    return true;
-  }
-
-  async getWalletTransactions(userId: string): Promise<WalletTransaction[]> {
-    return db.select().from(walletTransactions)
-      .where(eq(walletTransactions.userId, userId))
-      .orderBy(desc(walletTransactions.createdAt))
-      .limit(50);
-  }
-
   async createEmailVerificationToken(userId: string, code: string, expiresAt: Date): Promise<any> {
-    const [token] = await db.insert(emailVerificationTokens).values({
+    const [token] = await this.db.insert(emailVerificationTokens).values({
       userId,
       code,
       expiresAt,
@@ -1239,7 +1258,7 @@ export class DatabaseStorage {
   }
 
   async verifyEmailToken(userId: string, code: string): Promise<any> {
-    const [token] = await db.select().from(emailVerificationTokens)
+    const [token] = await this.db.select().from(emailVerificationTokens)
       .where(
         and(
           eq(emailVerificationTokens.userId, userId),
@@ -1254,19 +1273,19 @@ export class DatabaseStorage {
   }
 
   async markEmailTokenUsed(tokenId: string): Promise<void> {
-    await db.update(emailVerificationTokens)
+    await this.db.update(emailVerificationTokens)
       .set({ used: true })
       .where(eq(emailVerificationTokens.id, tokenId));
   }
 
   async setEmailVerified(userId: string): Promise<void> {
-    await db.update(users)
+    await this.db.update(users)
       .set({ emailVerified: true })
       .where(eq(users.id, userId));
   }
 
   async getRecentPurchases(limit: number = 5): Promise<{ productName: string; minutesAgo: number }[]> {
-    const rows = await db
+    const rows = await this.db
       .select({
         productName: orderItems.productName,
         createdAt: orders.createdAt,
@@ -1284,23 +1303,38 @@ export class DatabaseStorage {
   }
 
   async deleteUser(userId: string): Promise<boolean> {
-    await db.delete(supportTickets).where(eq(supportTickets.userId, userId));
-    await db.delete(userNotifications).where(eq(userNotifications.userId, userId));
-    await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
-    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
-    await db.delete(reviews).where(eq(reviews.userId, userId));
-    await db.delete(tickets).where(eq(tickets.userId, userId));
-    const userOrders = await db.select({ id: orders.id }).from(orders).where(eq(orders.userId, userId));
-    if (userOrders.length > 0) {
-      await db.delete(orderItems).where(inArray(orderItems.orderId, userOrders.map((o) => o.id)));
+    if (!this.inTransaction) return this.atomic(store => store.deleteUser(userId));
+    const pendingOrders = await this.getOrdersByUser(userId);
+    for (const order of pendingOrders) {
+      if (["pending_payment", "pending_review"].includes(order.paymentStatus)) await this.decidePayment(order.id, "rejected", "حذف الحساب");
     }
-    await db.delete(orders).where(eq(orders.userId, userId));
-    const result = await db.delete(users).where(eq(users.id, userId));
+    const affected = await this.getTicketsByUser(userId);
+    await this.db.delete(supportTickets).where(eq(supportTickets.userId, userId));
+    await this.db.delete(userNotifications).where(eq(userNotifications.userId, userId));
+    await this.db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
+    await this.db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+    await this.db.delete(reviews).where(eq(reviews.userId, userId));
+    await this.db.delete(tickets).where(eq(tickets.userId, userId));
+    for (const drawId of new Set(affected.map(t => t.drawId).filter((id): id is string => !!id))) {
+      const draw = await this.getDraw(drawId);
+      if (draw && draw.status !== "completed") {
+        const remaining = (await this.getTicketsByDraw(drawId)).length;
+        await this.db.update(draws).set({ soldTickets: remaining, status: draw.status === "ready_to_draw" ? "scheduled" : draw.status }).where(eq(draws.id, drawId));
+      }
+    }
+    await this.db.update(draws).set({ winnerId: null, winnerTicketId: null }).where(eq(draws.winnerId, userId));
+    if (!await this.getActiveDraw()) await this.activateNextScheduledDraw();
+    const userOrders = await this.db.select({ id: orders.id }).from(orders).where(eq(orders.userId, userId));
+    if (userOrders.length > 0) {
+      await this.db.delete(orderItems).where(inArray(orderItems.orderId, userOrders.map((o) => o.id)));
+    }
+    await this.db.delete(orders).where(eq(orders.userId, userId));
+    const result = await this.db.delete(users).where(eq(users.id, userId));
     return (result?.rowCount ?? 0) > 0;
   }
 
   async createSupportTicket(userId: string, data: { subject: string; message: string; priority: string }): Promise<SupportTicket> {
-    const [ticket] = await db.insert(supportTickets).values({
+    const [ticket] = await this.db.insert(supportTickets).values({
       userId,
       subject: data.subject,
       message: data.message,
@@ -1310,19 +1344,19 @@ export class DatabaseStorage {
   }
 
   async getUserSupportTickets(userId: string): Promise<SupportTicket[]> {
-    return db.select().from(supportTickets)
+    return this.db.select().from(supportTickets)
       .where(eq(supportTickets.userId, userId))
       .orderBy(desc(supportTickets.createdAt));
   }
 
   async getSupportTicketById(ticketId: string): Promise<SupportTicket | undefined> {
-    const [ticket] = await db.select().from(supportTickets)
+    const [ticket] = await this.db.select().from(supportTickets)
       .where(eq(supportTickets.id, ticketId));
     return ticket;
   }
 
   async getAllSupportTickets(): Promise<(SupportTicket & { username: string; email: string })[]> {
-    const result = await db.select({
+    const result = await this.db.select({
       id: supportTickets.id,
       userId: supportTickets.userId,
       subject: supportTickets.subject,
@@ -1351,7 +1385,7 @@ export class DatabaseStorage {
       updateData.repliedAt = new Date();
     }
     if (data.status === "closed") updateData.closedAt = new Date();
-    const [ticket] = await db.update(supportTickets)
+    const [ticket] = await this.db.update(supportTickets)
       .set(updateData)
       .where(eq(supportTickets.id, ticketId))
       .returning();
@@ -1360,4 +1394,5 @@ export class DatabaseStorage {
 }
 
 export const storage = new DatabaseStorage();
+
 

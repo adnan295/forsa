@@ -71,7 +71,6 @@ export const users = pgTable("users", {
   pushToken: text("push_token"),
   fcmToken: text("fcm_token"),
   apnToken: text("apn_token"),
-  walletBalance: decimal("wallet_balance", { precision: 10, scale: 2 }).notNull().default("0"),
   isSuspended: boolean("is_suspended").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -131,11 +130,12 @@ export const orders = pgTable("orders", {
   discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull().default("0"),
   /** رسوم التوصيل — لا تدخل في احتساب فرص السحب */
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).notNull().default("0"),
-  walletAmount: decimal("wallet_amount", { precision: 10, scale: 2 }).notNull().default("0"),
-  /** المبلغ المستحق فعلياً بعد الخصم والمحفظة */
+  /** المبلغ المستحق فعلياً بعد الخصم والتوصيل */
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  /** المبلغ المعتمد لاحتساب التذاكر (بعد الخصم، قبل المحفظة) */
+  /** المبلغ المعتمد لاحتساب التذاكر (بعد الخصم) */
   ticketEligibleAmount: decimal("ticket_eligible_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  checkoutKey: text("checkout_key").unique(),
+  expectedTickets: integer("expected_tickets").notNull().default(0),
   ticketsAwarded: integer("tickets_awarded").notNull().default(0),
   status: orderStatusEnum("status").notNull().default("pending"),
   paymentMethod: text("payment_method"),
@@ -312,19 +312,6 @@ export const supportTickets = pgTable("support_tickets", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const walletTransactions = pgTable("wallet_transactions", {
-  id: varchar("id")
-    .primaryKey()
-    .default(sql`gen_random_uuid()`),
-  userId: varchar("user_id")
-    .notNull()
-    .references(() => users.id),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  type: text("type").notNull(),
-  description: text("description").notNull(),
-  referenceId: varchar("reference_id"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
 
 export const campaignClientRequests = pgTable("campaign_client_requests", {
   id: varchar("id")
@@ -428,8 +415,8 @@ export const insertProductSchema = z.object({
   imageUrl: z.string().optional().nullable(),
   imagesJson: z.string().optional().nullable(),
   specsJson: z.string().optional().nullable(),
-  price: z.union([z.string(), z.number()]).transform((v) => String(v)),
-  stock: z.union([z.number(), z.null()]).optional(),
+  price: z.union([z.string(), z.number()]).transform((v) => String(v)).refine(v => Number.isFinite(Number(v)) && Number(v) > 0 && Number(v) <= 1000000, "سعر المنتج غير صالح"),
+  stock: z.union([z.number().int().min(0), z.null()]).optional(),
   category: z.string().optional().default("other"),
   isActive: z.boolean().optional().default(true),
   sortOrder: z.number().optional().default(0),
@@ -443,7 +430,7 @@ export const insertDrawSchema = z.object({
   ticketPrice: z
     .union([z.string(), z.number()])
     .transform((v) => String(v))
-    .refine((v) => parseFloat(v) > 0, "سعر التذكرة لازم يكون أكبر من صفر"),
+    .refine((v) => Number.isFinite(Number(v)) && Number(v) > 0, "سعر التذكرة لازم يكون أكبر من صفر"),
   targetTickets: z.number().int().min(1, "عدد التذاكر المستهدف مطلوب"),
 });
 
@@ -507,13 +494,13 @@ export const checkoutSchema = z.object({
     )
     .min(1, "السلة فارغة"),
   paymentMethod: z.string().min(1),
-  shippingFullName: z.string().optional(),
-  shippingPhone: z.string().optional(),
-  shippingCity: z.string().optional(),
-  shippingAddress: z.string().optional(),
-  shippingCountry: z.string().optional(),
+  checkoutKey: z.string().min(16).max(100).optional(),
+  shippingFullName: z.string().trim().min(1, "عنوان الشحن غير مكتمل").max(500),
+  shippingPhone: z.string().trim().min(8, "رقم الهاتف غير صحيح").max(30),
+  shippingCity: z.string().trim().min(1, "عنوان الشحن غير مكتمل").max(500),
+  shippingAddress: z.string().trim().min(1, "عنوان الشحن غير مكتمل").max(500),
+  shippingCountry: z.string().trim().min(1, "عنوان الشحن غير مكتمل").max(500),
   couponCode: z.string().optional().nullable(),
-  useWallet: z.boolean().optional().default(false),
 });
 
 /* ---------------------------------- الأنواع ---------------------------------- */
@@ -537,7 +524,6 @@ export type AdminNotification = typeof adminNotifications.$inferSelect;
 export type UserNotification = typeof userNotifications.$inferSelect;
 export type SupportTicket = typeof supportTickets.$inferSelect;
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
-export type WalletTransaction = typeof walletTransactions.$inferSelect;
 export type CampaignClientRequest = typeof campaignClientRequests.$inferSelect;
 export type InsertCampaignClientRequest = z.infer<typeof insertCampaignClientRequestSchema>;
 export type CheckoutPayload = z.infer<typeof checkoutSchema>;
@@ -572,3 +558,4 @@ export function parseProductSpecs(specsJson: string | null | undefined): Product
 
 /** رسوم التوصيل الافتراضية — لا تُحتسب ضمن فرص السحب */
 export const DEFAULT_DELIVERY_FEE = 2;
+
