@@ -39,7 +39,7 @@ const NOTIFICATION_STYLE: Record<
   winner_announced: { icon: "megaphone", fg: c.goldText, bg: c.goldSoft },
   draw_completed: { icon: "gift", fg: c.goldText, bg: c.goldSoft },
   draw_full: { icon: "flame", fg: StatusColors.warning.fg, bg: StatusColors.warning.bg },
-  new_draw: { icon: "sparkles", fg: c.primary, bg: c.primarySoft },
+  new_draw: { icon: "notifications", fg: c.primary, bg: c.primarySoft },
   tickets_awarded: { icon: "ticket", fg: StatusColors.success.fg, bg: StatusColors.success.bg },
   shipping_update: { icon: "cube", fg: StatusColors.info.fg, bg: StatusColors.info.bg },
   support_reply: { icon: "chatbubble-ellipses", fg: StatusColors.info.fg, bg: StatusColors.info.bg },
