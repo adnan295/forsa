@@ -11,7 +11,7 @@ import { sendFcmNotification, sendFcmToUser } from "./firebase";
 import { sendApnsNotifications, isApnsConfigured } from "./apns";
 import { sum, count, and, gte, sql, eq, desc, inArray } from "drizzle-orm";
 import { isBankTransferMethod, isConfiguredBankTransfer } from "@shared/commerce";
-import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode } from "./email";
+import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode, isEmailEnabled } from "./email";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import multer from "multer";
@@ -235,6 +235,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.logActivity("user_register", "New user registered", `User ${user.username} registered`, user.id);
 
+      // بدون بريد مضبوط لا سبيل لإيصال الرمز، فيُفعَّل الحساب مباشرة
+      // بدل أن يعلق المستخدم على شاشة تحقّق لا يصلها رمز أبداً.
+      if (!isEmailEnabled()) {
+        await storage.setEmailVerified(user.id);
+        req.session.userId = user.id;
+        const verified = await storage.getUser(user.id);
+        return res.json({
+          requiresVerification: false,
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: verified?.role ?? "user",
+          emailVerified: true,
+          createdAt: verified?.createdAt,
+        });
+      }
+
       const otpCode = crypto.randomInt(100000, 999999).toString();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
       await storage.createEmailVerificationToken(user.id, otpCode, expiresAt);
@@ -388,6 +405,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "البريد الإلكتروني مطلوب" });
       }
 
+      // لا نَعِد برمز لا يمكن إرساله — أوضح للمستخدم من انتظار بريد لن يصل.
+      if (!isEmailEnabled()) {
+        return res.status(503).json({
+          message: "استعادة كلمة السر غير متاحة حالياً. تواصل مع الدعم لإعادة تعيينها.",
+        });
+      }
+
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.json({ message: "إذا كان البريد مسجلاً، سيتم إرسال رمز إعادة التعيين" });
@@ -400,11 +424,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const emailSent = await sendPasswordResetCode(user.email, { code, username: user.username });
 
-      if (!emailSent) {
-        res.json({ message: "إذا كان البريد مسجلاً، سيتم إرسال رمز إعادة التعيين" });
-      } else {
-        res.json({ message: "إذا كان البريد مسجلاً، سيتم إرسال رمز إعادة التعيين" });
-      }
+      // نفس الرد في الحالتين حتى لا يكشف أي بريد مسجّل
+      void emailSent;
+      res.json({ message: "إذا كان البريد مسجلاً، سيتم إرسال رمز إعادة التعيين" });
     } catch (error) {
       console.error("Forgot password error:", error);
       res.status(500).json({ message: "Server error" });
