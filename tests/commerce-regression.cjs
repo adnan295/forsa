@@ -104,6 +104,69 @@ const out = path.join(root, '.commerce-test.cjs');
         const confirmed=await fetch(base+`/api/admin/orders/${o.id}/payment`,{method:'PUT',headers:{cookie,'content-type':'application/json'},body:JSON.stringify({paymentStatus:'confirmed'})});assert.equal(confirmed.status,200);
         const stored=await (await fetch(base+`/api/orders/${o.id}`,{headers:{cookie}})).json();assert.equal(stored.paymentStatus,'confirmed');assert.equal(stored.totalAmount,'32.00');
       });
+      await test('every admin section API loads and rejects anonymous access',async()=>{
+        for (const route of ['dashboard','orders','users','support-tickets','products','draws','payment-methods','coupons','activity-log','notifications','sales-chart']) {
+          const res=await fetch(base+'/api/admin/'+route,{headers:{cookie}});
+          assert.equal(res.status,200,route);await res.json();
+          assert.equal((await fetch(base+'/api/admin/'+route)).status,401,route);
+        }
+      });
+      await test('admin order details expose lines and promised ticket count',async()=>{
+        const rows=await (await fetch(base+'/api/admin/orders',{headers:{cookie}})).json();
+        assert.ok(rows.length);assert.ok(rows.every(o=>Array.isArray(o.items)&&Number.isInteger(o.expectedTickets)));
+        assert.equal(JSON.stringify(rows).includes('walletAmount'),false);
+      });
+      await test('shipping is blocked before payment and cannot go backwards',async()=>{
+        const o=await s.checkout('u',payload);
+        const update=async(data)=>fetch(base+`/api/admin/orders/${o.id}/shipping`,{method:'PUT',headers:{cookie,'content-type':'application/json'},body:JSON.stringify(data)});
+        assert.equal((await update({shippingStatus:'shipped'})).status,400);
+        await s.submitReceipt(o.id,'u','data:image/png;base64,dGVzdA==');await s.decidePayment(o.id,'confirmed');
+        assert.equal((await update({shippingStatus:'processing'})).status,200);
+        assert.equal((await update({shippingStatus:'shipped',trackingNumber:'TRACK-1'})).status,200);
+        assert.equal((await update({shippingStatus:'pending'})).status,400);
+        assert.equal((await update({shippingStatus:'cancelled'})).status,400);
+      });
+      await test('admin totals and sales chart count confirmed payments only',async()=>{
+        const all=await s.getAllOrders(), paid=all.filter(o=>o.paymentStatus==='confirmed');
+        const sum=paid.reduce((n,o)=>n+Number(o.totalAmount),0);
+        const stats=await (await fetch(base+'/api/admin/dashboard',{headers:{cookie}})).json();
+        assert.equal(Number(stats.totalRevenue),sum);
+        assert.equal(Number(stats.averageOrderValue),Number((sum/paid.length).toFixed(2)));
+        assert.ok(Number(stats.conversionRate)<=100);
+        assert.equal(Number((await s.getUserStats('u')).totalSpent),sum);
+        const chart=await (await fetch(base+'/api/admin/sales-chart',{headers:{cookie}})).json();
+        assert.equal(chart.reduce((n,d)=>n+Number(d.total),0),sum);
+      });
+      await test('product edits and coupon edits reject invalid values',async()=>{
+        const update=async(url,data)=>fetch(base+url,{method:'PUT',headers:{cookie,'content-type':'application/json'},body:JSON.stringify(data)});
+        assert.equal((await update('/api/admin/products/p',{price:'-1'})).status,400);
+        assert.equal((await update('/api/admin/products/p',{stock:1.5})).status,400);
+        assert.equal((await post('/api/admin/coupons',{code:'INVALID',discountPercent:150,maxUses:1},cookie)).status,400);
+        assert.equal((await update('/api/admin/coupons/c',{discountPercent:-10})).status,400);
+        assert.equal((await update('/api/admin/products/p',{price:'35.00'})).status,200);
+      });
+      await test('bank account configuration, enable and disable are consistent',async()=>{
+        assert.equal((await post('/api/admin/payment-methods',{name:'Bank Transfer',nameAr:'Bank'},cookie)).status,400);
+        const res=await post('/api/admin/payment-methods',{name:'Bank Transfer 2',nameAr:'Bank 2',bankName:'Bank',accountName:'Owner',iban:'TEST-2'},cookie);
+        assert.equal(res.status,200);const method=await res.json();
+        const disabled=await fetch(base+`/api/admin/payment-methods/${method.id}`,{method:'PUT',headers:{cookie,'content-type':'application/json'},body:JSON.stringify({enabled:false})});assert.equal(disabled.status,200);
+        const enabled=await (await fetch(base+'/api/payment-methods')).json();assert.equal(enabled.some(m=>m.id===method.id),false);
+      });
+      await test('admin account changes authenticate before changing email',async()=>{
+        const before=await s.getUser('u');
+        const res=await fetch(base+'/api/admin/account-settings',{method:'PUT',headers:{cookie,'content-type':'application/json'},body:JSON.stringify({email:'changed@example.com',currentPassword:'wrong-password',newPassword:'new-password'})});
+        assert.equal(res.status,401);assert.equal((await s.getUser('u')).email,before.email);
+        assert.equal((await post('/api/admin/create-admin',{email:'bad',username:'aa',password:'x'},cookie)).status,400);
+      });
+      await test('admin CSV exports are available',async()=>{
+        for(const kind of ['orders','users']) {
+          const res=await fetch(base+'/api/admin/'+kind+'/export/csv',{headers:{cookie}});
+          assert.equal(res.status,200);assert.match(res.headers.get('content-type'),/csv/);
+        }
+      });
+      await test('removed referrals and campaign endpoints are unavailable',async()=>{
+        for(const route of ['/api/referral','/api/admin/campaigns']) assert.equal((await fetch(base+route,{headers:{cookie}})).status,404);
+      });
       await test('wallet endpoint removed',async()=>{assert.equal((await fetch(base+'/api/user/wallet',{headers:{cookie}})).status,404);});
     } finally {await new Promise(resolve=>server.close(resolve));}
     await test('account deletion with orders, tickets and support succeeds atomically',async()=>{

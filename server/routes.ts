@@ -641,7 +641,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (b.isActive !== undefined) data.isActive = !!b.isActive;
       if (b.sortOrder !== undefined) data.sortOrder = Number(b.sortOrder);
 
-      const updated = await storage.updateProduct(req.params.id as string, data);
+      const parsed = insertProductSchema.partial().safeParse(data);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message });
+      const updated = await storage.updateProduct(req.params.id as string, parsed.data);
       if (!updated) return res.status(404).json({ message: "المنتج غير موجود" });
       res.json(updated);
     } catch (error: any) {
@@ -780,9 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: `في جولة نشطة حالياً (${current.title}) — لازم تخلص أولاً` });
       }
 
-      await storage.updateDraw(draw.id, { status: "active", startedAt: new Date() });
-      await storage.assignPendingTicketsToDraw(draw.id);
-      res.json(await storage.getDraw(draw.id));
+      res.json(await storage.activateDraw(draw.id));
     } catch (error: any) {
       console.error("Activate draw error:", error);
       res.status(400).json({ message: error.message || "فشل تفعيل الجولة" });
@@ -1090,9 +1090,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json(updated);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Update shipping error:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(400).json({ message: error.message || "تعذّر تحديث الشحن" });
     }
   });
 
@@ -1471,9 +1471,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const method = await storage.createPaymentMethod(parsed.data);
       res.json(method);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Create payment method error:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(400).json({ message: error.message || "بيانات الحساب البنكي غير صالحة" });
     }
   });
 
@@ -1486,9 +1486,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Payment method not found" });
       }
       res.json(updated);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Update payment method error:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(400).json({ message: error.message || "بيانات الحساب البنكي غير صالحة" });
     }
   });
 
@@ -1531,7 +1531,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/coupons/:id", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const updated = await storage.updateCoupon(req.params.id as string, req.body);
+      const parsed = insertCouponSchema.partial().safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message });
+      const updated = await storage.updateCoupon(req.params.id as string, parsed.data);
       if (!updated) {
         return res.status(404).json({ message: "Coupon not found" });
       }
@@ -1973,7 +1975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const [result] = await db
             .select({ total: sum(orders.totalAmount), count: count() })
             .from(orders)
-            .where(and(gte(orders.createdAt, hourStart2), sql`${orders.createdAt} <= ${hourEnd2}`));
+            .where(and(eq(orders.paymentStatus, "confirmed"), gte(orders.createdAt, hourStart2), sql`${orders.createdAt} <= ${hourEnd2}`));
           hours.push({
             label: `${hourStart2.getHours()}:00`,
             total: result?.total || "0",
@@ -1994,7 +1996,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const [result] = await db
           .select({ total: sum(orders.totalAmount), count: count() })
           .from(orders)
-          .where(and(gte(orders.createdAt, dayStart), sql`${orders.createdAt} <= ${dayEnd}`));
+          .where(and(eq(orders.paymentStatus, "confirmed"), gte(orders.createdAt, dayStart), sql`${orders.createdAt} <= ${dayEnd}`));
         days.push({
           date: dayStart.toISOString().split("T")[0],
           label: dayStart.toISOString().split("T")[0],
@@ -2306,11 +2308,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/account-settings", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const { email, currentPassword, newPassword } = req.body;
+      const parsed = z.object({
+        email: z.string().trim().email("البريد الإلكتروني غير صالح").optional(),
+        currentPassword: z.string().min(1, "يجب إدخال كلمة السر الحالية"),
+        newPassword: z.string().min(6, "كلمة السر يجب أن تكون 6 أحرف على الأقل").optional(),
+      }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0].message });
+      const { email, currentPassword, newPassword } = parsed.data;
       const adminId = (req.session as any).userId;
       const admin = await storage.getUser(adminId);
       if (!admin) return res.status(404).json({ message: "المستخدم غير موجود" });
 
+      const valid = await bcrypt.compare(currentPassword, admin.password);
+      if (!valid) return res.status(401).json({ message: "كلمة السر الحالية غير صحيحة" });
       if (email && email !== admin.email) {
         const existing = await storage.getUserByEmail(email);
         if (existing && existing.id !== adminId) {
@@ -2320,9 +2330,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (newPassword) {
-        if (!currentPassword) return res.status(400).json({ message: "يجب إدخال كلمة السر الحالية" });
-        const valid = await bcrypt.compare(currentPassword, admin.password);
-        if (!valid) return res.status(401).json({ message: "كلمة السر الحالية غير صحيحة" });
         const hashed = await bcrypt.hash(newPassword, 10);
         await storage.updateUserPassword(adminId, hashed);
       }
@@ -2336,10 +2343,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/create-admin", requireAdmin as any, async (req: Request, res: Response) => {
     try {
-      const { email, username, password } = req.body;
-      if (!email || !username || !password) {
-        return res.status(400).json({ message: "جميع الحقول مطلوبة" });
-      }
+      const parsed = z.object({
+        email: z.string().trim().email("البريد الإلكتروني غير صالح"),
+        username: z.string().trim().min(2, "اسم المستخدم قصير جداً"),
+        password: z.string().min(6, "كلمة السر يجب أن تكون 6 أحرف على الأقل"),
+      }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0].message });
+      const { email, username, password } = parsed.data;
       const existing = await storage.getUserByEmail(email);
       if (existing) return res.status(409).json({ message: "البريد الإلكتروني مستخدم بالفعل" });
 

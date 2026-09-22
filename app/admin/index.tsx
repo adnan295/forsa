@@ -21,9 +21,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
 import Colors from "@/constants/colors";
 import { Logo, StatTile, StatusBadge } from "@/components/ui";
+import { isConfiguredBankTransfer } from "@shared/commerce";
 import { parseProductSpecs } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
@@ -38,7 +38,7 @@ const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "users", label: "المستخدمين", icon: "people" },
   { key: "products", label: "المنتجات", icon: "cube" },
   { key: "draws", label: "جولات السحب", icon: "gift" },
-  { key: "payments", label: "الدفع", icon: "card" },
+  { key: "payments", label: "الحسابات البنكية", icon: "business" },
   { key: "coupons", label: "الكوبونات", icon: "pricetag" },
   { key: "activity", label: "السجل", icon: "time" },
   { key: "settings", label: "الإعدادات", icon: "settings" },
@@ -282,11 +282,12 @@ const shell = StyleSheet.create({
 });
 
 function SalesChart() {
-  const { data: chartData } = useQuery<{ date: string; total: string; count: number }[]>({
+  const { data: chartData, error: loadError, refetch } = useQuery<{ date: string; total: string; count: number }[]>({
     queryKey: ["/api/admin/sales-chart"],
     refetchInterval: 30000,
   });
 
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
   if (!chartData || chartData.length === 0) return null;
 
   const totals = chartData.map((d) => parseFloat(d.total));
@@ -366,7 +367,7 @@ function DashboardSection({
   wide: boolean;
   onNavigate: (tab: AdminTab) => void;
 }) {
-  const { data: stats, isLoading } = useQuery<any>({
+  const { data: stats, isLoading, error: loadError, refetch } = useQuery<any>({
     queryKey: ["/api/admin/dashboard"],
     refetchInterval: 10000,
   });
@@ -377,6 +378,7 @@ function DashboardSection({
   });
 
   if (isLoading) return <LoadingView />;
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
 
   const draw = stats?.activeDraw ?? null;
   const soldTickets = draw?.soldTickets ?? 0;
@@ -406,14 +408,14 @@ function DashboardSection({
           icon="bar-chart"
           tone="primary"
           value={`$${stats?.totalRevenue ?? "0"}`}
-          label="المبيعات"
+          label="التحويلات المؤكدة"
           style={wide ? dash.statWide : dash.statNarrow}
         />
         <StatTile
           icon="ticket"
           tone="success"
           value={soldTickets}
-          label="الفرص المؤكدة"
+          label="فرص الجولة الحالية"
           style={wide ? dash.statWide : dash.statNarrow}
         />
         <StatTile
@@ -427,7 +429,7 @@ function DashboardSection({
           icon="cart"
           tone="warning"
           value={stats?.pendingReviewOrders ?? 0}
-          label="طلبات بانتظار التأكيد"
+          label="إيصالات بانتظار المراجعة"
           style={wide ? dash.statWide : dash.statNarrow}
         />
       </View>
@@ -545,13 +547,13 @@ function DashboardSection({
         <View style={dash.panel}>
           <Text style={dash.panelTitle}>أفضل المنتجات مبيعاً</Text>
           {stats.topProducts.map((p: any, i: number) => (
-            <View key={i} style={styles.topCampaignItem}>
-              <View style={styles.topCampaignRank}>
-                <Text style={styles.topCampaignRankText}>{i + 1}</Text>
+            <View key={i} style={styles.topProductItem}>
+              <View style={styles.topProductRank}>
+                <Text style={styles.topProductRankText}>{i + 1}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.topCampaignTitle}>{p.name}</Text>
-                <Text style={styles.topCampaignSub}>{p.soldCount} مبيعات</Text>
+                <Text style={styles.topProductTitle}>{p.name}</Text>
+                <Text style={styles.topProductSub}>{p.soldCount} مبيعات</Text>
               </View>
             </View>
           ))}
@@ -732,7 +734,7 @@ const dash = StyleSheet.create({
 });
 
 function OrdersSection() {
-  const { data: orders, isLoading } = useQuery<any[]>({
+  const { data: orders, isLoading, error: loadError, refetch } = useQuery<any[]>({
     queryKey: ["/api/admin/orders"],
     refetchInterval: 10000,
   });
@@ -760,11 +762,13 @@ function OrdersSection() {
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+      for (const key of ["/api/admin/dashboard", "/api/admin/draws", "/api/admin/users", "/api/admin/products", "/api/admin/sales-chart", "/api/draws/current"]) queryClient.invalidateQueries({ queryKey: [key] });
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
   if (isLoading) return <LoadingView />;
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
 
   const getShippingStatusAr = (s: string) => {
     const map: Record<string, string> = { pending: "قيد الانتظار", processing: "قيد التجهيز", shipped: "تم الشحن", delivered: "تم التوصيل", cancelled: "ملغي" };
@@ -800,7 +804,7 @@ function OrdersSection() {
               <Pressable
                 onPress={async () => {
                   try {
-                    const url = `${getApiUrl()}/api/admin/orders/export/csv`;
+                    const url = new URL("/api/admin/orders/export/csv", getApiUrl()).toString();
                     if (Platform.OS === "web") {
                       window.open(url, "_blank");
                     } else {
@@ -850,7 +854,7 @@ function OrdersSection() {
       />
       <ShippingModal
         visible={showShippingModal}
-        order={selectedOrder}
+        order={orders?.find(o => o.id === selectedOrder?.id) ?? selectedOrder}
         onClose={() => setShowShippingModal(false)}
         onUpdate={(data: any) => selectedOrder && shippingMutation.mutate({ id: selectedOrder.id, data })}
         onPaymentUpdate={(data: any) => selectedOrder && paymentMutation.mutate({ id: selectedOrder.id, data })}
@@ -874,7 +878,7 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
       setAddress(order.shippingAddress || "");
       setRejectionReason("");
     }
-  }, [order]);
+  }, [order?.id, order?.shippingStatus, order?.trackingNumber, order?.shippingAddress]);
 
   const getPaymentStatusAr = (s: string) => {
     const map: Record<string, string> = { pending_payment: "في انتظار الدفع", pending_review: "قيد المراجعة", confirmed: "تم التأكيد", rejected: "مرفوض" };
@@ -890,7 +894,6 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
     { key: "processing", label: "قيد التجهيز" },
     { key: "shipped", label: "تم الشحن" },
     { key: "delivered", label: "تم التوصيل" },
-    { key: "cancelled", label: "ملغي" },
   ];
 
   return (
@@ -932,6 +935,14 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
               </View>
             )}
 
+            {order && <View style={orderMgmtStyles.infoSection}>
+              <Text style={orderMgmtStyles.infoSectionTitle}>المنتجات والمبلغ المطلوب تحويله</Text>
+              {(order.items ?? []).map((item: any) => <Text key={item.id} style={orderMgmtStyles.infoText}>{item.productName} × {item.quantity} — {item.lineTotal} $</Text>)}
+              <Text style={orderMgmtStyles.infoText}>المنتجات: {order.subtotal} $ · الخصم: {order.discountAmount} $ · التوصيل: {order.deliveryFee} $</Text>
+              <Text style={orderMgmtStyles.infoText}>المجموع المطلوب: {order.totalAmount} $ — تحويل بنكي</Text>
+              <Text style={orderMgmtStyles.infoText}>الفرص المثبتة عند الشراء: {order.expectedTickets} · القسائم الصادرة: {order.ticketsAwarded}</Text>
+              {order.rejectionReason ? <Text style={styles.errorText}>سبب الرفض: {order.rejectionReason}</Text> : null}
+            </View>}
             {order?.paymentStatus && (
               <View style={orderMgmtStyles.infoSection}>
                 <Text style={orderMgmtStyles.infoSectionTitle}>حالة الدفع</Text>
@@ -950,12 +961,15 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
                   </View>
                 )}
 
-                {order.paymentStatus === "pending_review" && (
+                {["pending_payment", "pending_review"].includes(order.paymentStatus) && (
                   <View style={orderMgmtStyles.paymentActions}>
                     <Pressable
-                      onPress={() => onPaymentUpdate({ paymentStatus: "confirmed" })}
-                      disabled={paymentLoading}
-                      style={[orderMgmtStyles.confirmBtn, paymentLoading && { opacity: 0.6 }]}
+                      onPress={() => Alert.alert("تأكيد التحويل البنكي", `هل وصل مبلغ ${order.totalAmount} $ فعلياً إلى البنك؟ سيتم منح ${order.expectedTickets} تذكرة.`, [
+                        { text: "رجوع", style: "cancel" },
+                        { text: "وصل التحويل — تأكيد", onPress: () => onPaymentUpdate({ paymentStatus: "confirmed" }) },
+                      ])}
+                      disabled={paymentLoading || !order.receiptUrl}
+                      style={[orderMgmtStyles.confirmBtn, (paymentLoading || !order.receiptUrl) && { opacity: 0.6 }]}
                     >
                       {paymentLoading ? <ActivityIndicator color="#fff" size="small" /> : (
                         <>
@@ -975,7 +989,10 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
                         textAlign="right"
                       />
                       <Pressable
-                        onPress={() => onPaymentUpdate({ paymentStatus: "rejected", rejectionReason: rejectionReason || undefined })}
+                        onPress={() => Alert.alert("رفض الطلب", "لن تُمنح قسائم وسيُعاد المخزون. هذا لا يعيد حوالة بنكية تلقائياً.", [
+                          { text: "رجوع", style: "cancel" },
+                          { text: "رفض الطلب", style: "destructive", onPress: () => onPaymentUpdate({ paymentStatus: "rejected", rejectionReason: rejectionReason || undefined }) },
+                        ])}
                         disabled={paymentLoading}
                         style={[orderMgmtStyles.rejectBtn, paymentLoading && { opacity: 0.6 }]}
                       >
@@ -992,10 +1009,11 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
               </View>
             )}
 
+            {order?.paymentStatus !== "confirmed" && <Text style={styles.emptyText}>تحديث الشحن متاح بعد تأكيد وصول التحويل البنكي.</Text>}
             <Text style={modalStyles.inputLabel}>حالة الشحن</Text>
             <View style={styles.statusPicker}>
               {statuses.map((s) => (
-                <Pressable key={s.key} onPress={() => setStatus(s.key)} style={[styles.statusOption, status === s.key && styles.statusOptionActive]}>
+                <Pressable key={s.key} disabled={order?.paymentStatus !== "confirmed" || statuses.findIndex(x => x.key === s.key) < statuses.findIndex(x => x.key === order.shippingStatus)} onPress={() => setStatus(s.key)} style={[styles.statusOption, status === s.key && styles.statusOptionActive]}>
                   <Text style={[styles.statusOptionText, status === s.key && styles.statusOptionTextActive]}>{s.label}</Text>
                 </Pressable>
               ))}
@@ -1004,8 +1022,8 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
             <ModalInput label="عنوان الشحن" value={address} onChangeText={setAddress} placeholder="أدخل عنوان الشحن" multiline />
             <Pressable
               onPress={() => onUpdate({ shippingStatus: status, trackingNumber: tracking, shippingAddress: address })}
-              disabled={loading}
-              style={[modalStyles.createBtn, loading && { opacity: 0.6 }]}
+              disabled={loading || order?.paymentStatus !== "confirmed"}
+              style={[modalStyles.createBtn, (loading || order?.paymentStatus !== "confirmed") && { opacity: 0.6 }]}
             >
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>تحديث الشحن</Text>}
             </Pressable>
@@ -1017,7 +1035,7 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
 }
 
 function UsersSection() {
-  const { data: users, isLoading } = useQuery<any[]>({
+  const { data: users, isLoading, error: loadError, refetch } = useQuery<any[]>({
     queryKey: ["/api/admin/users"],
   });
 
@@ -1042,6 +1060,7 @@ function UsersSection() {
   }
 
   if (isLoading) return <LoadingView />;
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
 
   return (
     <FlatList
@@ -1054,7 +1073,7 @@ function UsersSection() {
           <Pressable
             onPress={() => {
               try {
-                const url = `${getApiUrl()}/api/admin/users/export/csv`;
+                const url = new URL("/api/admin/users/export/csv", getApiUrl()).toString();
                 if (Platform.OS === "web") {
                   window.open(url, "_blank");
                 } else {
@@ -1115,7 +1134,7 @@ function UsersSection() {
 type TicketStatusFilter = "all" | "open" | "in_progress" | "closed";
 
 function SupportTicketsSection() {
-  const { data: tickets, isLoading } = useQuery<any[]>({
+  const { data: tickets, isLoading, error: loadError, refetch } = useQuery<any[]>({
     queryKey: ["/api/admin/support-tickets"],
     refetchInterval: 10000,
   });
@@ -1124,6 +1143,7 @@ function SupportTicketsSection() {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   if (isLoading) return <LoadingView />;
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
 
   const filteredTickets = (tickets || []).filter((t: any) =>
     statusFilter === "all" ? true : t.status === statusFilter
@@ -1339,14 +1359,7 @@ async function uploadAdminImage(imageUri: string | null, imageFile: any): Promis
     if (Platform.OS === "web" && imageFile) {
       formData.append("image", imageFile);
     } else if (imageUri) {
-      const base64 = await FileSystem.readAsStringAsync(imageUri, {
-        encoding: "base64" as any,
-      });
-      const byteChars = atob(base64);
-      const byteNumbers = new Array(byteChars.length);
-      for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
-      const blob = new Blob([new Uint8Array(byteNumbers)], { type: "image/jpeg" });
-      formData.append("image", blob, "image.jpg");
+      formData.append("image", { uri: imageUri, name: "image.jpg", type: "image/jpeg" } as any);
     } else {
       return undefined;
     }
@@ -1398,7 +1411,7 @@ const PRODUCT_CATEGORIES = [
 ];
 
 function ProductsSection() {
-  const { data: products, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/products"] });
+  const { data: products, isLoading, error: loadError, refetch } = useQuery<any[]>({ queryKey: ["/api/admin/products"] });
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
 
@@ -1436,6 +1449,7 @@ function ProductsSection() {
   };
 
   if (isLoading) return <LoadingView />;
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
 
   return (
     <>
@@ -1458,15 +1472,15 @@ function ProductsSection() {
         ListEmptyComponent={
           <View style={{ alignItems: "center", paddingVertical: 50, gap: 10 }}>
             <Ionicons name="cube-outline" size={44} color={Colors.light.border} />
-            <Text style={styles.campaignInfoText}>ما في منتجات بعد — ضيف أول منتج</Text>
+            <Text style={styles.catalogInfoText}>ما في منتجات بعد — ضيف أول منتج</Text>
           </View>
         }
         renderItem={({ item }) => {
           const outOfStock = item.stock !== null && item.stock <= 0;
           return (
-            <View style={[styles.campaignCard, !item.isActive && { opacity: 0.6 }]}>
-              <View style={styles.campaignHeader}>
-                <Text style={styles.campaignTitle} numberOfLines={1}>{item.name}</Text>
+            <View style={[styles.catalogCard, !item.isActive && { opacity: 0.6 }]}>
+              <View style={styles.catalogHeader}>
+                <Text style={styles.catalogTitle} numberOfLines={1}>{item.name}</Text>
                 <View
                   style={[
                     styles.statusPill,
@@ -1481,18 +1495,18 @@ function ProductsSection() {
                 </View>
               </View>
 
-              <View style={styles.campaignInfo}>
-                <Text style={styles.campaignInfoText}>السعر: {parseFloat(item.price).toFixed(2)} $</Text>
-                <Text style={[styles.campaignInfoText, outOfStock && { color: "#B42318" }]}>
+              <View style={styles.catalogInfo}>
+                <Text style={styles.catalogInfoText}>السعر: {parseFloat(item.price).toFixed(2)} $</Text>
+                <Text style={[styles.catalogInfoText, outOfStock && { color: "#B42318" }]}>
                   المخزون: {item.stock === null ? "غير محدود" : item.stock}
                 </Text>
-                <Text style={styles.campaignInfoText}>المباع: {item.soldCount}</Text>
-                <Text style={styles.campaignInfoText}>
+                <Text style={styles.catalogInfoText}>الكمية ضمن الطلبات: {item.soldCount}</Text>
+                <Text style={styles.catalogInfoText}>
                   التصنيف: {PRODUCT_CATEGORIES.find((c) => c.key === item.category)?.label || item.category}
                 </Text>
               </View>
 
-              <View style={styles.campaignActions}>
+              <View style={styles.catalogActions}>
                 <Pressable
                   onPress={() => { setEditing(item); setShowForm(true); }}
                   style={[styles.actionBtn, { backgroundColor: Colors.light.accent }]}
@@ -1561,7 +1575,7 @@ function ProductFormModal({ product, onClose }: { product: any | null; onClose: 
         name: name.trim(),
         description: description.trim(),
         price: price.trim(),
-        stock: unlimitedStock ? null : parseInt(stock, 10) || 0,
+        stock: unlimitedStock ? null : Number(stock) || 0,
         category,
         imageUrl,
         specsJson: JSON.stringify(
@@ -1592,7 +1606,7 @@ function ProductFormModal({ product, onClose }: { product: any | null; onClose: 
     if (name.trim().length < 2) return setError("اسم المنتج مطلوب");
     const priceNum = parseFloat(price);
     if (!priceNum || priceNum <= 0) return setError("السعر لازم يكون أكبر من صفر");
-    if (!unlimitedStock && (!stock.trim() || parseInt(stock, 10) < 0)) {
+    if (!unlimitedStock && (!stock.trim() || !Number.isInteger(Number(stock)) || Number(stock) < 0)) {
       return setError("حدّد المخزون أو فعّل المخزون غير المحدود");
     }
     mutation.mutate();
@@ -1740,7 +1754,7 @@ const DRAW_STATUS_COLOR: Record<string, string> = {
 };
 
 function DrawsSection() {
-  const { data: draws, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/draws"] });
+  const { data: draws, isLoading, error: loadError, refetch } = useQuery<any[]>({ queryKey: ["/api/admin/draws"] });
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
 
@@ -1789,12 +1803,13 @@ function DrawsSection() {
   });
 
   function handleDraw(d: any) {
-    const shortfall = d.targetTickets - d.soldTickets;
+    if (d.status !== "ready_to_draw" || d.soldTickets !== d.targetTickets) {
+      Alert.alert("الجولة غير جاهزة", "يجب اكتمال التذاكر المؤكدة قبل اختيار الفائز");
+      return;
+    }
     Alert.alert(
       "اختيار الفائز",
-      shortfall > 0
-        ? `الجولة لسا ما اكتملت (باقي ${shortfall} تذكرة). متأكد بدك تسحب هلق؟`
-        : `اختيار الفائز بجولة "${d.title}"؟ العملية ما بترجع.`,
+      `اختيار الفائز بجولة "${d.title}"؟ العملية ما بترجع.`,
       [
         { text: "إلغاء", style: "cancel" },
         { text: "اسحب", style: "destructive", onPress: () => drawMutation.mutate(d.id) },
@@ -1816,6 +1831,7 @@ function DrawsSection() {
   }
 
   if (isLoading) return <LoadingView />;
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
 
   return (
     <>
@@ -1838,7 +1854,7 @@ function DrawsSection() {
         ListEmptyComponent={
           <View style={{ alignItems: "center", paddingVertical: 50, gap: 10 }}>
             <Ionicons name="gift-outline" size={44} color={Colors.light.border} />
-            <Text style={styles.campaignInfoText}>ما في جولات — أنشئ أول جولة سحب</Text>
+            <Text style={styles.catalogInfoText}>ما في جولات — أنشئ أول جولة سحب</Text>
           </View>
         }
         renderItem={({ item }) => {
@@ -1847,9 +1863,9 @@ function DrawsSection() {
             : 0;
           const color = DRAW_STATUS_COLOR[item.status] || "#475467";
           return (
-            <View style={styles.campaignCard}>
-              <View style={styles.campaignHeader}>
-                <Text style={styles.campaignTitle} numberOfLines={1}>{item.title}</Text>
+            <View style={styles.catalogCard}>
+              <View style={styles.catalogHeader}>
+                <Text style={styles.catalogTitle} numberOfLines={1}>{item.title}</Text>
                 <View style={[styles.statusPill, { backgroundColor: color + "20" }]}>
                   <Text style={[styles.statusPillText, { color }]}>
                     {DRAW_STATUS_AR[item.status] || item.status}
@@ -1857,29 +1873,29 @@ function DrawsSection() {
                 </View>
               </View>
 
-              <View style={styles.campaignInfo}>
-                <Text style={styles.campaignInfoText}>الجائزة: {item.prizeName}</Text>
-                <Text style={styles.campaignInfoText}>
-                  سعر التذكرة: {parseFloat(item.ticketPrice).toFixed(2)} $
+              <View style={styles.catalogInfo}>
+                <Text style={styles.catalogInfoText}>الجائزة: {item.prizeName}</Text>
+                <Text style={styles.catalogInfoText}>
+                  كل {parseFloat(item.ticketPrice).toFixed(2)} $ من المشتريات = تذكرة
                 </Text>
-                <Text style={styles.campaignInfoText}>
+                <Text style={styles.catalogInfoText}>
                   التذاكر: {item.soldTickets} / {item.targetTickets}
                 </Text>
-                <Text style={styles.campaignInfoText}>المشاركون: {item.participants ?? 0}</Text>
+                <Text style={styles.catalogInfoText}>المشاركون: {item.participants ?? 0}</Text>
               </View>
 
-              <View style={styles.campaignProgressWrap}>
-                <View style={styles.campaignProgressBg}>
+              <View style={styles.drawProgressWrap}>
+                <View style={styles.drawProgressBg}>
                   <View
                     style={[
-                      styles.campaignProgressFill,
+                      styles.drawProgressFill,
                       { width: `${progress * 100}%`, backgroundColor: color },
                     ]}
                   />
                 </View>
               </View>
 
-              <View style={styles.campaignActions}>
+              <View style={styles.catalogActions}>
                 {item.status !== "completed" && (
                   <Pressable
                     onPress={() => { setEditing(item); setShowForm(true); }}
@@ -1971,7 +1987,7 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
         prizeDescription: prizeDescription.trim() || null,
         prizeImageUrl,
         ticketPrice: ticketPrice.trim(),
-        targetTickets: parseInt(targetTickets, 10),
+        targetTickets: Number(targetTickets),
       };
 
       const res = isEdit
@@ -1997,9 +2013,9 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
     if (title.trim().length < 2) return setError("عنوان الجولة مطلوب");
     if (prizeName.trim().length < 2) return setError("اسم الجائزة مطلوب");
     const priceNum = parseFloat(ticketPrice);
-    if (!priceNum || priceNum <= 0) return setError("سعر التذكرة لازم يكون أكبر من صفر");
-    const targetNum = parseInt(targetTickets, 10);
-    if (!targetNum || targetNum < 1) return setError("عدد التذاكر المستهدف مطلوب");
+    if (!priceNum || priceNum <= 0) return setError("قيمة المشتريات لكل تذكرة يجب أن تكون أكبر من صفر");
+    const targetNum = Number(targetTickets);
+    if (!Number.isInteger(targetNum) || targetNum < 1) return setError("عدد التذاكر المستهدف مطلوب");
     mutation.mutate();
   }
 
@@ -2025,7 +2041,7 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
               multiline
             />
             <ModalInput
-              label="سعر التذكرة ($)"
+              label="قيمة المشتريات لكل تذكرة ($)"
               value={ticketPrice}
               onChangeText={setTicketPrice}
               placeholder="10"
@@ -2042,8 +2058,8 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
             <View style={modalStyles.hintBox}>
               <Ionicons name="information-circle" size={16} color={Colors.light.accentDark} />
               <Text style={modalStyles.hintText}>
-                كل {parseFloat(ticketPrice) || 0}$ من مشتريات العميل = تذكرة وحدة. لما تنباع{" "}
-                {parseInt(targetTickets, 10) || 0} تذكرة بتصير الجولة جاهزة للسحب.
+                كل {parseFloat(ticketPrice) || 0}$ من مشتريات العميل = تذكرة وحدة. لما تصدر{" "}
+                {Number(targetTickets) || 0} تذكرة بتصير الجولة جاهزة للسحب.
               </Text>
             </View>
 
@@ -2093,7 +2109,7 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
 }
 
 function PaymentsSection() {
-  const { data: methods, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/payment-methods"] });
+  const { data: methods, isLoading, error: loadError, refetch } = useQuery<any[]>({ queryKey: ["/api/admin/payment-methods"] });
   const [showCreate, setShowCreate] = useState(false);
   const [editingMethod, setEditingMethod] = useState<any>(null);
 
@@ -2102,7 +2118,7 @@ function PaymentsSection() {
       const res = await apiRequest("PUT", `/api/admin/payment-methods/${id}`, { enabled });
       return res.json();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-methods"] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-methods"] }); queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] }); },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
 
@@ -2119,11 +2135,8 @@ function PaymentsSection() {
   });
 
   if (isLoading) return <LoadingView />;
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
 
-  const isBankType = (m: any) => {
-    const n = ((m.name || "") + " " + (m.nameAr || "")).toLowerCase();
-    return n.includes("bank") || n.includes("تحويل") || n.includes("حوالة");
-  };
 
   return (
     <>
@@ -2133,7 +2146,7 @@ function PaymentsSection() {
         contentContainerStyle={styles.sectionPadding}
         ListHeaderComponent={
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>طرق الدفع ({methods?.length || 0})</Text>
+            <Text style={styles.sectionTitle}>الحسابات البنكية ({methods?.length || 0})</Text>
             <Pressable onPress={() => setShowCreate(true)} style={styles.addBtn}>
               <Ionicons name="add" size={20} color="#fff" />
               <Text style={styles.addBtnText}>إضافة</Text>
@@ -2149,9 +2162,9 @@ function PaymentsSection() {
                 <Text style={styles.paymentNameEn}>{item.name}</Text>
                 {item.description && <Text style={styles.paymentDesc}>{item.description}</Text>}
               </View>
-              <Switch value={item.enabled} onValueChange={(v) => toggleMutation.mutate({ id: item.id, enabled: v })} trackColor={{ true: Colors.light.accent }} />
+              <Switch disabled={toggleMutation.isPending} value={item.enabled} onValueChange={(v) => { if (v && !isConfiguredBankTransfer(item)) { setEditingMethod(item); return; } toggleMutation.mutate({ id: item.id, enabled: v }); }} trackColor={{ true: Colors.light.accent }} />
             </View>
-            {isBankType(item) && (
+            {(
               <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: Colors.light.border }}>
                 {item.bankName ? (
                   <View style={{ flexDirection: "row", gap: 6, marginBottom: 4 }}>
@@ -2171,7 +2184,7 @@ function PaymentsSection() {
                     <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 11, color: Colors.light.text }}>{item.iban}</Text>
                   </View>
                 ) : null}
-                {!item.bankName && !item.accountName && !item.iban && (
+                {!isConfiguredBankTransfer(item) && (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 }}>
                     <Ionicons name="warning" size={14} color={Colors.light.warning} />
                     <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.warning, writingDirection: "rtl" }}>بيانات البنك غير مكتملة - اضغط تعديل لإضافتها</Text>
@@ -2188,7 +2201,7 @@ function PaymentsSection() {
                 <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.accent }}>تعديل</Text>
               </Pressable>
               <Pressable
-                onPress={() => Alert.alert("حذف", `حذف طريقة الدفع "${item.nameAr}"؟`, [
+                onPress={() => Alert.alert("حذف", `حذف الحساب البنكي "${item.nameAr}"؟`, [
                   { text: "إلغاء", style: "cancel" },
                   { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
                 ])}
@@ -2208,7 +2221,7 @@ function PaymentsSection() {
 }
 
 function CouponsSection() {
-  const { data: coupons, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/coupons"] });
+  const { data: coupons, isLoading, error: loadError, refetch } = useQuery<any[]>({ queryKey: ["/api/admin/coupons"] });
   const [showCreate, setShowCreate] = useState(false);
 
   const toggleMutation = useMutation({
@@ -2233,6 +2246,7 @@ function CouponsSection() {
   });
 
   if (isLoading) return <LoadingView />;
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
 
   return (
     <>
@@ -2291,21 +2305,22 @@ function CouponsSection() {
 }
 
 function ActivitySection() {
-  const { data: logs, isLoading } = useQuery<any[]>({
+  const { data: logs, isLoading, error: loadError, refetch } = useQuery<any[]>({
     queryKey: ["/api/admin/activity-log"],
     refetchInterval: 10000,
   });
 
   const getTypeIcon = (type: string) => {
-    const map: Record<string, string> = { user_register: "person-add", purchase: "cart", draw: "trophy", campaign_create: "megaphone", shipping_update: "airplane" };
+    const map: Record<string, string> = { user_register: "person-add", purchase: "cart", draw: "trophy", product_created: "cube", draw_created: "gift", payment_confirmed: "checkmark-circle", payment_rejected: "close-circle", shipping_update: "airplane" };
     return map[type] || "time";
   };
   const getTypeColor = (type: string) => {
-    const map: Record<string, string> = { user_register: "#067647", purchase: "#175CD3", draw: "#F5B731", campaign_create: "#164A9E", shipping_update: "#B54708" };
+    const map: Record<string, string> = { user_register: "#067647", purchase: "#175CD3", draw: "#F5B731", product_created: "#164A9E", draw_created: "#164A9E", payment_confirmed: "#067647", payment_rejected: "#B42318", shipping_update: "#B54708" };
     return map[type] || Colors.light.textSecondary;
   };
 
   if (isLoading) return <LoadingView />;
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
 
   return (
     <FlatList
@@ -2332,7 +2347,7 @@ function ActivitySection() {
 
 
 function NotificationsSection() {
-  const { data: notifications, isLoading } = useQuery<any[]>({
+  const { data: notifications, isLoading, error: loadError, refetch } = useQuery<any[]>({
     queryKey: ["/api/admin/notifications"],
     refetchInterval: 10000,
   });
@@ -2353,6 +2368,7 @@ function NotificationsSection() {
   });
 
   if (isLoading) return <LoadingView />;
+  if (loadError) return <LoadError onRetry={() => refetch()} />;
 
   const unreadCount = notifications?.filter((n: any) => !n.isRead).length || 0;
 
@@ -2485,6 +2501,10 @@ function BroadcastNotificationModal({ visible, onClose }: { visible: boolean; on
   );
 }
 
+function LoadError({ onRetry }: { onRetry: () => void }) {
+  return <View style={[styles.container, styles.centered]}><Text style={styles.errorText}>تعذّر تحميل البيانات. تحقق من الاتصال وحاول مجدداً.</Text><Pressable onPress={onRetry} style={styles.backBtn}><Text style={styles.backBtnText}>إعادة المحاولة</Text></Pressable></View>;
+}
+
 function LoadingView() {
   return (
     <View style={[styles.container, styles.centered]}>
@@ -2527,14 +2547,13 @@ function CreatePaymentModal({ visible, onClose }: { visible: boolean; onClose: (
           <ScrollView contentContainerStyle={modalStyles.scrollContent}>
             <ModalInput label="الاسم (إنجليزي) *" value={name} onChangeText={setName} placeholder="Bank Transfer" />
             <ModalInput label="الاسم (عربي) *" value={nameAr} onChangeText={setNameAr} placeholder="تحويل بنكي" />
-            <ModalInput label="أيقونة" value={icon} onChangeText={setIcon} placeholder="business" />
             <ModalInput label="وصف" value={desc} onChangeText={setDesc} placeholder="وصف اختياري" />
-            <ModalInput label="اسم البنك" value={bankName} onChangeText={setBankName} placeholder="مثال: البنك الأهلي" />
+            <ModalInput label="اسم البنك" value={bankName} onChangeText={setBankName} placeholder="اسم البنك" />
             <ModalInput label="اسم صاحب الحساب" value={accountName} onChangeText={setAccountName} placeholder="الاسم كما في الحساب البنكي" />
             <ModalInput label="رقم الحساب / IBAN" value={iban} onChangeText={setIban} placeholder="رقم الحساب البنكي" />
             <Pressable
               onPress={() => {
-                if (!name || !nameAr) { Alert.alert("خطأ", "يرجى ملء الحقول المطلوبة"); return; }
+                if (!name.trim() || !nameAr.trim() || !bankName.trim() || !accountName.trim() || !iban.trim()) { Alert.alert("بيانات ناقصة", "أدخل اسم البنك وصاحب الحساب ورقم الحساب واسم العرض"); return; }
                 mutation.mutate({
                   name, nameAr, icon, description: desc || undefined,
                   ...(bankName ? { bankName } : {}),
@@ -2588,20 +2607,19 @@ function EditPaymentModal({ visible, method, onClose }: { visible: boolean; meth
           <ScrollView contentContainerStyle={modalStyles.scrollContent}>
             <ModalInput label="الاسم (إنجليزي) *" value={name} onChangeText={setName} placeholder="Bank Transfer" />
             <ModalInput label="الاسم (عربي) *" value={nameAr} onChangeText={setNameAr} placeholder="تحويل بنكي" />
-            <ModalInput label="أيقونة" value={icon} onChangeText={setIcon} placeholder="business" />
             <ModalInput label="وصف" value={desc} onChangeText={setDesc} placeholder="وصف اختياري" />
             <View style={{ backgroundColor: "rgba(124,58,237,0.04)", borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: Colors.light.accent + "20" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
                 <Ionicons name="business" size={16} color={Colors.light.accent} />
                 <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.accent, writingDirection: "rtl" }}>بيانات الحساب البنكي</Text>
               </View>
-              <ModalInput label="اسم البنك" value={bankName} onChangeText={setBankName} placeholder="مثال: البنك الأهلي السعودي" />
+              <ModalInput label="اسم البنك" value={bankName} onChangeText={setBankName} placeholder="اسم البنك" />
               <ModalInput label="اسم صاحب الحساب" value={accountName} onChangeText={setAccountName} placeholder="الاسم كما في الحساب البنكي" />
               <ModalInput label="رقم الحساب / IBAN" value={iban} onChangeText={setIban} placeholder="رقم الحساب البنكي" />
             </View>
             <Pressable
               onPress={() => {
-                if (!name || !nameAr) { Alert.alert("خطأ", "يرجى ملء الحقول المطلوبة"); return; }
+                if (!name.trim() || !nameAr.trim() || !bankName.trim() || !accountName.trim() || !iban.trim()) { Alert.alert("بيانات ناقصة", "أدخل اسم البنك وصاحب الحساب ورقم الحساب واسم العرض"); return; }
                 mutation.mutate({
                   name, nameAr, icon, description: desc || undefined,
                   bankName: bankName || null,
@@ -2655,7 +2673,9 @@ function CreateCouponModal({ visible, onClose }: { visible: boolean; onClose: ()
             <Pressable
               onPress={() => {
                 if (!code || !discount) { Alert.alert("خطأ", "يرجى ملء الحقول المطلوبة"); return; }
-                mutation.mutate({ code, discountPercent: parseInt(discount), maxUses: parseInt(maxUses) || 100 });
+                const percent = Number(discount), uses = Number(maxUses);
+                if (!Number.isInteger(percent) || percent < 1 || percent > 100 || !Number.isInteger(uses) || uses < 1) { Alert.alert("خطأ", "الخصم بين 1 و100، وعدد الاستخدامات عدد صحيح موجب"); return; }
+                mutation.mutate({ code: code.trim(), discountPercent: percent, maxUses: uses });
               }}
               disabled={mutation.isPending}
               style={[modalStyles.createBtn, mutation.isPending && { opacity: 0.6 }]}
@@ -2689,7 +2709,7 @@ function ModalInput({ label, value, onChangeText, placeholder, multiline, keyboa
 }
 
 function AccountSettingsSection() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [email, setEmail] = useState(user?.email || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -2702,6 +2722,7 @@ function AccountSettingsSection() {
   const updateMutation = useMutation({
     mutationFn: (data: any) => apiRequest("PUT", "/api/admin/account-settings", data),
     onSuccess: () => {
+      refreshUser();
       Alert.alert("✅ تم", "تم تحديث الإعدادات بنجاح");
       setCurrentPassword("");
       setNewPassword("");
@@ -2731,7 +2752,10 @@ function AccountSettingsSection() {
       return;
     }
     const payload: any = {};
-    if (email && email !== user?.email) payload.email = email;
+    if (email && email !== user?.email) {
+      payload.email = email;
+      payload.currentPassword = currentPassword;
+    }
     if (newPassword) {
       payload.currentPassword = currentPassword;
       payload.newPassword = newPassword;
@@ -2858,11 +2882,11 @@ const styles = StyleSheet.create({
   statValue: { fontFamily: "Tajawal_700Bold", fontSize: 20, color: Colors.light.text, marginBottom: 2, textAlign: "right", writingDirection: "rtl" },
   statLabel: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
 
-  topCampaignItem: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#fff", padding: 14, borderRadius: 12, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  topCampaignRank: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.light.accent + "18", alignItems: "center", justifyContent: "center" },
-  topCampaignRankText: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.accent },
-  topCampaignTitle: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
-  topCampaignSub: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
+  topProductItem: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#fff", padding: 14, borderRadius: 12, marginBottom: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  topProductRank: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.light.accent + "18", alignItems: "center", justifyContent: "center" },
+  topProductRankText: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.accent },
+  topProductTitle: { fontFamily: "Tajawal_500Medium", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
+  topProductSub: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl" },
 
   orderCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   orderHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
@@ -2897,15 +2921,15 @@ const styles = StyleSheet.create({
   userStat: { flexDirection: "row", alignItems: "center", gap: 4 },
   userStatText: { fontFamily: "Tajawal_400Regular", fontSize: 11, color: Colors.light.textSecondary, writingDirection: "rtl" },
 
-  campaignCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  campaignHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  campaignTitle: { fontFamily: "Tajawal_700Bold", fontSize: 15, color: Colors.light.text, flex: 1, textAlign: "right", writingDirection: "rtl" },
-  campaignInfo: { marginBottom: 10 },
-  campaignInfoText: { fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 2 },
-  campaignProgressWrap: { marginBottom: 10 },
-  campaignProgressBg: { height: 6, backgroundColor: Colors.light.progressBg, borderRadius: 3, overflow: "hidden" },
-  campaignProgressFill: { height: "100%", borderRadius: 3 },
-  campaignActions: { flexDirection: "row", gap: 8 },
+  catalogCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  catalogHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  catalogTitle: { fontFamily: "Tajawal_700Bold", fontSize: 15, color: Colors.light.text, flex: 1, textAlign: "right", writingDirection: "rtl" },
+  catalogInfo: { marginBottom: 10 },
+  catalogInfoText: { fontFamily: "Tajawal_400Regular", fontSize: 13, color: Colors.light.textSecondary, textAlign: "right", writingDirection: "rtl", marginBottom: 2 },
+  drawProgressWrap: { marginBottom: 10 },
+  drawProgressBg: { height: 6, backgroundColor: Colors.light.progressBg, borderRadius: 3, overflow: "hidden" },
+  drawProgressFill: { height: "100%", borderRadius: 3 },
+  catalogActions: { flexDirection: "row", gap: 8 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
   actionBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: "#fff", writingDirection: "rtl" },
   winnerBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F5B73112", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 10 },

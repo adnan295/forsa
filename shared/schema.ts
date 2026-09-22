@@ -444,12 +444,12 @@ export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick
   imageUrl: true,
 });
 
-export const insertCouponSchema = createInsertSchema(coupons).pick({
-  code: true,
-  discountPercent: true,
-  maxUses: true,
-  expiresAt: true,
-  enabled: true,
+export const insertCouponSchema = z.object({
+  code: z.string().trim().min(1).max(50).transform(v => v.toUpperCase()),
+  discountPercent: z.number().int().min(1).max(100),
+  maxUses: z.number().int().min(1).max(1000000).optional(),
+  expiresAt: z.coerce.date().nullable().optional(),
+  enabled: z.boolean().optional(),
 });
 
 export const updateProfileSchema = z.object({

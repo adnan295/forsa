@@ -262,6 +262,17 @@ export class DatabaseStorage {
    * بتفعّل الجولة المجدولة التالية وبتسلّمها التذاكر المعلّقة.
    * بترجّع الجولة النشطة الجديدة أو undefined إذا ما في جولات مجدولة.
    */
+  async activateDraw(id: string): Promise<Draw | undefined> {
+    return this.atomic(async store => {
+      const draw = await store.getDraw(id);
+      if (!draw || draw.status !== "scheduled") throw new Error("يجب اختيار جولة مجدولة");
+      if (await store.getActiveDraw()) throw new Error("توجد جولة نشطة بالفعل");
+      await store.updateDraw(id, { status: "active", startedAt: new Date() });
+      await store.assignPendingTicketsToDraw(id);
+      return store.getDraw(id);
+    });
+  }
+
   async activateNextScheduledDraw(): Promise<Draw | undefined> {
     if (!this.inTransaction) return this.atomic(store => store.activateNextScheduledDraw());
     const active = await this.getActiveDraw();
@@ -698,7 +709,7 @@ export class DatabaseStorage {
 
   async getUserStats(userId: string): Promise<{ orderCount: number; ticketCount: number; totalSpent: string }> {
     const [orderResult] = await this.db
-      .select({ orderCount: count(), totalSpent: sum(orders.totalAmount) })
+      .select({ orderCount: count(), totalSpent: sql<string>`coalesce(sum(case when ${orders.paymentStatus} = 'confirmed' then ${orders.totalAmount} else 0 end), 0)` })
       .from(orders)
       .where(eq(orders.userId, userId));
 
@@ -714,7 +725,7 @@ export class DatabaseStorage {
     };
   }
 
-  async getAllOrders(): Promise<(Order & { username: string; itemCount: number; summary: string })[]> {
+  async getAllOrders(): Promise<(Order & { username: string; itemCount: number; summary: string; items: OrderItem[] })[]> {
     const rows = await this.db
       .select({
         order: orders,
@@ -746,6 +757,7 @@ export class DatabaseStorage {
         ...order,
         username: username || "Unknown",
         itemCount,
+        items: orderItemList,
         summary: names.length > 0 ? names.join("، ") : "—",
       };
     });
@@ -760,6 +772,14 @@ export class DatabaseStorage {
     orderId: string,
     data: { shippingStatus?: string; trackingNumber?: string; shippingAddress?: string }
   ): Promise<Order | undefined> {
+    if (!this.inTransaction) return this.atomic(store => store.updateOrderShipping(orderId, data));
+    const order = await this.getOrder(orderId);
+    if (!order) return undefined;
+    if (order.paymentStatus !== "confirmed") throw new Error("يجب تأكيد التحويل البنكي قبل تجهيز الطلب أو شحنه");
+    const steps = ["pending", "processing", "shipped", "delivered"];
+    if (data.shippingStatus && (!steps.includes(data.shippingStatus) || steps.indexOf(data.shippingStatus) < steps.indexOf(order.shippingStatus))) {
+      throw new Error("لا يمكن إلغاء طلب مدفوع أو إرجاع الشحن إلى مرحلة سابقة من هنا");
+    }
     const updateData: any = {};
     if (data.shippingStatus) updateData.shippingStatus = data.shippingStatus;
     if (data.trackingNumber !== undefined) updateData.trackingNumber = data.trackingNumber;
@@ -937,10 +957,12 @@ export class DatabaseStorage {
       .where(gte(users.createdAt, weekAgo));
 
     const topProducts = await this.db
-      .select({ name: products.name, soldCount: products.soldCount })
-      .from(products)
-      .orderBy(desc(products.soldCount))
-      .limit(5);
+      .select({ name: orderItems.productName, soldCount: sql<number>`sum(${orderItems.quantity})::integer` })
+      .from(orderItems).innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .where(eq(orders.paymentStatus, "confirmed"))
+      .groupBy(orderItems.productId, orderItems.productName)
+      .orderBy(desc(sql`sum(${orderItems.quantity})`)).limit(5);
+    const [paid] = await this.db.select({ orders: count(), buyers: sql<number>`count(distinct ${orders.userId})::integer` }).from(orders).where(eq(orders.paymentStatus, "confirmed"));
 
     const activeDraw = (await this.getCurrentDraw()) ?? null;
 
@@ -949,9 +971,9 @@ export class DatabaseStorage {
     const totalRevenueNum = parseFloat(revenueResult?.total || "0");
 
     const conversionRate =
-      totalUsersCount > 0 ? ((totalOrdersCount / totalUsersCount) * 100).toFixed(1) : "0.0";
+      totalUsersCount > 0 ? ((Number(paid?.buyers ?? 0) / totalUsersCount) * 100).toFixed(1) : "0.0";
     const averageOrderValue =
-      totalOrdersCount > 0 ? (totalRevenueNum / totalOrdersCount).toFixed(2) : "0.00";
+      Number(paid?.orders) > 0 ? (totalRevenueNum / Number(paid.orders)).toFixed(2) : "0.00";
 
     return {
       totalRevenue: revenueResult?.total || "0.00",
