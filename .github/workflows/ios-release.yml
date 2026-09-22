@@ -47,6 +47,20 @@ jobs:
           if missing:
               sys.exit('Missing GitHub Secrets: ' + ', '.join(missing))
           PY
+      - name: Select an Xcode with the iOS SDK App Store uploads require
+        run: |
+          set -euo pipefail
+          echo "Xcode versions on this runner:"
+          ls -d /Applications/Xcode*.app
+          newest="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$newest"
+          xcodebuild -version
+          sdk="$(xcodebuild -showsdks | sed -n 's/.*-sdk iphoneos\([0-9][0-9.]*\).*/\1/p' | sort -V | tail -1)"
+          echo "Newest iOS SDK: ${sdk:-none}"
+          if [ -z "$sdk" ] || [ "${sdk%%.*}" -lt 26 ]; then
+            echo "::error::App Store Connect rejects builds made with an iOS SDK older than 26. This runner offers ${sdk:-none}. Move the job to a runner image that ships Xcode 26 or later."
+            exit 1
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
