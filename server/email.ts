@@ -3,6 +3,14 @@ import { Resend } from "resend";
 const APP_NAME = "NAYVO";
 const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@nayvo.store";
 
+/**
+ * البريد مُفعَّل فقط عند ضبط RESEND_API_KEY.
+ * بدونه يعمل التطبيق كاملاً لكن دون رسائل — ويتخطّى تفعيل البريد عند التسجيل.
+ */
+export function isEmailEnabled(): boolean {
+  return !!process.env.RESEND_API_KEY;
+}
+
 function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {

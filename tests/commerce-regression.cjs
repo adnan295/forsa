@@ -89,7 +89,7 @@ const out = path.join(root, '.commerce-test.cjs');
     async function post(url,body,cookie=''){return fetch(base+url,{method:'POST',headers:{'content-type':'application/json',cookie},body:JSON.stringify(body)});}
     try {
       await test('password reset response does not disclose code when email unavailable',async()=>{
-        const res=await post('/api/auth/forgot-password',{email:'audit@example.invalid'});const body=await res.json();assert.equal(res.status,200);assert.deepEqual(Object.keys(body),['message']);
+        const res=await post('/api/auth/forgot-password',{email:'audit@example.invalid'});const body=await res.json();assert.equal(res.status,503);assert.deepEqual(Object.keys(body),['message']);
       });
       const login=await post('/api/auth/login',{username:'audit',password:'test-password'});assert.equal(login.status,200);const cookie=login.headers.get('set-cookie').split(';')[0];
       await test('HTTP checkout rejects cash and serves bank only',async()=>{
@@ -168,6 +168,19 @@ const out = path.join(root, '.commerce-test.cjs');
         for(const route of ['/api/referral','/api/admin/campaigns']) assert.equal((await fetch(base+route,{headers:{cookie}})).status,404);
       });
       await test('wallet endpoint removed',async()=>{assert.equal((await fetch(base+'/api/user/wallet',{headers:{cookie}})).status,404);});
+      // Without RESEND_API_KEY there is no way to deliver a code, so registration
+      // must activate the account instead of stranding the user on an OTP screen.
+      await test('registration without email configured verifies immediately',async()=>{
+        assert.ok(!process.env.RESEND_API_KEY,'test env must have no email key');
+        const res=await fetch(base+'/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({username:'noemail',email:'noemail@example.invalid',password:'test-password'})});
+        assert.equal(res.status,200);
+        const body=await res.json();
+        assert.equal(body.requiresVerification,false);
+        assert.equal(body.emailVerified,true);
+        const created=await s.getUserByUsername('noemail');
+        assert.equal(created.emailVerified,true);
+      });
     } finally {await new Promise(resolve=>server.close(resolve));}
     await test('account deletion with orders, tickets and support succeeds atomically',async()=>{
       await s.createSupportTicket('u',{subject:'Test',message:'Test',priority:'normal'});await s.deleteUser('u');assert.equal(await s.getUser('u'),undefined);
