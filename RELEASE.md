@@ -92,3 +92,24 @@ bash scripts/deploy-production.sh --reset-data
 
 ## إلغاء الإحالات
 أزيلت شاشة دعوة الأصدقاء والأكواد وروابط الدعوة ومسارات الإحالة وحقولها من الحسابات. ترحيل --update يحذف حقول الإحالة بعد النسخ الاحتياطي. لا توجد مكافأة إحالات؛ فرص السحب تأتي من الشراء المؤكد فقط.
+
+## بيانات تجريبية للمعاينة
+`scripts/sql/demo-seed.sql` يعبّئ المتجر بعشرة منتجات وجولتَي سحب (نشطة ومجدولة) لمعاينة الشكل النهائي قبل إدخال البيانات الحقيقية. الصور مضمّنة كـ data: URI بصيغة SVG فلا يحتاج الملف شبكة ولا مرفوعات.
+
+التشغيل بعد نجاح النشر:
+
+```bash
+cd /opt/forsa
+docker compose -f docker-compose.prod.yml exec -T db \
+  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < scripts/sql/demo-seed.sql
+```
+
+كل السجلات معرّفاتها تبدأ بـ `demo-` والملف آمن لإعادة التشغيل. الحذف قبل الإطلاق الحقيقي:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T db \
+  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "DELETE FROM draws WHERE id LIKE 'demo-%'; DELETE FROM products WHERE id LIKE 'demo-%';"
+```
+
+هذه بيانات توضيحية ولا تُعرض على أنها حقيقية. `sold_tickets` في الجولة النشطة رقم عرض فقط ولا تقابله تذاكر في جدول `tickets`، فلا تُجرِ سحباً فعلياً على الجولة التجريبية. احذفها قبل فتح البيع.
