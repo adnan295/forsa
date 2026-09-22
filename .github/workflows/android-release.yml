@@ -1,0 +1,110 @@
+name: NAYVO Android bundle
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version shown on Google Play'
+        required: true
+      version_code:
+        description: 'Unused integer versionCode higher than the latest on Play'
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: nayvo-android-release
+  cancel-in-progress: false
+jobs:
+  android:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CI: '1'
+      EXPO_PUBLIC_DOMAIN: nayvo.store
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import os, sys
+          names = ['ANDROID_KEYSTORE_BASE64', 'ANDROID_KEYSTORE_PASSWORD', 'ANDROID_KEY_ALIAS', 'ANDROID_KEY_PASSWORD']
+          missing = [n for n in names if not os.environ.get(n)]
+          if missing:
+              sys.exit('Missing GitHub Secrets: ' + ', '.join(missing))
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies
+        run: npm ci
+      - name: Set release version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_CODE: ${{ inputs.version_code }}
+        run: |
+          node <<'JS'
+          const fs = require('fs');
+          const version = process.env.RELEASE_VERSION;
+          const code = Number(process.env.RELEASE_CODE);
+          if (!/^\d+\.\d+\.\d+$/.test(version)) throw Error('Enter a release version such as 1.1.0');
+          if (!Number.isInteger(code) || code < 1) throw Error('Enter a positive integer versionCode');
+          const config = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+          if (config.expo.android.package !== 'today.forsa') throw Error('Existing Android package must be preserved');
+          config.expo.version = version;
+          config.expo.android.versionCode = code;
+          fs.writeFileSync('app.json', JSON.stringify(config, null, 2) + '\n');
+          console.log(`Building NAYVO ${version} (${code}) for today.forsa`);
+          JS
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+      - name: Apply upload signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: python3 scripts/ci/configure-android-signing.py
+      - name: Build the app bundle
+        working-directory: android
+        env:
+          ORG_GRADLE_PROJECT_NAYVO_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_NAYVO_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_NAYVO_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon bundleRelease
+      - name: Confirm the bundle carries the upload key
+        run: |
+          set -euo pipefail
+          bundle=android/app/build/outputs/bundle/release/app-release.aab
+          [ -f "$bundle" ] || { echo "::error::Gradle produced no release bundle"; exit 1; }
+          actual="$(keytool -printcert -jarfile "$bundle" | sed -n 's/.*SHA256: *//p' | head -1)"
+          echo "Bundle signed by SHA256: ${actual:-none}"
+          if [ -z "$actual" ]; then
+            echo "::error::The bundle carries no readable signature."
+            exit 1
+          fi
+          if [ "$actual" != "$NAYVO_UPLOAD_FINGERPRINT" ]; then
+            echo "::error::The bundle is signed by $actual, not the upload key $NAYVO_UPLOAD_FINGERPRINT. Google Play would reject it."
+            exit 1
+          fi
+          echo "Bundle matches the upload certificate."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NAYVO-android-${{ inputs.version }}-${{ inputs.version_code }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove the keystore
+        if: always()
+        run: rm -f android/app/upload.keystore
