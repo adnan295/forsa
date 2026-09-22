@@ -1,0 +1,132 @@
+{
+  "products": [
+    {
+      "name": "مكواة بخار احترافية",
+      "description": "مكواة بخار بقاعدة سيراميك وقدرة 2000 واط، مناسبة للاستخدام اليومي.",
+      "imageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGN0Y5RkMiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTkwIiByPSIxMTgiIGZpbGw9IiNFOEYwRkQiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDE5MCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzEyNjdFOCIgc3Ryb2tlLXdpZHRoPSIxMSIKICAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSItNjIiIHk9Ii0xNCIgd2lkdGg9IjEyNCIgaGVpZ2h0PSI0NiIgcng9IjE2Ii8+PHBhdGggZD0iTS02MiAtMTQgUS00MCAtNTQgOCAtNTQgTDQ0IC01NCIvPjxwYXRoIGQ9Ik0tNDQgNDYgSDQ0Ii8+PC9nPgo8L3N2Zz4=",
+      "specsJson": "[{\"text\": \"قدرة 2000 واط\", \"icon\": \"flash\"}, {\"text\": \"قاعدة سيراميك\", \"icon\": \"water\"}, {\"text\": \"خاصية البخار\", \"icon\": \"cloud\"}, {\"text\": \"تصميم مريح\", \"icon\": \"hand-left\"}]",
+      "price": 15,
+      "stock": 40,
+      "category": "home_appliances",
+      "isActive": true,
+      "sortOrder": 1
+    },
+    {
+      "name": "خلاط صغير متعدد",
+      "description": "خلاط بسعة 1.5 لتر وشفرات ستانلس، لعصائر وصلصات سريعة.",
+      "imageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGN0Y5RkMiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTkwIiByPSIxMTgiIGZpbGw9IiNFOEYwRkQiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDE5MCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzEyNjdFOCIgc3Ryb2tlLXdpZHRoPSIxMSIKICAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNLTM4IC01OCBIMzggTDI2IDI0IEgtMjYgWiIvPjxyZWN0IHg9Ii0zNCIgeT0iMzAiIHdpZHRoPSI2OCIgaGVpZ2h0PSIzNCIgcng9IjkiLz48cGF0aCBkPSJNLTE0IC0yMCBIMTQiLz48L2c+Cjwvc3ZnPg==",
+      "specsJson": "[{\"text\": \"قدرة 700 واط\", \"icon\": \"flash\"}, {\"text\": \"سعة 1.5 لتر\", \"icon\": \"cube\"}, {\"text\": \"شفرات ستانلس\", \"icon\": \"cut\"}, {\"text\": \"أجزاء قابلة للغسل\", \"icon\": \"water\"}]",
+      "price": 15,
+      "stock": 35,
+      "category": "kitchen",
+      "isActive": true,
+      "sortOrder": 2
+    },
+    {
+      "name": "غلاية ماء كهربائية",
+      "description": "غلاية ستانلس ستيل 1.7 لتر بإطفاء تلقائي عند الغليان.",
+      "imageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGN0Y5RkMiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTkwIiByPSIxMTgiIGZpbGw9IiNFOEYwRkQiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDE5MCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzEyNjdFOCIgc3Ryb2tlLXdpZHRoPSIxMSIKICAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSItNDQiIHk9Ii0yNiIgd2lkdGg9Ijg4IiBoZWlnaHQ9IjgwIiByeD0iMTgiLz48cGF0aCBkPSJNNDQgLTYgcTI2IDEwIDAgMzAiLz48cGF0aCBkPSJNLTI2IC0yNiBxMjYgLTM0IDUyIDAiLz48L2c+Cjwvc3ZnPg==",
+      "specsJson": "[{\"text\": \"قدرة 1800 واط\", \"icon\": \"flash\"}, {\"text\": \"سعة 1.7 لتر\", \"icon\": \"cube\"}, {\"text\": \"إطفاء تلقائي\", \"icon\": \"shield-checkmark\"}, {\"text\": \"حفظ الحرارة\", \"icon\": \"thermometer\"}]",
+      "price": 15,
+      "stock": 50,
+      "category": "kitchen",
+      "isActive": true,
+      "sortOrder": 3
+    },
+    {
+      "name": "مفرمة كهربائية",
+      "description": "مفرمة بوعاء زجاجي وشفرتين، تفرم اللحوم والخضار بثوانٍ.",
+      "imageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGN0Y5RkMiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTkwIiByPSIxMTgiIGZpbGw9IiNFOEYwRkQiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDE5MCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzEyNjdFOCIgc3Ryb2tlLXdpZHRoPSIxMSIKICAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSItNDIiIHk9Ii0xNiIgd2lkdGg9Ijg0IiBoZWlnaHQ9IjY2IiByeD0iMTQiLz48cGF0aCBkPSJNLTMwIC0xNiBWLTQyIGg2MCB2MjYiLz48cGF0aCBkPSJNLTEyIDggTDEyIDMyIE0xMiA4IEwtMTIgMzIiLz48L2c+Cjwvc3ZnPg==",
+      "specsJson": "[{\"text\": \"قدرة 500 واط\", \"icon\": \"flash\"}, {\"text\": \"وعاء زجاجي\", \"icon\": \"cube\"}, {\"text\": \"شفرتان\", \"icon\": \"cut\"}, {\"text\": \"تشغيل بلمسة\", \"icon\": \"flash-off\"}]",
+      "price": 15,
+      "stock": 30,
+      "category": "kitchen",
+      "isActive": true,
+      "sortOrder": 4
+    },
+    {
+      "name": "سماعات لاسلكية",
+      "description": "سماعات بلوتوث 5.3 مع عزل ضجيج وبطارية تدوم 30 ساعة.",
+      "imageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGN0Y5RkMiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTkwIiByPSIxMTgiIGZpbGw9IiNFOEYwRkQiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDE5MCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzBCMjE0MiIgc3Ryb2tlLXdpZHRoPSIxMSIKICAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNLTUyIDE2IHYtMTQgYTUyIDUyIDAgMCAxIDEwNCAwIHYxNCIvPjxyZWN0IHg9Ii02NCIgeT0iMTIiIHdpZHRoPSIyNiIgaGVpZ2h0PSI0NCIgcng9IjEyIi8+PHJlY3QgeD0iMzgiIHk9IjEyIiB3aWR0aD0iMjYiIGhlaWdodD0iNDQiIHJ4PSIxMiIvPjwvZz4KPC9zdmc+",
+      "specsJson": "[{\"text\": \"بلوتوث 5.3\", \"icon\": \"bluetooth\"}, {\"text\": \"30 ساعة تشغيل\", \"icon\": \"battery-full\"}, {\"text\": \"عزل ضجيج\", \"icon\": \"volume-off\"}, {\"text\": \"مايك مدمج\", \"icon\": \"mic\"}]",
+      "price": 30,
+      "stock": 25,
+      "category": "electronics",
+      "isActive": true,
+      "sortOrder": 5
+    },
+    {
+      "name": "ساعة ذكية رياضية",
+      "description": "ساعة بشاشة AMOLED وتتبّع نبض ونوم ومقاومة ماء.",
+      "imageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGN0Y5RkMiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTkwIiByPSIxMTgiIGZpbGw9IiNFOEYwRkQiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDE5MCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzBCMjE0MiIgc3Ryb2tlLXdpZHRoPSIxMSIKICAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSItMzQiIHk9Ii0zNCIgd2lkdGg9IjY4IiBoZWlnaHQ9IjY4IiByeD0iMTgiLz48cGF0aCBkPSJNLTE4IC0zNCBWLTU4IGgzNiB2MjQgTS0xOCAzNCBWNTggaDM2IFYzNCIvPjxwYXRoIGQ9Ik0wIC0xMiBWMCBoMTQiLz48L2c+Cjwvc3ZnPg==",
+      "specsJson": "[{\"text\": \"شاشة AMOLED\", \"icon\": \"phone-portrait\"}, {\"text\": \"تتبّع النبض\", \"icon\": \"heart\"}, {\"text\": \"مقاومة ماء\", \"icon\": \"water\"}, {\"text\": \"7 أيام بطارية\", \"icon\": \"battery-full\"}]",
+      "price": 45,
+      "stock": 20,
+      "category": "electronics",
+      "isActive": true,
+      "sortOrder": 6
+    },
+    {
+      "name": "شاحن سريع 65 واط",
+      "description": "شاحن بثلاثة منافذ يشحن الهاتف واللابتوب بنفس الوقت.",
+      "imageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGN0Y5RkMiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTkwIiByPSIxMTgiIGZpbGw9IiNFOEYwRkQiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDE5MCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzBCMjE0MiIgc3Ryb2tlLXdpZHRoPSIxMSIKICAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSItMzYiIHk9Ii0zMCIgd2lkdGg9IjcyIiBoZWlnaHQ9IjYyIiByeD0iMTQiLz48cGF0aCBkPSJNLTE2IC0zMCBWLTU4IE0xNiAtMzAgVi01OCIvPjxwYXRoIGQ9Ik0wIDMyIHYxNiBxMCAxMiAxOCAxMiBoMTQiLz48L2c+Cjwvc3ZnPg==",
+      "specsJson": "[{\"text\": \"65 واط\", \"icon\": \"flash\"}, {\"text\": \"ثلاثة منافذ\", \"icon\": \"grid\"}, {\"text\": \"حماية من الحرارة\", \"icon\": \"shield-checkmark\"}, {\"text\": \"حجم مدمج\", \"icon\": \"cube\"}]",
+      "price": 20,
+      "stock": 60,
+      "category": "electronics",
+      "isActive": true,
+      "sortOrder": 7
+    },
+    {
+      "name": "مصباح مكتب LED",
+      "description": "مصباح بثلاث درجات إضاءة وذراع قابلة للتعديل.",
+      "imageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGN0Y5RkMiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTkwIiByPSIxMTgiIGZpbGw9IiNFOEYwRkQiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDE5MCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0Y1QjczMSIgc3Ryb2tlLXdpZHRoPSIxMSIKICAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNLTQyIC0xNiBMLTI0IC01OCBIMjQgTDQyIC0xNiBaIi8+PHBhdGggZD0iTS0xNiAtMTYgSDE2Ii8+PHBhdGggZD0iTTAgLTE2IFY0MCIvPjxwYXRoIGQ9Ik0tMjggNTIgSDI4Ii8+PC9nPgo8L3N2Zz4=",
+      "specsJson": "[{\"text\": \"ثلاث درجات إضاءة\", \"icon\": \"sunny\"}, {\"text\": \"ذراع متحركة\", \"icon\": \"resize\"}, {\"text\": \"توفير طاقة\", \"icon\": \"flash\"}, {\"text\": \"مريح للعين\", \"icon\": \"eye\"}]",
+      "price": 15,
+      "stock": 45,
+      "category": "home_appliances",
+      "isActive": true,
+      "sortOrder": 8
+    },
+    {
+      "name": "مروحة مكتبية هادئة",
+      "description": "مروحة بثلاث سرعات ومحرك هادئ مناسب للمكتب.",
+      "imageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGN0Y5RkMiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTkwIiByPSIxMTgiIGZpbGw9IiNFOEYwRkQiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDE5MCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0Y1QjczMSIgc3Ryb2tlLXdpZHRoPSIxMSIKICAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIwIiBjeT0iMCIgcj0iMTQiLz48cGF0aCBkPSJNMCAtMTQgcS0zOCAtMzQgLTYgLTQ0IHEzMCAtOCA2IDQ0Ii8+PHBhdGggZD0iTTEyIDYgcTQ4IC0xMCA0MiAyMiBxLTggMzAgLTQyIC0yMiIvPjxwYXRoIGQ9Ik0tMTIgNiBxLTEwIDQ4IC00MiAyMiBxLTIyIC0yMiA0MiAtMjIiLz48L2c+Cjwvc3ZnPg==",
+      "specsJson": "[{\"text\": \"ثلاث سرعات\", \"icon\": \"flash\"}, {\"text\": \"محرك هادئ\", \"icon\": \"volume-off\"}, {\"text\": \"زاوية قابلة للتعديل\", \"icon\": \"resize\"}, {\"text\": \"قاعدة ثابتة\", \"icon\": \"cube\"}]",
+      "price": 15,
+      "stock": 38,
+      "category": "home_appliances",
+      "isActive": true,
+      "sortOrder": 9
+    },
+    {
+      "name": "طقم أكواب سيراميك",
+      "description": "أربعة أكواب سيراميك بتصميم بسيط، آمنة بالميكروويف.",
+      "imageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDAwIj4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGN0Y5RkMiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTkwIiByPSIxMTgiIGZpbGw9IiNFOEYwRkQiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDE5MCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0Y1QjczMSIgc3Ryb2tlLXdpZHRoPSIxMSIKICAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNLTM4IC0zNCBIMjYgVjI2IGEyMCAyMCAwIDAgMSAtMjAgMjAgSC0xOCBhMjAgMjAgMCAwIDEgLTIwIC0yMCBaIi8+PHBhdGggZD0iTTI2IC0xNCBxMjggNiAwIDI2Ii8+PHBhdGggZD0iTS00NCA2MCBINDAiLz48L2c+Cjwvc3ZnPg==",
+      "specsJson": "[{\"text\": \"أربع قطع\", \"icon\": \"cube\"}, {\"text\": \"آمنة بالميكروويف\", \"icon\": \"flame\"}, {\"text\": \"آمنة بغسالة الصحون\", \"icon\": \"water\"}, {\"text\": \"تصميم بسيط\", \"icon\": \"color-palette\"}]",
+      "price": 15,
+      "stock": 55,
+      "category": "kitchen",
+      "isActive": true,
+      "sortOrder": 10
+    }
+  ],
+  "draws": [
+    {
+      "title": "الجولة الأولى",
+      "prizeName": "آيفون 15 برو",
+      "prizeDescription": "آيفون 15 برو ٢٥٦ غيغا — جائزة الجولة الأولى، يُسلَّم للفائز بعد إعلان النتيجة.",
+      "prizeImageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMjAgNDAwIj4KPHJlY3Qgd2lkdGg9IjMyMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGRkZGRkYiLz4KPHJlY3QgeD0iNDQiIHk9IjcyIiB3aWR0aD0iMjMyIiBoZWlnaHQ9IjI1NiIgcng9IjI4IiBmaWxsPSIjMEIyMTQyIi8+CjxjaXJjbGUgY3g9IjE2MCIgY3k9IjIwMCIgcj0iOTYiIGZpbGw9IiMxMjY3RTgiIG9wYWNpdHk9IjAuMzAiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTYwIDIwMCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0Y1QjczMSIgc3Ryb2tlLXdpZHRoPSI5IgogICBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxyZWN0IHg9Ii0zMCIgeT0iLTU2IiB3aWR0aD0iNjAiIGhlaWdodD0iMTEyIiByeD0iMTIiLz48cGF0aCBkPSJNLTkgLTQyIEg5Ii8+PGNpcmNsZSBjeD0iMCIgY3k9IjQwIiByPSI0Ii8+PC9nPgo8L3N2Zz4=",
+      "ticketPrice": 10,
+      "targetTickets": 1000
+    },
+    {
+      "title": "الجولة الثانية",
+      "prizeName": "لابتوب ماك بوك إير",
+      "prizeDescription": "ماك بوك إير بمعالج M3 — جائزة الجولة القادمة، تبدأ فور اكتمال الجولة الحالية.",
+      "prizeImageUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMjAgNDAwIj4KPHJlY3Qgd2lkdGg9IjMyMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNGRkZGRkYiLz4KPHJlY3QgeD0iNDQiIHk9IjcyIiB3aWR0aD0iMjMyIiBoZWlnaHQ9IjI1NiIgcng9IjI4IiBmaWxsPSIjMEIyMTQyIi8+CjxjaXJjbGUgY3g9IjE2MCIgY3k9IjIwMCIgcj0iOTYiIGZpbGw9IiMxMjY3RTgiIG9wYWNpdHk9IjAuMzAiLz4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTYwIDIwMCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0Y1QjczMSIgc3Ryb2tlLXdpZHRoPSI5IgogICBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0tNTYgLTM0IGgxMTIgdjY4IGgtMTEyIHoiLz48cGF0aCBkPSJNLTc2IDM0IGgxNTIgbC0xMiAyMiBoLTEyOCB6Ii8+PHBhdGggZD0iTS0zMCAtOCBoNjAiLz48L2c+Cjwvc3ZnPg==",
+      "ticketPrice": 10,
+      "targetTickets": 1500
+    }
+  ]
+}
