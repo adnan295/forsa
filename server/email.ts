@@ -27,38 +27,38 @@ function baseTemplate(content: string): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { margin: 0; padding: 0; background-color: #f4f0ff; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; }
-    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 4px 24px rgba(124,58,237,0.08); }
-    .header { background: linear-gradient(135deg, #7C3AED, #EC4899); padding: 32px 24px; text-align: center; }
+    body { margin: 0; padding: 0; background-color: #F7F9FC; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 4px 24px rgba(11,33,66,0.08); }
+    .header { background: linear-gradient(135deg, #0B2142, #1267E8); padding: 32px 24px; text-align: center; }
     .header h1 { color: #ffffff; margin: 0; font-size: 24px; }
     .header p { color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 14px; }
     .body { padding: 32px 24px; }
-    .body h2 { color: #1a1a2e; font-size: 20px; margin: 0 0 16px; }
-    .body p { color: #4a4a6a; font-size: 15px; line-height: 1.7; margin: 0 0 12px; }
-    .info-box { background: #f8f5ff; border-radius: 12px; padding: 20px; margin: 20px 0; border-right: 4px solid #7C3AED; }
-    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(124,58,237,0.08); }
+    .body h2 { color: #182230; font-size: 20px; margin: 0 0 16px; }
+    .body p { color: #475467; font-size: 15px; line-height: 1.7; margin: 0 0 12px; }
+    .info-box { background: #E8F0FD; border-radius: 12px; padding: 20px; margin: 20px 0; border-right: 4px solid #1267E8; }
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #EAECF0; }
     .info-row:last-child { border-bottom: none; }
-    .info-label { color: #6b6b8a; font-size: 13px; }
-    .info-value { color: #1a1a2e; font-size: 14px; font-weight: 600; }
-    .btn { display: inline-block; background: linear-gradient(135deg, #7C3AED, #EC4899); color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 600; margin: 16px 0; }
-    .footer { background: #f8f5ff; padding: 24px; text-align: center; }
-    .footer p { color: #8b8ba8; font-size: 12px; margin: 4px 0; }
+    .info-label { color: #667085; font-size: 13px; }
+    .info-value { color: #182230; font-size: 14px; font-weight: 600; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #0B2142, #1267E8); color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 600; margin: 16px 0; }
+    .footer { background: #F7F9FC; padding: 24px; text-align: center; }
+    .footer p { color: #667085; font-size: 12px; margin: 4px 0; }
     .badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-    .badge-success { background: #dcfce7; color: #166534; }
-    .badge-warning { background: #fef3c7; color: #92400e; }
-    .badge-error { background: #fce4ec; color: #c62828; }
-    .badge-info { background: #e8eaf6; color: #283593; }
-    .winner-box { background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 16px; padding: 24px; text-align: center; margin: 20px 0; }
-    .winner-box h3 { color: #ffffff; font-size: 22px; margin: 0 0 8px; }
+    .badge-success { background: #ECFDF3; color: #067647; }
+    .badge-warning { background: #FFFAEB; color: #B54708; }
+    .badge-error { background: #FEF3F2; color: #B42318; }
+    .badge-info { background: #EFF8FF; color: #175CD3; }
+    .winner-box { background: linear-gradient(135deg, #0B2142, #164A9E); border-radius: 16px; padding: 24px; text-align: center; margin: 20px 0; }
+    .winner-box h3 { color: #F5B731; font-size: 22px; margin: 0 0 8px; }
     .winner-box p { color: rgba(255,255,255,0.9); margin: 4px 0; font-size: 15px; }
-    .code-box { background: #f0f0f5; border-radius: 12px; padding: 16px; text-align: center; margin: 16px 0; font-size: 28px; font-weight: 700; color: #7C3AED; letter-spacing: 6px; }
+    .code-box { background: #E8F0FD; border-radius: 12px; padding: 16px; text-align: center; margin: 16px 0; font-size: 28px; font-weight: 700; color: #1267E8; letter-spacing: 6px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <h1>${APP_NAME}</h1>
-      <p>منصة التسوق والهدايا</p>
+      <p>تسوّق. وترقّب الاحتمالات.</p>
     </div>
     ${content}
     <div class="footer">
