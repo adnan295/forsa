@@ -22,6 +22,66 @@ to the clipboard for pasting into GitHub Secrets. Do not send secrets in chat.
 If the old certificate private key cannot be recovered, create a new Apple
 Distribution certificate and matching profile without revoking unrelated certificates.
 
+## Creating the signing material
+
+`ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_PRIVATE_KEY` are already set. The three
+signing secrets are produced once and reused for every release.
+
+### On a Mac
+
+Export the Apple Distribution identity from Keychain Access as a `.p12` with a
+password, download the App Store profile for `app.replit.forsa` from the
+developer portal, then encode both:
+
+```bash
+base64 -i distribution.p12 | pbcopy      # IOS_CERTIFICATE_BASE64
+base64 -i nayvo.mobileprovision | pbcopy # IOS_PROFILE_BASE64
+```
+
+### Without a Mac
+
+A distribution certificate is just a signed key pair, so openssl is enough.
+
+1. Generate a private key and a certificate signing request. Keep `ios.key`:
+   the certificate is useless without it, and losing it means starting over.
+
+   ```bash
+   openssl genrsa -out ios.key 2048
+   openssl req -new -key ios.key -out ios.csr \
+     -subj "/emailAddress=<البريد>/CN=NAYVO Distribution/C=SY"
+   ```
+
+2. developer.apple.com → Certificates, Identifiers & Profiles → Certificates →
+   **+** → **Apple Distribution** → upload `ios.csr` → download `distribution.cer`.
+   Do not revoke certificates other builds still use.
+
+3. Profiles → **+** → **App Store Connect** → App ID `app.replit.forsa` →
+   select the certificate just created → download `nayvo.mobileprovision`.
+   The App ID must have the Push Notifications capability enabled, because the
+   application ships `aps-environment: production`.
+
+4. Combine the certificate and its private key into a password-protected P12:
+
+   ```bash
+   openssl x509 -in distribution.cer -inform DER -out ios.pem -outform PEM
+   openssl pkcs12 -export -inkey ios.key -in ios.pem -out distribution.p12
+   ```
+
+5. Encode both for GitHub (`-w 0` keeps the output on one line):
+
+   ```bash
+   base64 -w 0 distribution.p12 > cert.b64
+   base64 -w 0 nayvo.mobileprovision > profile.b64
+   ```
+
+Add the three secrets under **Settings → Secrets and variables → Actions**:
+`IOS_CERTIFICATE_BASE64` from `cert.b64`, `IOS_CERTIFICATE_PASSWORD` (the export
+password, which must not be empty), and `IOS_PROFILE_BASE64` from `profile.b64`.
+
+Back up `ios.key`, `distribution.p12` and the password somewhere outside the
+working machine, and delete the local copies once the secrets are stored. Never
+commit them and never paste them into a chat or an issue.
+
 ## Run
 
 The workflow file must also exist on the repository default branch before GitHub
