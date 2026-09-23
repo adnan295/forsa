@@ -1,9 +1,11 @@
 import { Tabs } from "expo-router";
-import { Platform, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Colors, { Fonts, FontSize } from "@/constants/colors";
+import { useDesignScale } from "@/lib/design-scale";
 
 /**
  * شريط تنقّل أبيض — التبويب النشط أزرق والباقي رمادي.
@@ -11,6 +13,8 @@ import Colors, { Fonts, FontSize } from "@/constants/colors";
  */
 export default function TabLayout() {
   const c = Colors.light;
+  const insets = useSafeAreaInsets();
+  const dp = useDesignScale();
 
   return (
     <Tabs
@@ -24,8 +28,10 @@ export default function TabLayout() {
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: c.border,
           elevation: 0,
-          height: Platform.OS === "web" ? 84 : undefined,
-          paddingTop: 6,
+          // ارتفاع الشريط 125 من تصميم 832، ويُضاف تحته شريط الرجوع للمنزل في الآيفون
+          height: dp(125) + insets.bottom,
+          paddingTop: 4,
+          paddingBottom: insets.bottom + 4,
           shadowColor: c.navy,
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.04,
