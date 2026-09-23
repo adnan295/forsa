@@ -232,8 +232,8 @@ export default function DrawScreen() {
 
               <NavRow
                 icon="help-circle-outline"
-                title="كيف يتم السحب؟"
-                subtitle="تعرّف على آلية السحب خطوة بخطوة حسب الشروط المعتمدة."
+                title="كيف يتم السحب؟ والقواعد الرسمية"
+                subtitle="آلية السحب خطوة بخطوة، والجهة الراعية، وشروط المشاركة."
                 onPress={() => router.push({ pathname: "/info", params: { type: "terms" } } as any)}
               />
 
@@ -243,6 +243,11 @@ export default function DrawScreen() {
                 subtitle="إجابات على أكثر الأسئلة شيوعاً حول السحب والمشتريات."
                 onPress={() => router.push("/faq" as any)}
               />
+
+              {/* شرط آبل 5.3: المنظِّم هو التطبيق، ومنصّات المتاجر ليست راعية */}
+              <Text style={s.sponsorNote}>
+                السحب تنظّمه NAYVO وحدها. Apple وGoogle ليستا راعيتين لهذا السحب ولا علاقة لهما به.
+              </Text>
             </>
           ) : (
             <EmptyState
@@ -267,6 +272,15 @@ export default function DrawScreen() {
 }
 
 const s = StyleSheet.create({
+  sponsorNote: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    lineHeight: 18,
+    color: c.textMuted,
+    textAlign: "center",
+    writingDirection: "rtl",
+    paddingHorizontal: Spacing.md,
+  },
   root: { flex: 1, backgroundColor: c.background },
   loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: c.background },
 

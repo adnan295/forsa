@@ -2194,13 +2194,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <title>سياسة الخصوصية - NAYVO</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
-    .header { background: linear-gradient(135deg, #7C3AED, #EC4899); padding: 40px 20px; text-align: center; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #F7F9FC; color: #1a1a2e; direction: rtl; line-height: 1.8; }
+    .header { background: linear-gradient(135deg, #0B2142, #1267E8); padding: 40px 20px; text-align: center; }
     .header h1 { color: #fff; font-size: 28px; margin-bottom: 8px; }
     .header p { color: rgba(255,255,255,0.7); font-size: 14px; }
     .container { max-width: 700px; margin: -20px auto 40px; padding: 0 16px; }
-    .card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(124,58,237,0.06); }
-    .card h2 { font-size: 18px; color: #7C3AED; margin-bottom: 12px; }
+    .card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(11,33,66,0.06); }
+    .card h2 { font-size: 18px; color: #0B2142; margin-bottom: 12px; }
     .card p, .card li { font-size: 15px; color: #4a4a6a; }
     .card ul { padding-right: 20px; }
     .card li { margin-bottom: 8px; }
@@ -2216,33 +2216,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div class="card">
       <h2>المعلومات التي نجمعها</h2>
       <ul>
-        <li>بيانات الحساب: اسم المستخدم، البريد الإلكتروني</li>
-        <li>بيانات الطلبات: تاريخ الشراء، المبالغ، المنتجات</li>
-        <li>بيانات الشحن: العنوان، رقم الهاتف، المدينة</li>
-        <li>إيصالات الدفع: صور إيصالات التحويل البنكي</li>
+        <li>بيانات الحساب: اسم المستخدم والبريد الإلكتروني والاسم الكامل</li>
+        <li>عند الدخول عبر Apple أو Google: معرّف حسابك لدى المزوّد والبريد الذي يشاركه معنا (قد تعطينا Apple بريداً وسيطاً يخفي بريدك الحقيقي). لا نطّلع على كلمة سرّك أبداً</li>
+        <li>بيانات الطلبات والشحن: المنتجات والمبالغ، والاسم ورقم الهاتف والمدينة والعنوان</li>
+        <li>إيصالات الدفع: صور إيصالات التحويل البنكي، تُحفظ بشكل خاص ونحذف منها الموقع الجغرافي وبيانات الكاميرا</li>
+        <li>رمز الإشعارات الخاص بجهازك، لإرسال تنبيهات الطلبات والسحب</li>
+        <li>لا نستخدم إعلانات ولا أدوات تتبّع أو تحليلات من أطراف ثالثة</li>
       </ul>
     </div>
     <div class="card">
       <h2>كيف نستخدم بياناتك</h2>
       <ul>
-        <li>معالجة طلباتك وتوصيل الهدايا</li>
-        <li>التحقق من المدفوعات</li>
-        <li>شحن المنتجات والهدايا</li>
-        <li>تحسين تجربة المستخدم</li>
-        <li>التواصل معك بشأن طلباتك</li>
+        <li>معالجة طلباتك وتوصيلها</li>
+        <li>التحقق من المدفوعات ومنح القسائم</li>
+        <li>إجراء السحب وتسليم الجوائز للفائزين</li>
+        <li>إرسال إشعارات الطلبات وتذكيرات السحب (تقدر توقفها من إعدادات جهازك)</li>
+        <li>التواصل معك بخصوص طلباتك وحسابك</li>
       </ul>
     </div>
     <div class="card">
-      <h2>حماية البيانات</h2>
-      <p>نستخدم تقنيات تشفير متقدمة لحماية بياناتك الشخصية. لن نشارك معلوماتك مع أطراف ثالثة إلا بموافقتك أو عند الحاجة القانونية.</p>
+      <h2>مع من نشارك بياناتك</h2>
+      <ul>
+        <li>Apple وGoogle: لتسجيل الدخول إن اخترته، ولإيصال الإشعارات إلى جهازك</li>
+        <li>مزوّد البريد الإلكتروني: لإرسال رموز التحقق وتحديثات الطلبات</li>
+        <li>جهة التوصيل: الاسم ورقم الهاتف والعنوان فقط، لتوصيل طلبك أو جائزتك</li>
+        <li>لا نبيع بياناتك ولا نشاركها لأغراض إعلانية</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>حماية البيانات والاحتفاظ بها</h2>
+      <p>نحمي بياناتك باتصال مشفّر (HTTPS) وصلاحيات وصول محدودة لفريق الإدارة. تبقى بياناتك محفوظة طالما حسابك فعّال، وتُحذف عند حذف الحساب.</p>
     </div>
     <div class="card">
       <h2>حقوقك</h2>
       <ul>
         <li>طلب نسخة من بياناتك الشخصية</li>
-        <li>تصحيح أو تحديث بياناتك</li>
-        <li>طلب حذف حسابك وبياناتك</li>
-        <li>إلغاء الاشتراك في الإشعارات</li>
+        <li>تصحيح بياناتك أو تحديثها من «حسابي ← بياناتي»</li>
+        <li>حذف حسابك نهائياً من «حسابي ← حذف الحساب»: نحذف بياناتك وطلباتك وقسائمك وصور إيصالاتك، ونفك ربط الدخول عبر Apple</li>
+        <li>إيقاف الإشعارات من إعدادات جهازك</li>
       </ul>
     </div>
     <div class="card">
@@ -2252,7 +2263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   </div>
   <div class="footer">
     <p>NAYVO &copy; ${new Date().getFullYear()}</p>
-    <p>آخر تحديث: ${new Date().toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</p>
+    <p>آخر تحديث: 23 أيلول 2026</p>
   </div>
 </body>
 </html>`);
@@ -2267,14 +2278,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <title>الشروط والأحكام - NAYVO</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f4f0ff; color: #1a1a2e; direction: rtl; line-height: 1.8; }
-    .header { background: linear-gradient(135deg, #8B5CF6, #7C3AED); padding: 40px 20px; text-align: center; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #F7F9FC; color: #1a1a2e; direction: rtl; line-height: 1.8; }
+    .header { background: linear-gradient(135deg, #0B2142, #1267E8); padding: 40px 20px; text-align: center; }
     .header h1 { color: #fff; font-size: 28px; margin-bottom: 8px; }
     .header p { color: rgba(255,255,255,0.7); font-size: 14px; }
     .container { max-width: 700px; margin: -20px auto 40px; padding: 0 16px; }
-    .card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(124,58,237,0.06); }
-    .card h2 { font-size: 18px; color: #7C3AED; margin-bottom: 12px; }
-    .card p { font-size: 15px; color: #4a4a6a; }
+    .card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(11,33,66,0.06); }
+    .card h2 { font-size: 18px; color: #0B2142; margin-bottom: 12px; }
+    .card p, .card li { font-size: 15px; color: #4a4a6a; }
+    .card ul { padding-right: 20px; }
+    .card li { margin-bottom: 8px; }
     .footer { text-align: center; padding: 24px; color: #8b8ba8; font-size: 12px; }
   </style>
 </head>
@@ -2298,20 +2311,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     </div>
     <div class="card">
       <h2>٤. عمليات الشراء والدفع</h2>
-      <p>جميع عمليات الشراء نهائية وغير قابلة للاسترجاع بعد تأكيد الدفع. يتم التحقق من جميع المدفوعات قبل تأكيد الطلب. مع كل عملية شراء تحصل على هدية مجانية.</p>
+      <p>جميع عمليات الشراء نهائية وغير قابلة للاسترجاع بعد تأكيد الدفع. الدفع بالتحويل البنكي ونتحقق منه قبل تأكيد الطلب. قسائم السحب تُمنح بعد تأكيد الدفع فقط.</p>
     </div>
     <div class="card">
-      <h2>٥. الهدايا</h2>
-      <p>يتم اختيار الهدايا بشكل عشوائي عند اكتمال بيع جميع المنتجات في الحملة. يتم شحن المنتجات والهدايا خلال 14 يوم عمل.</p>
+      <h2>٥. آلية السحب</h2>
+      <ul>
+        <li>كل جولة سحب إلها جائزة محدّدة وعدد قسائم مستهدف</li>
+        <li>قيمة المنتجات بعد الخصم هي أساس احتساب القسائم — رسوم التوصيل لا تُحتسب</li>
+        <li>عند اكتمال عدد قسائم الجولة تصبح جاهزة للسحب</li>
+        <li>الفائز يُختار عشوائياً من كل القسائم المؤكدة في الجولة</li>
+        <li>إذا رُفض دفع الطلب تُلغى قسائمه</li>
+        <li>نشحن المنتجات والجوائز خلال 14 يوم عمل</li>
+      </ul>
     </div>
     <div class="card">
-      <h2>٦. التعديلات</h2>
-      <p>نحتفظ بالحق في تعديل هذه الشروط في أي وقت. سيتم إبلاغك بأي تغييرات جوهرية.</p>
+      <h2>٦. القواعد الرسمية للسحب والجهة الراعية</h2>
+      <ul>
+        <li>الجهة المنظِّمة والراعية الوحيدة للسحوبات هي NAYVO، وهي المسؤولة عن الجوائز وتسليمها</li>
+        <li>Apple Inc. ليست راعية لهذه السحوبات ولا علاقة لها بها بأي شكل، ولا تتحمّل أي مسؤولية عنها</li>
+        <li>Google LLC ليست راعية لهذه السحوبات ولا علاقة لها بها بأي شكل، ولا تتحمّل أي مسؤولية عنها</li>
+        <li>المشاركة للمستخدمين بعمر 18 سنة فأكثر، والتوصيل وتسليم الجوائز داخل سوريا فقط</li>
+        <li>القسيمة تُمنح مع الشراء فقط ولا تُباع منفصلة، ولا تُستبدل بمال</li>
+        <li>الفائز يُختار بمولّد أرقام عشوائية آمن من كل القسائم المؤكدة في الجولة، ويُعلن داخل التطبيق في «السحوبات السابقة»</li>
+        <li>نتواصل مع الفائز عبر التطبيق والبريد ورقم الهاتف المسجّل لترتيب تسليم الجائزة</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>٧. التعديلات</h2>
+      <p>نحتفظ بالحق في تعديل هذه الشروط في أي وقت، وسنبلغك بأي تغييرات جوهرية.</p>
     </div>
   </div>
   <div class="footer">
     <p>NAYVO &copy; ${new Date().getFullYear()}</p>
-    <p>آخر تحديث: ${new Date().toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" })}</p>
+    <p>آخر تحديث: 23 أيلول 2026</p>
   </div>
 </body>
 </html>`);
