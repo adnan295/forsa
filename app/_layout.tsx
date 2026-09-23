@@ -15,6 +15,7 @@ import { FavoritesProvider } from "@/lib/favorites-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { setupNotificationHandlers, registerForPushNotifications } from "@/lib/push-notifications";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { applyWebRtl, WEB_RTL_PROPS } from "@/lib/rtl";
 import {
   useFonts,
   Tajawal_400Regular,
@@ -27,6 +28,7 @@ if (!I18nManager.isRTL && Platform.OS !== "web") {
   I18nManager.forceRTL(true);
   void reloadAppAsync("RTL enable");
 }
+applyWebRtl();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -223,7 +225,10 @@ export default function RootLayout() {
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <KeyboardProvider>
                     <PushNotificationManager />
-                    <View style={Platform.OS === "web" ? { flex: 1, width: "100%", maxWidth: 1200, alignSelf: "center" } : { flex: 1 }}>
+                    <View
+                      {...WEB_RTL_PROPS}
+                      style={Platform.OS === "web" ? { flex: 1, width: "100%", maxWidth: 1200, alignSelf: "center" } : { flex: 1 }}
+                    >
                       <RootLayoutNav />
                     </View>
                     <OfflineBanner />

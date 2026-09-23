@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Pressable,
   Platform,
-  I18nManager,
   useWindowDimensions,
 } from "react-native";
 import { router } from "expo-router";
@@ -17,6 +16,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useCart } from "@/lib/cart-context";
+import { IS_RTL } from "@/lib/rtl";
 import { queryClient } from "@/lib/query-client";
 import Colors, { Fonts, FontSize, Radius, Spacing } from "@/constants/colors";
 import { EmptyState } from "@/components/ui";
@@ -31,9 +31,9 @@ const c = Colors.light;
 /** عدد المنتجات المعروضة في قسم «منتجات مميزة» */
 const FEATURED_COUNT = 4;
 
-/** سهم «للأمام» بحسب اتجاه الواجهة — الموبايل RTL والويب LTR */
-const CHEVRON_FORWARD = I18nManager.isRTL ? "chevron-forward" : "chevron-back";
-const CHEVRON_BACK = I18nManager.isRTL ? "chevron-back" : "chevron-forward";
+/** سهم «للأمام» بحسب اتجاه الواجهة (عربية RTL على كل المنصات) */
+const CHEVRON_FORWARD = IS_RTL ? "chevron-forward" : "chevron-back";
+const CHEVRON_BACK = IS_RTL ? "chevron-back" : "chevron-forward";
 
 type CategoryKey = "all" | "electronics" | "home_appliances" | "kitchen" | "beauty" | "fashion";
 
