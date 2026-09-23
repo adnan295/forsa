@@ -33,6 +33,7 @@ interface AuthContextValue {
   verifyEmail: (email: string, code: string) => Promise<void>;
   resendVerification: (email: string) => Promise<any>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -100,6 +101,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  /** حذف نهائي للحساب من الخادم (مع إبطال ربط Apple) ثم تفريغ الجلسة */
+  async function deleteAccount() {
+    await apiRequest("DELETE", "/api/auth/delete-account");
+    setUser(null);
+  }
+
   async function refreshUser() {
     try {
       const baseUrl = getApiUrl();
@@ -113,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo(
-    () => ({ user, isLoading, login, socialLogin, register, verifyEmail, resendVerification, logout, refreshUser }),
+    () => ({ user, isLoading, login, socialLogin, register, verifyEmail, resendVerification, logout, deleteAccount, refreshUser }),
     [user, isLoading]
   );
 

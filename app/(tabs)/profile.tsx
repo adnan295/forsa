@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/lib/auth-context";
 import { queryClient } from "@/lib/query-client";
+import { translateError } from "@/lib/errors";
 import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
 import { Header, StatTile, EmptyState } from "@/components/ui";
 
@@ -60,7 +61,7 @@ function MenuRow({ item, first }: { item: MenuItem; first: boolean }) {
 }
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
   const isAdmin = user?.role === "admin";
 
   const { data: stats } = useQuery<UserStats>({
@@ -82,6 +83,32 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  }
+
+  // شرط آبل: حذف الحساب متاح من داخل التطبيق، بتأكيد صريح
+  function handleDeleteAccount() {
+    Alert.alert(
+      "حذف الحساب نهائياً",
+      "رح ينحذف حسابك وبياناتك وقسائمك، والطلبات يلي لسا قيد الدفع أو المراجعة بتنلغى. ما فيك ترجع عن هالخطوة.",
+      [
+        { text: "إلغاء", style: "cancel" },
+        {
+          text: "احذف حسابي",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              queryClient.clear();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              router.replace("/(tabs)");
+              Alert.alert("تم حذف الحساب", "شكراً لأنك جرّبت NAYVO");
+            } catch (error: any) {
+              Alert.alert("تعذّر حذف الحساب", translateError(error?.message));
+            }
+          },
+        },
+      ],
+    );
   }
 
   if (!user) {
@@ -121,6 +148,9 @@ export default function ProfileScreen() {
   }
 
   menu.push({ icon: "log-out-outline", label: "تسجيل الخروج", onPress: handleLogout, danger: true });
+  if (!isAdmin) {
+    menu.push({ icon: "trash-outline", label: "حذف الحساب", onPress: handleDeleteAccount, danger: true });
+  }
 
   return (
     <View style={s.root}>
