@@ -284,6 +284,11 @@ function setupErrorHandler(app: express.Application) {
 
   const server = await registerRoutes(app);
 
+  // صور قديمة مضمّنة كنص تُنقل لجدول media بالخلفية — آمنة للتكرار
+  import("./media")
+    .then(({ migrateInlineImages }) => migrateInlineImages(log))
+    .catch((error) => console.error("[media] migration failed:", error));
+
   app.get("/api/health", async (_req: Request, res: Response) => {
     try {
       const { pool } = await import("./db");

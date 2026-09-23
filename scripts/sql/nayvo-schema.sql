@@ -250,3 +250,15 @@ CREATE TABLE IF NOT EXISTS user_identities (
   created_at timestamp DEFAULT now() NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS user_identities_provider_subject_idx ON user_identities (provider, subject);
+
+-- Compressed uploads served from /api/media/:id instead of inline data URLs.
+CREATE TABLE IF NOT EXISTS media (
+  id varchar PRIMARY KEY NOT NULL,
+  mime_type text NOT NULL,
+  data_base64 text NOT NULL,
+  bytes integer NOT NULL,
+  width integer,
+  height integer,
+  is_private boolean DEFAULT false NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL
+);

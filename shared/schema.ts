@@ -290,6 +290,22 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+/**
+ * الصور المرفوعة بعد ضغطها (منتجات، جوائز، بانرات، إيصالات).
+ * تُخدَّم من /api/media/:id بتخزين مؤقت طويل بدل تضمينها في كل استجابة.
+ * المعرّف عشوائي غير قابل للتخمين؛ الإيصالات «خاصة» فلا تُخزَّن في وسطاء عامّين.
+ */
+export const media = pgTable("media", {
+  id: varchar("id").primaryKey(),
+  mimeType: text("mime_type").notNull(),
+  dataBase64: text("data_base64").notNull(),
+  bytes: integer("bytes").notNull(),
+  width: integer("width"),
+  height: integer("height"),
+  isPrivate: boolean("is_private").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 /** حسابات الدخول الخارجية (Apple / Google) المرتبطة بمستخدم */
 export const userIdentities = pgTable(
   "user_identities",
@@ -548,6 +564,7 @@ export const checkoutSchema = z.object({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type UserIdentity = typeof userIdentities.$inferSelect;
+export type Media = typeof media.$inferSelect;
 export type SocialProvider = "apple" | "google";
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
