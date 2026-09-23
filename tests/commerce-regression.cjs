@@ -132,10 +132,14 @@ const out = path.join(root, '.commerce-test.cjs');
       await test('HTTP checkout rejects incomplete shipping',async()=>{assert.equal((await post('/api/checkout',{...payload,shippingAddress:''},cookie)).status,400);});
       await test('HTTP receipt upload, confirmation and order read',async()=>{
         const res=await post('/api/checkout',payload,cookie);assert.equal(res.status,200);const {order:o}=await res.json();
-        const form=new FormData();form.append('receipt',new Blob(['test receipt'],{type:'image/png'}),'receipt.png');
+        const png=await require('sharp')({create:{width:40,height:40,channels:3,background:'#ffffff'}}).png().toBuffer();
+        const bogus=new FormData();bogus.append('receipt',new Blob(['test receipt'],{type:'image/png'}),'receipt.png');
+        assert.equal((await fetch(base+`/api/orders/${o.id}/receipt`,{method:'POST',headers:{cookie},body:bogus})).status,400);
+        const form=new FormData();form.append('receipt',new Blob([png],{type:'image/png'}),'receipt.png');
         const uploaded=await fetch(base+`/api/orders/${o.id}/receipt`,{method:'POST',headers:{cookie},body:form});assert.equal(uploaded.status,200);
         const confirmed=await fetch(base+`/api/admin/orders/${o.id}/payment`,{method:'PUT',headers:{cookie,'content-type':'application/json'},body:JSON.stringify({paymentStatus:'confirmed'})});assert.equal(confirmed.status,200);
         const stored=await (await fetch(base+`/api/orders/${o.id}`,{headers:{cookie}})).json();assert.equal(stored.paymentStatus,'confirmed');assert.equal(stored.totalAmount,'32.00');
+        assert.match(stored.receiptUrl,/^\/api\/media\/[A-Za-z0-9_-]+\.jpg$/);
       });
       await test('every admin section API loads and rejects anonymous access',async()=>{
         for (const route of ['dashboard','orders','users','support-tickets','products','draws','payment-methods','coupons','activity-log','notifications','sales-chart']) {

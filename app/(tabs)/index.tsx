@@ -59,7 +59,7 @@ export default function HomeScreen() {
 
   const { data: products, isLoading, refetch, isRefetching } = useQuery<Product[]>({
     queryKey: ["/api/products"],
-    refetchInterval: 20000,
+    refetchInterval: 60000,
     staleTime: 10000,
   });
 

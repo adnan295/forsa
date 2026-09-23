@@ -1398,29 +1398,33 @@ function TicketDetailModal({ visible, ticket, onClose }: { visible: boolean; tic
   );
 }
 
-/** رفع صورة للسيرفر — مشترك بين نماذج المنتجات والجولات */
-async function uploadAdminImage(imageUri: string | null, imageFile: any): Promise<string | undefined> {
+/**
+ * رفع صورة مشترك بين نماذج المنتجات والجولات: الخادم يضغطها ويعيد رابطها.
+ * kind="banner" يحفظها بدقة أعلى للبانر.
+ * أي فشل يُرمى برسالة الخادم حتى لا يُحفظ المنتج بلا صورة بصمت.
+ */
+async function uploadAdminImage(
+  imageUri: string | null,
+  imageFile: any,
+  kind: "product" | "banner" = "product",
+): Promise<string | undefined> {
   if (!imageUri && !imageFile) return undefined;
-  try {
-    const url = new URL("/api/admin/products/upload-image", getApiUrl());
-    const formData = new FormData();
+  const url = new URL("/api/admin/products/upload-image", getApiUrl());
+  const formData = new FormData();
+  formData.append("kind", kind);
 
-    if (Platform.OS === "web" && imageFile) {
-      formData.append("image", imageFile);
-    } else if (imageUri) {
-      formData.append("image", { uri: imageUri, name: "image.jpg", type: "image/jpeg" } as any);
-    } else {
-      return undefined;
-    }
-
-    const res = await fetch(url.toString(), { method: "POST", body: formData, credentials: "include" });
-    if (!res.ok) throw new Error("فشل رفع الصورة");
-    const data = await res.json();
-    return data.imageUrl;
-  } catch (err) {
-    console.error("Image upload error:", err);
+  if (Platform.OS === "web" && imageFile) {
+    formData.append("image", imageFile);
+  } else if (imageUri) {
+    formData.append("image", { uri: imageUri, name: "image.jpg", type: "image/jpeg" } as any);
+  } else {
     return undefined;
   }
+
+  const res = await fetch(url.toString(), { method: "POST", body: formData, credentials: "include" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.imageUrl) throw new Error(data.message || "فشل رفع الصورة");
+  return data.imageUrl;
 }
 
 /** منتقي صورة مشترك */
@@ -2034,7 +2038,7 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
       let bannerImageUrl = draw?.bannerImageUrl ?? null;
       if (bannerChanged) {
         if (bannerUri) {
-          const uploaded = await uploadAdminImage(bannerUri, bannerFile);
+          const uploaded = await uploadAdminImage(bannerUri, bannerFile, "banner");
           if (!uploaded) throw new Error("فشل رفع صورة البانر");
           bannerImageUrl = uploaded;
         } else {

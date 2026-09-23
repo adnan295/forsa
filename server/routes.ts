@@ -10,6 +10,7 @@ import { insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, c
 import { sendFcmNotification, sendFcmToUser } from "./firebase";
 import { sendApnsNotifications, isApnsConfigured } from "./apns";
 import { sendPushNotifications } from "./push";
+import { saveUpload, getMedia, MediaError } from "./media";
 import {
   SocialAuthError,
   verifySocialToken,
@@ -87,8 +88,9 @@ const apiLimiter = rateLimit({
   message: { message: "Too many requests, please slow down" },
   standardHeaders: true,
   legacyHeaders: false,
-  // اختبارات الانحدار تمر بكل المسارات من عنوان واحد خلال ثوانٍ؛ الإنتاج يضبط NODE_ENV=production
-  skip: () => process.env.NODE_ENV === "test",
+  // اختبارات الانحدار تمر بكل المسارات من عنوان واحد خلال ثوانٍ؛ الإنتاج يضبط NODE_ENV=production.
+  // الصور خارج الحد: صفحة واحدة تطلب عشرات الصور، وهي مخزّنة مؤقتاً لدى المتصفح أصلاً.
+  skip: (req) => process.env.NODE_ENV === "test" || req.path.startsWith("/media/"),
 });
 
 const PgSession = connectPgSimple(session);
@@ -208,6 +210,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   app.use("/api/", apiLimiter);
+
+  // الصور المضغوطة — روابط ثابتة لا تتغير، فتُخزَّن مؤقتاً لسنة
+  app.get("/api/media/:file", async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.file).replace(/\.[a-z0-9]{2,4}$/i, "");
+      if (!/^[A-Za-z0-9_-]{16,64}$/.test(id)) return res.status(404).end();
+      const item = await getMedia(id);
+      if (!item) return res.status(404).end();
+      const etag = `"${item.id}"`;
+      res.set({
+        "Content-Type": item.mimeType,
+        "Cache-Control": item.isPrivate ? "private, max-age=86400" : "public, max-age=31536000, immutable",
+        ETag: etag,
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; sandbox",
+        "Cross-Origin-Resource-Policy": "cross-origin",
+      });
+      if (req.headers["if-none-match"] === etag) return res.status(304).end();
+      res.send(Buffer.from(item.dataBase64, "base64"));
+    } catch (error) {
+      console.error("Media error:", error);
+      res.status(500).end();
+    }
+  });
 
   app.post("/api/auth/register", authLimiter, async (req: Request, res: Response) => {
     try {
@@ -1009,7 +1035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Receipt file is required" });
       }
 
-      const receiptUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      const receiptUrl = await saveUpload(req.file.buffer, req.file.mimetype, "receipt");
       const updated = await storage.submitReceipt(order.id, req.session.userId!, receiptUrl);
 
       await storage.logActivity(
@@ -1029,6 +1055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updated);
     } catch (error: any) {
+      if (error instanceof MediaError) return res.status(400).json({ message: error.message });
       console.error("Upload receipt error:", error);
       res.status(500).json({ message: error.message || "Server error" });
     }
@@ -1894,12 +1921,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "Image file is required" });
       }
-      const imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      const imageUrl = await saveUpload(req.file.buffer, req.file.mimetype, "icon");
       if (req.body.methodId) {
         await storage.updatePaymentMethod(req.body.methodId as string, { imageUrl });
       }
       res.json({ imageUrl });
     } catch (error: any) {
+      if (error instanceof MediaError) return res.status(400).json({ message: error.message });
       console.error("Upload payment method image error:", error);
       res.status(500).json({ message: error.message || "Server error" });
     }
@@ -1910,9 +1938,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "لم يتم رفع أي صورة" });
       }
-      const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
-      res.json({ imageUrl: base64 });
+      const kind = req.body?.kind === "banner" ? "banner" : "product";
+      res.json({ imageUrl: await saveUpload(req.file.buffer, req.file.mimetype, kind) });
     } catch (error) {
+      if (error instanceof MediaError) return res.status(400).json({ message: error.message });
       console.error("Upload product image error:", error);
       res.status(500).json({ message: "فشل رفع الصورة" });
     }
