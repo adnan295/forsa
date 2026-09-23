@@ -25,6 +25,7 @@ import { Logo, EmptyState } from "@/components/ui";
 import DrawHero from "@/components/DrawHero";
 import type { CurrentDraw } from "@/components/DrawBanner";
 import ProductCard from "@/components/ProductCard";
+import { useDesignScale } from "@/lib/design-scale";
 import type { Product } from "@shared/schema";
 
 const c = Colors.light;
@@ -50,8 +51,12 @@ const CATEGORIES: { key: CategoryKey; label: string; icon: keyof typeof Material
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  // المقاسات بالنسبة لتصميم 832px: هوامش 16، بانر 800، كرتان 390 بينهما 20
+  const dp = useDesignScale();
+  const margin = dp(16);
+  const gridGap = dp(20);
   const columns = Platform.OS === "web" && width >= 900 ? 4 : Platform.OS === "web" && width >= 600 ? 3 : 2;
-  const cellWidth = (Math.min(width, 1200) - Spacing.screen * 2 - Spacing.md * (columns - 1)) / columns;
+  const cellWidth = Math.floor((Math.min(width, 1200) - margin * 2 - gridGap * (columns - 1)) / columns);
   const { user } = useAuth();
   const { addItem, getQuantity, totalItems } = useCart();
   const [category, setCategory] = useState<CategoryKey>("all");
@@ -108,7 +113,7 @@ export default function HomeScreen() {
 
   return (
     <View style={s.root}>
-      <View style={[s.topBar, { paddingTop: insets.top + Spacing.sm }]}>
+      <View style={[s.topBar, { paddingTop: insets.top + Spacing.sm, paddingHorizontal: margin }]}>
         <View style={s.actions}>
           <Pressable
             onPress={() => router.push("/cart" as any)}
@@ -157,7 +162,7 @@ export default function HomeScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, { paddingHorizontal: margin }]}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={c.primary} />}
       >
         {draw ? (
@@ -168,7 +173,7 @@ export default function HomeScreen() {
               <Pressable
                 onPress={() => router.push("/(tabs)/products" as any)}
                 accessibilityRole="button"
-                style={({ pressed }) => [s.promo, pressed && { opacity: 0.95 }]}
+                style={({ pressed }) => [s.promo, { height: dp(100) }, pressed && { opacity: 0.95 }]}
               >
                 <LinearGradient
                   colors={[c.goldSoft, "#FCE7B0"]}
@@ -177,17 +182,17 @@ export default function HomeScreen() {
                   style={StyleSheet.absoluteFill}
                 />
                 <View style={s.promoArrow}>
-                  <Ionicons name={CHEVRON_FORWARD} size={17} color={c.navy} />
+                  <Ionicons name={CHEVRON_FORWARD} size={15} color={c.navy} />
                 </View>
                 <View style={s.promoText}>
                   <Text style={s.promoTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                     كل {ticketPrice.toFixed(0)}$ من مشترياتك = قسيمة سحب
                   </Text>
-                  <Text style={s.promoBody} numberOfLines={2}>
+                  <Text style={s.promoBody} numberOfLines={1}>
                     تسوق المنتجات المتنوعة واحصل على فرصتك لربح {draw.prizeName}
                   </Text>
                 </View>
-                <Ionicons name="gift" size={32} color={c.goldText} />
+                <Ionicons name="gift" size={26} color={c.goldText} />
               </Pressable>
             )}
           </>
@@ -198,7 +203,7 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <View style={s.categories}>
+        <View style={[s.categories, { gap: dp(10) }]}>
           {CATEGORIES.map((cat) => {
             const active = category === cat.key;
             return (
@@ -210,9 +215,9 @@ export default function HomeScreen() {
                 }}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
-                style={[s.category, active && s.categoryActive]}
+                style={[s.category, { height: dp(105) }, active && s.categoryActive]}
               >
-                <MaterialCommunityIcons name={cat.icon} size={22} color={active ? c.surface : c.navy} />
+                <MaterialCommunityIcons name={cat.icon} size={20} color={active ? c.surface : c.navy} />
                 <Text
                   style={[s.categoryLabel, active && { color: c.surface }]}
                   numberOfLines={1}
@@ -252,7 +257,7 @@ export default function HomeScreen() {
             body={category === "all" ? "ترقّب! منتجات وجوائز بالطريق" : "جرّب قسماً آخر أو تصفح كل المنتجات"}
           />
         ) : (
-          <View style={s.grid}>
+          <View style={[s.grid, { gap: gridGap }]}>
             {featured.map((p) => (
               <View key={p.id} style={[s.gridCell, { width: cellWidth }]}>
                 <ProductCard
@@ -318,7 +323,7 @@ const s = StyleSheet.create({
   loginText: { fontFamily: Fonts.medium, fontSize: FontSize.label, color: c.surface, writingDirection: "rtl" },
 
   content: {
-    padding: Spacing.screen,
+    paddingTop: Spacing.md,
     paddingBottom: Platform.OS === "web" ? 110 : 120,
     gap: Spacing.md + 2,
   },
@@ -327,32 +332,31 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
-    borderRadius: Radius.card,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#F3D48A",
-    paddingVertical: Spacing.md,
     paddingHorizontal: 10,
     overflow: "hidden",
   },
   promoArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: c.gold,
     alignItems: "center",
     justifyContent: "center",
   },
-  promoText: { flex: 1, gap: 2 },
+  promoText: { flex: 1, gap: 1 },
   promoTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 15,
+    fontSize: 13.5,
     color: c.goldText,
     textAlign: "center",
     writingDirection: "rtl",
   },
   promoBody: {
     fontFamily: Fonts.regular,
-    fontSize: 11.5,
+    fontSize: 10,
     color: c.goldText,
     textAlign: "center",
     writingDirection: "rtl",
@@ -379,15 +383,14 @@ const s = StyleSheet.create({
     writingDirection: "rtl",
   },
 
-  categories: { flexDirection: "row", gap: 4 },
+  categories: { flexDirection: "row" },
   category: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: Spacing.md,
+    gap: 3,
     paddingHorizontal: 0,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: c.borderSubtle,
@@ -413,6 +416,6 @@ const s = StyleSheet.create({
   sectionLink: { flexDirection: "row", alignItems: "center", gap: 2, paddingBottom: 2 },
   sectionLinkText: { fontFamily: Fonts.bold, fontSize: FontSize.caption, color: c.primary, writingDirection: "rtl" },
 
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.md },
+  grid: { flexDirection: "row", flexWrap: "wrap" },
   gridCell: { flexGrow: 0 },
 });

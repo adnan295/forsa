@@ -3,9 +3,10 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
-import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
+import Colors, { Fonts, Radius, StatusColors } from "@/constants/colors";
 import { buildMediaUrl } from "@/lib/query-client";
 import { useFavorites } from "@/lib/favorites-context";
+import { useDesignScale } from "@/lib/design-scale";
 import { parseProductSpecs, type Product } from "@shared/schema";
 
 const c = Colors.light;
@@ -44,6 +45,7 @@ export default function ProductCard({
   bestSeller = false,
 }: Props) {
   const { toggleFavorite, isFavorite } = useFavorites();
+  const dp = useDesignScale();
   const favorited = isFavorite(product.id);
 
   const price = parseFloat(product.price);
@@ -71,7 +73,7 @@ export default function ProductCard({
       }}
       accessibilityRole="button"
       accessibilityLabel={`${product.name}، ${price.toFixed(0)} دولار`}
-      style={({ pressed }) => [s.card, pressed && { opacity: 0.96 }]}
+      style={({ pressed }) => [s.card, { paddingHorizontal: dp(12.5), paddingTop: dp(9), paddingBottom: dp(12.5) }, pressed && { opacity: 0.96 }]}
     >
       <View style={s.imageBox}>
         {imageUri ? (
@@ -96,7 +98,7 @@ export default function ProductCard({
           >
             <Ionicons
               name={favorited ? "heart" : "heart-outline"}
-              size={18}
+              size={15}
               color={favorited ? StatusColors.error.fg : c.navy}
             />
           </Pressable>
@@ -115,10 +117,10 @@ export default function ProductCard({
 
         <View style={s.priceRow}>
           {vouchers > 0 ? (
-            <View style={s.voucher}>
+            <View style={[s.voucher, { height: dp(42), minWidth: dp(145) }]}>
               <Text style={s.voucherCount}>+{vouchers}</Text>
               <Text style={s.voucherWord}>{voucherWord(vouchers)}</Text>
-              <Ionicons name="ticket" size={14} color={c.goldText} />
+              <Ionicons name="ticket" size={12} color={c.goldText} />
             </View>
           ) : (
             <View />
@@ -139,13 +141,14 @@ export default function ProductCard({
             accessibilityState={{ disabled: outOfStock }}
             style={({ pressed }) => [
               s.addBtn,
+              { height: dp(55), marginHorizontal: dp(20) - dp(12.5) },
               pressed && !outOfStock && { backgroundColor: c.primaryPressed },
               outOfStock && s.addBtnOff,
             ]}
           >
             <Ionicons
               name={inCartQuantity > 0 ? "checkmark" : "cart-outline"}
-              size={18}
+              size={15}
               color={outOfStock ? StatusColors.disabled.fg : c.surface}
             />
             <Text style={[s.addBtnText, outOfStock && { color: StatusColors.disabled.fg }]}>
@@ -158,6 +161,7 @@ export default function ProductCard({
   );
 }
 
+// المقاسات النسبية من تصميم الكرت 390 × 365: صورة 365 × 190، شارة 145 × 42، زر 350 × 55
 const s = StyleSheet.create({
   card: {
     flex: 1,
@@ -165,7 +169,6 @@ const s = StyleSheet.create({
     borderRadius: Radius.card,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.borderSubtle,
-    padding: Spacing.sm,
     shadowColor: c.navy,
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -173,8 +176,8 @@ const s = StyleSheet.create({
     elevation: 2,
   },
   imageBox: {
-    aspectRatio: 1.9,
-    borderRadius: Radius.button,
+    aspectRatio: 365 / 190,
+    borderRadius: 10,
     backgroundColor: c.background,
     overflow: "hidden",
   },
@@ -182,11 +185,11 @@ const s = StyleSheet.create({
   imageFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
   favBtn: {
     position: "absolute",
-    top: Spacing.sm,
-    start: Spacing.sm,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    top: 6,
+    start: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: c.surface,
     alignItems: "center",
     justifyContent: "center",
@@ -198,25 +201,27 @@ const s = StyleSheet.create({
   },
   tag: {
     position: "absolute",
-    top: Spacing.sm,
-    end: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
+    top: 6,
+    end: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 6,
   },
-  tagText: { fontFamily: Fonts.bold, fontSize: 11, writingDirection: "rtl" },
+  tagText: { fontFamily: Fonts.bold, fontSize: 10, writingDirection: "rtl" },
 
-  body: { paddingHorizontal: 2, paddingTop: Spacing.sm, gap: 4 },
+  body: { paddingTop: 3, gap: 1 },
   name: {
     fontFamily: Fonts.bold,
-    fontSize: 15,
+    fontSize: 11.5,
+    lineHeight: 14,
     color: c.navy,
     textAlign: "right",
     writingDirection: "rtl",
   },
   specs: {
     fontFamily: Fonts.regular,
-    fontSize: FontSize.label,
+    fontSize: 9,
+    lineHeight: 11,
     color: c.textMuted,
     textAlign: "right",
     writingDirection: "rtl",
@@ -227,33 +232,32 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 2,
   },
-  price: { fontFamily: Fonts.bold, fontSize: 22, color: c.primary, writingDirection: "ltr" },
+  price: { fontFamily: Fonts.bold, fontSize: 17, lineHeight: 20, color: c.primary, writingDirection: "ltr" },
   voucher: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
+    gap: 3,
     backgroundColor: c.goldSoft,
     borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
+    paddingHorizontal: 6,
   },
-  voucherCount: { fontFamily: Fonts.bold, fontSize: FontSize.label, color: c.goldText, writingDirection: "ltr" },
-  voucherWord: { fontFamily: Fonts.bold, fontSize: FontSize.label, color: c.goldText, writingDirection: "rtl" },
+  voucherCount: { fontFamily: Fonts.bold, fontSize: 10.5, color: c.goldText, writingDirection: "ltr" },
+  voucherWord: { fontFamily: Fonts.bold, fontSize: 10.5, color: c.goldText, writingDirection: "rtl" },
 
   addBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 5,
     backgroundColor: c.primary,
-    borderRadius: 10,
-    height: 42,
-    marginTop: 6,
+    borderRadius: 8,
+    marginTop: 3,
   },
   addBtnOff: { backgroundColor: StatusColors.disabled.bg },
   addBtnText: {
     fontFamily: Fonts.medium,
-    fontSize: FontSize.caption,
+    fontSize: 12,
     color: c.surface,
     writingDirection: "rtl",
   },

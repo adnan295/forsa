@@ -7,6 +7,7 @@ import Svg, { Path } from "react-native-svg";
 import Colors, { Fonts, Radius, Spacing } from "@/constants/colors";
 import { buildMediaUrl } from "@/lib/query-client";
 import type { CurrentDraw } from "@/components/DrawBanner";
+import { useDesignScale } from "@/lib/design-scale";
 
 const c = Colors.light;
 
@@ -31,6 +32,7 @@ interface Props {
 
 /** بطاقة الجولة في الرئيسية: الجائزة كبطل، والتقدّم وشروط السحب تحتها. */
 export default function DrawHero({ draw, onPress }: Props) {
+  const dp = useDesignScale();
   const image = buildMediaUrl(draw.prizeImageUrl);
   const sold = draw.soldTickets;
   const target = draw.targetTickets;
@@ -53,7 +55,7 @@ export default function DrawHero({ draw, onPress }: Props) {
       disabled={!onPress}
       accessibilityRole={onPress ? "button" : undefined}
       accessibilityLabel={`${stage}: ${draw.prizeName}، ${formatCount(sold)} من ${formatCount(target)} قسيمة`}
-      style={({ pressed }) => [s.card, pressed && onPress && { opacity: 0.96 }]}
+      style={({ pressed }) => [s.card, { minHeight: dp(405) }, pressed && onPress && { opacity: 0.96 }]}
     >
       <LinearGradient
         colors={[c.navy, c.navy, c.navySoft]}
@@ -65,7 +67,7 @@ export default function DrawHero({ draw, onPress }: Props) {
 
       <View style={s.scribble} pointerEvents="none">
         <Text style={s.scribbleText}>{"ممكن تكون أنت\nالفائز!"}</Text>
-        <Svg width={78} height={14} viewBox="0 0 96 16" style={s.swoosh}>
+        <Svg width={64} height={12} viewBox="0 0 96 16" style={s.swoosh}>
           <Path d="M3 12 C 30 3, 62 2, 93 7" stroke={c.gold} strokeWidth={3} fill="none" strokeLinecap="round" />
           <Path d="M22 15 C 44 9, 66 9, 86 11" stroke={c.gold} strokeWidth={2} fill="none" strokeLinecap="round" />
         </Svg>
@@ -113,14 +115,14 @@ export default function DrawHero({ draw, onPress }: Props) {
           </View>
 
           <View style={s.footer}>
-            <Ionicons name="information-circle-outline" size={16} color="rgba(255,255,255,0.8)" />
+            <Ionicons name="information-circle-outline" size={13} color="rgba(255,255,255,0.8)" />
             <Text style={s.footerText} numberOfLines={1}>{footer}</Text>
           </View>
         </View>
 
-        <View style={s.imageCol}>
+        <View style={[s.imageCol, { width: dp(270) }]}>
           {image ? (
-            <Image source={{ uri: image }} style={s.image} contentFit="contain" cachePolicy="memory-disk" transition={200} />
+            <Image source={{ uri: image }} style={[s.image, { height: dp(350) }]} contentFit="contain" cachePolicy="memory-disk" transition={200} />
           ) : (
             <Ionicons name="trophy" size={48} color={c.gold} />
           )}
@@ -133,8 +135,8 @@ export default function DrawHero({ draw, onPress }: Props) {
 function Feature({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
   return (
     <View style={s.feature}>
-      <Ionicons name={icon} size={12} color={c.gold} />
-      <Text style={s.featureText}>{label}</Text>
+      <Ionicons name={icon} size={10} color={c.gold} />
+      <Text style={s.featureText} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
@@ -143,40 +145,40 @@ const s = StyleSheet.create({
   card: {
     borderRadius: Radius.hero,
     overflow: "hidden",
-    padding: Spacing.lg,
+    padding: Spacing.md,
     backgroundColor: c.navy,
   },
   scribble: {
     position: "absolute",
-    top: Spacing.md,
-    start: Spacing.lg,
+    top: Spacing.sm + 2,
+    start: Spacing.md,
     alignItems: "center",
     transform: [{ rotate: I18nManager.isRTL ? "-8deg" : "8deg" }],
     zIndex: 1,
   },
   scribbleText: {
     fontFamily: Fonts.bold,
-    fontSize: 13.5,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     color: c.gold,
     textAlign: "center",
     writingDirection: "rtl",
   },
   swoosh: { marginTop: -2 },
 
-  row: { flexDirection: "row", alignItems: "stretch", gap: Spacing.md },
-  content: { flex: 1, alignItems: "flex-end", gap: 6 },
-  lead: { alignItems: "flex-end", gap: 6, paddingStart: 74 },
+  row: { flex: 1, flexDirection: "row", alignItems: "stretch", gap: Spacing.sm },
+  content: { flex: 1, alignItems: "flex-end", justifyContent: "space-between", gap: 3 },
+  lead: { alignItems: "flex-end", gap: 3, paddingStart: 66 },
   stagePill: {
     backgroundColor: c.primary,
-    borderRadius: 8,
-    paddingHorizontal: Spacing.sm + 2,
-    paddingVertical: 3,
+    borderRadius: 7,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
   },
-  stageText: { fontFamily: Fonts.medium, fontSize: 12, color: c.surface, writingDirection: "rtl" },
+  stageText: { fontFamily: Fonts.medium, fontSize: 10, color: c.surface, writingDirection: "rtl" },
   leadText: {
     fontFamily: Fonts.regular,
-    fontSize: 14,
+    fontSize: 12,
     color: "rgba(255,255,255,0.88)",
     textAlign: TOWARD_IMAGE,
     writingDirection: "rtl",
@@ -184,34 +186,31 @@ const s = StyleSheet.create({
   prize: {
     alignSelf: "stretch",
     fontFamily: Fonts.bold,
-    fontSize: 26,
-    lineHeight: 34,
+    fontSize: 22,
+    lineHeight: 28,
     color: c.surface,
     textAlign: TOWARD_IMAGE,
   },
   description: {
     alignSelf: "stretch",
     fontFamily: Fonts.regular,
-    fontSize: 13,
+    fontSize: 11,
     color: "rgba(255,255,255,0.78)",
     textAlign: TOWARD_IMAGE,
     writingDirection: "rtl",
-    marginTop: -2,
+    marginTop: -3,
   },
 
   features: {
     alignSelf: "stretch",
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
-    columnGap: 6,
-    rowGap: 4,
-    marginTop: Spacing.sm,
+    gap: 4,
   },
-  feature: { flexDirection: "row", alignItems: "center", gap: 3 },
+  feature: { flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 2 },
   featureText: {
     fontFamily: Fonts.medium,
-    fontSize: 9.5,
+    fontSize: 7.5,
     color: c.surface,
     writingDirection: "rtl",
   },
@@ -221,16 +220,15 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "baseline",
-    marginTop: Spacing.sm,
   },
-  count: { fontFamily: Fonts.regular, fontSize: 13, color: c.surface, writingDirection: "rtl" },
-  countStrong: { fontFamily: Fonts.bold, fontSize: 16 },
-  percent: { fontFamily: Fonts.bold, fontSize: 16, color: c.surface, writingDirection: "ltr" },
+  count: { fontFamily: Fonts.regular, fontSize: 11, color: c.surface, writingDirection: "rtl" },
+  countStrong: { fontFamily: Fonts.bold, fontSize: 13 },
+  percent: { fontFamily: Fonts.bold, fontSize: 13, color: c.surface, writingDirection: "ltr" },
 
   // التعبئة تبدأ من جهة الصورة كما في التصميم المعتمد
   track: {
     alignSelf: "stretch",
-    height: 10,
+    height: 8,
     borderRadius: Radius.pill,
     backgroundColor: "rgba(255,255,255,0.16)",
     overflow: "hidden",
@@ -242,17 +240,17 @@ const s = StyleSheet.create({
     alignSelf: "stretch",
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginTop: 4,
+    gap: 4,
   },
   footerText: {
     flexShrink: 1,
     fontFamily: Fonts.regular,
-    fontSize: 12,
+    fontSize: 10,
     color: "rgba(255,255,255,0.8)",
     writingDirection: "rtl",
   },
 
-  imageCol: { width: "25%", alignItems: "center", justifyContent: "center" },
-  image: { width: "100%", height: "100%", minHeight: 170, borderRadius: Radius.card },
+  // مساحة صورة الجائزة 270 × 350 من تصميم 800 × 405
+  imageCol: { alignItems: "center", justifyContent: "center" },
+  image: { width: "100%", borderRadius: Radius.card },
 });
