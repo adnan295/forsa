@@ -7,6 +7,7 @@ import Colors, { Fonts, Radius, StatusColors } from "@/constants/colors";
 import { buildMediaUrl } from "@/lib/query-client";
 import { useFavorites } from "@/lib/favorites-context";
 import { useDesignScale } from "@/lib/design-scale";
+import { voucherWord } from "@/lib/vouchers";
 import { parseProductSpecs, type Product } from "@shared/schema";
 
 const c = Colors.light;
@@ -22,13 +23,6 @@ interface Props {
   ticketPrice?: number;
   /** وسم «الأكثر مبيعاً» */
   bestSeller?: boolean;
-}
-
-/** صيغة المعدود بالعربية: قسيمة، قسيمتان، ٣–١٠ قسائم، ١١+ قسيمة */
-function voucherWord(n: number) {
-  if (n === 2) return "قسيمتان";
-  if (n >= 3 && n <= 10) return "قسائم";
-  return "قسيمة";
 }
 
 /**

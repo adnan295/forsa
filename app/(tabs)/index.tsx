@@ -15,14 +15,13 @@ import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
 import { queryClient } from "@/lib/query-client";
-import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
-import { Logo, EmptyState } from "@/components/ui";
+import Colors, { Fonts, FontSize, Radius, Spacing } from "@/constants/colors";
+import { EmptyState } from "@/components/ui";
 import DrawHero from "@/components/DrawHero";
+import AppTopBar from "@/components/AppTopBar";
 import type { CurrentDraw } from "@/components/DrawBanner";
 import ProductCard from "@/components/ProductCard";
 import { useDesignScale } from "@/lib/design-scale";
@@ -49,7 +48,6 @@ const CATEGORIES: { key: CategoryKey; label: string; icon: keyof typeof Material
 ];
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   // المقاسات بالنسبة لتصميم 832px: هوامش 16، بانر 800، كرتان 390 بينهما 20
   const dp = useDesignScale();
@@ -57,8 +55,7 @@ export default function HomeScreen() {
   const gridGap = dp(20);
   const columns = Platform.OS === "web" && width >= 900 ? 4 : Platform.OS === "web" && width >= 600 ? 3 : 2;
   const cellWidth = Math.floor((Math.min(width, 1200) - margin * 2 - gridGap * (columns - 1)) / columns);
-  const { user } = useAuth();
-  const { addItem, getQuantity, totalItems } = useCart();
+  const { addItem, getQuantity } = useCart();
   const [category, setCategory] = useState<CategoryKey>("all");
 
   const { data: products, isLoading, refetch, isRefetching } = useQuery<Product[]>({
@@ -73,14 +70,6 @@ export default function HomeScreen() {
     staleTime: 5000,
   });
 
-  const { data: unreadData } = useQuery<{ count: number }>({
-    queryKey: ["/api/notifications/unread-count"],
-    enabled: !!user,
-    refetchInterval: 15000,
-    staleTime: 10000,
-  });
-
-  const unreadCount = unreadData?.count ?? 0;
   const ticketPrice = draw ? parseFloat(draw.ticketPrice) : 0;
 
   const featured = useMemo(() => {
@@ -113,52 +102,7 @@ export default function HomeScreen() {
 
   return (
     <View style={s.root}>
-      <View style={[s.topBar, { paddingTop: insets.top + Spacing.sm, paddingHorizontal: margin }]}>
-        <View style={s.actions}>
-          <Pressable
-            onPress={() => router.push("/cart" as any)}
-            style={s.iconBtn}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="السلة"
-            testID="cart-button"
-          >
-            <Ionicons name="cart-outline" size={28} color={c.navy} />
-            {totalItems > 0 && (
-              <View style={[s.badge, { backgroundColor: c.primary }]}>
-                <Text style={s.badgeText}>{totalItems}</Text>
-              </View>
-            )}
-          </Pressable>
-
-          {user ? (
-            <Pressable
-              onPress={() => router.push("/notifications" as any)}
-              style={s.iconBtn}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={unreadCount > 0 ? `الإشعارات، ${unreadCount} غير مقروءة` : "الإشعارات"}
-              testID="notifications-button"
-            >
-              <Ionicons name="notifications-outline" size={28} color={c.navy} />
-              {unreadCount > 0 && (
-                <View style={[s.badge, { backgroundColor: StatusColors.error.fg }]}>
-                  <Text style={s.badgeText}>{unreadCount}</Text>
-                </View>
-              )}
-            </Pressable>
-          ) : (
-            <Pressable onPress={() => router.push("/auth")} style={s.loginBtn}>
-              <Text style={s.loginText}>دخول</Text>
-            </Pressable>
-          )}
-        </View>
-
-        <View style={s.brand}>
-          <Logo size={30} />
-          <Text style={s.tagline}>تسوق أكثر .. فرصتك أكبر</Text>
-        </View>
-      </View>
+      <AppTopBar />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -281,46 +225,6 @@ export default function HomeScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: c.background },
   loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: c.background },
-
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: c.surface,
-    paddingHorizontal: Spacing.screen,
-    paddingBottom: Spacing.md,
-  },
-  brand: { alignItems: "flex-end" },
-  tagline: {
-    fontFamily: Fonts.medium,
-    fontSize: 13,
-    color: c.navy,
-    writingDirection: "rtl",
-    marginTop: -2,
-  },
-  actions: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
-  iconBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  badge: {
-    position: "absolute",
-    top: 0,
-    start: 0,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
-    borderWidth: 2,
-    borderColor: c.surface,
-  },
-  badgeText: { fontFamily: Fonts.bold, fontSize: 11, color: c.surface },
-  loginBtn: {
-    backgroundColor: c.primary,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 7,
-    borderRadius: Radius.button,
-  },
-  loginText: { fontFamily: Fonts.medium, fontSize: FontSize.label, color: c.surface, writingDirection: "rtl" },
 
   content: {
     paddingTop: Spacing.md,
