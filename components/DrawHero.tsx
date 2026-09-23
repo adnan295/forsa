@@ -34,6 +34,7 @@ interface Props {
 export default function DrawHero({ draw, onPress }: Props) {
   const dp = useDesignScale();
   const image = buildMediaUrl(draw.prizeImageUrl);
+  const banner = buildMediaUrl(draw.bannerImageUrl);
   const sold = draw.soldTickets;
   const target = draw.targetTickets;
   const fill = target > 0 ? Math.min(1, sold / target) : 0;
@@ -49,12 +50,58 @@ export default function DrawHero({ draw, onPress }: Props) {
       ? "اكتمل العدد — يُجرى السحب قريباً"
       : `يُجرى السحب عند اكتمال ${formatCount(target)} قسيمة`;
 
+  const label = `${stage}: ${draw.prizeName}، ${formatCount(sold)} من ${formatCount(target)} قسيمة`;
+
+  // بانر من تصميم المدير: الصورة كما هي، والعدّاد يُرسم فوقها في مكانه من التصميم
+  if (banner) {
+    return (
+      <Pressable
+        onPress={onPress}
+        disabled={!onPress}
+        accessibilityRole={onPress ? "button" : undefined}
+        accessibilityLabel={label}
+        style={({ pressed }) => [s.card, s.bannerCard, pressed && onPress && { opacity: 0.96 }]}
+      >
+        <Image source={{ uri: banner }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" transition={200} />
+        <LinearGradient
+          colors={["rgba(11,33,66,0)", "rgba(11,33,66,0.55)"]}
+          style={s.scrim}
+          pointerEvents="none"
+        />
+        <View style={[s.counter, { right: dp(24), bottom: dp(22) }]} pointerEvents="none">
+          <View style={s.progressLabels}>
+            <Text style={[s.count, s.shadowed]}>
+              <Text style={s.countStrong}>{formatCount(sold)}</Text>
+              {` من ${formatCount(target)} قسيمة`}
+            </Text>
+            <Text style={[s.percent, s.shadowed]}>{formatPercent(sold, target)}</Text>
+          </View>
+          <View style={s.track}>
+            {fill > 0 && (
+              <LinearGradient
+                colors={["#3D8BFF", c.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[s.fill, { width: `${fill * 100}%` }]}
+              />
+            )}
+          </View>
+          <Text style={[s.footerText, s.shadowed, s.remaining]} numberOfLines={1}>
+            {draw.status === "ready_to_draw"
+              ? "اكتمل العدد — يُجرى السحب قريباً"
+              : `متبقي ${formatCount(Math.max(0, target - sold))} قسيمة للسحب`}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  }
+
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? "button" : undefined}
-      accessibilityLabel={`${stage}: ${draw.prizeName}، ${formatCount(sold)} من ${formatCount(target)} قسيمة`}
+      accessibilityLabel={label}
       style={({ pressed }) => [s.card, { minHeight: dp(405) }, pressed && onPress && { opacity: 0.96 }]}
     >
       <LinearGradient
@@ -249,6 +296,18 @@ const s = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     writingDirection: "rtl",
   },
+
+  // بانر المدير بنسبة التصميم 800 × 405، والعدّاد على 58% من العرض يمين الأسفل
+  bannerCard: { aspectRatio: 800 / 405, padding: 0 },
+  scrim: { position: "absolute", start: 0, end: 0, bottom: 0, height: "50%" },
+  // صورة المدير ثابتة الاتجاه، فالعدّاد يُثبَّت يميناً وبترتيب RTL على كل المنصات
+  counter: { position: "absolute", width: "58%", gap: 6, direction: "rtl" },
+  shadowed: {
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  remaining: { alignSelf: "stretch", textAlign: "right" },
 
   // مساحة صورة الجائزة 270 × 350 من تصميم 800 × 405
   imageCol: { alignItems: "center", justifyContent: "center" },

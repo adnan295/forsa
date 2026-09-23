@@ -27,6 +27,8 @@ import { isConfiguredBankTransfer } from "@shared/commerce";
 import { parseProductSpecs } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
+import DrawHero from "@/components/DrawHero";
+import type { CurrentDraw } from "@/components/DrawBanner";
 
 type AdminTab = "dashboard" | "orders" | "users" | "products" | "draws" | "payments" | "coupons" | "notifications" | "activity" | "support" | "settings";
 
@@ -1969,6 +1971,9 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
   const [imageUri, setImageUri] = useState<string | null>(draw?.prizeImageUrl || null);
   const [imageFile, setImageFile] = useState<any>(null);
   const [imageChanged, setImageChanged] = useState(false);
+  const [bannerUri, setBannerUri] = useState<string | null>(draw?.bannerImageUrl || null);
+  const [bannerFile, setBannerFile] = useState<any>(null);
+  const [bannerChanged, setBannerChanged] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1979,6 +1984,16 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
       if (imageChanged) {
         prizeImageUrl = (await uploadAdminImage(imageUri, imageFile)) ?? null;
       }
+      let bannerImageUrl = draw?.bannerImageUrl ?? null;
+      if (bannerChanged) {
+        if (bannerUri) {
+          const uploaded = await uploadAdminImage(bannerUri, bannerFile);
+          if (!uploaded) throw new Error("فشل رفع صورة البانر");
+          bannerImageUrl = uploaded;
+        } else {
+          bannerImageUrl = null;
+        }
+      }
       setUploading(false);
 
       const payload = {
@@ -1986,6 +2001,7 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
         prizeName: prizeName.trim(),
         prizeDescription: prizeDescription.trim() || null,
         prizeImageUrl,
+        bannerImageUrl,
         ticketPrice: ticketPrice.trim(),
         targetTickets: Number(targetTickets),
       };
@@ -2077,6 +2093,51 @@ function DrawFormModal({ draw, onClose }: { draw: any | null; onClose: () => voi
                 </>
               )}
             </Pressable>
+
+            <Text style={modalStyles.inputLabel}>بانر الصفحة الرئيسية (اختياري)</Text>
+            <View style={modalStyles.hintBox}>
+              <Ionicons name="information-circle" size={16} color={Colors.light.accentDark} />
+              <Text style={modalStyles.hintText}>
+                صمّم البانر بمقاس 1600×810 (نسبة 800×405). عدّاد القسائم بينرسم فوقه تلقائياً بالجهة اليمنى
+                من الأسفل، فخلّي هالمساحة فاضية. بدون بانر بيظهر البانر الافتراضي من بيانات الجولة.
+              </Text>
+            </View>
+            {bannerUri ? (
+              <>
+                <DrawHero
+                  draw={{
+                    ...(draw ?? { id: "preview", status: "active", soldTickets: 0 }),
+                    prizeName: prizeName || "الجائزة",
+                    targetTickets: Number(targetTickets) || 0,
+                    bannerImageUrl: bannerUri,
+                  } as CurrentDraw}
+                />
+                <View style={modalStyles.bannerActions}>
+                  <Pressable
+                    onPress={() => { setBannerChanged(true); pickAdminImage(setBannerUri, setBannerFile); }}
+                    style={modalStyles.bannerAction}
+                  >
+                    <Ionicons name="image-outline" size={16} color={Colors.light.accent} />
+                    <Text style={modalStyles.bannerActionText}>تغيير البانر</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => { setBannerChanged(true); setBannerUri(null); setBannerFile(null); }}
+                    style={modalStyles.bannerAction}
+                  >
+                    <Ionicons name="trash-outline" size={16} color={Colors.light.danger} />
+                    <Text style={[modalStyles.bannerActionText, { color: Colors.light.danger }]}>إزالة البانر</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <Pressable
+                onPress={() => { setBannerChanged(true); pickAdminImage(setBannerUri, setBannerFile); }}
+                style={modalStyles.imagePicker}
+              >
+                <Ionicons name="images-outline" size={30} color={Colors.light.accent} />
+                <Text style={modalStyles.imagePickerText}>اختر صورة البانر</Text>
+              </Pressable>
+            )}
 
             {error && (
               <View style={modalStyles.errorBox}>
@@ -3064,6 +3125,9 @@ const modalStyles = StyleSheet.create({
 
   imagePicker: { height: 130, borderRadius: 14, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.light.border, borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 14, overflow: "hidden" },
   imagePreview: { width: "100%", height: "100%" },
+  bannerActions: { flexDirection: "row", justifyContent: "center", gap: 24, marginTop: 8, marginBottom: 14 },
+  bannerAction: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4 },
+  bannerActionText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.accent, writingDirection: "rtl" },
   imagePickerText: { fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.textSecondary, writingDirection: "rtl" },
 
   errorBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(239,68,68,0.08)", borderRadius: 10, padding: 12, marginBottom: 8 },

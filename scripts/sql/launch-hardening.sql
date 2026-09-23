@@ -20,6 +20,9 @@ UPDATE payment_methods SET enabled = false WHERE lower(name) ~ 'cash|cod|sham' O
 ALTER TABLE users DROP COLUMN IF EXISTS referral_code;
 ALTER TABLE users DROP COLUMN IF EXISTS referred_by;
 
+-- Admin-designed home banner per round; the ticket counter is drawn over it.
+ALTER TABLE draws ADD COLUMN IF NOT EXISTS banner_image_url text;
+
 -- Admin toggles for the periodic reminders. Absent keys mean enabled.
 CREATE TABLE IF NOT EXISTS app_settings (
   key text PRIMARY KEY NOT NULL,

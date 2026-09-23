@@ -55,6 +55,7 @@ CREATE TABLE "draws" (
 	"prize_name" text NOT NULL,
 	"prize_description" text,
 	"prize_image_url" text,
+	"banner_image_url" text,
 	"ticket_price" numeric(10, 2) DEFAULT '10' NOT NULL,
 	"target_tickets" integer NOT NULL,
 	"sold_tickets" integer DEFAULT 0 NOT NULL,

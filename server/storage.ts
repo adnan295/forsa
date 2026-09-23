@@ -204,6 +204,7 @@ export class DatabaseStorage {
         prizeName: data.prizeName,
         prizeDescription: data.prizeDescription ?? null,
         prizeImageUrl: data.prizeImageUrl ?? null,
+        bannerImageUrl: data.bannerImageUrl ?? null,
         ticketPrice: data.ticketPrice,
         targetTickets: data.targetTickets,
         sortOrder: (maxRow?.maxOrder ?? 0) + 1,

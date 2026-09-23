@@ -103,6 +103,8 @@ export const draws = pgTable("draws", {
   prizeName: text("prize_name").notNull(),
   prizeDescription: text("prize_description"),
   prizeImageUrl: text("prize_image_url"),
+  /** بانر الرئيسية كما يصمّمه المدير (800×405) — العدّاد يُرسم فوقه تلقائياً */
+  bannerImageUrl: text("banner_image_url"),
   /** قيمة المشتريات اللي بتعطي تذكرة وحدة */
   ticketPrice: decimal("ticket_price", { precision: 10, scale: 2 }).notNull().default("10"),
   targetTickets: integer("target_tickets").notNull(),
@@ -432,6 +434,7 @@ export const insertDrawSchema = z.object({
   prizeName: z.string().min(2, "اسم الجائزة مطلوب"),
   prizeDescription: z.string().optional().nullable(),
   prizeImageUrl: z.string().optional().nullable(),
+  bannerImageUrl: z.string().optional().nullable(),
   ticketPrice: z
     .union([z.string(), z.number()])
     .transform((v) => String(v))
