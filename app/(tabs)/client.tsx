@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/query-client";
 import { translateError } from "@/lib/errors";
 import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
 import { Header, Button, Card, Field, InfoNote } from "@/components/ui";
+import { SYRIAN_PHONE_PLACEHOLDER } from "@shared/syria";
 
 const c = Colors.light;
 
@@ -183,7 +184,7 @@ export default function ClientScreen() {
               label="رقم الهاتف *"
               value={phone}
               onChangeText={setPhone}
-              placeholder="05xxxxxxxx"
+              placeholder={SYRIAN_PHONE_PLACEHOLDER}
               icon="call-outline"
               keyboardType="phone-pad"
               error={errors.phone}

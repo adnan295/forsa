@@ -1525,7 +1525,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const parsed = updateProfileSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: "بيانات غير صحيحة", errors: parsed.error.flatten() });
+        return res.status(400).json({
+          message: parsed.error.errors[0]?.message ?? "بيانات غير صحيحة",
+          errors: parsed.error.flatten(),
+        });
       }
       const updated = await storage.updateUserProfile(req.session.userId!, parsed.data);
       if (!updated) {

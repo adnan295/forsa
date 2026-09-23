@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { SYRIA, SYRIAN_PHONE_ERROR, isSyrianPhone, normalizeSyrianPhone } from "./syria";
 
 export const roleEnum = pgEnum("user_role", ["user", "admin"]);
 
@@ -462,12 +463,21 @@ export const insertCouponSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
+/** رقم موبايل سوري يُحفظ بصيغة 09xxxxxxxx */
+const syrianPhone = z
+  .string()
+  .transform(normalizeSyrianPhone)
+  .refine(isSyrianPhone, SYRIAN_PHONE_ERROR);
+
+/** التوصيل داخل سوريا فقط — الدولة تُثبَّت مهما أُرسل */
+const syriaOnly = z.string().optional().nullable().transform(() => SYRIA);
+
 export const updateProfileSchema = z.object({
   fullName: z.string().min(2, "الاسم الكامل مطلوب"),
-  phone: z.string().min(8, "رقم الهاتف غير صحيح"),
+  phone: syrianPhone,
   address: z.string().min(5, "العنوان مطلوب"),
   city: z.string().min(2, "المدينة مطلوبة"),
-  country: z.string().min(2, "الدولة مطلوبة"),
+  country: syriaOnly,
 });
 
 export const insertReviewSchema = z.object({
@@ -504,10 +514,10 @@ export const checkoutSchema = z.object({
   paymentMethod: z.string().min(1),
   checkoutKey: z.string().min(16).max(100).optional(),
   shippingFullName: z.string().trim().min(1, "عنوان الشحن غير مكتمل").max(500),
-  shippingPhone: z.string().trim().min(8, "رقم الهاتف غير صحيح").max(30),
+  shippingPhone: syrianPhone,
   shippingCity: z.string().trim().min(1, "عنوان الشحن غير مكتمل").max(500),
   shippingAddress: z.string().trim().min(1, "عنوان الشحن غير مكتمل").max(500),
-  shippingCountry: z.string().trim().min(1, "عنوان الشحن غير مكتمل").max(500),
+  shippingCountry: syriaOnly,
   couponCode: z.string().optional().nullable(),
 });
 
