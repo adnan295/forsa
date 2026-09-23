@@ -2185,6 +2185,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // صفحة عامة يطلبها Google Play («أمان البيانات»): خطوات حذف الحساب وما يُحذف
+  app.get("/delete-account", (_req: Request, res: Response) => {
+    res.send(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حذف الحساب - NAYVO</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #F7F9FC; color: #182230; direction: rtl; line-height: 1.8; }
+    .header { background: linear-gradient(135deg, #0B2142, #1267E8); padding: 40px 20px; text-align: center; }
+    .header h1 { color: #fff; font-size: 28px; margin-bottom: 8px; }
+    .header p { color: rgba(255,255,255,0.8); font-size: 14px; }
+    .container { max-width: 700px; margin: -20px auto 40px; padding: 0 16px; }
+    .card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(11,33,66,0.06); }
+    .card h2 { font-size: 18px; color: #0B2142; margin-bottom: 12px; }
+    .card p, .card li { font-size: 15px; color: #475467; }
+    .card ol, .card ul { padding-right: 22px; }
+    .card li { margin-bottom: 8px; }
+    a { color: #1267E8; font-weight: 600; text-decoration: none; }
+    .footer { text-align: center; padding: 24px; color: #667085; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>حذف حسابك في NAYVO</h1>
+    <p>تطبيق NAYVO (today.forsa) — المطوّر: NAYVO</p>
+  </div>
+  <div class="container">
+    <div class="card">
+      <h2>من داخل التطبيق</h2>
+      <ol>
+        <li>افتح تطبيق NAYVO وسجّل الدخول</li>
+        <li>ادخل على تبويب «حسابي»</li>
+        <li>اكبس «حذف الحساب» وأكّد</li>
+      </ol>
+      <p>يُحذف الحساب فوراً ونهائياً.</p>
+    </div>
+    <div class="card">
+      <h2>من المتصفح</h2>
+      <ol>
+        <li>افتح <a href="/">nayvo.store</a> وسجّل الدخول بنفس حسابك</li>
+        <li>ادخل على «حسابي» واكبس «حذف الحساب» وأكّد</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>بدون تسجيل دخول</h2>
+      <p>راسلنا من بريدك المسجّل على <a href="mailto:support@nayvo.store?subject=طلب حذف حساب">support@nayvo.store</a> بعنوان «طلب حذف حساب»، ونحذف حسابك خلال 7 أيام بعد التأكد أن الطلب من صاحب الحساب.</p>
+    </div>
+    <div class="card">
+      <h2>ما الذي يُحذف</h2>
+      <ul>
+        <li>بيانات الحساب: الاسم واسم المستخدم والبريد ورقم الهاتف والعنوان</li>
+        <li>الطلبات والقسائم وصور إيصالات الدفع</li>
+        <li>الإشعارات والمراجعات وتذاكر الدعم</li>
+        <li>ربط الدخول عبر Apple أو Google (نبطل الربط لدى Apple أيضاً)</li>
+      </ul>
+      <p>الطلبات التي لم يُؤكَّد دفعها بعد تُلغى تلقائياً عند الحذف.</p>
+    </div>
+    <div class="card">
+      <h2>ما قد يبقى</h2>
+      <p>لا نحتفظ بأي بيانات من حسابك بعد حذفه، باستثناء النسخ الاحتياطية المحمية للسيرفر التي تُستخدم فقط لاستعادة الخدمة عند الأعطال، وتُستبدل بنسخ أحدث مع الوقت.</p>
+    </div>
+  </div>
+  <div class="footer">
+    <p><a href="/privacy-policy">سياسة الخصوصية</a> · <a href="/terms">الشروط والأحكام</a></p>
+    <p>NAYVO &copy; ${new Date().getFullYear()}</p>
+  </div>
+</body>
+</html>`);
+  });
+
   app.get("/privacy-policy", (_req: Request, res: Response) => {
     res.send(`<!DOCTYPE html>
 <html dir="rtl" lang="ar">
