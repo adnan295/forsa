@@ -28,6 +28,7 @@ import { parseProductSpecs } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient, getApiUrl, buildMediaUrl } from "@/lib/query-client";
 import DrawHero from "@/components/DrawHero";
+import { isReadyToShip, printShippingLabels, type LabelOrder } from "@/lib/shipping-label";
 import type { CurrentDraw } from "@/components/DrawBanner";
 
 type AdminTab = "dashboard" | "orders" | "users" | "products" | "draws" | "payments" | "coupons" | "notifications" | "activity" | "support" | "settings";
@@ -735,6 +736,17 @@ const dash = StyleSheet.create({
   },
 });
 
+/** طباعة ملصقات الشحن بكبسة — تعرض سبب الفشل إن لم تتوفر طابعة */
+async function handlePrintLabels(list: LabelOrder[]) {
+  if (list.length === 0) return;
+  try {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await printShippingLabels(list);
+  } catch (err: any) {
+    Alert.alert("تعذّرت الطباعة", err?.message || "تأكد من اتصال الطابعة وحاول مرة ثانية");
+  }
+}
+
 function OrdersSection() {
   const { data: orders, isLoading, error: loadError, refetch } = useQuery<any[]>({
     queryKey: ["/api/admin/orders"],
@@ -771,6 +783,8 @@ function OrdersSection() {
 
   if (isLoading) return <LoadingView />;
   if (loadError) return <LoadError onRetry={() => refetch()} />;
+
+  const readyToShip = (orders ?? []).filter(isReadyToShip);
 
   const getShippingStatusAr = (s: string) => {
     const map: Record<string, string> = { pending: "قيد الانتظار", processing: "قيد التجهيز", shipped: "تم الشحن", delivered: "تم التوصيل", cancelled: "ملغي" };
@@ -820,6 +834,19 @@ function OrdersSection() {
                 <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 12, color: "#067647" }}>CSV</Text>
               </Pressable>
             </View>
+            <Pressable
+              onPress={() => handlePrintLabels(readyToShip)}
+              disabled={readyToShip.length === 0}
+              accessibilityRole="button"
+              style={[orderMgmtStyles.printAllBtn, readyToShip.length === 0 && { opacity: 0.5 }]}
+            >
+              <Ionicons name="print-outline" size={18} color="#fff" />
+              <Text style={orderMgmtStyles.printAllText}>
+                {readyToShip.length > 0
+                  ? `طباعة ملصقات الطلبات الجاهزة للشحن (${readyToShip.length})`
+                  : "ما في طلبات جاهزة للشحن حالياً"}
+              </Text>
+            </Pressable>
           </View>
         }
         ListEmptyComponent={<Text style={styles.emptyText}>لا توجد طلبات</Text>}
@@ -827,8 +854,20 @@ function OrdersSection() {
           <Pressable style={styles.orderCard} onPress={() => { setSelectedOrder(item); setShowShippingModal(true); }}>
             <View style={styles.orderHeader}>
               <Text style={styles.orderIdText}>#{item.id.slice(0, 8)}</Text>
-              <View style={[styles.statusPill, { backgroundColor: getShippingColor(item.shippingStatus) + "20" }]}>
-                <Text style={[styles.statusPillText, { color: getShippingColor(item.shippingStatus) }]}>{getShippingStatusAr(item.shippingStatus)}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Pressable
+                  onPress={(e) => { e.stopPropagation(); handlePrintLabels([item]); }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="طباعة ملصق الشحن"
+                  style={orderMgmtStyles.printBtn}
+                >
+                  <Ionicons name="print-outline" size={16} color={Colors.light.navy} />
+                  <Text style={orderMgmtStyles.printBtnText}>ملصق</Text>
+                </Pressable>
+                <View style={[styles.statusPill, { backgroundColor: getShippingColor(item.shippingStatus) + "20" }]}>
+                  <Text style={[styles.statusPillText, { color: getShippingColor(item.shippingStatus) }]}>{getShippingStatusAr(item.shippingStatus)}</Text>
+                </View>
               </View>
             </View>
             <View style={styles.orderRow}>
@@ -910,6 +949,14 @@ function ShippingModal({ visible, order, onClose, onUpdate, onPaymentUpdate, loa
             {order && (order.shippingFullName || order.shippingPhone || order.shippingCity || order.shippingAddress || order.shippingCountry) && (
               <View style={orderMgmtStyles.infoSection}>
                 <Text style={orderMgmtStyles.infoSectionTitle}>عنوان الشحن</Text>
+                <Pressable
+                  onPress={() => handlePrintLabels([order])}
+                  accessibilityRole="button"
+                  style={[orderMgmtStyles.printAllBtn, { marginTop: 0, marginBottom: 10 }]}
+                >
+                  <Ionicons name="print-outline" size={18} color="#fff" />
+                  <Text style={orderMgmtStyles.printAllText}>طباعة ملصق الشحن</Text>
+                </Pressable>
                 {order.shippingFullName && (
                   <View style={orderMgmtStyles.infoRow}>
                     <Ionicons name="person" size={14} color={Colors.light.textSecondary} />
@@ -3141,6 +3188,10 @@ const modalStyles = StyleSheet.create({
 });
 
 const orderMgmtStyles = StyleSheet.create({
+  printAllBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.light.navy, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, marginTop: 10, marginBottom: 4 },
+  printAllText: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: "#fff", writingDirection: "rtl" },
+  printBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: Colors.light.primarySoft, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  printBtnText: { fontFamily: "Tajawal_500Medium", fontSize: 12, color: Colors.light.navy, writingDirection: "rtl" },
   infoSection: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: Colors.light.border },
   infoSectionTitle: { fontFamily: "Tajawal_700Bold", fontSize: 14, color: Colors.light.text, textAlign: "right", writingDirection: "rtl", marginBottom: 10 },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
