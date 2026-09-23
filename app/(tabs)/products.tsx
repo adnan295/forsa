@@ -43,6 +43,12 @@ export default function ProductsScreen() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
 
+  const { data: currentDraw } = useQuery<{ ticketPrice: string } | null>({
+    queryKey: ["/api/draws/current"],
+    staleTime: 15000,
+  });
+  const ticketPrice = currentDraw ? parseFloat(currentDraw.ticketPrice) : 0;
+
   const { data: products, isLoading, refetch, isRefetching } = useQuery<Product[]>({
     queryKey: ["/api/products"],
     refetchInterval: 20000,
@@ -140,6 +146,7 @@ export default function ProductsScreen() {
             {filtered.map((p) => (
               <View key={p.id} style={[s.gridCell, { width: cellWidth }]}>
                 <ProductCard
+                  ticketPrice={ticketPrice}
                   product={p}
                   showFavorite
                   inCartQuantity={getQuantity(p.id)}

@@ -6,7 +6,7 @@ import * as Haptics from "expo-haptics";
 import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
 import { buildMediaUrl } from "@/lib/query-client";
 import { useFavorites } from "@/lib/favorites-context";
-import type { Product } from "@shared/schema";
+import { parseProductSpecs, type Product } from "@shared/schema";
 
 const c = Colors.light;
 
@@ -17,11 +17,22 @@ interface Props {
   inCartQuantity?: number;
   /** إظهار أيقونة المفضلة فوق الصورة */
   showFavorite?: boolean;
+  /** سعر القسيمة في الجولة الحالية — يُظهر عدد القسائم التي يمنحها المنتج */
+  ticketPrice?: number;
+  /** وسم «الأكثر مبيعاً» */
+  bestSeller?: boolean;
+}
+
+/** صيغة المعدود بالعربية: قسيمة، قسيمتان، ٣–١٠ قسائم، ١١+ قسيمة */
+function voucherWord(n: number) {
+  if (n === 2) return "قسيمتان";
+  if (n >= 3 && n <= 10) return "قسائم";
+  return "قسيمة";
 }
 
 /**
- * بطاقة منتج: صورة على خلفية محايدة، اسم داكن، سعر أزرق،
- * وزر ثانوي بخلفية زرقاء فاتحة.
+ * بطاقة منتج: صورة كبيرة، اسم وسطر مواصفات، سعر بجانبه عدد القسائم،
+ * وزر إضافة أساسي بعرض البطاقة.
  */
 export default function ProductCard({
   product,
@@ -29,6 +40,8 @@ export default function ProductCard({
   onAddToCart,
   inCartQuantity = 0,
   showFavorite = false,
+  ticketPrice,
+  bestSeller = false,
 }: Props) {
   const { toggleFavorite, isFavorite } = useFavorites();
   const favorited = isFavorite(product.id);
@@ -38,6 +51,18 @@ export default function ProductCard({
   const lowStock = product.stock !== null && product.stock > 0 && product.stock <= 5;
   const imageUri = buildMediaUrl(product.imageUrl);
 
+  const specs = parseProductSpecs(product.specsJson).slice(0, 2).map((sp) => sp.text).join(" | ");
+  // القسائم تُحسب على مجموع الطلب، فهذا ما يضيفه المنتج وحده تقريباً
+  const vouchers = ticketPrice && ticketPrice > 0 ? Math.floor(price / ticketPrice) : 0;
+
+  const tag = outOfStock
+    ? { text: "نفد", bg: StatusColors.disabled.bg, fg: StatusColors.disabled.fg }
+    : bestSeller
+    ? { text: "الأكثر مبيعاً", bg: StatusColors.error.fg, fg: c.surface }
+    : lowStock
+    ? { text: `باقي ${product.stock}`, bg: StatusColors.warning.bg, fg: StatusColors.warning.fg }
+    : null;
+
   return (
     <Pressable
       onPress={() => {
@@ -46,17 +71,11 @@ export default function ProductCard({
       }}
       accessibilityRole="button"
       accessibilityLabel={`${product.name}، ${price.toFixed(0)} دولار`}
-      style={({ pressed }) => [s.card, pressed && { opacity: 0.95 }]}
+      style={({ pressed }) => [s.card, pressed && { opacity: 0.96 }]}
     >
       <View style={s.imageBox}>
         {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={s.image}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={200}
-          />
+          <Image source={{ uri: imageUri }} style={s.image} contentFit="cover" cachePolicy="memory-disk" transition={200} />
         ) : (
           <View style={s.imageFallback}>
             <Ionicons name="cube-outline" size={30} color={c.textMuted} />
@@ -77,36 +96,35 @@ export default function ProductCard({
           >
             <Ionicons
               name={favorited ? "heart" : "heart-outline"}
-              size={17}
-              color={favorited ? StatusColors.error.fg : c.textMuted}
+              size={18}
+              color={favorited ? StatusColors.error.fg : c.navy}
             />
           </Pressable>
         )}
 
-        {(outOfStock || lowStock) && (
-          <View
-            style={[
-              s.stockTag,
-              { backgroundColor: outOfStock ? StatusColors.disabled.bg : StatusColors.warning.bg },
-            ]}
-          >
-            <Text
-              style={[
-                s.stockTagText,
-                { color: outOfStock ? StatusColors.disabled.fg : StatusColors.warning.fg },
-              ]}
-            >
-              {outOfStock ? "نفد" : `باقي ${product.stock}`}
-            </Text>
+        {tag && (
+          <View style={[s.tag, { backgroundColor: tag.bg }]}>
+            <Text style={[s.tagText, { color: tag.fg }]}>{tag.text}</Text>
           </View>
         )}
       </View>
 
       <View style={s.body}>
-        <Text style={s.name} numberOfLines={2}>
-          {product.name}
-        </Text>
-        <Text style={s.price}>${price.toFixed(0)}</Text>
+        <Text style={s.name} numberOfLines={1}>{product.name}</Text>
+        {!!specs && <Text style={s.specs} numberOfLines={1}>{specs}</Text>}
+
+        <View style={s.priceRow}>
+          {vouchers > 0 ? (
+            <View style={s.voucher}>
+              <Text style={s.voucherCount}>+{vouchers}</Text>
+              <Text style={s.voucherWord}>{voucherWord(vouchers)}</Text>
+              <Ionicons name="ticket" size={14} color={c.goldText} />
+            </View>
+          ) : (
+            <View />
+          )}
+          <Text style={s.price}>${price.toFixed(0)}</Text>
+        </View>
 
         {onAddToCart && (
           <Pressable
@@ -119,19 +137,19 @@ export default function ProductCard({
             disabled={outOfStock}
             accessibilityRole="button"
             accessibilityState={{ disabled: outOfStock }}
-            style={[s.addBtn, outOfStock && s.addBtnOff]}
+            style={({ pressed }) => [
+              s.addBtn,
+              pressed && !outOfStock && { backgroundColor: c.primaryPressed },
+              outOfStock && s.addBtnOff,
+            ]}
           >
             <Ionicons
               name={inCartQuantity > 0 ? "checkmark" : "cart-outline"}
-              size={16}
-              color={outOfStock ? StatusColors.disabled.fg : c.primary}
+              size={18}
+              color={outOfStock ? StatusColors.disabled.fg : c.surface}
             />
             <Text style={[s.addBtnText, outOfStock && { color: StatusColors.disabled.fg }]}>
-              {outOfStock
-                ? "غير متوفر"
-                : inCartQuantity > 0
-                ? `بالسلة (${inCartQuantity})`
-                : "أضف إلى السلة"}
+              {outOfStock ? "غير متوفر" : inCartQuantity > 0 ? `بالسلة (${inCartQuantity})` : "أضف إلى السلة"}
             </Text>
           </Pressable>
         )}
@@ -145,14 +163,20 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: c.surface,
     borderRadius: Radius.card,
-    overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
+    borderColor: c.borderSubtle,
+    padding: Spacing.sm,
+    shadowColor: c.navy,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   imageBox: {
-    height: 132,
+    aspectRatio: 1.9,
+    borderRadius: Radius.button,
     backgroundColor: c.background,
-    position: "relative",
+    overflow: "hidden",
   },
   image: { width: "100%", height: "100%" },
   imageFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
@@ -160,53 +184,77 @@ const s = StyleSheet.create({
     position: "absolute",
     top: Spacing.sm,
     start: Spacing.sm,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: c.surface,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: c.navy,
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
-  stockTag: {
+  tag: {
     position: "absolute",
     top: Spacing.sm,
     end: Spacing.sm,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
-    borderRadius: Radius.pill,
+    borderRadius: 6,
   },
-  stockTagText: { fontFamily: Fonts.medium, fontSize: 11, writingDirection: "rtl" },
+  tagText: { fontFamily: Fonts.bold, fontSize: 11, writingDirection: "rtl" },
 
-  body: { padding: Spacing.md, gap: Spacing.sm },
+  body: { paddingHorizontal: 2, paddingTop: Spacing.sm, gap: 4 },
   name: {
-    fontFamily: Fonts.medium,
-    fontSize: FontSize.caption,
+    fontFamily: Fonts.bold,
+    fontSize: 15,
     color: c.navy,
     textAlign: "right",
     writingDirection: "rtl",
-    lineHeight: 21,
-    minHeight: 42,
   },
-  price: {
-    fontFamily: Fonts.bold,
-    fontSize: FontSize.body,
-    color: c.primary,
+  specs: {
+    fontFamily: Fonts.regular,
+    fontSize: FontSize.label,
+    color: c.textMuted,
     textAlign: "right",
+    writingDirection: "rtl",
   },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 2,
+  },
+  price: { fontFamily: Fonts.bold, fontSize: 22, color: c.primary, writingDirection: "ltr" },
+  voucher: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: c.goldSoft,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+  },
+  voucherCount: { fontFamily: Fonts.bold, fontSize: FontSize.label, color: c.goldText, writingDirection: "ltr" },
+  voucherWord: { fontFamily: Fonts.bold, fontSize: FontSize.label, color: c.goldText, writingDirection: "rtl" },
+
   addBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: c.primarySoft,
-    borderRadius: Radius.button,
-    paddingVertical: 10,
+    backgroundColor: c.primary,
+    borderRadius: 10,
+    height: 42,
+    marginTop: 6,
   },
   addBtnOff: { backgroundColor: StatusColors.disabled.bg },
   addBtnText: {
     fontFamily: Fonts.medium,
-    fontSize: FontSize.label,
-    color: c.primary,
+    fontSize: FontSize.caption,
+    color: c.surface,
     writingDirection: "rtl",
   },
 });
