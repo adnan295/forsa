@@ -15,6 +15,12 @@ export default function FavoritesScreen() {
   const { favorites } = useFavorites();
   const { addItem, getQuantity } = useCart();
 
+  const { data: currentDraw } = useQuery<{ ticketPrice: string } | null>({
+    queryKey: ["/api/draws/current"],
+    staleTime: 15000,
+  });
+  const ticketPrice = currentDraw ? parseFloat(currentDraw.ticketPrice) : 0;
+
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
@@ -43,6 +49,7 @@ export default function FavoritesScreen() {
             {favoriteProducts.map((p) => (
               <View key={p.id} style={s.cell}>
                 <ProductCard
+                  ticketPrice={ticketPrice}
                   product={p}
                   showFavorite
                   inCartQuantity={getQuantity(p.id)}
