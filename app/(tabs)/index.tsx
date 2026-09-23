@@ -31,20 +31,19 @@ const c = Colors.light;
 /** عدد المنتجات المعروضة في قسم «منتجات مميزة» */
 const FEATURED_COUNT = 4;
 
-/** سهم «للأمام» بحسب اتجاه الواجهة (عربية RTL على كل المنصات) */
-const CHEVRON_FORWARD = IS_RTL ? "chevron-forward" : "chevron-back";
-const CHEVRON_BACK = IS_RTL ? "chevron-back" : "chevron-forward";
+/** سهم «للأمام»: في الواجهة العربية يشير لليسار */
+const CHEVRON_ONWARD = IS_RTL ? "chevron-back" : "chevron-forward";
 
 type CategoryKey = "all" | "electronics" | "home_appliances" | "kitchen" | "beauty" | "fashion";
 
-// بترتيب العرض على الموبايل من اليمين، و«الكل» في الطرف الأيسر كما في التصميم
+// بترتيب القراءة من اليمين: «الكل» أولاً ثم الأقسام
 const CATEGORIES: { key: CategoryKey; label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
-  { key: "fashion", label: "أزياء", icon: "hanger" },
-  { key: "beauty", label: "عناية شخصية", icon: "bottle-tonic-outline" },
-  { key: "kitchen", label: "أدوات مطبخ", icon: "chef-hat" },
-  { key: "home_appliances", label: "أجهزة منزلية", icon: "home-outline" },
-  { key: "electronics", label: "إلكترونيات", icon: "headphones" },
   { key: "all", label: "الكل", icon: "view-grid-outline" },
+  { key: "electronics", label: "إلكترونيات", icon: "headphones" },
+  { key: "home_appliances", label: "أجهزة منزلية", icon: "home-outline" },
+  { key: "kitchen", label: "أدوات مطبخ", icon: "chef-hat" },
+  { key: "beauty", label: "عناية شخصية", icon: "bottle-tonic-outline" },
+  { key: "fashion", label: "أزياء", icon: "hanger" },
 ];
 
 export default function HomeScreen() {
@@ -125,9 +124,8 @@ export default function HomeScreen() {
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
                 />
-                <View style={s.promoArrow}>
-                  <Ionicons name={CHEVRON_FORWARD} size={15} color={c.navy} />
-                </View>
+                {/* من اليمين: الهدية ثم النص ثم سهم المتابعة */}
+                <Ionicons name="gift" size={26} color={c.goldText} />
                 <View style={s.promoText}>
                   <Text style={s.promoTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                     كل {ticketPrice.toFixed(0)}$ من مشترياتك = قسيمة سحب
@@ -136,7 +134,9 @@ export default function HomeScreen() {
                     تسوق المنتجات المتنوعة واحصل على فرصتك لربح {draw.prizeName}
                   </Text>
                 </View>
-                <Ionicons name="gift" size={26} color={c.goldText} />
+                <View style={s.promoArrow}>
+                  <Ionicons name={CHEVRON_ONWARD} size={15} color={c.navy} />
+                </View>
               </Pressable>
             )}
           </>
@@ -190,7 +190,7 @@ export default function HomeScreen() {
             style={s.sectionLink}
           >
             <Text style={s.sectionLinkText}>عرض الكل</Text>
-            <Ionicons name={CHEVRON_BACK} size={18} color={c.primary} />
+            <Ionicons name={CHEVRON_ONWARD} size={18} color={c.primary} />
           </Pressable>
         </View>
 
