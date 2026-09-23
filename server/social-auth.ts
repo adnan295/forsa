@@ -28,7 +28,7 @@ function appleClientId(): string {
 function googleClientIds(): string[] {
   return (process.env.GOOGLE_CLIENT_IDS || "")
     .split(",")
-    .map((id) => id.trim())
+    .map((id: string) => id.trim())
     .filter(Boolean);
 }
 
