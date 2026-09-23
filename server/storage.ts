@@ -36,6 +36,7 @@ import {
   emailVerificationTokens,
   supportTickets,
   userIdentities,
+  media,
   DEFAULT_DELIVERY_FEE,
 } from "@shared/schema";
 import { db as database } from "./db";
@@ -1362,7 +1363,17 @@ export class DatabaseStorage {
     }
     await this.db.update(draws).set({ winnerId: null, winnerTicketId: null }).where(eq(draws.winnerId, userId));
     if (!await this.getActiveDraw()) await this.activateNextScheduledDraw();
-    const userOrders = await this.db.select({ id: orders.id }).from(orders).where(eq(orders.userId, userId));
+    const userOrders = await this.db
+      .select({ id: orders.id, receiptUrl: orders.receiptUrl })
+      .from(orders)
+      .where(eq(orders.userId, userId));
+    // صور الإيصالات بيانات مالية شخصية — تُحذف مع الحساب
+    const receiptIds = userOrders
+      .map((o) => o.receiptUrl?.match(/^\/api\/media\/([A-Za-z0-9_-]+)/)?.[1])
+      .filter((id): id is string => !!id);
+    if (receiptIds.length > 0) {
+      await this.db.delete(media).where(and(inArray(media.id, receiptIds), eq(media.isPrivate, true)));
+    }
     if (userOrders.length > 0) {
       await this.db.delete(orderItems).where(inArray(orderItems.orderId, userOrders.map((o) => o.id)));
     }

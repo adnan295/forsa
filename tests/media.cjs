@@ -154,6 +154,16 @@ const out = path.join(root, '.media-test.cjs');
         assert.deepEqual(await migrateInlineImages(() => {}), { converted: 0, failed: 0 });
       });
 
+      await test('deleting an account deletes its receipt images', async () => {
+        const { rows: [o] } = await engine.query(`SELECT receipt_url FROM orders WHERE id='o1'`);
+        const id = o.receipt_url.match(/\/api\/media\/([A-Za-z0-9_-]+)/)[1];
+        assert.equal((await engine.query(`SELECT 1 FROM media WHERE id=$1`, [id])).rows.length, 1);
+        await engine.query(`UPDATE orders SET payment_status='rejected' WHERE id='o1'`);
+        await s.deleteUser('buyer');
+        assert.equal((await engine.query(`SELECT 1 FROM media WHERE id=$1`, [id])).rows.length, 0);
+        assert.equal((await fetch(base + o.receipt_url)).status, 404);
+      });
+
       await test('the public product list is now small', async () => {
         const res = await fetch(base + '/api/products');
         const text = await res.text();
