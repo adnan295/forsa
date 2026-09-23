@@ -46,3 +46,10 @@ export function isSyrianPhone(input: string): boolean {
 }
 
 export const SYRIAN_PHONE_ERROR = "أدخل رقم موبايل سوري مثل 0933123456";
+
+/** محافظة المدينة إن كانت من القائمة — تُطبع على ملصق الشحن */
+export function governorateOf(city: string | null | undefined): string | null {
+  const name = city?.trim();
+  if (!name) return null;
+  return SYRIAN_CITIES.find((g) => g.cities.includes(name))?.governorate ?? null;
+}

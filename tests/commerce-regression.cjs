@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, '..');
 const out = path.join(root, '.commerce-test.cjs');
 (async () => {
   await require('esbuild').build({
-    stdin: { contents: `export {storage} from './server/storage'; export {registerRoutes} from './server/routes'; export {engine} from 'test-db'; export * from './shared/commerce'; export * from './shared/syria';`, resolveDir: root },
+    stdin: { contents: `export {storage} from './server/storage'; export {registerRoutes} from './server/routes'; export {engine} from 'test-db'; export * from './shared/commerce'; export * from './shared/syria'; export * from './shared/shipping-label';`, resolveDir: root },
     bundle: true, platform: 'node', format: 'cjs', packages: 'external', outfile: out,
     plugins: [{ name: 'isolate-services', setup(b) {
       b.onResolve({filter: /^(test-db|\.\/db|connect-pg-simple|\.\/firebase|\.\/apns)$/}, a => ({path:['test-db','./db'].includes(a.path)?'test-db':a.path, namespace:'test'}));
@@ -21,7 +21,7 @@ const out = path.join(root, '.commerce-test.cjs');
     }}],
   });
   // Ensure the test entry and ./db use the exact same virtual module.
-  const {storage:s, engine, registerRoutes, isBankTransferMethod, normalizeSyrianPhone, isSyrianPhone} = require(out);
+  const {storage:s, engine, registerRoutes, isBankTransferMethod, normalizeSyrianPhone, isSyrianPhone, buildShippingLabelsHtml, isReadyToShip} = require(out);
   try {
     await engine.exec(fs.readFileSync(path.join(root,'scripts/sql/nayvo-schema.sql'),'utf8'));
     await engine.exec(fs.readFileSync(path.join(root,'scripts/sql/launch-hardening.sql'),'utf8'));
@@ -112,6 +112,22 @@ const out = path.join(root, '.commerce-test.cjs');
         const badProfile=await fetch(base+'/api/user/profile',{method:'PUT',headers:{'content-type':'application/json',cookie},
           body:JSON.stringify({fullName:'Audit User',phone:'0551234567',address:'Mezzeh street 1',city:'دمشق'})});
         assert.equal(badProfile.status,400);assert.match((await badProfile.json()).message,/سوري/);
+      });
+      await test('shipping labels print recipient details safely, one page per order',async()=>{
+        const base={createdAt:'2026-09-21T14:32:00Z',totalAmount:'23.00',shippingPhone:'0933123456',shippingCountry:'سوريا',items:[{productName:'خلاط',quantity:2}]};
+        const html=buildShippingLabelsHtml([
+          {...base,id:'abcdef12-0000',shippingFullName:'<script>alert(1)</script>',shippingCity:'جرمانا',shippingAddress:'شارع "الثورة" & بناء 3',paymentStatus:'confirmed'},
+          {...base,id:'12345678-0000',shippingFullName:'سامر',shippingCity:'دمشق',shippingAddress:'المزة',paymentStatus:'pending_review'},
+        ]);
+        assert.ok(!html.includes('<script>alert'),'user input must be escaped');
+        assert.ok(html.includes('&lt;script&gt;'));assert.ok(html.includes('&quot;الثورة&quot; &amp;'));
+        assert.equal((html.match(/<section class="label">/g)||[]).length,2);
+        assert.ok(html.includes('#ABCDEF12'));assert.ok(html.includes('جرمانا — محافظة ريف دمشق'));
+        assert.ok(html.includes('مدفوع مسبقاً'));assert.ok(html.includes('غير مدفوع — 23.00 $'));
+        assert.ok(html.includes('2 قطع'));assert.ok(html.includes('size: 100mm 150mm'));
+        assert.ok(isReadyToShip({paymentStatus:'confirmed',shippingStatus:'processing'}));
+        assert.ok(!isReadyToShip({paymentStatus:'confirmed',shippingStatus:'shipped'}));
+        assert.ok(!isReadyToShip({paymentStatus:'pending_review',shippingStatus:'pending'}));
       });
       await test('HTTP checkout rejects incomplete shipping',async()=>{assert.equal((await post('/api/checkout',{...payload,shippingAddress:''},cookie)).status,400);});
       await test('HTTP receipt upload, confirmation and order read',async()=>{
