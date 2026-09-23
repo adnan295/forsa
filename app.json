@@ -27,6 +27,7 @@
       "entitlements": {
         "aps-environment": "production"
       },
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "نحتاج الوصول للكاميرا لتصوير إيصال الدفع",
@@ -81,6 +82,12 @@
           "android": {
             "useAndroidPhotoPicker": true
           }
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.483140544009-ahvhvdrgc4cgmfbu7es3j1sdis2a0rpo"
         }
       ]
     ],
