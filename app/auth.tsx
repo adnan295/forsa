@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors, { Fonts, FontSize, Radius, Spacing, StatusColors } from "@/constants/colors";
 import { Logo, Button, Field } from "@/components/ui";
+import SocialSignIn from "@/components/SocialSignIn";
 import { useAuth } from "@/lib/auth-context";
 import { translateError } from "@/lib/errors";
 
@@ -269,6 +270,8 @@ export default function AuthScreen() {
             <Logo size={34} />
             <Text style={s.tagline}>مشترياتك اليوم قد تكون فرصتك غداً</Text>
           </View>
+
+          <SocialSignIn onSuccess={finishAuth} />
 
           <View style={s.switcher}>
             {(

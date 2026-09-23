@@ -8,6 +8,7 @@ import {
   boolean,
   timestamp,
   pgEnum,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -289,6 +290,27 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+/** حسابات الدخول الخارجية (Apple / Google) المرتبطة بمستخدم */
+export const userIdentities = pgTable(
+  "user_identities",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    /** معرّف المستخدم الثابت لدى المزوّد (sub) */
+    subject: text("subject").notNull(),
+    email: text("email"),
+    /** لإبطال الربط عند حذف الحساب — شرط آبل لتسجيل الدخول عبر Apple */
+    appleRefreshToken: text("apple_refresh_token"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("user_identities_provider_subject_idx").on(t.provider, t.subject)],
+);
+
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: varchar("id")
     .primaryKey()
@@ -525,6 +547,8 @@ export const checkoutSchema = z.object({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type UserIdentity = typeof userIdentities.$inferSelect;
+export type SocialProvider = "apple" | "google";
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Draw = typeof draws.$inferSelect;
