@@ -8,7 +8,7 @@
  */
 import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db } from "./db";
-import { draws, orders, tickets, userNotifications, users } from "@shared/schema";
+import { appSettings, draws, orders, tickets, userNotifications } from "@shared/schema";
 import { storage } from "./storage";
 import { sendPushNotifications } from "./push";
 
@@ -20,6 +20,36 @@ const RECEIPT_GRACE_HOURS = 6;
 const REPEAT_AFTER_HOURS = { draw_closing: Infinity, your_chances: 72, not_joined: 168, receipt_due: 24 };
 
 type ReminderType = keyof typeof REPEAT_AFTER_HOURS | "draw_ready_admin";
+
+/** ما تعرضه لوحة الإدارة. الترتيب هنا هو ترتيب العرض. */
+export const REMINDERS: { type: ReminderType; label: string; description: string }[] = [
+  { type: "draw_closing", label: "اقتراب السحب", description: "لكل المستخدمين حين تتجاوز الجولة ٨٠٪ — مرة واحدة لكل جولة" },
+  { type: "your_chances", label: "فرصك في السحب", description: "للمشاركين بعدد فرصهم — كل ٣ أيام" },
+  { type: "not_joined", label: "دعوة للمشاركة", description: "لمن لا يملك فرصة في الجولة الحالية — أسبوعياً" },
+  { type: "draw_ready_admin", label: "جولة تنتظر السحب", description: "للإدارة حين تكتمل جولة — يومياً حتى يُجرى السحب" },
+  { type: "receipt_due", label: "تذكير بالإيصال", description: "لطلب بلا إيصال بعد ٦ ساعات — يومياً" },
+];
+
+const settingKey = (type: ReminderType) => `reminder.${type}`;
+
+export function isReminderType(value: string): value is ReminderType {
+  return REMINDERS.some(r => r.type === value);
+}
+
+/** المفعّلة. غياب المفتاح يعني مفعّل، فلا يلزم زرع أولي. */
+export async function getReminderStates(): Promise<Record<string, boolean>> {
+  const rows = await db.select().from(appSettings)
+    .where(inArray(appSettings.key, REMINDERS.map(r => settingKey(r.type))));
+  const stored = new Map(rows.map(r => [r.key, r.value]));
+  return Object.fromEntries(REMINDERS.map(r => [r.type, stored.get(settingKey(r.type)) !== "false"]));
+}
+
+export async function setReminderEnabled(type: ReminderType, enabled: boolean): Promise<void> {
+  const value = enabled ? "true" : "false";
+  await db.insert(appSettings)
+    .values({ key: settingKey(type), value })
+    .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: sql`now()` } });
+}
 
 /** المستخدمون الذين وصلهم هذا النوع مؤخراً — يُستثنون من الإرسال */
 async function recentlyNotified(type: ReminderType, drawId: string | null, hours: number): Promise<Set<string>> {
@@ -150,7 +180,9 @@ export async function runReminders(): Promise<void> {
     ["draw_ready_admin", drawReadyForAdmin],
     ["receipt_due", receiptDue],
   ];
+  const enabled = await getReminderStates();
   for (const [name, job] of jobs) {
+    if (!enabled[name]) continue;
     try {
       await job();
     } catch (err: any) {

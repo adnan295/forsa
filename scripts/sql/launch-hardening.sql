@@ -19,3 +19,10 @@ UPDATE payment_methods SET enabled = false WHERE lower(name) ~ 'cash|cod|sham' O
 -- Referral system removed at the owner's request.
 ALTER TABLE users DROP COLUMN IF EXISTS referral_code;
 ALTER TABLE users DROP COLUMN IF EXISTS referred_by;
+
+-- Admin toggles for the periodic reminders. Absent keys mean enabled.
+CREATE TABLE IF NOT EXISTS app_settings (
+  key text PRIMARY KEY NOT NULL,
+  value text NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL
+);

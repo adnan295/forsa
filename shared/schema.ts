@@ -249,6 +249,13 @@ export const adminNotifications = pgTable("admin_notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+/** إعدادات تشغيلية يغيّرها المدير من اللوحة دون إعادة نشر */
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const userNotifications = pgTable("user_notifications", {
   id: varchar("id")
     .primaryKey()

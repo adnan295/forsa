@@ -79,6 +79,8 @@ const apiLimiter = rateLimit({
   message: { message: "Too many requests, please slow down" },
   standardHeaders: true,
   legacyHeaders: false,
+  // اختبارات الانحدار تمر بكل المسارات من عنوان واحد خلال ثوانٍ؛ الإنتاج يضبط NODE_ENV=production
+  skip: () => process.env.NODE_ENV === "test",
 });
 
 const PgSession = connectPgSimple(session);
@@ -1628,6 +1630,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/admin/reminders", requireAdmin as any, async (_req: Request, res: Response) => {
+    try {
+      const { REMINDERS, getReminderStates } = await import("./reminders");
+      const states = await getReminderStates();
+      res.json(REMINDERS.map(r => ({ ...r, enabled: states[r.type] })));
+    } catch (error) {
+      console.error("Get reminders error:", error);
+      res.status(500).json({ message: "فشل تحميل إعدادات التذكيرات" });
+    }
+  });
+
+  app.put("/api/admin/reminders/:type", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const { isReminderType, setReminderEnabled } = await import("./reminders");
+      const type = String(req.params.type);
+      if (!isReminderType(type)) return res.status(404).json({ message: "نوع تذكير غير معروف" });
+      if (typeof req.body?.enabled !== "boolean") {
+        return res.status(400).json({ message: "enabled يجب أن يكون true أو false" });
+      }
+      await setReminderEnabled(type, req.body.enabled);
+      await storage.logActivity(
+        req.body.enabled ? "reminder_enabled" : "reminder_disabled",
+        req.body.enabled ? "تفعيل تذكير" : "إيقاف تذكير",
+        type,
+        req.session.userId!,
+        JSON.stringify({ type, enabled: req.body.enabled })
+      );
+      res.json({ type, enabled: req.body.enabled });
+    } catch (error) {
+      console.error("Set reminder error:", error);
+      res.status(500).json({ message: "فشل حفظ الإعداد" });
     }
   });
 

@@ -158,6 +158,20 @@ const out = path.join(root, '.commerce-test.cjs');
         assert.equal(res.status,401);assert.equal((await s.getUser('u')).email,before.email);
         assert.equal((await post('/api/admin/create-admin',{email:'bad',username:'aa',password:'x'},cookie)).status,400);
       });
+      await test('reminder toggles are admin-only, validated and persisted',async()=>{
+        const put=(type,body,c=cookie)=>fetch(base+'/api/admin/reminders/'+type,{method:'PUT',headers:{'content-type':'application/json',cookie:c},body:JSON.stringify(body)});
+        assert.equal((await fetch(base+'/api/admin/reminders')).status,401);
+        assert.equal((await put('not_joined',{enabled:false},'')).status,401);
+        const list=await (await fetch(base+'/api/admin/reminders',{headers:{cookie}})).json();
+        assert.equal(list.length,5);assert.ok(list.every(r=>r.enabled===true&&r.label&&r.description));
+        assert.equal((await put('no_such_reminder',{enabled:false})).status,404);
+        assert.equal((await put('not_joined',{enabled:'false'})).status,400);
+        assert.equal((await put('not_joined',{enabled:false})).status,200);
+        const after=await (await fetch(base+'/api/admin/reminders',{headers:{cookie}})).json();
+        assert.equal(after.find(r=>r.type==='not_joined').enabled,false);
+        assert.ok(after.filter(r=>r.type!=='not_joined').every(r=>r.enabled));
+        assert.equal((await put('not_joined',{enabled:true})).status,200);
+      });
       await test('admin CSV exports are available',async()=>{
         for(const kind of ['orders','users']) {
           const res=await fetch(base+'/api/admin/'+kind+'/export/csv',{headers:{cookie}});

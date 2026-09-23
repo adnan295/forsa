@@ -2346,6 +2346,74 @@ function ActivitySection() {
 }
 
 
+type ReminderSetting = { type: string; label: string; description: string; enabled: boolean };
+
+/** مفاتيح تشغيل التذكيرات الدورية. التغيير يُطبَّق في الدورة التالية (خلال ساعة). */
+function RemindersCard() {
+  const { data: reminders } = useQuery<ReminderSetting[]>({ queryKey: ["/api/admin/reminders"] });
+
+  const toggle = useMutation({
+    mutationFn: async ({ type, enabled }: { type: string; enabled: boolean }) => {
+      await apiRequest("PUT", `/api/admin/reminders/${type}`, { enabled });
+    },
+    // يظهر التغيير فوراً ويُعاد لحالته إذا فشل الحفظ
+    onMutate: async ({ type, enabled }) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/admin/reminders"] });
+      const previous = queryClient.getQueryData<ReminderSetting[]>(["/api/admin/reminders"]);
+      queryClient.setQueryData<ReminderSetting[]>(["/api/admin/reminders"], (old) =>
+        old?.map((r) => (r.type === type ? { ...r, enabled } : r)));
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(["/api/admin/reminders"], context.previous);
+      Alert.alert("تعذّر الحفظ", "لم يتغيّر إعداد التذكير، حاول مجدداً.");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/reminders"] }),
+  });
+
+  if (!reminders) return null;
+
+  return (
+    <View style={{ backgroundColor: Colors.light.surface, borderRadius: 16, borderWidth: 1, borderColor: Colors.light.borderSubtle, padding: 16, marginBottom: 16 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        <Ionicons name="alarm-outline" size={18} color={Colors.light.primary} />
+        <Text style={{ fontFamily: "Tajawal_700Bold", fontSize: 15, color: Colors.light.text }}>التذكيرات التلقائية</Text>
+      </View>
+      <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textMuted, marginBottom: 12 }}>
+        تُفحص كل ساعة. التغيير يسري في الدورة التالية.
+      </Text>
+      {reminders.map((r, i) => (
+        <View
+          key={r.type}
+          style={{
+            flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10,
+            borderTopWidth: i === 0 ? 0 : 1, borderTopColor: Colors.light.borderSubtle,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: "Tajawal_500Medium", fontSize: 14, color: r.enabled ? Colors.light.text : Colors.light.textMuted }}>
+              {r.label}
+            </Text>
+            <Text style={{ fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textMuted, marginTop: 2 }}>
+              {r.description}
+            </Text>
+          </View>
+          <Switch
+            value={r.enabled}
+            disabled={toggle.isPending}
+            onValueChange={(enabled) => {
+              Haptics.selectionAsync();
+              toggle.mutate({ type: r.type, enabled });
+            }}
+            trackColor={{ true: Colors.light.primary }}
+            accessibilityLabel={`${r.enabled ? "إيقاف" : "تفعيل"} ${r.label}`}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function NotificationsSection() {
   const { data: notifications, isLoading, error: loadError, refetch } = useQuery<any[]>({
     queryKey: ["/api/admin/notifications"],
@@ -2395,6 +2463,7 @@ function NotificationsSection() {
         contentContainerStyle={styles.sectionPadding}
         ListHeaderComponent={
           <View>
+            <RemindersCard />
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <Text style={styles.sectionTitle}>الإشعارات ({notifications?.length || 0})</Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
