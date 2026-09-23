@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Pressable,
   Platform,
-  I18nManager,
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -18,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/lib/auth-context";
+import { IS_RTL } from "@/lib/rtl";
 import { buildMediaUrl, queryClient } from "@/lib/query-client";
 import { useDesignScale } from "@/lib/design-scale";
 import { shortTicketCode, voucherWord } from "@/lib/vouchers";
@@ -28,8 +28,8 @@ import type { Order, Ticket } from "@shared/schema";
 
 const c = Colors.light;
 
-/** النص الملاصق لجهة القسيمة — اليسار على الموبايل (RTL) واليمين على الويب */
-const TOWARD_END = I18nManager.isRTL ? "left" : "right";
+/** النص الملاصق لجهة القسيمة — يسار الشاشة في الواجهة العربية */
+const TOWARD_END = IS_RTL ? "left" : "right";
 
 interface Winner {
   drawId: string;

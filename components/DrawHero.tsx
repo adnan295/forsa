@@ -1,10 +1,11 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet, I18nManager } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path } from "react-native-svg";
 import Colors, { Fonts, Radius, Spacing } from "@/constants/colors";
+import { IS_RTL } from "@/lib/rtl";
 import { buildMediaUrl } from "@/lib/query-client";
 import type { CurrentDraw } from "@/components/DrawBanner";
 import { useDesignScale } from "@/lib/design-scale";
@@ -12,10 +13,10 @@ import { useDesignScale } from "@/lib/design-scale";
 const c = Colors.light;
 
 /**
- * الموبايل يعمل بـRTL فتنعكس الصفوف، والويب LTR. النص في هذه البطاقة يلتصق
- * بجهة صورة الجائزة، وهي اليسار على الموبايل واليمين على الويب.
+ * الواجهة RTL فتنعكس الصفوف: صورة الجائزة يساراً، والنص في هذه البطاقة
+ * يلتصق بجهتها.
  */
-const TOWARD_IMAGE = I18nManager.isRTL ? "left" : "right";
+const TOWARD_IMAGE = IS_RTL ? "left" : "right";
 
 const formatCount = (n: number) => n.toLocaleString("en-US");
 
@@ -107,8 +108,8 @@ export default function DrawHero({ draw, onPress }: Props) {
       <LinearGradient
         colors={[c.navy, c.navy, c.navySoft]}
         locations={[0, 0.55, 1]}
-        start={{ x: I18nManager.isRTL ? 0 : 1, y: 0 }}
-        end={{ x: I18nManager.isRTL ? 1 : 0, y: 1 }}
+        start={{ x: IS_RTL ? 0 : 1, y: 0 }}
+        end={{ x: IS_RTL ? 1 : 0, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
 
@@ -200,7 +201,7 @@ const s = StyleSheet.create({
     top: Spacing.sm + 2,
     start: Spacing.md,
     alignItems: "center",
-    transform: [{ rotate: I18nManager.isRTL ? "-8deg" : "8deg" }],
+    transform: [{ rotate: IS_RTL ? "-8deg" : "8deg" }],
     zIndex: 1,
   },
   scribbleText: {
