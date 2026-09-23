@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, '..');
 const out = path.join(root, '.commerce-test.cjs');
 (async () => {
   await require('esbuild').build({
-    stdin: { contents: `export {storage} from './server/storage'; export {registerRoutes} from './server/routes'; export {engine} from 'test-db'; export * from './shared/commerce';`, resolveDir: root },
+    stdin: { contents: `export {storage} from './server/storage'; export {registerRoutes} from './server/routes'; export {engine} from 'test-db'; export * from './shared/commerce'; export * from './shared/syria';`, resolveDir: root },
     bundle: true, platform: 'node', format: 'cjs', packages: 'external', outfile: out,
     plugins: [{ name: 'isolate-services', setup(b) {
       b.onResolve({filter: /^(test-db|\.\/db|connect-pg-simple|\.\/firebase|\.\/apns)$/}, a => ({path:['test-db','./db'].includes(a.path)?'test-db':a.path, namespace:'test'}));
@@ -21,7 +21,7 @@ const out = path.join(root, '.commerce-test.cjs');
     }}],
   });
   // Ensure the test entry and ./db use the exact same virtual module.
-  const {storage:s, engine, registerRoutes, isBankTransferMethod} = require(out);
+  const {storage:s, engine, registerRoutes, isBankTransferMethod, normalizeSyrianPhone, isSyrianPhone} = require(out);
   try {
     await engine.exec(fs.readFileSync(path.join(root,'scripts/sql/nayvo-schema.sql'),'utf8'));
     await engine.exec(fs.readFileSync(path.join(root,'scripts/sql/launch-hardening.sql'),'utf8'));
@@ -34,7 +34,7 @@ const out = path.join(root, '.commerce-test.cjs');
       UPDATE payment_methods SET bank_name='Test Bank',account_name='Test Owner',iban='TEST-ACCOUNT' WHERE id='bank';
       INSERT INTO draws(id,title,prize_name,ticket_price,target_tickets,status) VALUES ('d','Test draw','Test prize',15,2,'active');
       INSERT INTO coupons(id,code,discount_percent,max_uses) VALUES ('c','SAVE',10,20);`);
-    const payload = {items:[{productId:'p',quantity:1}],paymentMethod:'bank',shippingFullName:'Test',shippingPhone:'123456789',shippingCity:'Test',shippingAddress:'Test',shippingCountry:'Test'};
+    const payload = {items:[{productId:'p',quantity:1}],paymentMethod:'bank',shippingFullName:'Test',shippingPhone:'0933123456',shippingCity:'دمشق',shippingAddress:'Test',shippingCountry:'سوريا'};
     let passed=0;
     async function test(name, fn) { await fn(); console.log('PASS', name); passed++; }
     await test('bank only, no cash or Sham Cash', async()=>{
@@ -95,6 +95,23 @@ const out = path.join(root, '.commerce-test.cjs');
       await test('HTTP checkout rejects cash and serves bank only',async()=>{
         const methods=await (await fetch(base+'/api/payment-methods')).json();assert.equal(methods.length,1);
         assert.equal((await post('/api/checkout',{...payload,paymentMethod:'cash'},cookie)).status,400);
+      });
+      await test('Syrian phone numbers are normalized and others rejected',async()=>{
+        for(const [input,expected] of [['0933123456','0933123456'],['+963 933 123 456','0933123456'],['00963933123456','0933123456'],['٠٩٣٣١٢٣٤٥٦','0933123456'],['933-123-456','0933123456']]) {
+          assert.equal(normalizeSyrianPhone(input),expected);assert.ok(isSyrianPhone(input),input);
+        }
+        for(const bad of ['0551234567','+966551234567','0113456789','09331234','123456789']) assert.ok(!isSyrianPhone(bad),bad);
+      });
+      await test('HTTP checkout requires a Syrian phone and ships to Syria only',async()=>{
+        const saudi=await post('/api/checkout',{...payload,shippingPhone:'0551234567'},cookie);
+        assert.equal(saudi.status,400);assert.match((await saudi.json()).message,/سوري/);
+        const profile=await fetch(base+'/api/user/profile',{method:'PUT',headers:{'content-type':'application/json',cookie},
+          body:JSON.stringify({fullName:'Audit User',phone:'+963 944 000 111',address:'Mezzeh street 1',city:'دمشق',country:'السعودية'})});
+        assert.equal(profile.status,200);const saved=await profile.json();
+        assert.equal(saved.phone,'0944000111');assert.equal(saved.country,'سوريا');
+        const badProfile=await fetch(base+'/api/user/profile',{method:'PUT',headers:{'content-type':'application/json',cookie},
+          body:JSON.stringify({fullName:'Audit User',phone:'0551234567',address:'Mezzeh street 1',city:'دمشق'})});
+        assert.equal(badProfile.status,400);assert.match((await badProfile.json()).message,/سوري/);
       });
       await test('HTTP checkout rejects incomplete shipping',async()=>{assert.equal((await post('/api/checkout',{...payload,shippingAddress:''},cookie)).status,400);});
       await test('HTTP receipt upload, confirmation and order read',async()=>{

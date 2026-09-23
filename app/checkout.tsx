@@ -32,6 +32,14 @@ import { DEFAULT_DELIVERY_FEE, type PaymentMethod } from "@shared/schema";
 import { requiresPaymentReceipt as requiresReceiptUpload } from "@shared/commerce";
 import type { CurrentDraw } from "@/components/DrawBanner";
 import { registerForPushNotifications } from "@/lib/push-notifications";
+import SyrianCityField from "@/components/SyrianCityField";
+import {
+  SYRIA,
+  SYRIAN_PHONE_ERROR,
+  SYRIAN_PHONE_PLACEHOLDER,
+  isSyrianPhone,
+  normalizeSyrianPhone,
+} from "@shared/syria";
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   card: "card-outline",
@@ -66,7 +74,6 @@ export default function CheckoutScreen() {
   const [shippingPhone, setShippingPhone] = useState(user?.phone || "");
   const [shippingCity, setShippingCity] = useState(user?.city || "");
   const [shippingAddress, setShippingAddress] = useState(user?.address || "");
-  const [shippingCountry, setShippingCountry] = useState(user?.country || "السعودية");
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [receiptFile, setReceiptFile] = useState<any>(null);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
@@ -209,10 +216,10 @@ export default function CheckoutScreen() {
         paymentMethod: selectedMethod?.id,
         checkoutKey: checkoutKey.current,
         shippingFullName,
-        shippingPhone,
+        shippingPhone: normalizeSyrianPhone(shippingPhone),
         shippingCity,
         shippingAddress,
-        shippingCountry,
+        shippingCountry: SYRIA,
         couponCode: appliedCoupon?.code || undefined,
       });
       return res.json();
@@ -268,10 +275,13 @@ export default function CheckoutScreen() {
       !shippingFullName.trim() ||
       !shippingPhone.trim() ||
       !shippingCity.trim() ||
-      !shippingAddress.trim() ||
-      !shippingCountry.trim()
+      !shippingAddress.trim()
     ) {
       Alert.alert("تنبيه", "يرجى تعبئة جميع حقول الشحن");
+      return;
+    }
+    if (!isSyrianPhone(shippingPhone)) {
+      Alert.alert("تنبيه", SYRIAN_PHONE_ERROR);
       return;
     }
     if (selectedMethod && total > 0 && requiresReceiptUpload(selectedMethod) && !receiptImage) {
@@ -677,7 +687,7 @@ export default function CheckoutScreen() {
             <TextInput
                 textContentType="none"
               style={styles.input}
-              placeholder="رقم الهاتف"
+              placeholder={SYRIAN_PHONE_PLACEHOLDER}
               placeholderTextColor={Colors.light.textSecondary}
               value={shippingPhone}
               onChangeText={setShippingPhone}
@@ -685,14 +695,7 @@ export default function CheckoutScreen() {
             />
 
             <Text style={styles.inputLabel}>المدينة</Text>
-            <TextInput
-                textContentType="none"
-              style={styles.input}
-              placeholder="المدينة"
-              placeholderTextColor={Colors.light.textSecondary}
-              value={shippingCity}
-              onChangeText={setShippingCity}
-            />
+            <SyrianCityField value={shippingCity} onChange={setShippingCity} />
 
             <Text style={styles.inputLabel}>العنوان التفصيلي</Text>
             <TextInput
@@ -707,14 +710,10 @@ export default function CheckoutScreen() {
             />
 
             <Text style={styles.inputLabel}>الدولة</Text>
-            <TextInput
-                textContentType="none"
-              style={styles.input}
-              placeholder="الدولة"
-              placeholderTextColor={Colors.light.textSecondary}
-              value={shippingCountry}
-              onChangeText={setShippingCountry}
-            />
+            <View style={[styles.input, styles.fixedCountry]}>
+              <Text style={styles.fixedCountryText}>{SYRIA}</Text>
+              <Text style={styles.fixedCountryHint}>التوصيل حالياً داخل سوريا فقط</Text>
+            </View>
           </View>
 
           <View style={styles.card}>
@@ -1183,6 +1182,24 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
     marginBottom: 6,
     marginTop: 12,
+  },
+  fixedCountry: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.light.borderSubtle,
+  },
+  fixedCountryText: {
+    fontFamily: "Tajawal_500Medium",
+    fontSize: 14,
+    color: Colors.light.text,
+    writingDirection: "rtl",
+  },
+  fixedCountryHint: {
+    fontFamily: "Tajawal_400Regular",
+    fontSize: 11,
+    color: Colors.light.textMuted,
+    writingDirection: "rtl",
   },
   input: {
     backgroundColor: Colors.light.inputBg,
