@@ -29,3 +29,15 @@ CREATE TABLE IF NOT EXISTS app_settings (
   value text NOT NULL,
   updated_at timestamp DEFAULT now() NOT NULL
 );
+
+-- Sign in with Apple / Google: external identities linked to a user.
+CREATE TABLE IF NOT EXISTS user_identities (
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  user_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider text NOT NULL,
+  subject text NOT NULL,
+  email text,
+  apple_refresh_token text,
+  created_at timestamp DEFAULT now() NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS user_identities_provider_subject_idx ON user_identities (provider, subject);

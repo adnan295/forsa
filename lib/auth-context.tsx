@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
+import type { SocialCredential } from "@/lib/social-auth";
 import { fetch } from "expo/fetch";
 
 interface AuthUser {
@@ -27,6 +28,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  socialLogin: (credential: SocialCredential) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<VerificationResult>;
   verifyEmail: (email: string, code: string) => Promise<void>;
   resendVerification: (email: string) => Promise<any>;
@@ -61,6 +63,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(username: string, password: string) {
     const res = await apiRequest("POST", "/api/auth/login", { username, password });
+    const data = await res.json();
+    setUser(data);
+  }
+
+  async function socialLogin(credential: SocialCredential) {
+    const res = await apiRequest("POST", "/api/auth/social", credential);
     const data = await res.json();
     setUser(data);
   }
@@ -105,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo(
-    () => ({ user, isLoading, login, register, verifyEmail, resendVerification, logout, refreshUser }),
+    () => ({ user, isLoading, login, socialLogin, register, verifyEmail, resendVerification, logout, refreshUser }),
     [user, isLoading]
   );
 

@@ -10,6 +10,14 @@ import { insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, c
 import { sendFcmNotification, sendFcmToUser } from "./firebase";
 import { sendApnsNotifications, isApnsConfigured } from "./apns";
 import { sendPushNotifications } from "./push";
+import {
+  SocialAuthError,
+  verifySocialToken,
+  exchangeAppleAuthorizationCode,
+  revokeAppleRefreshToken,
+  sha256Hex,
+  type SocialIdentity,
+} from "./social-auth";
 import { sum, count, and, gte, sql, eq, desc, inArray } from "drizzle-orm";
 import { isBankTransferMethod, isConfiguredBankTransfer } from "@shared/commerce";
 import { sendOrderConfirmation, sendPaymentStatusUpdate, sendWinnerNotification, sendPasswordResetCode, sendShippingUpdate, sendEmailVerificationCode, isEmailEnabled } from "./email";
@@ -114,6 +122,65 @@ declare module "express-session" {
   interface SessionData {
     userId: string;
   }
+}
+
+const socialLoginSchema = z.object({
+  provider: z.enum(["apple", "google"]),
+  idToken: z.string().min(20).max(8000),
+  nonce: z.string().max(200).optional(),
+  authorizationCode: z.string().max(2000).optional(),
+  fullName: z.string().trim().max(120).optional(),
+});
+
+/** بيانات المستخدم المعادة بعد الدخول — نفس شكل /api/auth/login */
+function sessionUser(user: any) {
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    fullName: user.fullName,
+    phone: user.phone,
+    address: user.address,
+    city: user.city,
+    country: user.country,
+    emailVerified: user.emailVerified,
+    createdAt: user.createdAt,
+  };
+}
+
+/** ينشئ حساباً لمن يدخل أول مرة عبر Apple أو Google */
+async function createSocialUser(identity: SocialIdentity, fullName?: string) {
+  // بريد غير موثّق أو مخفي لا يصلح معرّفاً للحساب؛ نستخدم عنواناً داخلياً لا يُراسَل
+  const email =
+    identity.email && identity.emailVerified
+      ? identity.email
+      : `${identity.provider}.${sha256Hex(identity.subject).slice(0, 20)}@signin.nayvo.invalid`;
+  const username = await storage.generateUsername(identity.email || fullName || identity.name || "");
+  const unusablePassword = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
+  const user = await storage.createUser({ username, email, password: unusablePassword } as any);
+  await storage.setEmailVerified(user.id);
+  const name = (fullName || identity.name || "").trim();
+  if (name.length >= 2) {
+    await storage.setUserFullName(user.id, name);
+  }
+  await storage.logActivity(
+    "user_register",
+    "New user registered",
+    `User ${user.username} registered with ${identity.provider === "apple" ? "Apple" : "Google"}`,
+    user.id,
+  );
+  return (await storage.getUser(user.id))!;
+}
+
+/** يبطل ربط Apple قبل حذف الحساب (شرط مراجعة آبل) — أفضل جهد */
+async function revokeAppleIdentities(userId: string) {
+  const identities = await storage.getIdentitiesForUser(userId).catch(() => []);
+  await Promise.all(
+    identities
+      .filter((i) => i.provider === "apple" && i.appleRefreshToken)
+      .map((i) => revokeAppleRefreshToken(i.appleRefreshToken!)),
+  );
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -312,6 +379,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Login error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // الدخول أو التسجيل بكبسة عبر Apple أو Google
+  app.post("/api/auth/social", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const parsed = socialLoginSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "بيانات غير صحيحة" });
+      }
+      const { provider, idToken, nonce, authorizationCode, fullName } = parsed.data;
+      const identity = await verifySocialToken(provider, idToken, nonce);
+
+      let isNewUser = false;
+      let linked = await storage.getIdentity(provider, identity.subject);
+      let user = linked ? await storage.getUser(linked.userId) : undefined;
+
+      if (!user) {
+        // بريد وثّقه المزوّد يربط الدخول بالحساب الموجود بدل إنشاء حساب ثانٍ
+        const existing =
+          identity.email && identity.emailVerified
+            ? await storage.getUserByEmailInsensitive(identity.email)
+            : undefined;
+        if (existing?.role === "admin") {
+          return res.status(403).json({ message: "حساب الإدارة يدخل بكلمة المرور فقط" });
+        }
+        if (existing && !existing.emailVerified) await storage.setEmailVerified(existing.id);
+        user = existing ? (await storage.getUser(existing.id))! : await createSocialUser(identity, fullName);
+        isNewUser = !existing;
+
+        const appleRefreshToken =
+          provider === "apple" && authorizationCode ? await exchangeAppleAuthorizationCode(authorizationCode) : null;
+        try {
+          linked = await storage.linkIdentity({
+            userId: user.id,
+            provider,
+            subject: identity.subject,
+            email: identity.email,
+            appleRefreshToken,
+          });
+        } catch (error: any) {
+          // كبستان متزامنتان: الربط تمّ في الطلب الآخر
+          if (error?.code !== "23505") throw error;
+          linked = await storage.getIdentity(provider, identity.subject);
+          user = linked ? await storage.getUser(linked.userId) : undefined;
+          isNewUser = false;
+          if (!user) throw error;
+        }
+      } else if (provider === "apple" && authorizationCode && linked && !linked.appleRefreshToken) {
+        const refreshToken = await exchangeAppleAuthorizationCode(authorizationCode);
+        if (refreshToken) await storage.setIdentityRefreshToken(linked.id, refreshToken);
+      }
+
+      if (user.role === "admin") {
+        return res.status(403).json({ message: "حساب الإدارة يدخل بكلمة المرور فقط" });
+      }
+      if (user.isSuspended) {
+        return res.status(403).json({ message: "حسابك موقوف. يرجى التواصل مع الدعم." });
+      }
+
+      req.session.userId = user.id;
+      res.json({ ...sessionUser(user), isNewUser });
+    } catch (error) {
+      if (error instanceof SocialAuthError) {
+        return res.status(401).json({ message: error.message });
+      }
+      console.error("Social login error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -1309,6 +1444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.params.id as string);
       if (!user) return res.status(404).json({ message: "User not found" });
       if (user.role === "admin") return res.status(400).json({ message: "لا يمكن حذف حساب الأدمن" });
+      await revokeAppleIdentities(user.id);
       const deleted = await storage.deleteUser(req.params.id as string);
       if (!deleted) return res.status(500).json({ message: "فشل الحذف" });
       res.json({ message: "تم حذف المستخدم" });
@@ -2010,6 +2146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user.role === "admin") {
         return res.status(403).json({ message: "لا يمكن حذف حساب المدير" });
       }
+      await revokeAppleIdentities(userId);
       await storage.deleteUser(userId);
       req.session.destroy(() => {});
       res.json({ message: "تم حذف الحساب بنجاح" });

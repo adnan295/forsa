@@ -238,3 +238,15 @@ ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_user_id_users_id_f
 ALTER TABLE "tickets" ADD CONSTRAINT "tickets_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tickets" ADD CONSTRAINT "tickets_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_notifications" ADD CONSTRAINT "user_notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+
+-- Sign in with Apple / Google: external identities linked to a user.
+CREATE TABLE IF NOT EXISTS user_identities (
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  user_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider text NOT NULL,
+  subject text NOT NULL,
+  email text,
+  apple_refresh_token text,
+  created_at timestamp DEFAULT now() NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS user_identities_provider_subject_idx ON user_identities (provider, subject);

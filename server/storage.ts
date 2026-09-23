@@ -18,6 +18,8 @@ import {
   type UserNotification,
   type SupportTicket,
   type CheckoutPayload,
+  type UserIdentity,
+  type SocialProvider,
   users,
   products,
   draws,
@@ -33,6 +35,7 @@ import {
   passwordResetTokens,
   emailVerificationTokens,
   supportTickets,
+  userIdentities,
   DEFAULT_DELIVERY_FEE,
 } from "@shared/schema";
 import { db as database } from "./db";
@@ -80,6 +83,70 @@ export class DatabaseStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await this.db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  /* ============================ الدخول عبر Apple / Google ============================ */
+
+  async getUserByEmailInsensitive(email: string): Promise<User | undefined> {
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(sql`lower(${users.email}) = ${email.trim().toLowerCase()}`);
+    return user || undefined;
+  }
+
+  async getIdentity(provider: SocialProvider, subject: string): Promise<UserIdentity | undefined> {
+    const [identity] = await this.db
+      .select()
+      .from(userIdentities)
+      .where(and(eq(userIdentities.provider, provider), eq(userIdentities.subject, subject)));
+    return identity || undefined;
+  }
+
+  async getIdentitiesForUser(userId: string): Promise<UserIdentity[]> {
+    return this.db.select().from(userIdentities).where(eq(userIdentities.userId, userId));
+  }
+
+  async linkIdentity(data: {
+    userId: string;
+    provider: SocialProvider;
+    subject: string;
+    email: string | null;
+    appleRefreshToken?: string | null;
+  }): Promise<UserIdentity> {
+    const [identity] = await this.db
+      .insert(userIdentities)
+      .values({
+        userId: data.userId,
+        provider: data.provider,
+        subject: data.subject,
+        email: data.email,
+        appleRefreshToken: data.appleRefreshToken ?? null,
+      })
+      .returning();
+    return identity;
+  }
+
+  async setUserFullName(userId: string, fullName: string): Promise<void> {
+    await this.db.update(users).set({ fullName }).where(eq(users.id, userId));
+  }
+
+  async setIdentityRefreshToken(id: string, appleRefreshToken: string): Promise<void> {
+    await this.db.update(userIdentities).set({ appleRefreshToken }).where(eq(userIdentities.id, id));
+  }
+
+  /** اسم مستخدم فريد مشتق من البريد أو الاسم (أحرف لاتينية وأرقام فقط) */
+  async generateUsername(seed: string): Promise<string> {
+    const derived = (seed.split("@")[0] || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "")
+      .slice(0, 16);
+    const base = derived || "user";
+    for (let i = 0; i < 8; i++) {
+      const candidate = i === 0 && derived.length >= 3 ? derived : `${base}${randomInt(1000, 99999)}`;
+      if (!(await this.getUserByUsername(candidate))) return candidate;
+    }
+    return `user${randomBytes(5).toString("hex")}`;
   }
 
   /* ============================ المنتجات (الكتالوج) ============================ */
