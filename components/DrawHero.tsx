@@ -28,12 +28,10 @@ function formatPercent(sold: number, target: number) {
 interface Props {
   draw: CurrentDraw;
   onPress?: () => void;
-  /** نسخة صفحة «قسائمي»: بلا سطر الدعوة وبلا المزايا */
-  compact?: boolean;
 }
 
 /** بطاقة الجولة في الرئيسية: الجائزة كبطل، والتقدّم وشروط السحب تحتها. */
-export default function DrawHero({ draw, onPress, compact = false }: Props) {
+export default function DrawHero({ draw, onPress }: Props) {
   const dp = useDesignScale();
   const image = buildMediaUrl(draw.prizeImageUrl);
   const sold = draw.soldTickets;
@@ -82,7 +80,7 @@ export default function DrawHero({ draw, onPress, compact = false }: Props) {
             <View style={s.stagePill}>
               <Text style={s.stageText}>{stage}</Text>
             </View>
-            {!compact && <Text style={s.leadText}>تسوق وادخل السحب على</Text>}
+            <Text style={s.leadText}>تسوق وادخل السحب على</Text>
           </View>
 
           <Text style={s.prize} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75}>
@@ -92,13 +90,11 @@ export default function DrawHero({ draw, onPress, compact = false }: Props) {
             <Text style={s.description} numberOfLines={1}>{draw.prizeDescription}</Text>
           )}
 
-          {!compact && (
-            <View style={s.features}>
-              <Feature icon="car-outline" label="شحن لكافة المناطق" />
-              <Feature icon="shield-checkmark" label="سحب موثوق وشفاف" />
-              <Feature icon="gift" label={`${formatCount(target)} قسيمة`} />
-            </View>
-          )}
+          <View style={s.features}>
+            <Feature icon="car-outline" label="شحن لكافة المناطق" />
+            <Feature icon="shield-checkmark" label="سحب موثوق وشفاف" />
+            <Feature icon="gift" label={`${formatCount(target)} قسيمة`} />
+          </View>
 
           <View style={s.progressLabels}>
             <Text style={s.count}>
@@ -119,13 +115,7 @@ export default function DrawHero({ draw, onPress, compact = false }: Props) {
           </View>
 
           <View style={s.footer}>
-            {compact ? (
-              <View style={s.footerGift}>
-                <Ionicons name="gift" size={10} color={c.navy} />
-              </View>
-            ) : (
-              <Ionicons name="information-circle-outline" size={13} color="rgba(255,255,255,0.8)" />
-            )}
+            <Ionicons name="information-circle-outline" size={13} color="rgba(255,255,255,0.8)" />
             <Text style={s.footerText} numberOfLines={1}>{footer}</Text>
           </View>
         </View>
@@ -251,14 +241,6 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-  },
-  footerGift: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    backgroundColor: c.gold,
-    alignItems: "center",
-    justifyContent: "center",
   },
   footerText: {
     flexShrink: 1,
