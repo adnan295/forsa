@@ -180,21 +180,7 @@ function configureExpoAndLanding(app: express.Application) {
   );
   const landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
 
-  const deleteAccountTemplatePath = path.resolve(
-    process.cwd(),
-    "server",
-    "templates",
-    "delete-account.html",
-  );
-  const deleteAccountTemplate = fs.readFileSync(deleteAccountTemplatePath, "utf-8");
-
   const appName = getAppName();
-
-  app.get("/delete-account", (_req: Request, res: Response) => {
-    const html = deleteAccountTemplate.replace(/APP_NAME_PLACEHOLDER/g, appName);
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.status(200).send(html);
-  });
 
   // Web and native use the same Expo screens and admin panel.
   app.get("/admin/login", (_req: Request, res: Response) => {
