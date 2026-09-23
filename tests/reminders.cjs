@@ -10,7 +10,7 @@ const out = path.join(root, '.reminders-test.cjs');
   await require('esbuild').build({
     stdin: {
       contents: `export {storage} from './server/storage';
-export {runReminders} from './server/reminders';
+export {runReminders, setReminderEnabled, getReminderStates} from './server/reminders';
 export {engine} from 'test-db';
 export {sent} from './push';`,
       resolveDir: root,
@@ -31,7 +31,7 @@ export {sent} from './push';`,
     }}],
   });
 
-  const { storage, runReminders, engine, sent: pushes } = require(out);
+  const { storage, runReminders, setReminderEnabled, getReminderStates, engine, sent: pushes } = require(out);
   let passed = 0;
   const check = (name, cond) => {
     assert.ok(cond, name);
@@ -107,6 +107,31 @@ export {sent} from './push';`,
     await runReminders();
     check('تنبيه الجولة المكتملة يصل للإدارة وحدها',
       (await notifs('draw_ready_admin')).map(r => r.user_id).join() === admin.id);
+
+    // مفاتيح التشغيل
+    const defaults = await getReminderStates();
+    check('كل التذكيرات مفعّلة افتراضياً دون زرع', Object.values(defaults).every(v => v === true));
+
+    // جولة جديدة فيها عتبة الاقتراب، والتذكير مطفأ
+    await engine.query(`update draws set status='completed' where id=$1`, [draw.id]);
+    const second = await storage.createDraw({ title: 'الثانية', prizeName: 'ماك', ticketPrice: 10, targetTickets: 100 });
+    await engine.query(`update draws set sold_tickets=90, status='active' where id=$1`, [second.id]);
+    await setReminderEnabled('draw_closing', false);
+
+    const closingBefore = (await notifs('draw_closing')).length;
+    await runReminders();
+    check('التذكير المطفأ لا يُرسل', (await notifs('draw_closing')).length === closingBefore);
+    check('إطفاء نوع لا يوقف الأنواع الأخرى', (await notifs('not_joined')).length > 1);
+    check('الحالة المطفأة محفوظة', (await getReminderStates()).draw_closing === false);
+
+    // إعادة التشغيل تستأنف الإرسال
+    await setReminderEnabled('draw_closing', true);
+    await runReminders();
+    check('إعادة التفعيل تستأنف الإرسال', (await notifs('draw_closing')).length > closingBefore);
+
+    // حفظ القيمة نفسها مرتين لا يكسر شيئاً
+    await setReminderEnabled('draw_closing', true);
+    check('الحفظ المكرر آمن', (await getReminderStates()).draw_closing === true);
 
     console.log(`\n${passed} فحصاً ناجحاً`);
   } finally {
