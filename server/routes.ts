@@ -688,6 +688,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (b.prizeName !== undefined) data.prizeName = b.prizeName;
       if (b.prizeDescription !== undefined) data.prizeDescription = b.prizeDescription;
       if (b.prizeImageUrl !== undefined) data.prizeImageUrl = b.prizeImageUrl;
+      if (b.bannerImageUrl !== undefined) {
+        data.bannerImageUrl = typeof b.bannerImageUrl === "string" && b.bannerImageUrl ? b.bannerImageUrl : null;
+      }
       if (b.ticketPrice !== undefined) data.ticketPrice = String(b.ticketPrice);
       if (b.targetTickets !== undefined) {
         const target = Number(b.targetTickets);

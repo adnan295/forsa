@@ -178,6 +178,19 @@ const out = path.join(root, '.commerce-test.cjs');
           assert.equal(res.status,200);assert.match(res.headers.get('content-type'),/csv/);
         }
       });
+      await test('admin draw banner image is saved, updated and cleared',async()=>{
+        const put=(id,body)=>fetch(base+'/api/admin/draws/'+id,{method:'PUT',headers:{'content-type':'application/json',cookie},body:JSON.stringify(body)});
+        const created=await post('/api/admin/draws',{title:'Banner round',prizeName:'Banner prize',ticketPrice:'10',targetTickets:5,bannerImageUrl:'data:image/png;base64,AAAA'},cookie);
+        assert.equal(created.status,200);const draw=await created.json();
+        assert.equal(draw.bannerImageUrl,'data:image/png;base64,AAAA');
+        const updated=await put(draw.id,{bannerImageUrl:'data:image/png;base64,BBBB'});assert.equal(updated.status,200);
+        assert.equal((await s.getDraw(draw.id)).bannerImageUrl,'data:image/png;base64,BBBB');
+        assert.equal((await put(draw.id,{bannerImageUrl:''})).status,200);
+        assert.equal((await s.getDraw(draw.id)).bannerImageUrl,null);
+        assert.equal((await put(draw.id,{bannerImageUrl:42})).status,200);
+        assert.equal((await s.getDraw(draw.id)).bannerImageUrl,null);
+        await s.deleteDraw(draw.id);
+      });
       await test('removed referrals and campaign endpoints are unavailable',async()=>{
         for(const route of ['/api/referral','/api/admin/campaigns']) assert.equal((await fetch(base+route,{headers:{cookie}})).status,404);
       });

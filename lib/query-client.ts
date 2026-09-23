@@ -24,7 +24,8 @@ export function getApiUrl(): string {
 
 export function buildMediaUrl(path: string | null | undefined): string | null {
   if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) return path;
+  // روابط كاملة، أو صور محلية لم تُرفع بعد (معاينة الإدارة على الموبايل والويب)
+  if (/^(https?:|data:|file:|content:|blob:|ph:)/.test(path)) return path;
   const base = getApiUrl().replace(/\/$/, "");
   const suffix = path.startsWith("/") ? path : `/${path}`;
   return `${base}${suffix}`;
