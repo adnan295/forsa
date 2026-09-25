@@ -217,6 +217,34 @@ function configureExpoAndLanding(app: express.Application) {
   app.use(express.static(path.resolve(process.cwd(), "web-build"), { index: false }));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
+  // Store listings and old links use many spellings of the public pages
+  // (/privacy, /privacy-policy/, /privacy-policy.html…); send them all to the real page
+  // instead of the app's "page not found" screen.
+  const PUBLIC_PAGE_ALIASES: Record<string, string> = {
+    privacy: "/privacy-policy",
+    "privacy-policy": "/privacy-policy",
+    privacy_policy: "/privacy-policy",
+    privacypolicy: "/privacy-policy",
+    policy: "/privacy-policy",
+    terms: "/terms",
+    "terms-of-service": "/terms",
+    "terms-and-conditions": "/terms",
+    tos: "/terms",
+    support: "/support",
+    contact: "/support",
+    "delete-account": "/delete-account",
+    "account-deletion": "/delete-account",
+    "delete-my-account": "/delete-account",
+  };
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (!["GET", "HEAD"].includes(req.method)) return next();
+    const key = req.path.toLowerCase().replace(/^\/+|\/+$/g, "").replace(/\.html?$/, "");
+    const target = PUBLIC_PAGE_ALIASES[key];
+    if (!target || target === req.path) return next();
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    res.redirect(301, target + query);
+  });
+
   const spaIndexPath = path.resolve(process.cwd(), "web-build", "index.html");
   if (fs.existsSync(spaIndexPath)) {
     app.use((req: Request, res: Response, next: NextFunction) => {
