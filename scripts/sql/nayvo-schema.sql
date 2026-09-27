@@ -262,3 +262,21 @@ CREATE TABLE IF NOT EXISTS media (
   is_private boolean DEFAULT false NOT NULL,
   created_at timestamp DEFAULT now() NOT NULL
 );
+
+-- Influencer links (/r/:slug) count visits; their coupon code attributes sales.
+CREATE TABLE IF NOT EXISTS influencers (
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  name text NOT NULL,
+  slug text NOT NULL UNIQUE,
+  coupon_code text,
+  enabled boolean DEFAULT true NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL
+);
+CREATE TABLE IF NOT EXISTS influencer_visits (
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+  influencer_id varchar NOT NULL REFERENCES influencers(id) ON DELETE CASCADE,
+  visitor_hash text NOT NULL,
+  platform text NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL
+);
+CREATE INDEX IF NOT EXISTS influencer_visits_influencer_created_idx ON influencer_visits (influencer_id, created_at);

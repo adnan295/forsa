@@ -6,7 +6,7 @@ import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
 import { pool, db } from "./db";
 import { storage, DEFAULT_TICKET_PRICE } from "./storage";
-import { insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, checkoutSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, campaignClientRequests, reviews, orders, users } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, checkoutSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, insertInfluencerSchema, updateInfluencerSchema, type VisitPlatform, campaignClientRequests, reviews, orders, users } from "@shared/schema";
 import { sendFcmNotification, sendFcmToUser } from "./firebase";
 import { sendApnsNotifications, isApnsConfigured } from "./apns";
 import { sendPushNotifications } from "./push";
@@ -1672,6 +1672,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /* ───────── المشاهير: رابط يعدّ الزيارات + كود يعدّ المبيعات ───────── */
+
+  app.get("/api/admin/influencers", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const days = Number(req.query.days);
+      const since = Number.isInteger(days) && days > 0 && days <= 3650 ? new Date(Date.now() - days * 86_400_000) : null;
+      res.json(await storage.getInfluencerStats(since));
+    } catch (error) {
+      console.error("Get influencers error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/admin/influencers", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const parsed = insertInfluencerSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message || "بيانات غير صالحة" });
+      const data = parsed.data;
+      if (await storage.getInfluencerBySlug(data.slug)) {
+        return res.status(409).json({ message: "هذا الرابط مستخدم لمشهور آخر" });
+      }
+      if (data.couponCode && (await storage.getInfluencerByCoupon(data.couponCode))) {
+        return res.status(409).json({ message: "هذا الكود مستخدم لمشهور آخر" });
+      }
+      res.json(await storage.createInfluencer(data));
+    } catch (error) {
+      console.error("Create influencer error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.patch("/api/admin/influencers/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const parsed = updateInfluencerSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message || "بيانات غير صالحة" });
+      const updated = await storage.updateInfluencer(req.params.id as string, parsed.data);
+      if (!updated) return res.status(404).json({ message: "Influencer not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Update influencer error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/admin/influencers/:id", requireAdmin as any, async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteInfluencer(req.params.id as string);
+      if (!deleted) return res.status(404).json({ message: "Influencer not found" });
+      res.json({ message: "Influencer deleted" });
+    } catch (error) {
+      console.error("Delete influencer error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.get("/api/admin/activity-log", requireAdmin as any, async (req: Request, res: Response) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
@@ -2185,6 +2240,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // رابط المشهور: يسجّل الزيارة ثم يحوّل للمتجر المناسب لجهاز الزائر.
+  // معاينات الروابط (واتساب، تيليغرام، إنستغرام…) لا تُحسب.
+  const LINK_PREVIEW_BOTS = /bot|crawl|spider|preview|facebookexternalhit|meta-external|whatsapp|telegram|slack|discord|skype|curl|wget|python|headless/i;
+  const visitorSecret = process.env.SESSION_SECRET || "nayvo-dev-visitors";
+  app.get("/r/:slug", async (req: Request, res: Response) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-Robots-Tag", "noindex");
+    const userAgent = String(req.headers["user-agent"] || "");
+    const platform: VisitPlatform = /iphone|ipad|ipod/i.test(userAgent)
+      ? "ios"
+      : /android/i.test(userAgent)
+        ? "android"
+        : "web";
+    const slug = String(req.params.slug || "").toLowerCase();
+    let destination = "/";
+    try {
+      const influencer = /^[a-z0-9_-]{1,40}$/.test(slug) ? await storage.getInfluencerBySlug(slug) : undefined;
+      if (influencer?.enabled) {
+        if (platform === "ios") destination = "https://apps.apple.com/app/id6759828874";
+        else if (platform === "android") {
+          // Play Console → الإحصاءات → مصادر الاكتساب يعرض التثبيتات حسب utm_campaign
+          const referrer = `utm_source=influencer&utm_medium=link&utm_campaign=${slug}`;
+          destination = `https://play.google.com/store/apps/details?id=today.forsa&referrer=${encodeURIComponent(referrer)}`;
+        }
+        if (req.method === "GET" && userAgent && !LINK_PREVIEW_BOTS.test(userAgent)) {
+          // بصمة غير قابلة للعكس فقط لعدّ الزوار المختلفين — لا يُحفظ عنوان IP
+          const visitorHash = crypto
+            .createHmac("sha256", visitorSecret)
+            .update(`${req.ip}|${userAgent}`)
+            .digest("hex")
+            .slice(0, 32);
+          await storage.recordInfluencerVisit(influencer.id, visitorHash, platform);
+        }
+      }
+    } catch (error) {
+      console.error("Influencer link error:", error);
+    }
+    res.redirect(302, destination);
+  });
+
   // صفحة عامة يطلبها Google Play («أمان البيانات»): خطوات حذف الحساب وما يُحذف
   app.get("/delete-account", (_req: Request, res: Response) => {
     res.send(`<!DOCTYPE html>
@@ -2294,6 +2389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <li>بيانات الطلبات والشحن: المنتجات والمبالغ، والاسم ورقم الهاتف والمدينة والعنوان</li>
         <li>إيصالات الدفع: صور إيصالات التحويل البنكي، تُحفظ بشكل خاص ونحذف منها الموقع الجغرافي وبيانات الكاميرا</li>
         <li>رمز الإشعارات الخاص بجهازك، لإرسال تنبيهات الطلبات والسحب</li>
+        <li>روابط شركائنا الترويجية: عند فتح رابط شريك نسجّل نوع جهازك (آيفون، أندرويد، كمبيوتر) وبصمة مشفّرة لا تكشف هويتك ولا نحفظ عنوان IP، فقط لعدّ الزيارات. ونعدّ الطلبات التي استُخدم فيها كود الشريك</li>
         <li>لا نستخدم إعلانات ولا أدوات تتبّع أو تحليلات من أطراف ثالثة</li>
       </ul>
     </div>

@@ -21,7 +21,8 @@
     "test:commerce": "node tests/commerce-regression.cjs",
     "test:reminders": "node tests/reminders.cjs",
     "test:social": "node tests/social-auth.cjs",
-    "test:media": "node tests/media.cjs"
+    "test:media": "node tests/media.cjs",
+    "test:influencers": "node tests/influencers.cjs"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
