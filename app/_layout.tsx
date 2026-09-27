@@ -16,6 +16,7 @@ import { ThemeProvider } from "@/lib/theme-context";
 import { setupNotificationHandlers, registerForPushNotifications } from "@/lib/push-notifications";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { applyWebRtl, WEB_RTL_PROPS } from "@/lib/rtl";
+import { getAttribution } from "@/lib/attribution";
 import {
   useFonts,
   Tajawal_400Regular,
@@ -212,6 +213,11 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  // أول فتح بعد التثبيت: نعرف من أي رابط تتبع جاء المستخدم (ريل، مشهور، إعلان)
+  useEffect(() => {
+    getAttribution();
+  }, []);
 
   if (!fontsLoaded) return null;
 

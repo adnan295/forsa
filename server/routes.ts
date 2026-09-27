@@ -6,7 +6,7 @@ import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
 import { pool, db } from "./db";
 import { storage, DEFAULT_TICKET_PRICE } from "./storage";
-import { insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, checkoutSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, insertInfluencerSchema, updateInfluencerSchema, type VisitPlatform, campaignClientRequests, reviews, orders, users } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertProductSchema, insertDrawSchema, checkoutSchema, insertPaymentMethodSchema, insertCouponSchema, updateProfileSchema, insertReviewSchema, insertSupportTicketSchema, insertCampaignClientRequestSchema, insertInfluencerSchema, updateInfluencerSchema, type VisitPlatform, type InfluencerSource, campaignClientRequests, reviews, orders, users } from "@shared/schema";
 import { sendFcmNotification, sendFcmToUser } from "./firebase";
 import { sendApnsNotifications, isApnsConfigured } from "./apns";
 import { sendPushNotifications } from "./push";
@@ -175,6 +175,46 @@ async function createSocialUser(identity: SocialIdentity, fullName?: string) {
   return (await storage.getUser(user.id))!;
 }
 
+/* ───────── نسبة الحسابات الجديدة لروابط التتبع (/r/…) ───────── */
+
+const REF_COOKIE = "nayvo_ref";
+const IOS_MATCH_WINDOW_MS = 24 * 60 * 60 * 1000;
+const visitorSecret = process.env.SESSION_SECRET || "nayvo-dev-visitors";
+
+/** بصمة غير قابلة للعكس — لا يُحفظ عنوان IP نفسه */
+function visitorFingerprint(...parts: string[]) {
+  return crypto.createHmac("sha256", visitorSecret).update(parts.join("|")).digest("hex").slice(0, 32);
+}
+
+function readRefCookie(req: Request): string | null {
+  const match = String(req.headers.cookie || "").match(new RegExp(`(?:^|;\\s*)${REF_COOKIE}=([a-z0-9_-]{1,40})(?:;|$)`));
+  return match ? match[1] : null;
+}
+
+/**
+ * ينسب حساباً جديداً للرابط الذي جاء منه: التطبيق يرسل ما عرفه عند أول فتح
+ * (Google Play أو مطابقة آيفون)، والمتصفح يحمل كوكي من فتح الرابط.
+ */
+async function attributeNewUser(req: Request, userId: string) {
+  try {
+    const ref = req.body?.ref;
+    let slug: string | null = null;
+    let source: InfluencerSource | null = null;
+    if (ref && typeof ref.slug === "string" && (ref.source === "play" || ref.source === "ios_match")) {
+      slug = ref.slug.toLowerCase();
+      source = ref.source;
+    } else {
+      slug = readRefCookie(req);
+      source = slug ? "web" : null;
+    }
+    if (!slug || !source || !/^[a-z0-9_-]{1,40}$/.test(slug)) return;
+    const influencer = await storage.getInfluencerBySlug(slug);
+    if (influencer?.enabled) await storage.attributeUser(userId, influencer.id, source);
+  } catch (error) {
+    console.error("Attribution error:", error);
+  }
+}
+
 /** يبطل ربط Apple قبل حذف الحساب (شرط مراجعة آبل) — أفضل جهد */
 async function revokeAppleIdentities(userId: string) {
   const identities = await storage.getIdentitiesForUser(userId).catch(() => []);
@@ -254,6 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } as any);
 
       await storage.logActivity("user_register", "New user registered", `User ${user.username} registered`, user.id);
+      await attributeNewUser(req, user.id);
 
       // بدون بريد مضبوط لا سبيل لإيصال الرمز، فيُفعَّل الحساب مباشرة
       // بدل أن يعلق المستخدم على شاشة تحقّق لا يصلها رمز أبداً.
@@ -435,6 +476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existing && !existing.emailVerified) await storage.setEmailVerified(existing.id);
         user = existing ? (await storage.getUser(existing.id))! : await createSocialUser(identity, fullName);
         isNewUser = !existing;
+        if (isNewUser) await attributeNewUser(req, user.id);
 
         const appleRefreshToken =
           provider === "apple" && authorizationCode ? await exchangeAppleAuthorizationCode(authorizationCode) : null;
@@ -1672,7 +1714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  /* ───────── المشاهير: رابط يعدّ الزيارات + كود يعدّ المبيعات ───────── */
+  /* ───────── روابط التتبع: زيارات وحسابات ومبيعات كل رابط ───────── */
 
   app.get("/api/admin/influencers", requireAdmin as any, async (req: Request, res: Response) => {
     try {
@@ -1691,10 +1733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message || "بيانات غير صالحة" });
       const data = parsed.data;
       if (await storage.getInfluencerBySlug(data.slug)) {
-        return res.status(409).json({ message: "هذا الرابط مستخدم لمشهور آخر" });
-      }
-      if (data.couponCode && (await storage.getInfluencerByCoupon(data.couponCode))) {
-        return res.status(409).json({ message: "هذا الكود مستخدم لمشهور آخر" });
+        return res.status(409).json({ message: "هذا الرابط مستخدم من قبل" });
       }
       res.json(await storage.createInfluencer(data));
     } catch (error) {
@@ -2240,10 +2279,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // رابط المشهور: يسجّل الزيارة ثم يحوّل للمتجر المناسب لجهاز الزائر.
+  // رابط التتبع (ريل، مشهور، إعلان…): يسجّل الزيارة ثم يحوّل للمتجر المناسب لجهاز الزائر.
   // معاينات الروابط (واتساب، تيليغرام، إنستغرام…) لا تُحسب.
   const LINK_PREVIEW_BOTS = /bot|crawl|spider|preview|facebookexternalhit|meta-external|whatsapp|telegram|slack|discord|skype|curl|wget|python|headless/i;
-  const visitorSecret = process.env.SESSION_SECRET || "nayvo-dev-visitors";
   app.get("/r/:slug", async (req: Request, res: Response) => {
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Robots-Tag", "noindex");
@@ -2260,24 +2298,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (influencer?.enabled) {
         if (platform === "ios") destination = "https://apps.apple.com/app/id6759828874";
         else if (platform === "android") {
-          // Play Console → الإحصاءات → مصادر الاكتساب يعرض التثبيتات حسب utm_campaign
-          const referrer = `utm_source=influencer&utm_medium=link&utm_campaign=${slug}`;
+          // التطبيق يقرأ utm_campaign من Google Play عند أول فتح، وPlay Console يعرض التثبيتات حسبه
+          const referrer = `utm_source=nayvo&utm_medium=link&utm_campaign=${slug}`;
           destination = `https://play.google.com/store/apps/details?id=today.forsa&referrer=${encodeURIComponent(referrer)}`;
+        } else {
+          // من يسجّل من المتصفح خلال 30 يوماً يُنسب لهذا الرابط
+          res.cookie(REF_COOKIE, slug, {
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+            sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
+            path: "/",
+          });
         }
         if (req.method === "GET" && userAgent && !LINK_PREVIEW_BOTS.test(userAgent)) {
-          // بصمة غير قابلة للعكس فقط لعدّ الزوار المختلفين — لا يُحفظ عنوان IP
-          const visitorHash = crypto
-            .createHmac("sha256", visitorSecret)
-            .update(`${req.ip}|${userAgent}`)
-            .digest("hex")
-            .slice(0, 32);
-          await storage.recordInfluencerVisit(influencer.id, visitorHash, platform);
+          const ios = userAgent.match(/OS (\d+)[_.](\d+)/);
+          await storage.recordInfluencerVisit({
+            influencerId: influencer.id,
+            visitorHash: visitorFingerprint(req.ip || "", userAgent),
+            ipHash: visitorFingerprint("ip", req.ip || ""),
+            osVersion: platform === "ios" && ios ? `${ios[1]}.${ios[2]}` : null,
+            platform,
+          });
         }
       }
     } catch (error) {
-      console.error("Influencer link error:", error);
+      console.error("Tracking link error:", error);
     }
     res.redirect(302, destination);
+  });
+
+  // التطبيق على آيفون يسأل مرة وحدة عند أول فتح: هل فُتح رابط من هالشبكة ونفس نسخة iOS مؤخراً؟
+  app.get("/api/attribution/ios", async (req: Request, res: Response) => {
+    const os = String(req.query.os || "").match(/^(\d{1,2})\.(\d{1,2})/);
+    if (!os) return res.json({ slug: null });
+    try {
+      const match = await storage.matchIosVisit(visitorFingerprint("ip", req.ip || ""), `${os[1]}.${os[2]}`, IOS_MATCH_WINDOW_MS);
+      res.json({ slug: match?.slug ?? null });
+    } catch (error) {
+      console.error("iOS attribution error:", error);
+      res.json({ slug: null });
+    }
   });
 
   // صفحة عامة يطلبها Google Play («أمان البيانات»): خطوات حذف الحساب وما يُحذف
@@ -2389,7 +2450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <li>بيانات الطلبات والشحن: المنتجات والمبالغ، والاسم ورقم الهاتف والمدينة والعنوان</li>
         <li>إيصالات الدفع: صور إيصالات التحويل البنكي، تُحفظ بشكل خاص ونحذف منها الموقع الجغرافي وبيانات الكاميرا</li>
         <li>رمز الإشعارات الخاص بجهازك، لإرسال تنبيهات الطلبات والسحب</li>
-        <li>روابط شركائنا الترويجية: عند فتح رابط شريك نسجّل نوع جهازك (آيفون، أندرويد، كمبيوتر) وبصمة مشفّرة لا تكشف هويتك ولا نحفظ عنوان IP، فقط لعدّ الزيارات. ونعدّ الطلبات التي استُخدم فيها كود الشريك</li>
+        <li>روابطنا الترويجية: عند فتح أحد روابطنا (من إعلان أو ستوري أو شريك) نسجّل نوع جهازك وبصمة مشفّرة لا تكشف هويتك ولا نحفظ عنوان IP، لعدّ الزيارات. وإذا أنشأت حساباً بعدها نربطه بهذا الرابط لنعرف أي إعلان جاء بالطلبات. لا نشارك هذا مع أي جهة</li>
         <li>لا نستخدم إعلانات ولا أدوات تتبّع أو تحليلات من أطراف ثالثة</li>
       </ul>
     </div>

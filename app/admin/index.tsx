@@ -44,7 +44,7 @@ const TABS: { key: AdminTab; label: string; icon: string }[] = [
   { key: "draws", label: "جولات السحب", icon: "gift" },
   { key: "payments", label: "الحسابات البنكية", icon: "business" },
   { key: "coupons", label: "الكوبونات", icon: "pricetag" },
-  { key: "influencers", label: "المشاهير", icon: "megaphone" },
+  { key: "influencers", label: "روابط التتبع", icon: "link" },
   { key: "activity", label: "السجل", icon: "time" },
   { key: "settings", label: "الإعدادات", icon: "settings" },
 ];
@@ -2419,22 +2419,22 @@ function CouponsSection() {
   );
 }
 
-/* ───────── المشاهير: مين جاب زيارات ومبيعات أكتر ───────── */
+/* ───────── روابط التتبع: كل ريل أو مشهور أو إعلان كم زيارة وحساب ومبيعة جاب ───────── */
 
 type InfluencerStats = {
   id: string;
   name: string;
   slug: string;
-  couponCode: string | null;
   enabled: boolean;
   visits: number;
   visitors: number;
   visitorsByPlatform: { ios: number; android: number; web: number };
+  signups: number;
+  estimatedSignups: number;
   orders: number;
   pendingOrders: number;
   customers: number;
   sales: number;
-  discounts: number;
 };
 
 const INFLUENCER_PERIODS = [
@@ -2494,8 +2494,8 @@ function InfluencersSection() {
   // الأعلى مبيعات أولاً، وعند التساوي الأكثر زواراً
   const list = [...(data || [])].sort((a, b) => b.sales - a.sales || b.visitors - a.visitors);
   const totals = list.reduce(
-    (t, i) => ({ visitors: t.visitors + i.visitors, orders: t.orders + i.orders, sales: t.sales + i.sales }),
-    { visitors: 0, orders: 0, sales: 0 },
+    (t, i) => ({ visitors: t.visitors + i.visitors, signups: t.signups + i.signups, sales: t.sales + i.sales }),
+    { visitors: 0, signups: 0, sales: 0 },
   );
 
   return (
@@ -2507,14 +2507,14 @@ function InfluencersSection() {
         ListHeaderComponent={
           <View>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>المشاهير ({list.length})</Text>
+              <Text style={styles.sectionTitle}>روابط التتبع ({list.length})</Text>
               <Pressable onPress={() => setShowCreate(true)} style={styles.addBtn}>
                 <Ionicons name="add" size={20} color="#fff" />
                 <Text style={styles.addBtnText}>جديد</Text>
               </Pressable>
             </View>
             <Text style={infl.hint}>
-              كل مشهور إلو رابط بيعدّ الزيارات، وكود خصم بيعدّ المبيعات. المبيعات بتنحسب بس بعد ما تأكّد الدفع.
+              اعمل رابط لكل ريل أو مشهور أو إعلان. الرابط بيعدّ الزيارات، واللي بيعمل حساب بعد ما يفتحه بتنحسب مشترياته المؤكدة لهالرابط. آيفون تقديري، أندرويد والمتصفح دقيق.
             </Text>
             <View style={infl.periods}>
               {INFLUENCER_PERIODS.map((p) => (
@@ -2532,14 +2532,14 @@ function InfluencersSection() {
             {list.length > 0 && (
               <View style={infl.totals}>
                 <InfluencerStat label="الزوار" value={String(totals.visitors)} />
-                <InfluencerStat label="طلبات مؤكدة" value={String(totals.orders)} />
+                <InfluencerStat label="حسابات جديدة" value={String(totals.signups)} />
                 <InfluencerStat label="المبيعات" value={formatMoney(totals.sales)} strong />
               </View>
             )}
           </View>
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>ما في مشاهير لسا. اضغط «جديد» وأنشئ رابط وكود لأول مشهور.</Text>
+          <Text style={styles.emptyText}>ما في روابط لسا. اضغط «جديد» واعمل رابط لأول ريل أو مشهور.</Text>
         }
         renderItem={({ item, index }) => {
           const link = influencerLink(item.slug);
@@ -2557,31 +2557,25 @@ function InfluencersSection() {
                 />
               </View>
 
-              <Pressable onPress={() => copy(link, "انسخ الرابط وابعته للمشهور")} style={infl.copyRow} accessibilityRole="button" accessibilityLabel="نسخ الرابط">
+              <Pressable onPress={() => copy(link, "حطّه بزر الإعلان أو بملصق الستوري أو بالبايو")} style={infl.copyRow} accessibilityRole="button" accessibilityLabel="نسخ الرابط">
                 <Ionicons name="link" size={16} color={Colors.light.accent} />
                 <Text style={infl.copyText} numberOfLines={1}>{link.replace(/^https?:\/\//, "")}</Text>
                 <Ionicons name="copy-outline" size={16} color={Colors.light.textMuted} />
               </Pressable>
-              {item.couponCode ? (
-                <Pressable onPress={() => copy(item.couponCode!, "كود الخصم")} style={infl.copyRow} accessibilityRole="button" accessibilityLabel="نسخ الكود">
-                  <Ionicons name="pricetag" size={16} color={Colors.light.goldText} />
-                  <Text style={[infl.copyText, infl.code]}>{item.couponCode}</Text>
-                  <Ionicons name="copy-outline" size={16} color={Colors.light.textMuted} />
-                </Pressable>
-              ) : (
-                <Text style={infl.noCode}>بدون كود خصم — المبيعات ما رح تنحسب إلو</Text>
-              )}
 
               <View style={infl.grid}>
                 <InfluencerStat label="الزوار" value={String(item.visitors)} />
-                <InfluencerStat label="طلبات مؤكدة" value={String(item.orders)} />
+                <InfluencerStat label="حسابات جديدة" value={String(item.signups)} />
                 <InfluencerStat label="المبيعات" value={formatMoney(item.sales)} strong />
               </View>
               <View style={infl.grid}>
+                <InfluencerStat label="طلبات مؤكدة" value={String(item.orders)} />
+                <InfluencerStat label="زبائن اشترو" value={String(item.customers)} />
                 <InfluencerStat label="بانتظار الدفع" value={String(item.pendingOrders)} />
-                <InfluencerStat label="زبائن" value={String(item.customers)} />
-                <InfluencerStat label="قيمة الخصم" value={formatMoney(item.discounts)} />
               </View>
+              {item.estimatedSignups > 0 && (
+                <Text style={infl.note}>منها {item.estimatedSignups} حساب آيفون (تقديري)</Text>
+              )}
 
               <View style={infl.platforms}>
                 <View style={infl.platform}>
@@ -2600,7 +2594,7 @@ function InfluencersSection() {
 
               <Pressable
                 onPress={() =>
-                  Alert.alert("حذف", `حذف "${item.name}"؟ الرابط بيوقف، وكود الخصم بيضل بقسم الكوبونات.`, [
+                  Alert.alert("حذف", `حذف "${item.name}"؟ الرابط بيوقف وأرقامه بتنمسح.`, [
                     { text: "إلغاء", style: "cancel" },
                     { text: "حذف", style: "destructive", onPress: () => deleteMutation.mutate(item.id) },
                   ])
@@ -2631,23 +2625,19 @@ function InfluencerStat({ label, value, strong }: { label: string; value: string
 function CreateInfluencerModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
-  const [code, setCode] = useState("");
-  const [discount, setDiscount] = useState("10");
-
-  const reset = () => { setName(""); setSlug(""); setCode(""); setDiscount("10"); };
 
   const mutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: { name: string; slug: string }) => {
       const res = await apiRequest("POST", "/api/admin/influencers", data);
       return res.json();
     },
     onSuccess: (created: { slug: string }) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       invalidateInfluencers();
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/coupons"] });
       onClose();
-      reset();
-      Alert.alert("✅ تم", `ابعت للمشهور هالرابط:\n${influencerLink(created.slug)}`);
+      setName("");
+      setSlug("");
+      Alert.alert("✅ تم", `الرابط جاهز:\n${influencerLink(created.slug)}`);
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
@@ -2657,42 +2647,28 @@ function CreateInfluencerModal({ visible, onClose }: { visible: boolean; onClose
       <View style={modalStyles.overlay}>
         <View style={modalStyles.container}>
           <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>مشهور جديد</Text>
+            <Text style={modalStyles.title}>رابط تتبع جديد</Text>
             <Pressable onPress={onClose}><Ionicons name="close" size={24} color={Colors.light.text} /></Pressable>
           </View>
           <ScrollView contentContainerStyle={modalStyles.scrollContent}>
-            <ModalInput label="الاسم *" value={name} onChangeText={setName} placeholder="سامر" />
+            <ModalInput label="الاسم *" value={name} onChangeText={setName} placeholder="ريل الساعات، أو المشهور سامر" />
             <ModalInput
               label="اسم الرابط (إنجليزي) *"
               value={slug}
-              onChangeText={(t) => {
-                const clean = t.toLowerCase().replace(/[^a-z0-9_-]/g, "");
-                // الكود بيمشي مع الرابط تلقائياً لحد ما المدير يغيّره
-                if (!code || code === slug.toUpperCase()) setCode(clean.toUpperCase());
-                setSlug(clean);
-              }}
-              placeholder="samer"
+              onChangeText={(t) => setSlug(t.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9_-]/g, ""))}
+              placeholder="reel-watch"
             />
             {slug.length > 0 && <Text style={infl.preview}>{influencerLink(slug).replace(/^https?:\/\//, "")}</Text>}
-            <ModalInput
-              label="كود الخصم (لعدّ المبيعات)"
-              value={code}
-              onChangeText={(t) => setCode(t.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
-              placeholder="SAMER"
-            />
-            <ModalInput label="نسبة الخصم (%)" value={discount} onChangeText={setDiscount} placeholder="10" keyboardType="number-pad" />
-            <Text style={infl.hint}>إذا الكود موجود من قبل بقسم الكوبونات، بينربط بالمشهور بنفس خصمه.</Text>
+            <Text style={infl.hint}>لكل ريل رابط مختلف. حطّه بزر الإعلان الممول، أو بملصق الرابط بالستوري، أو بالبايو.</Text>
             <Pressable
               onPress={() => {
                 if (!name.trim() || slug.length < 2) { Alert.alert("خطأ", "اكتب الاسم واسم الرابط (حرفين على الأقل)"); return; }
-                const percent = Number(discount);
-                if (code && (!Number.isInteger(percent) || percent < 1 || percent > 100)) { Alert.alert("خطأ", "نسبة الخصم بين 1 و100"); return; }
-                mutation.mutate({ name: name.trim(), slug, couponCode: code || null, discountPercent: code ? percent : undefined });
+                mutation.mutate({ name: name.trim(), slug });
               }}
               disabled={mutation.isPending}
               style={[modalStyles.createBtn, mutation.isPending && { opacity: 0.6 }]}
             >
-              {mutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>إنشاء</Text>}
+              {mutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={modalStyles.createBtnText}>إنشاء الرابط</Text>}
             </Pressable>
           </ScrollView>
         </View>
@@ -2718,8 +2694,7 @@ const infl = StyleSheet.create({
   name: { flex: 1, fontFamily: "Tajawal_700Bold", fontSize: 17, color: Colors.light.text, textAlign: "right", writingDirection: "rtl" },
   copyRow: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: Colors.light.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
   copyText: { flex: 1, fontFamily: "Tajawal_500Medium", fontSize: 13, color: Colors.light.text, textAlign: "left", writingDirection: "ltr" },
-  code: { fontFamily: "Tajawal_700Bold", letterSpacing: 1, color: Colors.light.goldText },
-  noCode: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.warning, textAlign: "right", writingDirection: "rtl" },
+  note: { fontFamily: "Tajawal_400Regular", fontSize: 12, color: Colors.light.textMuted, textAlign: "right", writingDirection: "rtl" },
   grid: { flexDirection: "row" },
   stat: { flex: 1, alignItems: "center", gap: 2 },
   statValue: { fontFamily: "Tajawal_700Bold", fontSize: 17, color: Colors.light.text },

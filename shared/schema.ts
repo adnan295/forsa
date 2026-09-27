@@ -73,6 +73,9 @@ export const users = pgTable("users", {
   fcmToken: text("fcm_token"),
   apnToken: text("apn_token"),
   isSuspended: boolean("is_suspended").notNull().default(false),
+  /** المشهور الذي جاء منه الحساب (رابط /r/…)، وطريقة الربط */
+  influencerId: varchar("influencer_id"),
+  influencerSource: text("influencer_source"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -329,8 +332,8 @@ export const userIdentities = pgTable(
 );
 
 /**
- * المشاهير/المسوّقون: لكل واحد رابط خاص (nayvo.store/r/slug) يعدّ الزيارات،
- * وكود خصم خاص تُنسب له المبيعات التي استُخدم فيها.
+ * المشاهير/المسوّقون: لكل واحد رابط خاص (nayvo.store/r/slug) يعدّ الزيارات.
+ * من يفتح الرابط ثم ينشئ حساباً يُنسب للمشهور، وتُحسب له مشترياته المؤكدة.
  */
 export const influencers = pgTable("influencers", {
   id: varchar("id")
@@ -338,12 +341,14 @@ export const influencers = pgTable("influencers", {
     .default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
-  couponCode: text("coupon_code"),
   enabled: boolean("enabled").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-/** كل فتحة للرابط — الزائر محفوظ كبصمة مشفّرة فقط لعدّ الزوار المختلفين */
+/**
+ * كل فتحة للرابط. الزائر محفوظ كبصمات مشفّرة فقط: visitorHash لعدّ الزوار المختلفين،
+ * وipHash مع نسخة iOS لربط من ثبّت التطبيق على آيفون بعد فتح الرابط.
+ */
 export const influencerVisits = pgTable(
   "influencer_visits",
   {
@@ -354,6 +359,8 @@ export const influencerVisits = pgTable(
       .notNull()
       .references(() => influencers.id, { onDelete: "cascade" }),
     visitorHash: text("visitor_hash").notNull(),
+    ipHash: text("ip_hash"),
+    osVersion: text("os_version"),
     platform: text("platform").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -541,14 +548,6 @@ export const insertInfluencerSchema = z.object({
     .trim()
     .toLowerCase()
     .regex(/^[a-z0-9][a-z0-9_-]{1,39}$/, "الرابط بالأحرف الإنجليزية والأرقام فقط (2-40 حرف)"),
-  couponCode: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(/^[A-Z0-9_-]{2,50}$/, "الكود بالأحرف الإنجليزية والأرقام فقط")
-    .nullable()
-    .optional(),
-  discountPercent: z.number().int().min(1).max(100).optional(),
 });
 
 export const updateInfluencerSchema = z.object({
@@ -634,6 +633,8 @@ export type Coupon = typeof coupons.$inferSelect;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type Influencer = typeof influencers.$inferSelect;
 export type VisitPlatform = "ios" | "android" | "web";
+/** كيف انربط الحساب بالمشهور: متصفح، Google Play، أو مطابقة تقديرية على آيفون */
+export type InfluencerSource = "web" | "play" | "ios_match";
 export type ActivityLogEntry = typeof activityLog.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type AdminNotification = typeof adminNotifications.$inferSelect;
