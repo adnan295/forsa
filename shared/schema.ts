@@ -9,6 +9,7 @@ import {
   timestamp,
   pgEnum,
   uniqueIndex,
+  index,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -327,6 +328,38 @@ export const userIdentities = pgTable(
   (t) => [uniqueIndex("user_identities_provider_subject_idx").on(t.provider, t.subject)],
 );
 
+/**
+ * المشاهير/المسوّقون: لكل واحد رابط خاص (nayvo.store/r/slug) يعدّ الزيارات،
+ * وكود خصم خاص تُنسب له المبيعات التي استُخدم فيها.
+ */
+export const influencers = pgTable("influencers", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  couponCode: text("coupon_code"),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/** كل فتحة للرابط — الزائر محفوظ كبصمة مشفّرة فقط لعدّ الزوار المختلفين */
+export const influencerVisits = pgTable(
+  "influencer_visits",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    influencerId: varchar("influencer_id")
+      .notNull()
+      .references(() => influencers.id, { onDelete: "cascade" }),
+    visitorHash: text("visitor_hash").notNull(),
+    platform: text("platform").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("influencer_visits_influencer_created_idx").on(t.influencerId, t.createdAt)],
+);
+
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: varchar("id")
     .primaryKey()
@@ -501,6 +534,28 @@ export const insertCouponSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
+export const insertInfluencerSchema = z.object({
+  name: z.string().trim().min(1, "اكتب اسم المشهور").max(80),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9][a-z0-9_-]{1,39}$/, "الرابط بالأحرف الإنجليزية والأرقام فقط (2-40 حرف)"),
+  couponCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9_-]{2,50}$/, "الكود بالأحرف الإنجليزية والأرقام فقط")
+    .nullable()
+    .optional(),
+  discountPercent: z.number().int().min(1).max(100).optional(),
+});
+
+export const updateInfluencerSchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  enabled: z.boolean().optional(),
+});
+
 /** رقم موبايل سوري يُحفظ بصيغة 09xxxxxxxx */
 const syrianPhone = z
   .string()
@@ -577,6 +632,8 @@ export type PaymentMethod = typeof paymentMethods.$inferSelect;
 export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
 export type Coupon = typeof coupons.$inferSelect;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
+export type Influencer = typeof influencers.$inferSelect;
+export type VisitPlatform = "ios" | "android" | "web";
 export type ActivityLogEntry = typeof activityLog.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type AdminNotification = typeof adminNotifications.$inferSelect;

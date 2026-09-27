@@ -254,6 +254,7 @@ function configureExpoAndLanding(app: express.Application) {
         req.path.startsWith("/api") ||
         req.path.startsWith("/uploads") ||
         req.path.startsWith("/assets") ||
+        req.path.startsWith("/r/") ||
         ["/privacy-policy", "/terms", "/support", "/delete-account"].includes(req.path)
       ) {
         return next();
