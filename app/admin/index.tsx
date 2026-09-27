@@ -51,7 +51,7 @@ const TABS: { key: AdminTab; label: string; icon: string }[] = [
 
 export default function AdminPanel() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const { width } = useWindowDimensions();
   /** القائمة الجانبية على الشاشات العريضة، وشريط أفقي على الجوال */
@@ -61,6 +61,9 @@ export default function AdminPanel() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setActiveTab(tab);
   };
+
+  // على الويب الصفحة بتنفتح مباشرة (nayvo.store/admin) قبل ما يوصل الحساب من السيرفر
+  if (authLoading) return <LoadingView />;
 
   if (!user || user.role !== "admin") {
     return (
