@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
+import { getAttribution } from "@/lib/attribution";
 import type { SocialCredential } from "@/lib/social-auth";
 import { fetch } from "expo/fetch";
 
@@ -69,16 +70,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function socialLogin(credential: SocialCredential) {
-    const res = await apiRequest("POST", "/api/auth/social", credential);
+    const ref = await getAttribution();
+    const res = await apiRequest("POST", "/api/auth/social", ref ? { ...credential, ref } : credential);
     const data = await res.json();
     setUser(data);
   }
 
   async function register(username: string, email: string, password: string): Promise<VerificationResult> {
+    const ref = await getAttribution();
     const res = await apiRequest("POST", "/api/auth/register", {
       username,
       email,
       password,
+      ...(ref ? { ref } : {}),
     });
     const data = await res.json();
     return data as VerificationResult;

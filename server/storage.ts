@@ -22,6 +22,7 @@ import {
   type SocialProvider,
   type Influencer,
   type VisitPlatform,
+  type InfluencerSource,
   users,
   products,
   draws,
@@ -961,7 +962,7 @@ export class DatabaseStorage {
     return coupon;
   }
 
-  /* ───────── المشاهير: زيارات الرابط ومبيعات الكود ───────── */
+  /* ───────── روابط التتبع: زيارات الرابط والحسابات والمبيعات التي جاءت منه ───────── */
 
   async getInfluencers(): Promise<Influencer[]> {
     return this.db.select().from(influencers).orderBy(desc(influencers.createdAt));
@@ -972,32 +973,9 @@ export class DatabaseStorage {
     return row || undefined;
   }
 
-  async getInfluencerByCoupon(code: string): Promise<Influencer | undefined> {
-    const [row] = await this.db.select().from(influencers).where(eq(influencers.couponCode, code.toUpperCase()));
-    return row || undefined;
-  }
-
-  /** ينشئ المشهور، وكود خصمه إن لم يكن موجوداً مسبقاً بقسم الكوبونات */
-  async createInfluencer(data: {
-    name: string;
-    slug: string;
-    couponCode?: string | null;
-    discountPercent?: number;
-  }): Promise<Influencer> {
-    return this.db.transaction(async (tx) => {
-      const couponCode = data.couponCode || null;
-      if (couponCode) {
-        const [existing] = await tx.select({ id: coupons.id }).from(coupons).where(eq(coupons.code, couponCode));
-        if (!existing) {
-          await tx.insert(coupons).values({ code: couponCode, discountPercent: data.discountPercent ?? 5, maxUses: 1_000_000 });
-        }
-      }
-      const [created] = await tx
-        .insert(influencers)
-        .values({ name: data.name, slug: data.slug, couponCode })
-        .returning();
-      return created;
-    });
+  async createInfluencer(data: { name: string; slug: string }): Promise<Influencer> {
+    const [created] = await this.db.insert(influencers).values(data).returning();
+    return created;
   }
 
   async updateInfluencer(id: string, data: { name?: string; enabled?: boolean }): Promise<Influencer | undefined> {
@@ -1005,19 +983,56 @@ export class DatabaseStorage {
     return updated || undefined;
   }
 
-  /** يحذف المشهور وزياراته؛ كوده يبقى بقسم الكوبونات والطلبات تحتفظ به */
+  /** يحذف الرابط وزياراته؛ الحسابات تبقى بلا نسبة */
   async deleteInfluencer(id: string): Promise<boolean> {
     const [deleted] = await this.db.delete(influencers).where(eq(influencers.id, id)).returning();
     return !!deleted;
   }
 
-  async recordInfluencerVisit(influencerId: string, visitorHash: string, platform: VisitPlatform): Promise<void> {
-    await this.db.insert(influencerVisits).values({ influencerId, visitorHash, platform });
+  async recordInfluencerVisit(visit: {
+    influencerId: string;
+    visitorHash: string;
+    ipHash: string;
+    osVersion: string | null;
+    platform: VisitPlatform;
+  }): Promise<void> {
+    await this.db.insert(influencerVisits).values(visit);
   }
 
   /**
-   * أرقام كل مشهور منذ تاريخ معيّن (أو منذ البداية):
-   * الزيارات والزوار المختلفون حسب الجهاز، والطلبات بكوده — المؤكدة الدفع تُحسب مبيعات.
+   * آيفون لا يمرّر مصدر التثبيت، فنبحث عن آخر فتحة رابط على آيفون من نفس الشبكة
+   * خلال المدة المحددة، ونفضّل نفس نسخة iOS (سفاري بـ iOS 26 يثبّت النسخة بـ 18.6
+   * فلا نشترطها) — نسبة تقديرية.
+   */
+  async matchIosVisit(ipHash: string, osVersion: string, withinMs: number): Promise<Influencer | undefined> {
+    const [row] = await this.db
+      .select({ influencer: influencers })
+      .from(influencerVisits)
+      .innerJoin(influencers, eq(influencers.id, influencerVisits.influencerId))
+      .where(
+        and(
+          eq(influencerVisits.platform, "ios"),
+          eq(influencerVisits.ipHash, ipHash),
+          eq(influencers.enabled, true),
+          gte(influencerVisits.createdAt, new Date(Date.now() - withinMs)),
+        ),
+      )
+      .orderBy(sql`(${influencerVisits.osVersion} = ${osVersion}) desc nulls last`, desc(influencerVisits.createdAt))
+      .limit(1);
+    return row?.influencer;
+  }
+
+  /** ينسب حساباً جديداً لرابط — مرة واحدة فقط، أول رابط جاء منه */
+  async attributeUser(userId: string, influencerId: string, source: InfluencerSource): Promise<void> {
+    await this.db
+      .update(users)
+      .set({ influencerId, influencerSource: source })
+      .where(and(eq(users.id, userId), isNull(users.influencerId)));
+  }
+
+  /**
+   * أرقام كل رابط منذ تاريخ معيّن (أو منذ البداية): الزيارات والزوار حسب الجهاز،
+   * الحسابات الجديدة، وطلبات هذه الحسابات — المؤكدة الدفع تُحسب مبيعات.
    */
   async getInfluencerStats(since: Date | null) {
     const list = await this.getInfluencers();
@@ -1031,51 +1046,59 @@ export class DatabaseStorage {
         ios: sql<number>`count(distinct case when ${influencerVisits.platform} = 'ios' then ${influencerVisits.visitorHash} end)`.mapWith(Number),
         android: sql<number>`count(distinct case when ${influencerVisits.platform} = 'android' then ${influencerVisits.visitorHash} end)`.mapWith(Number),
         web: sql<number>`count(distinct case when ${influencerVisits.platform} = 'web' then ${influencerVisits.visitorHash} end)`.mapWith(Number),
-        lastVisitAt: sql<string | null>`max(${influencerVisits.createdAt})`,
       })
       .from(influencerVisits)
       .where(since ? gte(influencerVisits.createdAt, since) : undefined)
       .groupBy(influencerVisits.influencerId);
 
-    const codes = list.map((i) => i.couponCode).filter((c): c is string => !!c);
+    const signupRows = await this.db
+      .select({
+        influencerId: users.influencerId,
+        signups: count(),
+        estimated: sql<number>`count(*) filter (where ${users.influencerSource} = 'ios_match')`.mapWith(Number),
+      })
+      .from(users)
+      .where(and(sql`${users.influencerId} is not null`, since ? gte(users.createdAt, since) : undefined))
+      .groupBy(users.influencerId);
+
     const confirmed = sql`${orders.paymentStatus} = 'confirmed'`;
-    const orderRows = codes.length
-      ? await this.db
-          .select({
-            couponCode: orders.couponCode,
-            orders: sql<number>`count(*) filter (where ${confirmed})`.mapWith(Number),
-            pendingOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} in ('pending_payment', 'pending_review'))`.mapWith(Number),
-            customers: sql<number>`count(distinct ${orders.userId}) filter (where ${confirmed})`.mapWith(Number),
-            sales: sql<number>`coalesce(sum(${orders.totalAmount} - ${orders.deliveryFee}) filter (where ${confirmed}), 0)`.mapWith(Number),
-            discounts: sql<number>`coalesce(sum(${orders.discountAmount}) filter (where ${confirmed}), 0)`.mapWith(Number),
-          })
-          .from(orders)
-          .where(
-            and(
-              inArray(orders.couponCode, codes),
-              ne(orders.status, "refunded"),
-              since ? gte(orders.createdAt, since) : undefined,
-            ),
-          )
-          .groupBy(orders.couponCode)
-      : [];
+    const orderRows = await this.db
+      .select({
+        influencerId: users.influencerId,
+        orders: sql<number>`count(*) filter (where ${confirmed})`.mapWith(Number),
+        pendingOrders: sql<number>`count(*) filter (where ${orders.paymentStatus} in ('pending_payment', 'pending_review'))`.mapWith(Number),
+        customers: sql<number>`count(distinct ${orders.userId}) filter (where ${confirmed})`.mapWith(Number),
+        sales: sql<number>`coalesce(sum(${orders.totalAmount} - ${orders.deliveryFee}) filter (where ${confirmed}), 0)`.mapWith(Number),
+      })
+      .from(orders)
+      .innerJoin(users, eq(users.id, orders.userId))
+      .where(
+        and(
+          sql`${users.influencerId} is not null`,
+          ne(orders.status, "refunded"),
+          since ? gte(orders.createdAt, since) : undefined,
+        ),
+      )
+      .groupBy(users.influencerId);
 
     const visitsBy = new Map(visitRows.map((r) => [r.influencerId, r]));
-    const ordersBy = new Map(orderRows.map((r) => [r.couponCode, r]));
+    const signupsBy = new Map(signupRows.map((r) => [r.influencerId, r]));
+    const ordersBy = new Map(orderRows.map((r) => [r.influencerId, r]));
     return list.map((influencer) => {
       const v = visitsBy.get(influencer.id);
-      const o = influencer.couponCode ? ordersBy.get(influencer.couponCode) : undefined;
+      const u = signupsBy.get(influencer.id);
+      const o = ordersBy.get(influencer.id);
       return {
         ...influencer,
         visits: v?.visits ?? 0,
         visitors: v?.visitors ?? 0,
         visitorsByPlatform: { ios: v?.ios ?? 0, android: v?.android ?? 0, web: v?.web ?? 0 },
-        lastVisitAt: v?.lastVisitAt ?? null,
+        signups: u?.signups ?? 0,
+        estimatedSignups: u?.estimated ?? 0,
         orders: o?.orders ?? 0,
         pendingOrders: o?.pendingOrders ?? 0,
         customers: o?.customers ?? 0,
         sales: Math.round((o?.sales ?? 0) * 100) / 100,
-        discounts: Math.round((o?.discounts ?? 0) * 100) / 100,
       };
     });
   }
