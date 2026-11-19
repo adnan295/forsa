@@ -1825,7 +1825,7 @@ function DrawsSection() {
     onSuccess: (data) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
-        "تم اختيار الفائز! 🏆",
+        "تم اختيار الفائز!",
         `الفائز: ${data.winner.username}\nالتذكرة: ${data.ticket.ticketNumber}` +
           (data.nextDraw ? `\n\nتم تفعيل الجولة التالية: ${data.nextDraw.title}` : "\n\nما في جولة تالية مجدولة"),
       );
@@ -2640,7 +2640,7 @@ function CreateInfluencerModal({ visible, onClose }: { visible: boolean; onClose
       onClose();
       setName("");
       setSlug("");
-      Alert.alert("✅ تم", `الرابط جاهز:\n${influencerLink(created.slug)}`);
+      Alert.alert("تم", `الرابط جاهز:\n${influencerLink(created.slug)}`);
     },
     onError: (err: any) => Alert.alert("خطأ", err.message),
   });
@@ -3196,7 +3196,7 @@ function AccountSettingsSection() {
     mutationFn: (data: any) => apiRequest("PUT", "/api/admin/account-settings", data),
     onSuccess: () => {
       refreshUser();
-      Alert.alert("✅ تم", "تم تحديث الإعدادات بنجاح");
+      Alert.alert("تم", "تم تحديث الإعدادات بنجاح");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -3209,7 +3209,7 @@ function AccountSettingsSection() {
   const createAdminMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/admin/create-admin", data),
     onSuccess: () => {
-      Alert.alert("✅ تم", "تم إنشاء حساب الأدمن بنجاح");
+      Alert.alert("تم", "تم إنشاء حساب الأدمن بنجاح");
       setNewAdminEmail("");
       setNewAdminUsername("");
       setNewAdminPassword("");

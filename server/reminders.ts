@@ -103,7 +103,7 @@ async function yourChances(): Promise<number> {
   let sent = 0;
   for (const row of counts) {
     if (already.has(row.userId)) continue;
-    sent += await send([row.userId], "your_chances", "فرصك في السحب 🎟️",
+    sent += await send([row.userId], "your_chances", "فرصك في السحب",
       `لديك ${row.n} ${row.n === 1 ? "فرصة" : "فرص"} في سحب ${draw.prizeName}`, draw.id);
   }
   return sent;
@@ -125,7 +125,7 @@ async function notJoined(): Promise<number> {
   const ids = everyone
     .filter(u => u.role !== "admin" && !joined.has(u.id) && !already.has(u.id))
     .map(u => u.id);
-  return send(ids, "not_joined", "ما زال بإمكانك المشاركة 🎁",
+  return send(ids, "not_joined", "ما زال بإمكانك المشاركة",
     `كل عملية شراء تمنحك فرصاً في سحب ${draw.prizeName}`, draw.id);
 }
 
@@ -142,7 +142,7 @@ async function drawReadyForAdmin(): Promise<number> {
     // يتكرر يومياً حتى يُجرى السحب، لأن تجاهله يعطّل الجولة التالية
     const already = await recentlyNotified("draw_ready_admin", draw.id, 24);
     const ids = admins.filter(a => !already.has(a.id)).map(a => a.id);
-    sent += await send(ids, "draw_ready_admin", "جولة مكتملة تنتظر السحب 🔔",
+    sent += await send(ids, "draw_ready_admin", "جولة مكتملة تنتظر السحب",
       `${draw.title} — ${draw.prizeName} اكتمل عدد تذاكرها ولم يُجرَ السحب بعد`, draw.id);
   }
   return sent;
@@ -165,7 +165,7 @@ async function receiptDue(): Promise<number> {
   for (const order of stale) {
     if (already.has(order.userId)) continue;
     already.add(order.userId); // طلبان معلّقان لنفس المستخدم يعنيان تذكيراً واحداً
-    sent += await send([order.userId], "receipt_due", "طلبك بانتظار الإيصال 🧾",
+    sent += await send([order.userId], "receipt_due", "طلبك بانتظار الإيصال",
       "ارفع إيصال التحويل لتأكيد طلبك واحتساب فرصك");
   }
   return sent;
