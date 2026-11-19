@@ -209,6 +209,10 @@ function configureExpoAndLanding(app: express.Application) {
       return serveExpoManifest(platform, res);
     }
 
+    // المتصفح على الصفحة الرئيسية بيشوف صفحة الهبوط؛ المتجر نفسه على /products
+    if (req.path === "/" && ["GET", "HEAD"].includes(req.method)) {
+      return serveLandingPage({ req, res, landingPageTemplate, appName });
+    }
 
     next();
   });
