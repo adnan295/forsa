@@ -8,3 +8,5 @@ Do not overwrite shared UI with legacy campaign screens or edit generated build 
 The user explicitly authorized deleting legacy application data on 2026-09-22. See RELEASE.md for the reset procedure. Back up first, verify the exact app database target, and preserve signing assets, service secrets and backups. Do not require preserving old orders/tickets as a release prerequisite.
 Validate changes locally; report separately code committed, builds tested, and releases deployed.
 
+
+Always reply to the owner in Arabic (Syrian dialect is fine). Never answer in English, whatever language the question or the tooling output is in.
