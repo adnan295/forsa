@@ -751,7 +751,7 @@ export default function CheckoutScreen() {
                 <Text style={[styles.totalRowValue, { color: Colors.light.accentDark }]}>
                   {expectedTickets} تذكرة
                 </Text>
-                <Text style={styles.totalRowLabel}>تذاكر السحب 🎟️</Text>
+                <Text style={styles.totalRowLabel}>تذاكر السحب</Text>
               </View>
             )}
           </View>

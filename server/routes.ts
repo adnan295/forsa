@@ -860,7 +860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const allUsers = await storage.getAllUsers();
           const ids = allUsers.filter((u) => u.role !== "admin").map((u) => u.id);
           if (ids.length > 0) {
-            const title = "جولة سحب جديدة! 🎁";
+            const title = "جولة سحب جديدة!";
             const body = `الجائزة: ${draw.prizeName} — كل ${parseFloat(draw.ticketPrice)}$ من مشترياتك = تذكرة`;
             await storage.createBulkUserNotifications(ids, "new_draw", title, body, draw.id);
             sendPushNotifications(ids, title, body, { drawId: draw.id });
@@ -1123,7 +1123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       try {
-        const winTitle = "مبروك أنت الفائز! 🏆🎉";
+        const winTitle = "مبروك أنت الفائز!";
         const winBody = `فزت بـ${draw.prizeName} في جولة ${draw.title} بالتذكرة ${ticket.ticketNumber}!`;
         await storage.createUserNotification(winner.id, "you_won", winTitle, winBody, draw.id);
         sendPushNotifications([winner.id], winTitle, winBody, { drawId: draw.id });
@@ -1136,7 +1136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (id) => id !== winner.id
         );
         if (participantIds.length > 0) {
-          const t = "تم اختيار الفائز 🎁";
+          const t = "تم اختيار الفائز";
           const b = `تم اختيار الفائز بـ${draw.prizeName} في جولة ${draw.title}! حظاً أوفر المرة الجاية`;
           await storage.createBulkUserNotifications(participantIds, "draw_completed", t, b, draw.id);
           sendPushNotifications(participantIds, t, b, { drawId: draw.id });
@@ -1147,7 +1147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .filter((u) => u.role !== "admin" && u.id !== winner.id && !participantIds.includes(u.id))
           .map((u) => u.id);
         if (others.length > 0) {
-          const t = "فائز جديد! 🎊";
+          const t = "فائز جديد!";
           const b = `تم اختيار الفائز بـ${draw.prizeName} في جولة ${draw.title}!`;
           await storage.createBulkUserNotifications(others, "winner_announced", t, b, draw.id);
           sendPushNotifications(others, t, b, { drawId: draw.id });
@@ -1237,10 +1237,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.createUserNotification(
               shippingOrder.userId,
               "shipping_update",
-              `تحديث الشحن: ${statusText} 📦`,
+              `تحديث الشحن: ${statusText}`,
               `طلبك (${shippingSummary}) — ${statusText}`
             );
-            sendPushNotifications([shippingOrder.userId], `تحديث الشحن: ${statusText} 📦`, `طلبك (${shippingSummary}) — ${statusText}`, { orderId: shippingOrder.id });
+            sendPushNotifications([shippingOrder.userId], `تحديث الشحن: ${statusText}`, `طلبك (${shippingSummary}) — ${statusText}`, { orderId: shippingOrder.id });
           }
         }
       }
@@ -1279,7 +1279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         try {
           if (awardedTickets > 0) {
-            const t = "تذاكرك جاهزة! 🎟️";
+            const t = "تذاكرك جاهزة!";
             const b = `تم تأكيد دفعك وحصلت على ${awardedTickets} تذكرة للسحب. بالتوفيق!`;
             await storage.createUserNotification(order.userId, "tickets_awarded", t, b, award.drawIds[0]);
             sendPushNotifications([order.userId], t, b, { orderId: order.id });
@@ -1291,7 +1291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (d && d.status === "ready_to_draw") {
               await storage.createAdminNotification(
                 "draw_ready",
-                "جولة جاهزة للسحب 🎯",
+                "جولة جاهزة للسحب",
                 `جولة "${d.title}" وصلت ${d.soldTickets}/${d.targetTickets} تذكرة — جاهزة للسحب`,
                 JSON.stringify({ drawId: d.id })
               );
@@ -1299,7 +1299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const drawTickets = await storage.getTicketsByDraw(d.id);
               const participantIds = [...new Set(drawTickets.map((x) => x.userId))];
               if (participantIds.length > 0) {
-                const t = "اكتمل العدد! 🔥";
+                const t = "اكتمل العدد!";
                 const b = `جولة ${d.title} وصلت للعدد المطلوب — السحب على ${d.prizeName} قريباً`;
                 await storage.createBulkUserNotifications(participantIds, "draw_full", t, b, d.id);
                 sendPushNotifications(participantIds, t, b, { drawId: d.id });
@@ -2481,8 +2481,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       <h2>حقوقك</h2>
       <ul>
         <li>طلب نسخة من بياناتك الشخصية</li>
-        <li>تصحيح بياناتك أو تحديثها من «حسابي ← بياناتي»</li>
-        <li>حذف حسابك نهائياً من «حسابي ← حذف الحساب»: نحذف بياناتك وطلباتك وقسائمك وصور إيصالاتك، ونفك ربط الدخول عبر Apple</li>
+        <li>تصحيح بياناتك أو تحديثها من «حسابي» ثم «بياناتي»</li>
+        <li>حذف حسابك نهائياً من «حسابي» ثم «حذف الحساب»: نحذف بياناتك وطلباتك وقسائمك وصور إيصالاتك، ونفك ربط الدخول عبر Apple</li>
         <li>إيقاف الإشعارات من إعدادات جهازك</li>
       </ul>
     </div>
@@ -2711,10 +2711,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createUserNotification(
           ticket.userId,
           "support_reply",
-          "رد على تذكرة الدعم 📩",
+          "رد على تذكرة الدعم",
           `تم الرد على تذكرتك: ${ticket.subject}`,
         );
-        sendPushNotifications([ticket.userId], "رد على تذكرة الدعم 📩", `تم الرد على تذكرتك: ${ticket.subject}`);
+        sendPushNotifications([ticket.userId], "رد على تذكرة الدعم", `تم الرد على تذكرتك: ${ticket.subject}`);
       }
       res.json(ticket);
     } catch (error) {

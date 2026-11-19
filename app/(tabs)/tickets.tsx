@@ -104,7 +104,7 @@ function TicketRow({ ticket, order }: { ticket: Ticket; order?: Order }) {
         </Text>
         {(ticket.isWinner || pending) && (
           <Text style={[s.rowNote, ticket.isWinner && { color: c.goldText }]}>
-            {ticket.isWinner ? "🏆 قسيمة فائزة" : "بانتظار الجولة القادمة"}
+            {ticket.isWinner ? "قسيمة فائزة" : "بانتظار الجولة القادمة"}
           </Text>
         )}
       </View>
@@ -137,7 +137,7 @@ function PastDrawCard({ winner }: { winner: Winner }) {
           <Text style={s.pastCaption}>تاريخ السحب</Text>
         </View>
         <Text style={s.pastDateValue}>{winner.drawnAt ? formatDate(winner.drawnAt) : "—"}</Text>
-        <Text style={s.pastCongrats}>🎉 مبروك للفائز!</Text>
+        <Text style={s.pastCongrats}>مبروك للفائز!</Text>
       </View>
 
       <View style={s.pastInfo}>

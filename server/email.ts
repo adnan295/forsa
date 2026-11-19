@@ -236,17 +236,17 @@ export async function sendShippingUpdate(
   to: string,
   data: { orderId: string; itemsSummary: string; status: string; trackingNumber?: string }
 ) {
-  const statusMap: Record<string, { label: string; emoji: string }> = {
-    processing: { label: "جاري التجهيز", emoji: "📦" },
-    shipped: { label: "تم الشحن", emoji: "🚚" },
-    delivered: { label: "تم التوصيل", emoji: "✅" },
+  const statusMap: Record<string, { label: string }> = {
+    processing: { label: "جاري التجهيز" },
+    shipped: { label: "تم الشحن" },
+    delivered: { label: "تم التوصيل" },
   };
 
-  const statusInfo = statusMap[data.status] || { label: data.status, emoji: "📋" };
+  const statusInfo = statusMap[data.status] || { label: data.status };
 
   const html = baseTemplate(`
     <div class="body">
-      <h2>${statusInfo.emoji} تحديث حالة الشحن</h2>
+      <h2>تحديث حالة الشحن</h2>
       <div class="info-box">
         <div class="info-row"><span class="info-label">رقم الطلب</span><span class="info-value">#${data.orderId.slice(0, 8)}</span></div>
         <div class="info-row"><span class="info-label">المنتجات</span><span class="info-value">${data.itemsSummary}</span></div>
@@ -256,6 +256,6 @@ export async function sendShippingUpdate(
     </div>
   `);
 
-  await sendEmail(to, `${statusInfo.emoji} تحديث الشحن - طلب #${data.orderId.slice(0, 8)} - ${APP_NAME}`, html);
+  await sendEmail(to, `تحديث الشحن - طلب #${data.orderId.slice(0, 8)} - ${APP_NAME}`, html);
 }
 
